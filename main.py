@@ -3,15 +3,15 @@
 mkvmerge required (python-pymkv)
 ffmpeg required
 TODO:
-make encoding queue with limiting by workers and cores,
+make encoding queue with limiting by workers,
 make concatenating videos,
 make passing your arguments for encoding,
 make separate audio and encode it separately,
 """
 
-import sys
 import os
 import subprocess
+from multiprocessing import Pool
 try:
     import scenedetect
 except:
@@ -27,7 +27,7 @@ def get_ram():
 
 
 def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid} --output output detect-content list-scenes split-video -c'
+    cmd2 = f'scenedetect -i {input_vid} --output temp detect-content split-video -c'
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -40,3 +40,24 @@ def get_video_queue(source_path):
 
     videos = sorted(videos, key=lambda x: -x[1])
     return videos
+
+
+def encode(commands):
+    print('encoding')
+    cmd = f'ffmpeg {commands}'
+    subprocess.Popen(cmd, shell=True).wait()
+
+
+def main(input_video):
+    split_video(input_video)
+    vid_queue = get_video_queue('temp')
+    files = [i[0] for i in vid_queue[:-1]]
+    print(files)
+    commands = [f'-i temp/{str(file)} -c:v libaom-av1 -strict -2 -cpu-used 4 -crf 36 {file}' for file in files]
+    print('we here')
+    pool = Pool(4)
+    pool.map(encode, commands)
+
+
+if __name__ == '__main__':
+    main('bruh.mp4')

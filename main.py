@@ -48,16 +48,29 @@ def encode(commands):
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
+def concat(directory):
+    cmd = ''
+    subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
 def main(input_video):
+
+    # Make temporal directories
     os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
     os.makedirs(f'{os.getcwd()}/temp/encoded', exist_ok=True)
-    encoding_params = '-c:v libaom-av1 -strict -2 -cpu-used 8 -crf 60'
+
+    # Passing encoding parameters
+    encoding_params = ' -an -c:v libaom-av1 -strict -2 -cpu-used 8 -crf 60'
+
+    # Spliting video and sorting big-first
     split_video(input_video)
     vid_queue = get_video_queue('temp')
     files = [i[0] for i in vid_queue[:-1]]
-    print(files)
+
+    # Making list of commands for encoding
     commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encoded/{file}' for file in files]
-    print('we here')
+
+    # Creating threading pool to encode fixed amount of files at the same time
     pool = Pool(4)
     pool.map(encode, commands)
 

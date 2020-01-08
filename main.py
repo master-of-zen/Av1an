@@ -85,11 +85,12 @@ def main(input_video):
     commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encode/{file}' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
-    pool = Pool(6)
+    pool = Pool(8)
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
     concat()
+
 
 if __name__ == '__main__':
     main('bruh.mp4')

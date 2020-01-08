@@ -6,6 +6,7 @@ TODO:
 make encoding queue with limiting by workers and cores,
 make concatenating videos,
 make passing your arguments for encoding,
+make separate audio and encode it separately,
 """
 
 import sys

@@ -27,7 +27,7 @@ def get_ram():
 
 
 def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid} --output temp detect-content split-video -c'
+    cmd2 = f'scenedetect -i {input_vid} --output temp/split detect-content split-video -c'
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -45,15 +45,18 @@ def get_video_queue(source_path):
 def encode(commands):
     print('encoding')
     cmd = f'ffmpeg {commands}'
-    subprocess.Popen(cmd, shell=True).wait()
+    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
 def main(input_video):
+    os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
+    os.makedirs(f'{os.getcwd()}/temp/encoded', exist_ok=True)
+    encoding_params = '-c:v libaom-av1 -strict -2 -cpu-used 8 -crf 60'
     split_video(input_video)
     vid_queue = get_video_queue('temp')
     files = [i[0] for i in vid_queue[:-1]]
     print(files)
-    commands = [f'-i temp/{str(file)} -c:v libaom-av1 -strict -2 -cpu-used 4 -crf 36 {file}' for file in files]
+    commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encoded/{file}' for file in files]
     print('we here')
     pool = Pool(4)
     pool.map(encode, commands)

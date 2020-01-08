@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 """
 mkvmerge required (python-pymkv)
+ffmpeg required
+TODO:
+make encoding queue with limiting by workers and cores,
+make concatenating videos,
+make passing your arguments for encoding,
 """
 
 import sys

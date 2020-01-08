@@ -58,7 +58,7 @@ def concat():
     """
     with open(f'{os.getcwd()}/temp/concat.txt', 'w') as f:
 
-        for root, firs, files in os.walk(f'{os.getcwd()}/temp/encoded'):
+        for root, firs, files in os.walk(f'{os.getcwd()}/temp/encode'):
             for file in sorted(files):
                 f.write(f"file '{os.path.join(root, file)}'\n")
 
@@ -70,7 +70,7 @@ def main(input_video):
 
     # Make temporal directories
     os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
-    os.makedirs(f'{os.getcwd()}/temp/encoded', exist_ok=True)
+    os.makedirs(f'{os.getcwd()}/temp/encode', exist_ok=True)
 
     # Passing encoding parameters
     #                   no audio  av1 codec              adding tiles        speed      quality
@@ -82,7 +82,7 @@ def main(input_video):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encoded/{file}' for file in files]
+    commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encode/{file}' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     pool = Pool(6)

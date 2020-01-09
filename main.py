@@ -5,12 +5,13 @@ ffmpeg required
 TODO:
 DONE make encoding queue with limiting by workers
 DONE make concatenating videos after encoding
-make passing your arguments for encoding,
+DONE make passing your arguments for encoding,
 make separate audio and encode it separately,
 """
 
 import os
 import subprocess
+import argparse
 from multiprocessing import Pool
 try:
     import scenedetect
@@ -66,7 +67,7 @@ def concat():
     subprocess.Popen(cmd, shell=True).wait()
 
 
-def main(input_video):
+def main(input_video, encoding_params, num_worker):
 
     # Make temporal directories
     os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
@@ -74,7 +75,7 @@ def main(input_video):
 
     # Passing encoding parameters
     #                   no audio  av1 codec              adding tiles        speed      quality
-    encoding_params = ' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 '
+    #encoding_params = ' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 '
 
     # Spliting video and sorting big-first
     split_video(input_video)
@@ -85,7 +86,7 @@ def main(input_video):
     commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encode/{file}' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
-    pool = Pool(8)
+    pool = Pool(num_worker)
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
@@ -93,4 +94,9 @@ def main(input_video):
 
 
 if __name__ == '__main__':
-    main('bruh.mp4')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ', help='FFmpeg settings')
+    parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
+    parser.add_argument('--num_worker', '-t', type=int, default=8, help='input video file')
+    args = parser.parse_args()
+    main(args.input_file, args.encoding_params, args.num_worker)

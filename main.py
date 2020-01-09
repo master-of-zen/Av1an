@@ -31,7 +31,7 @@ def arg_parsing():
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str,
+    parser.add_argument('--encoding_params', '-p', type=str,
                         default=' -an -c:v libaom-av1  -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     # Main thread
     start = time.time()
     main(args.input_file, args.encoding_params, args.num_worker)
-    print(f'Encoding completed in {round(time.time()-start)}ces')
+    print(f'Encoding completed in {round(time.time()-start)} seconds')
 
     # Delete temp folders
     shutil.rmtree(join(os.getcwd(), "temp"))

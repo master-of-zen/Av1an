@@ -48,7 +48,7 @@ def extract_audio(input_vid):
     """
     Extracting audio from video file
     """
-    cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec copy {os.getcwd()}/temp/audio.aac'
+    cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec libopus {os.getcwd()}/temp/audio.opus'
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
@@ -92,7 +92,7 @@ def concat():
             for file in sorted(files):
                 f.write(f"file '{os.path.join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.aac -c copy output.webm'
+    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.opus -c copy output.webm'
     subprocess.Popen(cmd, shell=True).wait()
     print('File finished')
 

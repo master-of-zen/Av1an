@@ -27,6 +27,7 @@ except:
 def arg_parsing():
     """
     Command line parser
+    Have default params
     """
 
     parser = argparse.ArgumentParser()
@@ -34,7 +35,7 @@ def arg_parsing():
                         default=' -an -c:v libaom-av1  -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
-    parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
+    parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
     return parser.parse_args()
 
 
@@ -47,6 +48,8 @@ def determine_resources():
 def extract_audio(input_vid):
     """
     Extracting audio from video file
+    Encoding audio to opus.
+    Posible to -acodec copy to .mkv container without reencoding
     """
     cmd = f'ffmpeg -i {join(os.getcwd(),input_vid)} -vn -acodec libopus {join(os.getcwd(),"temp","audio.opus")}'
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()

@@ -76,9 +76,8 @@ def encode(commands):
     Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
     """
     cmd = f'ffmpeg {commands}'
-    print('Started encode process...')
     subprocess.Popen(cmd, shell=True).wait()
-    print('Finished encode process')
+
 
 
 def concat():
@@ -94,7 +93,6 @@ def concat():
 
     cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.opus -c copy output.webm'
     subprocess.Popen(cmd, shell=True).wait()
-    print('File finished')
 
 
 def main(input_video, encoding_params, num_worker):
@@ -129,7 +127,7 @@ if __name__ == '__main__':
 
     # Command line parser
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ', help='FFmpeg settings')
+    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -cpu-used 2 -crf 35', help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
 

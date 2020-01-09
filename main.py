@@ -31,8 +31,8 @@ def arg_parsing():
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', '-p', type=str,
-                        default=' -an -c:v libaom-av1  -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
+    parser.add_argument('--encoding_params', type=str,
+                        default=' aomenc -q --passes=1   --tile-columns=2 --tile-rows=2  --cpu-used=3 --end-usage=q --cq-level=25 --aq-mode=1  -o',
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
@@ -115,7 +115,7 @@ def main(input_video, encoding_params, num_worker):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} {encoding_params} {join(os.getcwd(), "temp", "encode", file)}' for file in files]
+    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     pool = Pool(num_worker)

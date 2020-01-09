@@ -48,12 +48,12 @@ def extract_audio(input_vid):
     """
     Extracting audio from video file
     """
-    cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec libopus {os.getcwd()}/temp/audio.opus'
+    cmd = f'ffmpeg -i \"{os.getcwd()}/{input_vid}\" -vn -acodec libopus \"{os.getcwd()}/temp/audio.opus\"'
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
 def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid} --output temp/split detect-content split-video -c'
+    cmd2 = f'scenedetect -i \"{input_vid}\" --output temp/split detect-content split-video -c'
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f'Video {input_vid} splitted')
 
@@ -91,7 +91,7 @@ def concat():
             for file in sorted(files):
                 f.write(f"file '{os.path.join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.opus -c copy output.webm'
+    cmd = f'ffmpeg -f concat -safe 0 -i \"{os.getcwd()}/temp/concat.txt\" -i \"{os.getcwd()}/temp/audio.opus\" -c copy \"output.webm\"'
     subprocess.Popen(cmd, shell=True).wait()
 
 
@@ -113,7 +113,7 @@ def main(input_video, encoding_params, num_worker):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encode/{file}' for file in files]
+    commands = [f'-i \"{os.getcwd()}/temp/split/{file}\" {encoding_params} \"{os.getcwd()}/temp/encode/{file}\"' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     pool = Pool(num_worker)

@@ -12,6 +12,7 @@ make separate audio and encode it separately,
 import os
 import subprocess
 import argparse
+import time
 from multiprocessing import Pool
 try:
     import scenedetect
@@ -42,6 +43,9 @@ def get_ram():
 
 
 def extract_audio(input_vid):
+    """
+    Extracting audio from video file
+    """
     cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec copy {os.getcwd()}/temp/audio.aac'
 
 

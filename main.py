@@ -98,9 +98,12 @@ def concat():
 
 def main(input_video, encoding_params, num_worker):
 
-    # Make temporal directories
-    os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
-    os.makedirs(f'{os.getcwd()}/temp/encode', exist_ok=True)
+    # Make temporal directories, and remove them if already presented
+    if os.path.isdir(f'{os.getcwd()}/temp/'):
+        shutil.rmtree(f'{os.getcwd()}/temp')
+
+    os.makedirs(f'{os.getcwd()}/temp/split')
+    os.makedirs(f'{os.getcwd()}/temp/encode')
 
     # Extracting audio
     extract_audio(input_video)

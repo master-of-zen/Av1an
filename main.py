@@ -19,6 +19,20 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
+def arg_parsing():
+    """
+    Command line parser
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--encoding_params', type=str,
+                        default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
+                        help='FFmpeg settings')
+    parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
+    parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
+    return parser.parse_args()
+
+
 def get_cpu_count():
     return os.cpu_count()
 
@@ -101,7 +115,10 @@ if __name__ == '__main__':
     parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ', help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
-    args = parser.parse_args()
+
+    args = arg_parsing()
 
     # Main thread
+    start = time.time()
     main(args.input_file, args.encoding_params, args.num_worker)
+    print(f'Encoding completed in {round(time.time()-start)}ces')

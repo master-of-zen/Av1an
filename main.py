@@ -13,6 +13,7 @@ import os
 import subprocess
 import argparse
 import time
+import shutil
 from multiprocessing import Pool
 try:
     import scenedetect
@@ -134,3 +135,6 @@ if __name__ == '__main__':
     start = time.time()
     main(args.input_file, args.encoding_params, args.num_worker)
     print(f'Encoding completed in {round(time.time()-start)}ces')
+
+    # Delete temp folders
+    shutil.rmtree(f'{os.getcwd()}/temp')

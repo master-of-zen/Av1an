@@ -56,7 +56,7 @@ def extract_audio(input_vid):
 
 
 def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid} --output temp/split detect-content split-video -c'
+    cmd2 = f'scenedetect -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f'Video {input_vid} splitted')
 

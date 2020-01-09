@@ -47,6 +47,7 @@ def extract_audio(input_vid):
     Extracting audio from video file
     """
     cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec copy {os.getcwd()}/temp/audio.aac'
+    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
 def split_video(input_vid):
@@ -89,7 +90,7 @@ def concat():
             for file in sorted(files):
                 f.write(f"file '{os.path.join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -c copy output.mp4'
+    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.aac -c copy output.mp4'
     subprocess.Popen(cmd, shell=True).wait()
     print('File finished')
 
@@ -99,6 +100,9 @@ def main(input_video, encoding_params, num_worker):
     # Make temporal directories
     os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
     os.makedirs(f'{os.getcwd()}/temp/encode', exist_ok=True)
+
+    # Extracting audio
+    extract_audio(input_video)
 
     # Spliting video and sorting big-first
     split_video(input_video)

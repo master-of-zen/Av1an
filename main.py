@@ -31,7 +31,7 @@ def arg_parsing():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding_params', type=str,
-                        default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
+                        default=' -an -c:v libaom-av1  -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ',
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
@@ -123,12 +123,6 @@ def main(input_video, encoding_params, num_worker):
 
 
 if __name__ == '__main__':
-
-    # Command line parser
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -cpu-used 8 -crf 63', help='FFmpeg settings')
-    parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
-    parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encode running at a time')
 
     args = arg_parsing()
 

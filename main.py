@@ -91,7 +91,7 @@ def concat():
             for file in sorted(files):
                 f.write(f"file '{os.path.join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.aac -c copy output.mp4'
+    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.aac -c copy output.webm'
     subprocess.Popen(cmd, shell=True).wait()
     print('File finished')
 

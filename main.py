@@ -14,6 +14,7 @@ import subprocess
 import argparse
 import time
 import shutil
+import pathlib
 from multiprocessing import Pool
 try:
     import scenedetect

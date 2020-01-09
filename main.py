@@ -11,6 +11,7 @@ make separate audio and encode it separately,
 
 import os
 from os.path import join
+from psutil import virtual_memory
 import subprocess
 import argparse
 import time
@@ -39,7 +40,7 @@ def arg_parsing():
 
 def determine_resources():
     cpu = os.cpu_count()
-    ram = round((os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')) / (1024. ** 3), 1)
+    ram = round(virtual_memory().total / 2**30)
     return ceil(min(cpu, ram/2))
 
 

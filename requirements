@@ -2,3 +2,4 @@ numpy
 opencv-python
 tqdm
 scenedetect
+psutil

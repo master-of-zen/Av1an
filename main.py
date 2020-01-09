@@ -48,6 +48,11 @@ def get_video_queue(source_path):
 
 
 def encode(commands):
+    """
+    Passing encoding params to ffmpeg for encoding
+    TODO:
+    Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
+    """
     cmd = f'ffmpeg {commands}'
     subprocess.Popen(cmd, shell=True).wait()
 
@@ -73,10 +78,6 @@ def main(input_video, encoding_params, num_worker):
     os.makedirs(f'{os.getcwd()}/temp/split', exist_ok=True)
     os.makedirs(f'{os.getcwd()}/temp/encode', exist_ok=True)
 
-    # Passing encoding parameters
-    #                   no audio  av1 codec              adding tiles        speed      quality
-    #encoding_params = ' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 '
-
     # Spliting video and sorting big-first
     split_video(input_video)
     vid_queue = get_video_queue('temp')
@@ -94,9 +95,13 @@ def main(input_video, encoding_params, num_worker):
 
 
 if __name__ == '__main__':
+
+    # Command line parser
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -row-mt 1 -tiles 2x2 -cpu-used 8 -crf 60 ', help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
     args = parser.parse_args()
+
+    # Main thread
     main(args.input_file, args.encoding_params, args.num_worker)

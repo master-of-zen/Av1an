@@ -10,6 +10,7 @@ make separate audio and encode it separately,
 """
 
 import os
+from os.path import join
 import subprocess
 import argparse
 import time
@@ -46,7 +47,7 @@ def extract_audio(input_vid):
     """
     Extracting audio from video file
     """
-    cmd = f'ffmpeg -i {os.getcwd()}/{input_vid} -vn -acodec libopus {os.getcwd()}/temp/audio.opus'
+    cmd = f'ffmpeg -i {join(os.getcwd(),input_vid)} -vn -acodec libopus {join(os.getcwd(),"temp","audio.opus")}'
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
@@ -84,22 +85,22 @@ def concat():
     """
     with open(f'{os.getcwd()}/temp/concat.txt', 'w') as f:
 
-        for root, firs, files in os.walk(f'{os.getcwd()}/temp/encode'):
+        for root, firs, files in os.walk(join(os.getcwd(), 'temp', 'encode')):
             for file in sorted(files):
-                f.write(f"file '{os.path.join(root, file)}'\n")
+                f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -i {os.getcwd()}/temp/audio.opus -c copy output.webm'
+    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.opus")} -c copy output.webm'
     subprocess.Popen(cmd, shell=True).wait()
 
 
 def main(input_video, encoding_params, num_worker):
 
     # Make temporal directories, and remove them if already presented
-    if os.path.isdir(f'{os.getcwd()}/temp/'):
-        shutil.rmtree(f'{os.getcwd()}/temp')
+    if os.path.isdir(join(os.getcwd(), "temp")):
+        shutil.rmtree(join(os.getcwd(), "temp"))
 
-    os.makedirs(f'{os.getcwd()}/temp/split')
-    os.makedirs(f'{os.getcwd()}/temp/encode')
+    os.makedirs(join(os.getcwd(), 'temp', 'split'))
+    os.makedirs(join(os.getcwd(), 'temp', 'encode'))
 
     # Extracting audio
     extract_audio(input_video)
@@ -110,7 +111,7 @@ def main(input_video, encoding_params, num_worker):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {os.getcwd()}/temp/split/{file} {encoding_params} {os.getcwd()}/temp/encode/{file}' for file in files]
+    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} {encoding_params} {join(os.getcwd(), "temp", "encode", file)}' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     pool = Pool(num_worker)
@@ -124,7 +125,7 @@ if __name__ == '__main__':
 
     # Command line parser
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -cpu-used 2 -crf 35', help='FFmpeg settings')
+    parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -cpu-used 8 -crf 63', help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encode running at a time')
 
@@ -136,4 +137,4 @@ if __name__ == '__main__':
     print(f'Encoding completed in {round(time.time()-start)}ces')
 
     # Delete temp folders
-    shutil.rmtree(f'{os.getcwd()}/temp')
+    shutil.rmtree(join(os.getcwd(), "temp"))

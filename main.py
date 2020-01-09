@@ -52,6 +52,7 @@ def extract_audio(input_vid):
 def split_video(input_vid):
     cmd2 = f'scenedetect -i {input_vid} --output temp/split detect-content split-video -c'
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(f'Video {input_vid} splitted')
 
 
 def get_video_queue(source_path):
@@ -72,7 +73,9 @@ def encode(commands):
     Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
     """
     cmd = f'ffmpeg {commands}'
+    print('Started encode process...')
     subprocess.Popen(cmd, shell=True).wait()
+    print('Finished encode process')
 
 
 def concat():
@@ -88,6 +91,7 @@ def concat():
 
     cmd = f'ffmpeg -f concat -safe 0 -i {os.getcwd()}/temp/concat.txt -c copy output.mp4'
     subprocess.Popen(cmd, shell=True).wait()
+    print('File finished')
 
 
 def main(input_video, encoding_params, num_worker):

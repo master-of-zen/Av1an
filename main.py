@@ -14,7 +14,7 @@ import subprocess
 import argparse
 import time
 import shutil
-import pathlib
+from math import ceil
 from multiprocessing import Pool
 try:
     import scenedetect
@@ -36,12 +36,10 @@ def arg_parsing():
     return parser.parse_args()
 
 
-def get_cpu_count():
-    return os.cpu_count()
-
-
-def get_ram():
-    return round((os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')) / (1024. ** 3), 3)
+def determine_resources():
+    cpu = os.cpu_count()
+    ram = round((os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')) / (1024. ** 3), 1)
+    return ceil(min(cpu, ram/2))
 
 
 def extract_audio(input_vid):
@@ -77,7 +75,6 @@ def encode(commands):
     """
     cmd = f'ffmpeg {commands}'
     subprocess.Popen(cmd, shell=True).wait()
-
 
 
 def concat():
@@ -129,7 +126,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding_params', type=str, default=' -an -c:v libaom-av1 -strict -2 -cpu-used 2 -crf 35', help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
-    parser.add_argument('--num_worker', '-t', type=int, default=8, help='number of encode running at a time')
+    parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encode running at a time')
 
     args = arg_parsing()
 

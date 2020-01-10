@@ -121,6 +121,7 @@ def main(input_video, encoding_params, num_worker):
 
     # Making list of commands for encoding
     commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
+                f' aomenc -q {encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}\nEncoding..')

@@ -6,6 +6,7 @@ TODO:
 DONE make encoding queue with limiting by workers
 DONE make concatenating videos after encoding
 DONE make passing your arguments for encoding,
+make arguments help description more understandable
 make separate audio and encode it separately,
 """
 
@@ -36,6 +37,8 @@ def arg_parsing():
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
+    parser.add_argument('--segment_length', '-L', type=str, default='60', help='Length of each segment, then on segment spliting mode')
+    parser.add_argument('--spliting_method', type=str, default='scenedetect', help='method for spliting video [scenedetect/segment]')
     return parser.parse_args()
 
 
@@ -55,8 +58,13 @@ def extract_audio(input_vid):
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
-def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
+def split_video(input_vid, method='scenedetect', segment_length='60'):
+    if method == 'scenedetect':
+        cmd2 = f'scenedetect -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
+    elif method == 'segment':
+        cmd2 = f'ffmpeg -i \"{input_vid}\" -c:v copy -segment_time {segment_length} -f segment -reset_timestamps 1 temp/split/segment%03d.mkv'
+    else:
+        raise SystemExit('Invalid video spliting method')
     subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f'Video {input_vid} splitted')
 
@@ -97,7 +105,7 @@ def concat(input_video):
     subprocess.Popen(cmd, shell=True).wait()
 
 
-def main(input_video, encoding_params, num_worker):
+def main(input_video, encoding_params, num_worker, spliting_method, segment_length):
 
     # Make temporal directories, and remove them if already presented
     if os.path.isdir(join(os.getcwd(), "temp")):
@@ -110,7 +118,7 @@ def main(input_video, encoding_params, num_worker):
     extract_audio(input_video)
 
     # Spliting video and sorting big-first
-    split_video(input_video)
+    split_video(input_video, spliting_method, segment_length)
     vid_queue = get_video_queue('temp')
     files = [i[0] for i in vid_queue[:-1]]
 
@@ -131,7 +139,7 @@ if __name__ == '__main__':
 
     # Main thread
     start = time.time()
-    main(args.input_file, args.encoding_params, args.num_worker)
+    main(args.input_file, args.encoding_params, args.num_worker, args.spliting_method, args.segment_length)
     print(f'Encoding completed in {round(time.time()-start)} seconds')
 
     # Delete temp folders

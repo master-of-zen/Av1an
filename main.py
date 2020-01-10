@@ -37,7 +37,7 @@ def arg_parsing():
                         help='FFmpeg settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
-    parser.add_argument('--segment_length', '-L', type=str, default='60', help='Length of each segment, then on segment spliting mode')
+    parser.add_argument('--segment_length', '-L', type=str, default='60', help='Length of each segment, then using segment spliting mode')
     parser.add_argument('--spliting_method', type=str, default='scenedetect', help='method for spliting video [scenedetect/segment]')
     return parser.parse_args()
 
@@ -105,7 +105,7 @@ def concat(input_video):
     subprocess.Popen(cmd, shell=True).wait()
 
 
-def main(input_video, encoding_params, num_worker, spliting_method, segment_length):
+def main(args):
 
     # Make temporal directories, and remove them if already presented
     if os.path.isdir(join(os.getcwd(), "temp")):
@@ -115,31 +115,29 @@ def main(input_video, encoding_params, num_worker, spliting_method, segment_leng
     os.makedirs(join(os.getcwd(), 'temp', 'encode'))
 
     # Extracting audio
-    extract_audio(input_video)
+    extract_audio(args.input_video)
 
     # Spliting video and sorting big-first
-    split_video(input_video, spliting_method, segment_length)
+    split_video(args.input_video, args.spliting_method, args.segment_length)
     vid_queue = get_video_queue('temp')
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -' for file in files]
+    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {args.encoding_params} {join(os.getcwd(), "temp", "encode", file)} -' for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
-    pool = Pool(num_worker)
+    pool = Pool(args.num_worker)
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
-    concat(input_video)
+    concat(args.input_video)
 
 
 if __name__ == '__main__':
 
-    args = arg_parsing()
-
     # Main thread
     start = time.time()
-    main(args.input_file, args.encoding_params, args.num_worker, args.spliting_method, args.segment_length)
+    main(arg_parsing())
     print(f'Encoding completed in {round(time.time()-start)} seconds')
 
     # Delete temp folders

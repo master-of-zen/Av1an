@@ -51,7 +51,7 @@ def extract_audio(input_vid):
     Encoding audio to opus.
     Posible to -acodec copy to .mkv container without reencoding
     """
-    cmd = f'ffmpeg -i {join(os.getcwd(),input_vid)} -vn -acodec libopus {join(os.getcwd(),"temp","audio.opus")}'
+    cmd = f'ffmpeg -i {join(os.getcwd(),input_vid)} -vn -acodec copy {join(os.getcwd(),"temp","audio.mkv")}'
     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
@@ -93,7 +93,7 @@ def concat(input_video):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.opus")} -c copy {input_video.split(".")[:-1]}-av1.webm'
+    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy {input_video.split(".")[:-1]}-av1.webm'
     subprocess.Popen(cmd, shell=True).wait()
 
 

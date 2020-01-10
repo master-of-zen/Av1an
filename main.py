@@ -81,11 +81,10 @@ def encode(commands):
     TODO:
     Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
     """
-    print(f'Start: {commands[1]}')
 
     cmd = f'{FFMPEG} {commands[0]}'
     Popen(cmd, shell=True,  stderr=PIPE).wait()
-    print(f'Done:  {commands[1]}')
+    print(f'Done: {commands[1].split(".")[0].split("-")[-1]}')
 
 
 def concat(input_video):
@@ -124,7 +123,7 @@ def main(input_video, encoding_params, num_worker):
     commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
-    print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}')
+    print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}\nEncoding..')
     pool = Pool(num_worker)
     pool.map(encode, commands)
 

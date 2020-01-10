@@ -12,7 +12,7 @@ make separate audio and encode it separately,
 import os
 from os.path import join
 from psutil import virtual_memory
-import subprocess
+from subprocess import Popen, PIPE, call
 import argparse
 import time
 import shutil
@@ -51,13 +51,13 @@ def extract_audio(input_vid):
     Encoding audio to opus.
     Posible to -acodec copy to .mkv container without reencoding
     """
-    cmd = f'ffmpeg -i {join(os.getcwd(),input_vid)} -vn -acodec copy {join(os.getcwd(),"temp","audio.mkv")}'
-    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn -acodec copy {join(os.getcwd(),"temp","audio.mkv")}'
+    Popen(cmd, shell=True).wait()
 
 
 def split_video(input_vid):
-    cmd2 = f'scenedetect -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
-    subprocess.call(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd2 = f'scenedetect -q -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
+    call(cmd2, shell=True)
     print(f'Video {input_vid} splitted')
 
 
@@ -93,8 +93,8 @@ def concat(input_video):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy {input_video.split(".")[:-1]}-av1.webm'
-    subprocess.Popen(cmd, shell=True).wait()
+    cmd = f'{FFMPEG} -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy {input_video.split(".")[0]}_av1.webm'
+    Popen(cmd, shell=True,  stderr=PIPE).wait()
 
 
 def main(input_video, encoding_params, num_worker):

@@ -82,7 +82,7 @@ def encode(commands):
     subprocess.Popen(cmd, shell=True).wait()
 
 
-def concat():
+def concat(input_video):
     """
     Using FFMPEG to concatenate all encoded videos to 1 file.
     Reading all files in A-Z order and saving it to concat.txt
@@ -93,7 +93,7 @@ def concat():
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.opus")} -c copy output.webm'
+    cmd = f'ffmpeg -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.opus")} -c copy {input_video.split(".")[:-1]}-av1.webm'
     subprocess.Popen(cmd, shell=True).wait()
 
 
@@ -122,7 +122,7 @@ def main(input_video, encoding_params, num_worker):
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
-    concat()
+    concat(input_video)
 
 
 if __name__ == '__main__':

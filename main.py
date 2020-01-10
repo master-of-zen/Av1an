@@ -24,7 +24,7 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-DEFAULT_ENCODE = ' aomenc -q --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=4 --end-usage=q --cq-level=45 --aq-mode=1  -o'
+DEFAULT_ENCODE = ' --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=5 --end-usage=q --cq-level=63 --aq-mode=1'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
@@ -120,7 +120,7 @@ def main(input_video, encoding_params, num_worker):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
+    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
 
     # Creating threading pool to encode fixed amount of files at the same time
     print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}\nEncoding..')

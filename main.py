@@ -115,10 +115,10 @@ def main(args):
     os.makedirs(join(os.getcwd(), 'temp', 'encode'))
 
     # Extracting audio
-    extract_audio(args.input_file)
+    extract_audio(args.input_video)
 
     # Spliting video and sorting big-first
-    split_video(args.input_file, args.spliting_method, args.segment_length)
+    split_video(args.input_video, args.spliting_method, args.segment_length)
     vid_queue = get_video_queue('temp')
     files = [i[0] for i in vid_queue[:-1]]
 
@@ -130,16 +130,14 @@ def main(args):
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
-    concat(args.input_file)
+    concat(args.input_video)
 
 
 if __name__ == '__main__':
 
-    parse_args = arg_parsing()
-
     # Main thread
     start = time.time()
-    main(parse_args)
+    main(arg_parsing())
     print(f'Encoding completed in {round(time.time()-start)} seconds')
 
     # Delete temp folders

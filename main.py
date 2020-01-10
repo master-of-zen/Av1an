@@ -24,6 +24,10 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
+DEFAULT_ENCODE = ' aomenc -q --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=4 --end-usage=q --cq-level=45 --aq-mode=1  -o'
+FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
+
+
 def arg_parsing():
     """
     Command line parser
@@ -31,9 +35,7 @@ def arg_parsing():
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str,
-                        default=' aomenc -q --passes=1   --tile-columns=2 --tile-rows=2  --cpu-used=3 --end-usage=q --cq-level=25 --aq-mode=1  -o',
-                        help='FFmpeg settings')
+    parser.add_argument('--encoding_params', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
     return parser.parse_args()
@@ -69,6 +71,7 @@ def get_video_queue(source_path):
             videos.append([file, f])
 
     videos = sorted(videos, key=lambda x: -x[1])
+    print(f'Splited videos: {len(videos)}')
     return videos
 
 
@@ -78,8 +81,11 @@ def encode(commands):
     TODO:
     Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
     """
-    cmd = f'ffmpeg {commands}'
-    subprocess.Popen(cmd, shell=True).wait()
+    print(f'Start: {commands[1]}')
+
+    cmd = f'{FFMPEG} {commands[0]}'
+    Popen(cmd, shell=True,  stderr=PIPE).wait()
+    print(f'Done:  {commands[1]}')
 
 
 def concat(input_video):
@@ -111,13 +117,14 @@ def main(input_video, encoding_params, num_worker):
 
     # Spliting video and sorting big-first
     split_video(input_video)
-    vid_queue = get_video_queue('temp')
+    vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
-    commands = [f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -' for file in files]
+    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - | {encoding_params} {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
+    print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}')
     pool = Pool(num_worker)
     pool.map(encode, commands)
 
@@ -132,7 +139,7 @@ if __name__ == '__main__':
     # Main thread
     start = time.time()
     main(args.input_file, args.encoding_params, args.num_worker)
-    print(f'Encoding completed in {round(time.time()-start)} seconds')
+    print(f'Completed in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
     shutil.rmtree(join(os.getcwd(), "temp"))

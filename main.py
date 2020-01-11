@@ -198,7 +198,7 @@ if __name__ == '__main__':
     # Main thread
     start = time.time()
     main(args.input_file, args.encoding_params, args.num_worker)
-    print(f'Completed in {round(time.time()-start, 1)} seconds')
+    print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
     rmtree(join(os.getcwd(), "temp"))

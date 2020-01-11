@@ -73,6 +73,8 @@ def arg_parsing():
     parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
     parser.add_argument('--audio_params', '-a' , type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
+    parser.add_argument('--segment_length', '-L', type=str, default='60', help='Length of each segment, then using segment spliting mode')
+    parser.add_argument('--spliting_method', type=str, default='scenedetect', help='method for spliting video [scenedetect/segment]')
     return parser.parse_args()
 
 
@@ -109,12 +111,17 @@ def extract_audio(input_vid, audio_params):
     Popen(cmd, shell=True).wait()
 
 
-def split_video(input_vid):
-    """
-    PySceneDetect used split video by scenes and pass it to encoder
-    Optimal threshold settings 15-50
-    """
-    cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
+def split_video(input_vid, method='scenedetect', segment_length='60'):
+    if method == 'scenedetect':
+        """
+        PySceneDetect used split video by scenes and pass it to encoder
+        Optimal threshold settings 15-50
+        """
+        cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
+    elif method == 'segment':
+        cmd2 = f'ffmpeg -i \"{input_vid}\" -c:v copy -segment_time {segment_length} -f segment -reset_timestamps 1 .temp/split/segment%04d.mkv'
+    else:
+        raise SystemExit('Invalid video spliting method')
     call(cmd2, shell=True)
     print(f'Video {input_vid} splitted')
 
@@ -208,7 +215,7 @@ def main(arg):
     extract_audio(arg.file_path, arg.audio_params)
 
     # Splitting video and sorting big-first
-    split_video(arg.file_path)
+    split_video(arg.file_path, arg.spliting_method, arg.segment_length)
     vid_queue = get_video_queue('.temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 

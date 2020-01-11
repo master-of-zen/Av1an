@@ -6,6 +6,7 @@ TODO:
 DONE make encoding queue with limiting by workers
 DONE make concatenating videos after encoding
 DONE make passing your arguments for encoding,
+2-pass encode by default for better quality
 make separate audio and encode it separately,
 """
 #import asyncio

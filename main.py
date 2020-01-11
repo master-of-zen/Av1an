@@ -70,7 +70,7 @@ def arg_parsing():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding_params', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
-    parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
+    parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
     parser.add_argument('--audio_params', '-a' , type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
     return parser.parse_args()
@@ -154,7 +154,10 @@ def concatenate_video(input_video):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'{FFMPEG} -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy -y {input_video.split(".")[0]}_av1.webm'
+    concat = join(os.getcwd(), "temp", "concat.txt")
+    audio = join(os.getcwd(), "temp", "audio.mkv")
+    output = f'{input_video.split(".")[0]}_av1.webm'
+    cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} -i {audio} -c copy -y {output}'
     Popen(cmd, shell=True).wait()
 
 
@@ -181,13 +184,13 @@ def compose_encoding_queue(encoding_params, files):
 def main(arg):
 
     # Check validity of request and create temp folders/files
-    setup(arg.input_file)
+    setup(arg.file_path)
 
     # Extracting audio
-    extract_audio(arg.input_file, arg.audio_params)
+    extract_audio(arg.file_path, arg.audio_params)
 
     # Splitting video and sorting big-first
-    split_video(arg.input_file)
+    split_video(arg.file_path)
     vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
@@ -208,7 +211,7 @@ def main(arg):
     bar.tick()
 
     # Merging all encoded videos to 1
-    concatenate_video(arg.input_file)
+    concatenate_video(arg.file_path)
 
 
 if __name__ == '__main__':

@@ -126,6 +126,9 @@ def extract_audio(input_vid, audio_params):
 
 
 def split_video(input_vid):
+    """
+    PySceneDetect used split video by scenes and pass it to encoder
+    """
     cmd2 = f'scenedetect -q -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
     call(cmd2, shell=True)
     print(f'Video {input_vid} splitted')

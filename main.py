@@ -98,7 +98,7 @@ def determine_resources():
     """
     cpu = os.cpu_count()
     ram = round(virtual_memory().total / 2**30)
-    return ceil(min(cpu, ram/2))
+    return ceil(min(cpu, ram/1.5))
 
 
 def setup(input_file):

@@ -25,6 +25,7 @@ except:
 
 
 DEFAULT_ENCODE = ' -w 72 -h 128 --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
+DEFAULT_AUDIO = ' -acodec copy'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
@@ -98,6 +99,7 @@ def arg_parsing():
     parser.add_argument('--encoding_params', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
     parser.add_argument('--input_file', '-i', type=str, default='bruh.mp4', help='input video file')
     parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
+    parser.add_argument('--audio_params', '-a' , type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
     return parser.parse_args()
 
 
@@ -111,13 +113,13 @@ def determine_resources():
     return ceil(min(cpu, ram/2))
 
 
-def extract_audio(input_vid):
+def extract_audio(input_vid, audio_params):
     """
     Extracting audio from video file
     Encoding audio to opus.
     Posible to -acodec copy to .mkv container without reencoding
     """
-    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn -acodec copy {join(os.getcwd(),"temp","audio.mkv")}'
+    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),"temp","audio.mkv")}'
     Popen(cmd, shell=True).wait()
 
 
@@ -178,7 +180,7 @@ async def async_encode(commands, num_worker=4):
 """
 
 
-def main(input_video, encoding_params, num_worker):
+def main(input_video, encoding_params, num_worker, audio_params):
 
     # Make temporal directories, and remove them if already presented
     if os.path.isdir(join(os.getcwd(), "temp")):
@@ -188,7 +190,7 @@ def main(input_video, encoding_params, num_worker):
     os.makedirs(join(os.getcwd(), 'temp', 'encode'))
 
     # Extracting audio
-    extract_audio(input_video)
+    extract_audio(input_video, audio_params)
 
     # Splitting video and sorting big-first
     split_video(input_video)
@@ -220,7 +222,7 @@ if __name__ == '__main__':
 
     # Main thread
     start = time.time()
-    main(args.input_file, args.encoding_params, args.num_worker)
+    main(args.input_file, args.encoding_params, args.num_worker, args.audio_params)
     print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders

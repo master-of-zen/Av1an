@@ -159,12 +159,22 @@ def concatenate_video(input_video):
 
 
 def compose_encoding_queue(encoding_params, files):
-    # Making list of commands for encoding
+    """
+    Composing encoding commands
+    1_pass:
+    ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+    aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
+    """
     ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
 
-    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} {ffmpeg_pipe}' +
-                 f' aomenc -q {encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file)
-                for file in files]
+    file_paths = [(f'{join(os.getcwd(), "temp", "split", file_name)}',
+                   f'{join(os.getcwd(), "temp", "encode", file_name)}',
+                   file_name) for file_name in files]
+
+    commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
+                 f' aomenc -q {encoding_params} -o {file[1]} -',  file[2])
+                for file in file_paths]
+
     return commands
 
 

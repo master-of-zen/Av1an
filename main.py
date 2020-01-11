@@ -34,29 +34,28 @@ class ProgressBar:
     Progress Bar for tracking encoding progress
     """
 
-    def __init__(self, size):
+    def __init__(self, tasks):
         self.iteration: int = 0
-        self.total = size
-        self.length = 50
-        self.fill = '█'
+        self.tasks = tasks
 
         # Print on empty bar on initialization
         self.print()
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
-        self.length = terminal_size - 14 - 2 * len(str(self.total))
+        bar_length = terminal_size - (2 * len(str(self.tasks))) - 11
 
         if self.iteration == 0:
             percent = 0
-            filled_length = 0
+            fill_size = 0
         else:
-            percent = round(100 * (self.iteration / self.total), 1)
-            filled_length = int(self.length * self.iteration // self.total)
+            percent = round(100 * (self.iteration / self.tasks), 1)
+            fill_size = int(self.bar_length * self.iteration // self.tasks)
 
-        bar_size = (self.fill * filled_length) + '-' * (self.length - filled_length)
-        print(f'\r|{bar_size}| {percent}% {self.iteration}/{self.total} ', end='')
+        end = f'{percent}% {self.iteration}/{self.tasks}'
+        in_bar = ('█' * fill_size) + '-' * (self.bar_length - fill_size)
 
+        print(f'\r|{in_bar}| {end} ', end='')
 
     def tick(self):
         self.iteration += 1

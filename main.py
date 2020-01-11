@@ -88,7 +88,6 @@ class ProgressBar:
 # Progress Bar initialization
 bar = ProgressBar()
 
-
 def arg_parsing():
     """
     Command line parser
@@ -111,6 +110,20 @@ def determine_resources():
     cpu = os.cpu_count()
     ram = round(virtual_memory().total / 2**30)
     return ceil(min(cpu, ram/2))
+
+
+def setup(input_file):
+
+    if not os.path.exists(input_file):
+        print("File don't exist")
+        exit()
+
+    # Make temporal directories, and remove them if already presented
+    if os.path.isdir(join(os.getcwd(), "temp")):
+        rmtree(join(os.getcwd(), "temp"))
+
+    os.makedirs(join(os.getcwd(), 'temp', 'split'))
+    os.makedirs(join(os.getcwd(), 'temp', 'encode'))
 
 
 def extract_audio(input_vid, audio_params):
@@ -180,49 +193,43 @@ async def async_encode(commands, num_worker=4):
 """
 
 
-def main(input_video, encoding_params, num_worker, audio_params):
+def main(arg):
 
-    # Make temporal directories, and remove them if already presented
-    if os.path.isdir(join(os.getcwd(), "temp")):
-        rmtree(join(os.getcwd(), "temp"))
-
-    os.makedirs(join(os.getcwd(), 'temp', 'split'))
-    os.makedirs(join(os.getcwd(), 'temp', 'encode'))
+    # Check validity of request and create temp folders/files
+    setup(arg.input_file)
 
     # Extracting audio
-    extract_audio(input_video, audio_params)
+    extract_audio(arg.input_file, arg.audio_params)
 
     # Splitting video and sorting big-first
-    split_video(input_video)
+    split_video(arg.input_file)
     vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
     # Making list of commands for encoding
     commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
-                f' aomenc -q {encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
+                f' aomenc -q {arg.encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
-    print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}\nEncoding..')
+    print(f'Starting encoding with {arg.num_worker} workers. \nParameters:{arg.encoding_params}\nEncoding..')
 
     # Progress Bar
     bar.total = (len(vid_queue))
     bar.start()
 
     #async_encode(commands, num_worker)
-    pool = Pool(num_worker)
+    pool = Pool(arg.num_worker)
     pool.map(encode, commands)
 
     # Merging all encoded videos to 1
-    concat(input_video)
+    concat(arg.input_file)
 
 
 if __name__ == '__main__':
 
-    args = arg_parsing()
-
     # Main thread
     start = time.time()
-    main(args.input_file, args.encoding_params, args.num_worker, args.audio_params)
+    main(arg_parsing())
     print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders

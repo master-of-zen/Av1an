@@ -98,7 +98,6 @@ def concat(input_video):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    cmd = f'{FFMPEG} -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy {input_video.split(".")[0]}_av1.webm'
     cmd = f'{FFMPEG} -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy -y {input_video.split(".")[0]}_av1.webm'
     Popen(cmd, shell=True,  stderr=PIPE).wait()
 

@@ -8,7 +8,7 @@ DONE make concatenating videos after encoding
 DONE make passing your arguments for encoding,
 make separate audio and encode it separately,
 """
-import sys
+#import asyncio
 import os
 from os.path import join
 from psutil import virtual_memory
@@ -24,7 +24,7 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-DEFAULT_ENCODE = ' --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
+DEFAULT_ENCODE = ' -w 72 -h 128 --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
@@ -37,19 +37,22 @@ class ProgressBar:
                  prefix='',
                  suffix='',
                  decimals=1,
-                 length=int(os.popen('stty size', 'r').read().split()[1]) - 10,
                  fill='█',
                  print_end="\r"):
-        self.iteration = 0
+        self.iteration: int = 0
         self.total = 0
         self.prefix = prefix
         self.suffix = suffix
         self.decimals = decimals
-        self.length = length
+        self.length = 50
         self.fill = fill
         self.print_end = print_end
+        self.suffix_percent_lenght = 4
 
     def print(self):
+        terminal_size = int(os.popen('stty size', 'r').read().split()[1])
+        self.length = terminal_size - 10 - 2 * len(str(self.total))
+
         if self.iteration == 0:
             percent = 0
             filled_length = 0
@@ -58,16 +61,26 @@ class ProgressBar:
             filled_length = int(self.length * self.iteration // self.total)
 
         bar_size = (self.fill * filled_length) + '-' * (self.length - filled_length)
-        print(f'\r{self.prefix}|{bar_size}| {percent}% {self.suffix}', end='')
-        # Print New Line on Complete
+        
+        print(f'\r{self.prefix}|{bar_size}| {percent}% {self.iteration}/{self.total}{self.suffix} ', end='')
+
         if self.iteration == self.total:
-            print()
+            self.iteration +=1
+            self.print()
 
     def start(self):
         self.print()
+        with open(f'{os.getcwd()}/temp/.counter', 'w+') as f:
+            f.write(f'0')
 
     def tick(self):
-        self.iteration += 1
+        with open(f'{os.getcwd()}/temp/.counter', 'r+') as f:
+            f.seek(0)
+            counter = int(f.read())
+            self.iteration: int = int(counter) + 1
+            f.seek(0)
+            f.write(f'{self.iteration}')
+
         self.print()
 
 
@@ -155,6 +168,16 @@ def concat(input_video):
     Popen(cmd, shell=True,  stderr=PIPE).wait()
 
 
+"""
+TODO: async encode instead of having pool of python instances
+async def async_encode(commands, num_worker=4):
+    tasks = [asyncio.create_task(encode(task)) for task in commands]
+    sem = asyncio.Semaphore(num_worker)
+    for task in tasks:
+        await task
+"""
+
+
 def main(input_video, encoding_params, num_worker):
 
     # Make temporal directories, and remove them if already presented
@@ -167,11 +190,10 @@ def main(input_video, encoding_params, num_worker):
     # Extracting audio
     extract_audio(input_video)
 
-    # Spliting video and sorting big-first
+    # Splitting video and sorting big-first
     split_video(input_video)
     vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
-
 
     # Making list of commands for encoding
     commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
@@ -184,6 +206,7 @@ def main(input_video, encoding_params, num_worker):
     bar.total = (len(vid_queue))
     bar.start()
 
+    #async_encode(commands, num_worker)
     pool = Pool(num_worker)
     pool.map(encode, commands)
 

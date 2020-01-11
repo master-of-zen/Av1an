@@ -158,6 +158,16 @@ def concat(input_video):
     Popen(cmd, shell=True).wait()
 
 
+def compose_encoding_queue(encoding_params, files):
+    # Making list of commands for encoding
+    ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
+
+    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} {ffmpeg_pipe}' +
+                 f' aomenc -q {encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file)
+                for file in files]
+    return commands
+
+
 def main(arg):
 
     # Check validity of request and create temp folders/files
@@ -171,11 +181,10 @@ def main(arg):
     vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
-    # Making list of commands for encoding
-    commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
-                f' aomenc -q {arg.encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
+    # Make encode queue
+    commands = compose_encoding_queue(arg.encoding_params, files)
 
-    # Creating threading pool to encode fixed amount of files at the same time
+    # Creating threading pool to encode bunch of files at the same time
     print(f'Starting encoding with {arg.num_worker} workers. \nParameters:{arg.encoding_params}\nEncoding..')
 
     # Progress Bar

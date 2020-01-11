@@ -24,7 +24,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 #-w 252 -h 144
-DEFAULT_ENCODE = ' -w 35 -h 20  --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
+DEFAULT_ENCODE = ' -w 35 -h 20 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
 DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 12k'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
@@ -169,16 +169,23 @@ def compose_encoding_queue(encoding_params, files):
     aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
     """
     ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
-
+    single_pass = 'aomenc -q --passes=1 '
+    two_pass = ''
     file_paths = [(f'{join(os.getcwd(), "temp", "split", file_name)}',
                    f'{join(os.getcwd(), "temp", "encode", file_name)}',
                    file_name) for file_name in files]
 
-    commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' aomenc -q {encoding_params} -o {file[1]} -',  file[2])
-                for file in file_paths]
+    pass_1_commands = [
+        (f'-i {file[0]} {ffmpeg_pipe}' +
+         f' {single_pass} {encoding_params} -o {file[1]} -',  file[2])
+        for file in file_paths]
 
-    return commands
+    pass_2_commands= [
+        (f'-i {file[0]} {ffmpeg_pipe}' +
+         f'')
+        for file in file_paths]
+
+    return pass_1_commands
 
 
 def main(arg):

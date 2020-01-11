@@ -5,7 +5,7 @@
     </br>
 </h1>
 
-<center>  All-in-one tool for streamline and easy av1 encoding </center>
+<h2 align="center">All-in-one tool for streamline and easy av1 encoding</h2>
 
 ## Easy And Efficient
 

@@ -50,10 +50,10 @@ class ProgressBar:
             fill_size = 0
         else:
             percent = round(100 * (self.iteration / self.tasks), 1)
-            fill_size = int(self.bar_length * self.iteration // self.tasks)
+            fill_size = int(bar_length * self.iteration // self.tasks)
 
         end = f'{percent}% {self.iteration}/{self.tasks}'
-        in_bar = ('█' * fill_size) + '-' * (self.bar_length - fill_size)
+        in_bar = ('█' * fill_size) + '-' * (bar_length - fill_size)
 
         print(f'\r|{in_bar}| {end} ', end='')
 

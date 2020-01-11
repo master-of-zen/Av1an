@@ -10,6 +10,7 @@ DONE make passing your arguments for encoding,
 make separate audio and encode it separately,
 """
 import os
+import shutil
 from os.path import join
 from psutil import virtual_memory
 from subprocess import Popen, call
@@ -42,7 +43,7 @@ class ProgressBar:
         self.print()
 
     def print(self):
-        terminal_size = int(os.popen('stty size', 'r').read().split()[1])
+        terminal_size, _ = shutil.get_terminal_size()
         bar_length = terminal_size - (2 * len(str(self.tasks))) - 13
 
         if self.iteration == 0:

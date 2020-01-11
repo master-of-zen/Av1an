@@ -28,6 +28,53 @@ DEFAULT_ENCODE = ' --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
+class ProgressBar:
+    """
+    Progress Bar for tracking encoding progress
+    """
+
+    def __init__(self,
+                 prefix='',
+                 suffix='',
+                 decimals=1,
+                 length=int(os.popen('stty size', 'r').read().split()[1]) - 10,
+                 fill='█',
+                 print_end="\r"):
+        self.iteration = 0
+        self.total = 0
+        self.prefix = prefix
+        self.suffix = suffix
+        self.decimals = decimals
+        self.length = length
+        self.fill = fill
+        self.print_end = print_end
+
+    def print(self):
+        if self.iteration == 0:
+            percent = 0
+            filled_length = 0
+        else:
+            percent = ("{0:." + str(self.decimals) + "f}").format(100 * (self.iteration / float(self.total)))
+            filled_length = int(self.length * self.iteration // self.total)
+
+        bar_size = (self.fill * filled_length) + '-' * (self.length - filled_length)
+        print(f'\r{self.prefix}|{bar_size}| {percent}% {self.suffix}', end='')
+        # Print New Line on Complete
+        if self.iteration == self.total:
+            print()
+
+    def start(self):
+        self.print()
+
+    def tick(self):
+        self.iteration += 1
+        self.print()
+
+
+# Progress Bar initialization
+bar = ProgressBar()
+
+
 def arg_parsing():
     """
     Command line parser
@@ -42,6 +89,10 @@ def arg_parsing():
 
 
 def determine_resources():
+    """
+    Returns number of workers that machine can handle
+    :return: int
+    """
     cpu = os.cpu_count()
     ram = round(virtual_memory().total / 2**30)
     return ceil(min(cpu, ram/2))
@@ -84,7 +135,9 @@ def encode(commands):
 
     cmd = f'{FFMPEG} {commands[0]}'
     Popen(cmd, shell=True,  stderr=PIPE).wait()
-    print(f'Done: {commands[1].split(".")[0].split("-")[-1]}')
+
+    # +1 to progress bar after encode is finished
+    bar.tick()
 
 
 def concat(input_video):
@@ -119,12 +172,18 @@ def main(input_video, encoding_params, num_worker):
     vid_queue = get_video_queue('temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
+
     # Making list of commands for encoding
     commands = [(f'-i {join(os.getcwd(), "temp", "split", file)} -pix_fmt yuv420p -f yuv4mpegpipe - |' +
                 f' aomenc -q {encoding_params} -o {join(os.getcwd(), "temp", "encode", file)} -', file) for file in files]
 
     # Creating threading pool to encode fixed amount of files at the same time
     print(f'Starting encoding with {num_worker} workers. \nParameters:{encoding_params}\nEncoding..')
+
+    # Progress Bar
+    bar.total = (len(vid_queue))
+    bar.start()
+
     pool = Pool(num_worker)
     pool.map(encode, commands)
 

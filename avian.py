@@ -43,7 +43,7 @@ class ProgressBar:
         self.print()
 
     def print(self):
-        terminal_size, _ = shutil.get_terminal_size()
+        terminal_size, _ = shutil.get_terminal_size((80, 20))
         bar_length = terminal_size - (2 * len(str(self.tasks))) - 13
 
         if self.iteration == 0:

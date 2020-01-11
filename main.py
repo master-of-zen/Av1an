@@ -24,7 +24,7 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-DEFAULT_ENCODE = ' --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=5 --end-usage=q --cq-level=63 --aq-mode=1'
+DEFAULT_ENCODE = ' --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 

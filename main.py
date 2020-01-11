@@ -43,7 +43,7 @@ class ProgressBar:
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
-        bar_length = terminal_size - (2 * len(str(self.tasks))) - 11
+        bar_length = terminal_size - (2 * len(str(self.tasks))) - 13
 
         if self.iteration == 0:
             percent = 0
@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
     main(arg_parsing())
 
-    print(f'\nCompleted in {round(time.time()-start, 1)} seconds\n')
+    print(f'\n Completed in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
     rmtree(join(os.getcwd(), "temp"))

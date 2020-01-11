@@ -25,7 +25,7 @@ except:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-DEFAULT_ENCODE = ' -h 40 -w 70  --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
+DEFAULT_ENCODE = ' -w 128 -h 72 --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
 DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 12k'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
@@ -53,9 +53,9 @@ class ProgressBar:
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
-        self.length = terminal_size - 14 - 2 * len(str(self.total))
+        self.length = terminal_size - 11 - 2 * len(str(self.total))
 
-        if self.iteration == 1:
+        if self.iteration == 0:
             percent = 0
             filled_length = 0
         else:
@@ -63,22 +63,14 @@ class ProgressBar:
             filled_length = int(self.length * self.iteration // self.total)
 
         bar_size = (self.fill * filled_length) + '-' * (self.length - filled_length)
-        
         print(f'\r{self.prefix}|{bar_size}| {percent}% {self.iteration}/{self.total}{self.suffix} ', end='')
+
 
     def start(self):
         self.print()
-        with open(f'{os.getcwd()}/temp/.counter', 'w+') as f:
-            f.write(f'0')
 
     def tick(self):
-        with open(f'{os.getcwd()}/temp/.counter', 'r+') as f:
-            f.seek(0)
-            counter = int(f.read())
-            self.iteration: int = int(counter) + 1
-            f.seek(0)
-            f.write(f'{self.iteration}')
-
+        self.iteration += 1
         self.print()
 
 
@@ -162,9 +154,6 @@ def encode(commands):
     cmd = f'{FFMPEG} {commands[0]}'
 
     Popen(cmd, shell=True).wait()
-    bar.tick()
-
-    # +1 to progress bar after encode is finished
 
 
 def concat(input_video):
@@ -216,9 +205,12 @@ def main(arg):
     bar.total = (len(vid_queue))
     bar.start()
 
-    # async_encode(commands, num_worker)
+    #async_encode(commands, num_worker)
     pool = Pool(arg.num_worker)
-    pool.map(encode, commands)
+    for i, _ in enumerate(pool.imap_unordered(encode, commands), 1):
+        bar.tick()
+
+    bar.tick()
 
     # Merging all encoded videos to 1
     concat(arg.input_file)
@@ -231,8 +223,9 @@ if __name__ == '__main__':
 
     main(arg_parsing())
 
-    bar.tick()
     print(f'\nCompleted in {round(time.time()-start, 1)} seconds\n')
 
     # Delete temp folders
     rmtree(join(os.getcwd(), "temp"))
+    # Fix dumb bug that I don't even know
+    os.popen('stty sane', 'r')

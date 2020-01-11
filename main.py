@@ -37,21 +37,14 @@ class ProgressBar:
     Progress Bar for tracking encoding progress
     """
 
-    def __init__(self,
-                 prefix='',
-                 suffix='',
-                 decimals=1,
-                 fill='█',
-                 print_end="\r"):
+    def __init__(self, size):
         self.iteration: int = 0
-        self.total = 0
-        self.prefix = prefix
-        self.suffix = suffix
-        self.decimals = decimals
+        self.total = size
         self.length = 50
-        self.fill = fill
-        self.print_end = print_end
-        self.suffix_percent_lenght = 4
+        self.fill = '█'
+
+        # Print on empty bar on initialization
+        self.print()
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
@@ -61,22 +54,16 @@ class ProgressBar:
             percent = 0
             filled_length = 0
         else:
-            percent = ("{0:." + str(self.decimals) + "f}").format(100 * (self.iteration / float(self.total)))
+            percent = round(100 * (self.iteration / self.total), 1)
             filled_length = int(self.length * self.iteration // self.total)
 
         bar_size = (self.fill * filled_length) + '-' * (self.length - filled_length)
-        print(f'\r{self.prefix}|{bar_size}| {percent}% {self.iteration}/{self.total}{self.suffix} ', end='')
+        print(f'\r|{bar_size}| {percent}% {self.iteration}/{self.total} ', end='')
 
-    def start(self):
-        self.print()
 
     def tick(self):
         self.iteration += 1
         self.print()
-
-
-# Progress Bar initialization
-bar = ProgressBar()
 
 
 def arg_parsing():
@@ -196,8 +183,7 @@ def main(arg):
     print(f'Starting encoding with {arg.num_worker} workers. \nParameters:{arg.encoding_params}\nEncoding..')
 
     # Progress Bar
-    bar.total = (len(vid_queue))
-    bar.start()
+    bar = ProgressBar(len(vid_queue))
 
     # async_encode(commands, num_worker)
     pool = Pool(arg.num_worker)

@@ -8,14 +8,14 @@ DONE make concatenating videos after encoding
 DONE make passing your arguments for encoding,
 make separate audio and encode it separately,
 """
-
+import sys
 import os
 from os.path import join
 from psutil import virtual_memory
 from subprocess import Popen, PIPE, call
 import argparse
 import time
-import shutil
+from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
 try:

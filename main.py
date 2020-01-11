@@ -93,11 +93,11 @@ def setup(input_file):
         exit()
 
     # Make temporal directories, and remove them if already presented
-    if os.path.isdir(join(os.getcwd(), "temp")):
-        rmtree(join(os.getcwd(), "temp"))
+    if os.path.isdir(join(os.getcwd(), ".temp")):
+        rmtree(join(os.getcwd(), ".temp"))
 
-    os.makedirs(join(os.getcwd(), 'temp', 'split'))
-    os.makedirs(join(os.getcwd(), 'temp', 'encode'))
+    os.makedirs(join(os.getcwd(), '.temp', 'split'))
+    os.makedirs(join(os.getcwd(), '.temp', 'encode'))
 
 
 def extract_audio(input_vid, audio_params):
@@ -105,7 +105,7 @@ def extract_audio(input_vid, audio_params):
     Extracting audio from video file
     Encoding audio if needed
     """
-    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),"temp","audio.mkv")}'
+    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
     Popen(cmd, shell=True).wait()
 
 
@@ -114,7 +114,7 @@ def split_video(input_vid):
     PySceneDetect used split video by scenes and pass it to encoder
     Optimal threshold settings 15-50
     """
-    cmd2 = f'scenedetect -q -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
+    cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 50 split-video -c'
     call(cmd2, shell=True)
     print(f'Video {input_vid} splitted')
 
@@ -147,14 +147,14 @@ def concatenate_video(input_video):
     Using FFMPEG to concatenate all encoded videos to 1 file.
     Reading all files in A-Z order and saving it to concat.txt
     """
-    with open(f'{os.getcwd()}/temp/concat.txt', 'w') as f:
+    with open(f'{os.getcwd()}/.temp/concat.txt', 'w') as f:
 
-        for root, firs, files in os.walk(join(os.getcwd(), 'temp', 'encode')):
+        for root, firs, files in os.walk(join(os.getcwd(), '.temp', 'encode')):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    concat = join(os.getcwd(), "temp", "concat.txt")
-    audio = join(os.getcwd(), "temp", "audio.mkv")
+    concat = join(os.getcwd(), ".temp", "concat.txt")
+    audio = join(os.getcwd(), ".temp", "audio.mkv")
     output = f'{input_video.split(".")[0]}_av1.webm'
     cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} -i {audio} -c copy -y {output}'
     Popen(cmd, shell=True).wait()
@@ -179,8 +179,8 @@ def compose_encoding_queue(encoding_params, files):
     single_pass = 'aomenc -q --passes=1 '
     two_pass_1 = '--passes=2 --pass=1'
     two_pass_2 = '--passes=2 --pass=2'
-    file_paths = [(f'{join(os.getcwd(), "temp", "split", file_name)}',
-                   f'{join(os.getcwd(), "temp", "encode", file_name)}',
+    file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
+                   f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                    file_name) for file_name in files]
 
     pass_1_commands = [
@@ -209,7 +209,7 @@ def main(arg):
 
     # Splitting video and sorting big-first
     split_video(arg.file_path)
-    vid_queue = get_video_queue('temp/split')
+    vid_queue = get_video_queue('.temp/split')
     files = [i[0] for i in vid_queue[:-1]]
 
     # Make encode queue
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     print(f'\n Completed in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
-    rmtree(join(os.getcwd(), "temp"))
+    rmtree(join(os.getcwd(), ".temp"))
 
     # To prevent console from hanging
     os.popen('stty sane', 'r')

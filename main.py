@@ -9,7 +9,6 @@ DONE make passing your arguments for encoding,
 2-pass encode by default for better quality
 make separate audio and encode it separately,
 """
-#import asyncio
 import os
 from os.path import join
 from psutil import virtual_memory
@@ -21,7 +20,7 @@ from math import ceil
 from multiprocessing import Pool
 try:
     import scenedetect
-except:
+except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 

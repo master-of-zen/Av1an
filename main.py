@@ -172,16 +172,6 @@ def concat(input_video):
     Popen(cmd, shell=True).wait()
 
 
-"""
-TODO: async encode instead of having pool of python instances
-async def async_encode(commands, num_worker=4):
-    tasks = [asyncio.create_task(encode(task)) for task in commands]
-    sem = asyncio.Semaphore(num_worker)
-    for task in tasks:
-        await task
-"""
-
-
 def main(arg):
 
     # Check validity of request and create temp folders/files
@@ -228,5 +218,6 @@ if __name__ == '__main__':
 
     # Delete temp folders
     rmtree(join(os.getcwd(), "temp"))
-    # Fix dumb bug that I don't even know
+
+    # To prevent console from hanging
     os.popen('stty sane', 'r')

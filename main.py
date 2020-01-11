@@ -52,7 +52,7 @@ class ProgressBar:
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
-        self.length = terminal_size - 10 - 2 * len(str(self.total))
+        self.length = terminal_size - 11 - 2 * len(str(self.total))
 
         if self.iteration == 0:
             percent = 0

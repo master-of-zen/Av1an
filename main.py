@@ -106,7 +106,7 @@ def main(input_video, encoding_params, num_worker):
 
     # Make temporal directories, and remove them if already presented
     if os.path.isdir(join(os.getcwd(), "temp")):
-        shutil.rmtree(join(os.getcwd(), "temp"))
+        rmtree(join(os.getcwd(), "temp"))
 
     os.makedirs(join(os.getcwd(), 'temp', 'split'))
     os.makedirs(join(os.getcwd(), 'temp', 'encode'))
@@ -142,4 +142,4 @@ if __name__ == '__main__':
     print(f'Completed in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
-    shutil.rmtree(join(os.getcwd(), "temp"))
+    rmtree(join(os.getcwd(), "temp"))

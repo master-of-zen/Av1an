@@ -7,6 +7,9 @@ temp/
 
 # C extensions
 *.so
+*.mp4
+*.av1
+*.webm
 
 # Distribution / packaging
 .Python

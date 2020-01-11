@@ -26,6 +26,9 @@ except ImportError:
 
 DEFAULT_ENCODE = ' -h 40 -w 70  --passes=1 --tile-columns=2 --tile-rows=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
 DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 12k'
+#-w 252 -h 144
+DEFAULT_ENCODE = ' -w 70 -h 40  --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0'
+DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 24k'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
@@ -117,8 +120,7 @@ def setup(input_file):
 def extract_audio(input_vid, audio_params):
     """
     Extracting audio from video file
-    Encoding audio to opus.
-    Posible to -acodec copy to .mkv container without reencoding
+    Encoding audio if needed
     """
     cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),"temp","audio.mkv")}'
     Popen(cmd, shell=True).wait()
@@ -127,6 +129,7 @@ def extract_audio(input_vid, audio_params):
 def split_video(input_vid):
     """
     PySceneDetect used split video by scenes and pass it to encoder
+    Optimal threshold settings 15-50
     """
     cmd2 = f'scenedetect -q -i {input_vid}  --output temp/split detect-content --threshold 50 split-video -c'
     call(cmd2, shell=True)

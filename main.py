@@ -53,9 +53,9 @@ class ProgressBar:
 
     def print(self):
         terminal_size = int(os.popen('stty size', 'r').read().split()[1])
-        self.length = terminal_size - 11 - 2 * len(str(self.total))
+        self.length = terminal_size - 14 - 2 * len(str(self.total))
 
-        if self.iteration == 0:
+        if self.iteration == 1:
             percent = 0
             filled_length = 0
         else:
@@ -66,9 +66,6 @@ class ProgressBar:
         
         print(f'\r{self.prefix}|{bar_size}| {percent}% {self.iteration}/{self.total}{self.suffix} ', end='')
 
-        if self.iteration == self.total:
-            self.iteration +=1
-            self.print()
 
     def start(self):
         self.print()
@@ -232,6 +229,8 @@ if __name__ == '__main__':
     start = time.time()
     main(arg_parsing())
     print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
+    bar.tick()
+    print(f'\nCompleted in {round(time.time()-start, 1)} seconds\n')
 
     # Delete temp folders
     rmtree(join(os.getcwd(), "temp"))

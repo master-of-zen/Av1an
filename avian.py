@@ -24,7 +24,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 #-w 252 -h 144
-DEFAULT_ENCODE = ' -w 252 -h 144 --threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
+DEFAULT_ENCODE = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
 DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 12k'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
@@ -190,9 +190,9 @@ def compose_encoding_queue(encoding_params, files):
 
     pass_2_commands = [
         (f'-i {file[0]} {ffmpeg_pipe}' +
-         f' aomenc -q {two_pass_1} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
+         f' aomenc -q {two_pass_1} -w 30 -h 20 {encoding_params} --fpf={file[0]}.log -o /dev/null -',
          f'-i {file[0]} {ffmpeg_pipe}' +
-         f' aomenc -q {two_pass_2} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
+         f' aomenc -q {two_pass_2} -w 30 -h 20 {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
          , file[2])
         for file in file_paths]
 

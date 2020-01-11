@@ -143,7 +143,7 @@ def encode(commands):
     Popen(cmd, shell=True).wait()
 
 
-def concat(input_video):
+def concatenate_video(input_video):
     """
     Using FFMPEG to concatenate all encoded videos to 1 file.
     Reading all files in A-Z order and saving it to concat.txt
@@ -198,7 +198,7 @@ def main(arg):
     bar.tick()
 
     # Merging all encoded videos to 1
-    concat(arg.input_file)
+    concatenate_video(arg.input_file)
 
 
 if __name__ == '__main__':

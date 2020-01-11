@@ -13,7 +13,7 @@ make separate audio and encode it separately,
 import os
 from os.path import join
 from psutil import virtual_memory
-from subprocess import Popen, PIPE, call
+from subprocess import Popen, call
 import argparse
 import time
 from shutil import rmtree
@@ -66,7 +66,6 @@ class ProgressBar:
         
         print(f'\r{self.prefix}|{bar_size}| {percent}% {self.iteration}/{self.total}{self.suffix} ', end='')
 
-
     def start(self):
         self.print()
         with open(f'{os.getcwd()}/temp/.counter', 'w+') as f:
@@ -85,6 +84,7 @@ class ProgressBar:
 
 # Progress Bar initialization
 bar = ProgressBar()
+
 
 def arg_parsing():
     """
@@ -160,10 +160,11 @@ def encode(commands):
     """
 
     cmd = f'{FFMPEG} {commands[0]}'
-    Popen(cmd, shell=True,  stderr=PIPE).wait()
+
+    Popen(cmd, shell=True).wait()
+    bar.tick()
 
     # +1 to progress bar after encode is finished
-    bar.tick()
 
 
 def concat(input_video):
@@ -178,7 +179,7 @@ def concat(input_video):
                 f.write(f"file '{join(root, file)}'\n")
 
     cmd = f'{FFMPEG} -f concat -safe 0 -i {join(os.getcwd(), "temp", "concat.txt")} -i {join(os.getcwd(), "temp", "audio.mkv")} -c copy -y {input_video.split(".")[0]}_av1.webm'
-    Popen(cmd, shell=True,  stderr=PIPE).wait()
+    Popen(cmd, shell=True).wait()
 
 
 """
@@ -215,7 +216,7 @@ def main(arg):
     bar.total = (len(vid_queue))
     bar.start()
 
-    #async_encode(commands, num_worker)
+    # async_encode(commands, num_worker)
     pool = Pool(arg.num_worker)
     pool.map(encode, commands)
 
@@ -227,8 +228,9 @@ if __name__ == '__main__':
 
     # Main thread
     start = time.time()
+
     main(arg_parsing())
-    print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
+
     bar.tick()
     print(f'\nCompleted in {round(time.time()-start, 1)} seconds\n')
 

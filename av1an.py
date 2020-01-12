@@ -119,7 +119,7 @@ def split_video(input_vid):
     """
     cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
     call(cmd2, shell=True)
-    print(f'Video {input_vid} splitted')
+    print(f'\rVideo {input_vid} splitted')
 
 
 def get_video_queue(source_path):
@@ -156,7 +156,7 @@ def concatenate_video(input_video):
     here = os.getcwd()
     with open(f'{join(here, ".temp", "concat.txt")}', 'w') as f:
 
-        for root, firs, files in os.walk(join(os.getcwd(), '.temp', 'encode')):
+        for root, firs, files in os.walk(join(here, '.temp', 'encode')):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
@@ -172,8 +172,9 @@ def concatenate_video(input_video):
     '''
     audio = f'-i {join(here, ".temp", "audio.mkv")}'
     output = f'{input_video.split(".")[0]}_av1.mkv'
-    cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} -i {audio} -c copy -y {output}'
-    Popen(cmd, shell=True).wait()
+
+    cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output}'
+    Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
 
 
 def compose_encoding_queue(encoding_params, files, encoder):
@@ -222,7 +223,7 @@ def compose_encoding_queue(encoding_params, files, encoder):
 
     if encoder == 'rav1e':
         pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
-                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', file[2])
+                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf')
                            for file in file_paths]
         return pass_1_commands
 

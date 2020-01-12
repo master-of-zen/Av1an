@@ -66,15 +66,15 @@ def arg_parsing():
     Command line parser
     Have default params
     """
-    DEFAULT_ENCODE = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
-    DEFAULT_AUDIO = '-c:a copy'
+    default_encode_aomenc = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
+    default_audio = '-c:a copy'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', '-e', type=str, default=DEFAULT_ENCODE, help='encoding settings')
+    parser.add_argument('--encoding_params', '-e', type=str, default=default_encode_aomenc, help='encoding settings')
     parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
     parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
     parser.add_argument('--workers', '-t', type=int, default=determine_resources(), help='Number of workers')
-    parser.add_argument('--audio_params', '-a', type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
+    parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='ffmpeg audio encode settings')
     args = parser.parse_args()
     return args
 

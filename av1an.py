@@ -70,9 +70,10 @@ def arg_parsing():
     DEFAULT_AUDIO = '-c:a copy'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', '-e', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
-    parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='input video file')
-    parser.add_argument('--workers', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
+    parser.add_argument('--encoding_params', '-e', type=str, default=DEFAULT_ENCODE, help='encoding settings')
+    parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
+    parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
+    parser.add_argument('--workers', '-t', type=int, default=determine_resources(), help='Number of workers')
     parser.add_argument('--audio_params', '-a', type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
     args = parser.parse_args()
     return args
@@ -165,7 +166,7 @@ def concatenate_video(input_video):
     Popen(cmd, shell=True).wait()
 
 
-def compose_encoding_queue(encoding_params, files):
+def compose_encoding_queue(encoding_params, files, encoder):
     """
     Composing encoding commands
     Examples:
@@ -181,28 +182,35 @@ def compose_encoding_queue(encoding_params, files):
     aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
     """
     ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
-    single_pass = 'aomenc -q --passes=1 '
-    two_pass_1 = '--passes=2 --pass=1'
-    two_pass_2 = '--passes=2 --pass=2'
-    file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
-                   f'{join(os.getcwd(), ".temp", "encode", file_name)}',
-                   file_name) for file_name in files]
+    if encoder == 'aomenc':
+        single_pass = 'aomenc -q --passes=1 '
+        two_pass_1_aom = '--passes=2 --pass=1'
+        two_pass_2_aom = '--passes=2 --pass=2'
+        file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
+                       f'{join(os.getcwd(), ".temp", "encode", file_name)}',
+                       file_name) for file_name in files]
 
-    pass_1_commands = [
-        (f'-i {file[0]} {ffmpeg_pipe}' +
-         f'  {single_pass} {encoding_params} -o {file[1]} -',  file[2])
-        for file in file_paths]
+        pass_1_commands = [
+            (f'-i {file[0]} {ffmpeg_pipe}' +
+             f'  {single_pass} {encoding_params} -o {file[1]} -',  file[2])
+            for file in file_paths]
 
-    pass_2_commands = [
-        (f'-i {file[0]} {ffmpeg_pipe}' +
-         f' aomenc -q {two_pass_1} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
-         f'-i {file[0]} {ffmpeg_pipe}' +
-         f' aomenc -q {two_pass_2} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
-         , file[2])
-        for file in file_paths]
+        pass_2_commands = [
+            (f'-i {file[0]} {ffmpeg_pipe}' +
+             f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
+             f'-i {file[0]} {ffmpeg_pipe}' +
+             f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
+             , file[2])
+            for file in file_paths]
 
-    return pass_2_commands
+        return pass_2_commands
 
+    if encoder == 'rav1e':
+        pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
+                            f'  {encoding_params} -o {file[1]}.ivf -',  file[2])
+                           for file in files]
+        return pass_1_commands
+    
 
 def main(arg):
 
@@ -218,7 +226,7 @@ def main(arg):
     files = [i[0] for i in vid_queue[:-1]]
 
     # Make encode queue
-    commands = compose_encoding_queue(arg.encoding_params, files)
+    commands = compose_encoding_queue(arg.encoding_params, files, arg.encoder)
 
     # Creating threading pool to encode bunch of files at the same time
     print(f'Starting encoding with {arg.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')

@@ -71,11 +71,12 @@ def arg_parsing():
     DEFAULT_AUDIO = '-c:a copy'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
+    parser.add_argument('--encoding_params', '-e', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')
     parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='input video file')
-    parser.add_argument('--num_worker', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
-    parser.add_argument('--audio_params', '-a' , type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
-    return parser.parse_args()
+    parser.add_argument('--workers', '-t', type=int, default=determine_resources(), help='number of encodes running at a time')
+    parser.add_argument('--audio_params', '-a', type=str, default=DEFAULT_AUDIO, help='ffmpeg audio encode settings')
+    args = parser.parse_args()
+    return args
 
 
 def determine_resources():
@@ -218,13 +219,13 @@ def main(arg):
     commands = compose_encoding_queue(arg.encoding_params, files)
 
     # Creating threading pool to encode bunch of files at the same time
-    print(f'Starting encoding with {arg.num_worker} workers. \nParameters:{arg.encoding_params}\nEncoding..')
+    print(f'Starting encoding with {arg.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
 
     # Progress Bar
     bar = ProgressBar(len(vid_queue))
 
     # async_encode(commands, num_worker)
-    pool = Pool(arg.num_worker)
+    pool = Pool(arg.workers)
     for i, _ in enumerate(pool.imap_unordered(encode, commands), 1):
         bar.tick()
 

@@ -13,7 +13,7 @@
 
 
 
-Start using AV1 encoding. At current moment only available encoder is Aomenc.
+Start using AV1 encoding. At current moment only available encoders are Aomenc, Rav1e.
  
 Example with default parameters:
 

@@ -153,7 +153,8 @@ def concatenate_video(input_video):
     Using FFMPEG to concatenate all encoded videos to 1 file.
     Reading all files in A-Z order and saving it to concat.txt
     """
-    with open(f'{os.getcwd()}/.temp/concat.txt', 'w') as f:
+    here = os.getcwd()
+    with open(f'{join(here, ".temp", "concat.txt")}', 'w') as f:
 
         for root, firs, files in os.walk(join(os.getcwd(), '.temp', 'encode')):
             for file in sorted(files):
@@ -170,16 +171,20 @@ def compose_encoding_queue(encoding_params, files, encoder):
     """
     Composing encoding commands
     Examples:
-    1_pass:
+    1_pass Aomenc:
     ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
     aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
 
-    2_pass:
+    2_pass Aomenc:
     ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
     aomenc -q --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
 
     ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
     aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
+
+    rav1e:
+    ffmpeg -i bruh.mp4 -pix_fmt yuv420p -f yuv4mpegpipe - |
+     rav1e - --speed=5 --tile-rows 2 --tile-cols 2 --output  output.ivf
     """
     file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
                    f'{join(os.getcwd(), ".temp", "encode", file_name)}',

@@ -174,7 +174,7 @@ def concatenate_video(input_video):
     output = f'{input_video.split(".")[0]}_av1.mkv'
 
     cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output}'
-    Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+    Popen(cmd, shell=True).wait()
 
 
 def compose_encoding_queue(encoding_params, files, encoder):

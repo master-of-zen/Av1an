@@ -161,7 +161,7 @@ def concatenate_video(input_video):
 
     concat = join(os.getcwd(), ".temp", "concat.txt")
     audio = join(os.getcwd(), ".temp", "audio.mkv")
-    output = f'{input_video.split(".")[0]}_av1.webm'
+    output = f'{input_video.split(".")[0]}_av1.mkv'
     cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} -i {audio} -c copy -y {output}'
     Popen(cmd, shell=True).wait()
 
@@ -181,14 +181,17 @@ def compose_encoding_queue(encoding_params, files, encoder):
     ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
     aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
     """
+    file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
+                   f'{join(os.getcwd(), ".temp", "encode", file_name)}',
+                   file_name) for file_name in files]
+
+    print(file_paths[0])
+
     ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
     if encoder == 'aomenc':
         single_pass = 'aomenc -q --passes=1 '
         two_pass_1_aom = '--passes=2 --pass=1'
         two_pass_2_aom = '--passes=2 --pass=2'
-        file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
-                       f'{join(os.getcwd(), ".temp", "encode", file_name)}',
-                       file_name) for file_name in files]
 
         pass_1_commands = [
             (f'-i {file[0]} {ffmpeg_pipe}' +
@@ -207,10 +210,10 @@ def compose_encoding_queue(encoding_params, files, encoder):
 
     if encoder == 'rav1e':
         pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
-                            f'  {encoding_params} -o {file[1]}.ivf -',  file[2])
-                           for file in files]
+                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', file[2])
+                           for file in file_paths]
         return pass_1_commands
-    
+
 
 def main(arg):
 

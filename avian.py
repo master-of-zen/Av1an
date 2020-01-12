@@ -25,8 +25,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 #-w 252 -h 144
-DEFAULT_ENCODE = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
-DEFAULT_AUDIO = '-c:a copy'
+
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 
@@ -68,6 +67,8 @@ def arg_parsing():
     Command line parser
     Have default params
     """
+    DEFAULT_ENCODE = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
+    DEFAULT_AUDIO = '-c:a copy'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoding_params', type=str, default=DEFAULT_ENCODE, help='AOMENC settings')

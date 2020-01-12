@@ -123,6 +123,9 @@ def split_video(input_vid):
 
 
 def get_video_queue(source_path):
+    """
+    Returns sorted list of all videos that need to be encoded. Big first
+    """
     videos = []
     for root, dirs, files in os.walk(source_path):
         for file in files:

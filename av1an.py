@@ -66,7 +66,7 @@ def arg_parsing():
     Command line parser
     Have default params
     """
-    default_encode_aomenc = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
+    default_encode_aomenc = '--cpu-used=6 --end-usage=q --cq-level=40'
     default_audio = '-c:a copy'
 
     parser = argparse.ArgumentParser()

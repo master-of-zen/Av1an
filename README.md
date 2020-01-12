@@ -17,11 +17,11 @@ Start using AV1 encoding. At current moment only available encoders are Aomenc, 
  
 Example with default parameters:
 
-    ./avian.py -i input_file
+    ./avian.py -i input
 
 Your own parameters:
 
-    ./avian.py -i input_file -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
+    ./avian.py -i input -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
 
 <h2 align="center">Main Features</h2>
 

@@ -190,8 +190,6 @@ def compose_encoding_queue(encoding_params, files, encoder):
                    f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                    file_name) for file_name in files]
 
-    print(file_paths[0])
-
     ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
     if encoder == 'aomenc':
         single_pass = 'aomenc -q --passes=1 '

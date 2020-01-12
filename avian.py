@@ -26,7 +26,7 @@ except ImportError:
 
 #-w 252 -h 144
 DEFAULT_ENCODE = '--threads=2 --cpu-used=4 --end-usage=q --cq-level=35 --aq-mode=1'
-DEFAULT_AUDIO = '-c:a libopus -ac 1 -b:a 12k'
+DEFAULT_AUDIO = '-c:a copy'
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 
 

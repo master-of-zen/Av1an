@@ -25,7 +25,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
+FFMPEG = 'ffmpeg -hide_banner -loglevel error -an'
 
 
 class ProgressBar:

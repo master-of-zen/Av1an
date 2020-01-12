@@ -21,7 +21,7 @@ Example with default parameters:
 
 Your own parameters:
 
-    ./avian.py -i input_file -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
+    ./avian.py -i input_file -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
 
 <h2 align="center">Main Features</h2>
 

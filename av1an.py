@@ -11,6 +11,7 @@ make separate audio and encode it separately,
 """
 import os
 import shutil
+import subprocess
 from os.path import join
 from psutil import virtual_memory
 from subprocess import Popen, call
@@ -61,217 +62,208 @@ class ProgressBar:
         self.print()
 
 
-def arg_parsing():
-    """
-    Command line parser
-    Have default params
-    """
-    default_encode_aomenc = '--cpu-used=6 --end-usage=q --cq-level=40'
-    default_audio = '-c:a copy'
+class Av1an:
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--encoding_params', '-e', type=str, default=default_encode_aomenc, help='encoding settings')
-    parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
-    parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
-    parser.add_argument('--workers', '-t', type=int, default=determine_resources(), help='Number of workers')
-    parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='ffmpeg audio encode settings')
-    args = parser.parse_args()
-    return args
+    def __init__(self):
+        self.here = os.getcwd()
 
+    def arg_parsing(self):
+        """
+        Command line parser
+        Have default params
+        """
+        default_encode_aomenc = '--cpu-used=6 --end-usage=q --cq-level=40'
+        default_audio = '-c:a copy'
 
-def determine_resources():
-    """
-    Returns number of workers that machine can handle
-    :return: int
-    """
-    cpu = os.cpu_count()
-    ram = round(virtual_memory().total / 2**30)
-    return ceil(min(cpu, ram/1.5))
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--encoding_params', '-e', type=str, default=default_encode_aomenc,
+                            help='encoding settings')
+        parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
+        parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
+        parser.add_argument('--workers', '-t', type=int, default=self.determine_resources(), help='Number of workers')
+        parser.add_argument('--audio_params', '-a', type=str, default=default_audio,
+                            help='ffmpeg audio encode settings')
+        args = parser.parse_args()
+        return args
 
+    def determine_resources(self):
+        """
+        Returns number of workers that machine can handle
+        :return: int
+        """
+        cpu = os.cpu_count()
+        ram = round(virtual_memory().total / 2**30)
+        return ceil(min(cpu, ram/1.5))
 
-def setup(input_file):
+    def setup(self, input_file):
 
-    if not os.path.exists(input_file):
-        print("File don't exist")
-        exit()
+        if not os.path.exists(input_file):
+            print("File don't exist")
+            exit()
 
-    # Make temporal directories, and remove them if already presented
-    if os.path.isdir(join(os.getcwd(), ".temp")):
-        rmtree(join(os.getcwd(), ".temp"))
+        # Make temporal directories, and remove them if already presented
+        if os.path.isdir(join(os.getcwd(), ".temp")):
+            rmtree(join(self.here, ".temp"))
 
-    os.makedirs(join(os.getcwd(), '.temp', 'split'))
-    os.makedirs(join(os.getcwd(), '.temp', 'encode'))
+        os.makedirs(join(self.here, '.temp', 'split'))
+        os.makedirs(join(self.here, '.temp', 'encode'))
 
-
-def extract_audio(input_vid, audio_params):
-    """
-    Extracting audio from video file
-    Encoding audio if needed
-    """
-    cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
-    Popen(cmd, shell=True).wait()
-
-
-def split_video(input_vid):
-    """
-    PySceneDetect used split video by scenes and pass it to encoder
-    Optimal threshold settings 15-50
-    """
-    cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
-    call(cmd2, shell=True)
-    print(f'\rVideo {input_vid} splitted')
-
-
-def get_video_queue(source_path):
-    """
-    Returns sorted list of all videos that need to be encoded. Big first
-    """
-    videos = []
-    for root, dirs, files in os.walk(source_path):
-        for file in files:
-            f = os.path.getsize(os.path.join(root, file))
-            videos.append([file, f])
-
-    videos = sorted(videos, key=lambda x: -x[1])
-    print(f'Splited videos: {len(videos)}')
-    return videos
-
-
-def encode(commands):
-    """
-    Passing encoding params to ffmpeg for encoding
-    TODO:
-    Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
-    """
-    for i in commands[:-1]:
-        cmd = f'{FFMPEG} -an {i}'
+    def extract_audio(self, input_vid, audio_params):
+        """
+        Extracting audio from video file
+        Encoding audio if needed
+        """
+        cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
         Popen(cmd, shell=True).wait()
 
+    def split_video(self, input_vid):
+        """
+        PySceneDetect used split video by scenes and pass it to encoder
+        Optimal threshold settings 15-50
+        """
+        cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
+        call(cmd2, shell=True)
+        print(f'\rVideo {input_vid} splitted')
 
-def concatenate_video(input_video):
-    """
-    Using FFMPEG to concatenate all encoded videos to 1 file.
-    Reading all files in A-Z order and saving it to concat.txt
-    """
-    here = os.getcwd()
-    with open(f'{join(here, ".temp", "concat.txt")}', 'w') as f:
+    def get_video_queue(self, source_path):
+        """
+        Returns sorted list of all videos that need to be encoded. Big first
+        """
+        videos = []
+        for root, dirs, files in os.walk(source_path):
+            for file in files:
+                f = os.path.getsize(os.path.join(root, file))
+                videos.append([file, f])
 
-        for root, firs, files in os.walk(join(here, '.temp', 'encode')):
-            for file in sorted(files):
-                f.write(f"file '{join(root, file)}'\n")
+        videos = sorted(videos, key=lambda x: -x[1])
+        print(f'Splited videos: {len(videos)}')
+        return videos
 
-    concat = join(here, ".temp", "concat.txt")
-    '''
-    # original video don't have audio
-    if os.path.isfile(join(here, 'temp', 'audio.mkv')):
-        print('Audio here')
-        
-    else:
-        print('No audio')
-        audio = ''
-    '''
-    audio = f'-i {join(here, ".temp", "audio.mkv")}'
-    output = f'{input_video.split(".")[0]}_av1.mkv'
+    def encode(self, commands):
+        """
+        Passing encoding params to ffmpeg for encoding
+        TODO:
+        Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
+        """
+        for i in commands[:-1]:
+            cmd = f'{FFMPEG} -an {i}'
+            Popen(cmd, shell=True).wait()
 
-    cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output}'
-    Popen(cmd, shell=True).wait()
+    def concatenate_video(self, input_video):
+        """
+        Using FFMPEG to concatenate all encoded videos to 1 file.
+        Reading all files in A-Z order and saving it to concat.txt
+        """
+        with open(f'{join(self.here, ".temp", "concat.txt")}', 'w') as f:
 
+            for root, firs, files in os.walk(join(self.here, '.temp', 'encode')):
+                for file in sorted(files):
+                    f.write(f"file '{join(root, file)}'\n")
 
-def compose_encoding_queue(encoding_params, files, encoder):
-    """
-    Composing encoding commands
-    Examples:
-    1_pass Aomenc:
-    ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-    aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
+        concat = join(self.here, ".temp", "concat.txt")
 
-    2_pass Aomenc:
-    ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-    aomenc -q --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
+        audio = f'-i {join(self.here, ".temp", "audio.mkv")}'
+        output = f'{input_video.split(".")[0]}_av1.mkv'
 
-    ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-    aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
+        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output}'
+        Popen(cmd, shell=True).wait()
 
-    rav1e:
-    ffmpeg -i bruh.mp4 -pix_fmt yuv420p -f yuv4mpegpipe - |
-     rav1e - --speed=5 --tile-rows 2 --tile-cols 2 --output  output.ivf
-    """
-    file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
-                   f'{join(os.getcwd(), ".temp", "encode", file_name)}',
-                   file_name) for file_name in files]
+    def compose_encoding_queue(self, encoding_params, files, encoder):
+        """
+        Composing encoding commands
+        Examples:
+        1_pass Aomenc:
+        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
 
-    ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
-    if encoder == 'aomenc':
-        single_pass = 'aomenc -q --passes=1 '
-        two_pass_1_aom = '--passes=2 --pass=1'
-        two_pass_2_aom = '--passes=2 --pass=2'
+        2_pass Aomenc:
+        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        aomenc -q --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
 
-        pass_1_commands = [
-            (f'-i {file[0]} {ffmpeg_pipe}' +
-             f'  {single_pass} {encoding_params} -o {file[1]} -',  file[2])
-            for file in file_paths]
+        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
 
-        pass_2_commands = [
-            (f'-i {file[0]} {ffmpeg_pipe}' +
-             f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
-             f'-i {file[0]} {ffmpeg_pipe}' +
-             f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
-             , file[2])
-            for file in file_paths]
+        rav1e:
+        ffmpeg -i bruh.mp4 -pix_fmt yuv420p -f yuv4mpegpipe - |
+         rav1e - --speed=5 --tile-rows 2 --tile-cols 2 --output  output.ivf
+        """
+        file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
+                       f'{join(os.getcwd(), ".temp", "encode", file_name)}',
+                       file_name) for file_name in files]
 
-        return pass_2_commands
+        ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
+        if encoder == 'aomenc':
+            single_pass = 'aomenc -q --passes=1 '
+            two_pass_1_aom = '--passes=2 --pass=1'
+            two_pass_2_aom = '--passes=2 --pass=2'
 
-    if encoder == 'rav1e':
-        pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
-                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf')
-                           for file in file_paths]
-        return pass_1_commands
+            pass_1_commands = [
+                (f'-i {file[0]} {ffmpeg_pipe}' +
+                 f'  {single_pass} {encoding_params} -o {file[1]} -',  file[2])
+                for file in file_paths]
 
+            pass_2_commands = [
+                (f'-i {file[0]} {ffmpeg_pipe}' +
+                 f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
+                 f'-i {file[0]} {ffmpeg_pipe}' +
+                 f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
+                 , file[2])
+                for file in file_paths]
 
-def main(arg):
+            return pass_2_commands
 
-    # Check validity of request and create temp folders/files
-    setup(arg.file_path)
+        if encoder == 'rav1e':
+            pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
+                                f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf')
+                               for file in file_paths]
+            return pass_1_commands
 
-    # Extracting audio
-    extract_audio(arg.file_path, arg.audio_params)
+    def main( self, arg):
 
-    # Splitting video and sorting big-first
-    split_video(arg.file_path)
-    vid_queue = get_video_queue('.temp/split')
-    files = [i[0] for i in vid_queue[:-1]]
+        # Check validity of request and create temp folders/files
+        self.setup(arg.file_path)
 
-    # Make encode queue
-    commands = compose_encoding_queue(arg.encoding_params, files, arg.encoder)
+        # Extracting audio
+        self.extract_audio(arg.file_path, arg.audio_params)
 
-    # Creating threading pool to encode bunch of files at the same time
-    print(f'Starting encoding with {arg.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
+        # Splitting video and sorting big-first
+        self.split_video(arg.file_path)
+        vid_queue = self.get_video_queue('.temp/split')
+        files = [i[0] for i in vid_queue[:-1]]
 
-    # Progress Bar
-    bar = ProgressBar(len(vid_queue))
+        # Make encode queue
+        commands = self.compose_encoding_queue(arg.encoding_params, files, arg.encoder)
 
-    # async_encode(commands, num_worker)
-    pool = Pool(arg.workers)
-    for i, _ in enumerate(pool.imap_unordered(encode, commands), 1):
+        # Creating threading pool to encode bunch of files at the same time
+        print(f'Starting encoding with {arg.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
+
+        # Progress Bar
+        bar = ProgressBar(len(vid_queue))
+
+        # async_encode(commands, num_worker)
+        pool = Pool(arg.workers)
+        for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
+            bar.tick()
+
         bar.tick()
 
-    bar.tick()
-
-    # Merging all encoded videos to 1
-    concatenate_video(arg.file_path)
+        self.concatenate_video(arg.file_path)
 
 
 if __name__ == '__main__':
 
     # Main thread
+
     start = time.time()
 
-    main(arg_parsing())
+    av1an = Av1an()
+    av1an.main(av1an.arg_parsing())
 
     print(f'\n Completed in {round(time.time()-start, 1)} seconds')
 
     # Delete temp folders
     rmtree(join(os.getcwd(), ".temp"))
+
 
     # To prevent console from hanging
     os.popen('stty sane', 'r')

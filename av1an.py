@@ -160,8 +160,17 @@ def concatenate_video(input_video):
             for file in sorted(files):
                 f.write(f"file '{join(root, file)}'\n")
 
-    concat = join(os.getcwd(), ".temp", "concat.txt")
-    audio = join(os.getcwd(), ".temp", "audio.mkv")
+    concat = join(here, ".temp", "concat.txt")
+    '''
+    # original video don't have audio
+    if os.path.isfile(join(here, 'temp', 'audio.mkv')):
+        print('Audio here')
+        
+    else:
+        print('No audio')
+        audio = ''
+    '''
+    audio = f'-i {join(here, ".temp", "audio.mkv")}'
     output = f'{input_video.split(".")[0]}_av1.mkv'
     cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} -i {audio} -c copy -y {output}'
     Popen(cmd, shell=True).wait()

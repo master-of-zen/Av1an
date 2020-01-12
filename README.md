@@ -39,6 +39,8 @@ Building encoding queue with bigger files first, minimizing waiting for last sce
 
 Both video and audio encoding option with FFmpeg
 
+And many more to go..
+
 ## Dependencies
 
 * [FFmpeg](https://ffmpeg.org/download.html)

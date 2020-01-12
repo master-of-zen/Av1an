@@ -24,7 +24,6 @@ try:
 except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
-#-w 252 -h 144
 
 FFMPEG = 'ffmpeg -hide_banner -loglevel warning '
 

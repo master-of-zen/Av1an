@@ -25,7 +25,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-FFMPEG = 'ffmpeg -hide_banner -loglevel error -an'
+FFMPEG = 'ffmpeg -hide_banner -loglevel error '
 
 
 class ProgressBar:
@@ -143,7 +143,7 @@ def encode(commands):
     Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
     """
     for i in commands[:-1]:
-        cmd = f'{FFMPEG} {i}'
+        cmd = f'{FFMPEG} -an {i}'
         Popen(cmd, shell=True).wait()
 
 

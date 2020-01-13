@@ -3,12 +3,12 @@
 Todo:
 Option for KeyFrame Separation
 Fix error if no audio stream
+Windows PySceneDetect fail
 """
 import os
 import shutil
 from os.path import join
 from psutil import virtual_memory
-from subprocess import Popen, call
 import argparse
 import time
 from shutil import rmtree
@@ -63,7 +63,7 @@ class Av1an:
         self.workers = 0
         self.encoder = 'aomenc'
         self.args = None
-        self.audio = None
+        self.audio = ''
         self.threshold = 20
         self.logging = '&> /dev/null'
 
@@ -134,7 +134,6 @@ class Av1an:
         check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
 
         os.system(check)
-
         cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")} {self.logging}'
         os.system(cmd)
 
@@ -184,10 +183,13 @@ class Av1an:
 
         concat = join(self.here, ".temp", "concat.txt")
 
-        audio = f'-i {join(self.here, ".temp", "audio.mkv")}'
+        is_audio_here = os.path.getsize(join(self.here,".temp", "audio_check.txt"))
+        if is_audio_here:
+            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
+
         output = f'{input_video.split(".")[0]}_av1.mkv'
 
-        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output} {self.logging}'
+        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {output} {self.logging}'
         os.system(cmd)
 
     def compose_encoding_queue(self, encoding_params, files, encoder):

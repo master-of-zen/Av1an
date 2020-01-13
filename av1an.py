@@ -92,6 +92,9 @@ class Av1an:
 
         self.args = parser.parse_args()
 
+        if self.logging != self.args.logging:
+            self.logging = f'&>> {self.args.logging}.log'
+            os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
 
     def determine_resources(self):
         """
@@ -145,8 +148,8 @@ class Av1an:
         PySceneDetect used split video by scenes and pass it to encoder
         Optimal threshold settings 15-50
         """
-        cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold {self.threshold} split-video -c'
-        call(cmd2, shell=True)
+        cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content --threshold {self.threshold} list-scenes  split-video -c {self.logging}'
+        os.system(cmd2)
         print(f'\rVideo {input_vid} splitted')
 
     def get_video_queue(self, source_path):

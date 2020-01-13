@@ -11,7 +11,6 @@ make separate audio and encode it separately,
 """
 import os
 import shutil
-import subprocess
 from os.path import join
 from psutil import virtual_memory
 from subprocess import Popen, call
@@ -35,8 +34,9 @@ class ProgressBar:
     """
 
     def __init__(self, tasks):
-        self.iteration: int = 0
+        self.bar_iteration: int = 0
         self.tasks = tasks
+
 
         # Print on empty bar on initialization
         self.print()
@@ -45,20 +45,20 @@ class ProgressBar:
         terminal_size, _ = shutil.get_terminal_size((80, 20))
         bar_length = terminal_size - (2 * len(str(self.tasks))) - 13
 
-        if self.iteration == 0:
+        if self.bar_iteration == 0:
             percent = 0
             fill_size = 0
         else:
-            percent = round(100 * (self.iteration / self.tasks), 1)
-            fill_size = int(bar_length * self.iteration // self.tasks)
+            percent = round(100 * (self.bar_iteration / self.tasks), 1)
+            fill_size = int(bar_length * self.bar_iteration // self.tasks)
 
-        end = f'{percent}% {self.iteration}/{self.tasks}'
+        end = f'{percent}% {self.bar_iteration}/{self.tasks}'
         in_bar = ('█' * fill_size) + '-' * (bar_length - fill_size)
 
         print(f'\r|{in_bar}| {end} ', end='')
 
     def tick(self):
-        self.iteration += 1
+        self.bar_iteration += 1
         self.print()
 
 
@@ -66,6 +66,9 @@ class Av1an:
 
     def __init__(self):
         self.here = os.getcwd()
+        self.workers = 0
+        self.encoder = 'aomenc'
+        self.args = None
 
     def arg_parsing(self):
         """
@@ -80,7 +83,7 @@ class Av1an:
                             help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
-        parser.add_argument('--workers', '-t', type=int, default=self.determine_resources(), help='Number of workers')
+        parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio,
                             help='ffmpeg audio encode settings')
         args = parser.parse_args()
@@ -88,12 +91,24 @@ class Av1an:
 
     def determine_resources(self):
         """
-        Returns number of workers that machine can handle
+        Returns number of workers that machine can handle with selected encoder
         :return: int
         """
+        self.encoder = self.args.encoder.strip()
         cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2**30)
-        return ceil(min(cpu, ram/1.5))
+        ram = round(virtual_memory().total / 2 ** 30)
+
+        if self.args.workers != 0:
+            self.workers = self.args.workers
+
+        elif self.encoder == 'aomenc':
+            self.workers = ceil(min(cpu, ram/1.5))
+
+        elif self.encoder == 'rav1e':
+            self.workers = ceil(min(cpu, ram/1.2)) // 3
+        else:
+            print('Error: no valid encoder')
+            exit()
 
     def setup(self, input_file):
 
@@ -218,30 +233,33 @@ class Av1an:
                                for file in file_paths]
             return pass_1_commands
 
-    def main( self, arg):
+    def main(self, arg):
+
+        self.args = arg
 
         # Check validity of request and create temp folders/files
-        self.setup(arg.file_path)
+        self.setup(self.args.file_path)
 
         # Extracting audio
-        self.extract_audio(arg.file_path, arg.audio_params)
+        self.extract_audio(self.args.file_path, self.args.audio_params)
 
         # Splitting video and sorting big-first
-        self.split_video(arg.file_path)
+        self.split_video(self.args.file_path)
         vid_queue = self.get_video_queue('.temp/split')
         files = [i[0] for i in vid_queue[:-1]]
 
+        # Determine resources
+        self.determine_resources()
+
         # Make encode queue
-        commands = self.compose_encoding_queue(arg.encoding_params, files, arg.encoder)
+        commands = self.compose_encoding_queue(self.args.encoding_params, files, arg.encoder)
 
         # Creating threading pool to encode bunch of files at the same time
-        print(f'Starting encoding with {arg.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
+        print(f'Starting encoding with {self.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
 
-        # Progress Bar
+        # Progress bar
         bar = ProgressBar(len(vid_queue))
-
-        # async_encode(commands, num_worker)
-        pool = Pool(arg.workers)
+        pool = Pool(self.workers)
         for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
             bar.tick()
 
@@ -263,7 +281,6 @@ if __name__ == '__main__':
 
     # Delete temp folders
     rmtree(join(os.getcwd(), ".temp"))
-
 
     # To prevent console from hanging
     os.popen('stty sane', 'r')

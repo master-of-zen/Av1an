@@ -298,4 +298,4 @@ if __name__ == '__main__':
     rmtree(join(os.getcwd(), ".temp"))
 
     # To prevent console from hanging
-    os.popen('stty sane', 'r')
+    # os.popen('stty sane', 'r')

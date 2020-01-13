@@ -37,8 +37,7 @@ class ProgressBar:
         self.bar_iteration: int = 0
         self.tasks = tasks
 
-
-        # Print on empty bar on initialization
+        # Print empty bar on initialization
         self.print()
 
     def print(self):
@@ -71,6 +70,7 @@ class Av1an:
         self.args = None
         self.audio = None
         self.threshold = 20
+        self.logging = '&> /dev/null'
 
     def arg_parsing(self):
         """
@@ -88,6 +88,9 @@ class Av1an:
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
+        parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging. ')
+
+
         args = parser.parse_args()
         return args
 
@@ -169,7 +172,6 @@ class Av1an:
         for i in commands[:-1]:
             cmd = rf'{FFMPEG} -an {i}  &> /dev/null'
             os.system(cmd)
-            #Popen(cmd, shell=True, ststdout=os.devnull).wait()
 
     def concatenate_video(self, input_video):
         """

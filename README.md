@@ -44,6 +44,7 @@ And many more to go..
 ## Dependencies
 
 * [FFmpeg](https://ffmpeg.org/download.html)
-* [AOMENC](https://aomedia.googlesource.com/aom/)
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
+* [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
+* [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
+* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/) 
 * [mkvmerge/python-pymkv](https://pypi.org/project/pymkv/)

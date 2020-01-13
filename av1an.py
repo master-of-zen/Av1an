@@ -166,9 +166,9 @@ class Av1an:
         Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
         """
         for i in commands[:-1]:
-            cmd = rf'{FFMPEG} -an {i}'
+            cmd = rf'{FFMPEG} -an {i}  &> /dev/null'
             os.system(cmd)
-            #Popen(cmd, shell=True).wait()
+            #Popen(cmd, shell=True, ststdout=os.devnull).wait()
 
     def concatenate_video(self, input_video):
         """

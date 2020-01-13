@@ -306,5 +306,4 @@ if __name__ == '__main__':
     # Delete temp folders
     rmtree(join(os.getcwd(), ".temp"))
 
-    # To prevent console from hanging
-    # os.popen('stty sane', 'r')
+    os.popen('stty sane', 'r')

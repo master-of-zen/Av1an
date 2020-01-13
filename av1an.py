@@ -87,8 +87,6 @@ class Av1an:
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
 
         self.args = parser.parse_args()
-        logging_ux = '&> /dev/null'
-        logging_win = '> NUL'
 
         if self.logging != self.args.logging:
             if sys.platform == 'linux':

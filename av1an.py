@@ -87,7 +87,7 @@ class Av1an:
         parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=int, default=default_audio, help='PySceneDetect Threshold')
+        parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         args = parser.parse_args()
         return args
 
@@ -130,9 +130,10 @@ class Av1an:
         Extracting audio from video file
         Encoding audio if needed
         """
-        cmd = f'{FFMPEG} -i {join(os.getcwd(),input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
-        check = fr'ffprobe -hide_banner -loglevel error -i {join(self.here,input_vid)} -show_streams -select_streams a'
-        os.system(check)
+        # check = fr'ffprobe -hide_banner -loglevel error -i {join(self.here,input_vid)} -show_streams -select_streams a'
+        # os.system(check)
+
+        cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
         Popen(cmd, shell=True).wait()
 
     def split_video(self, input_vid):

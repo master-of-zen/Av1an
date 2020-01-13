@@ -27,7 +27,7 @@ Your own parameters:
 
 #### Spliting video by scenes for parallel encoding
 
-AV1 encoders at current moment not good at multithreading so encoding limited to single core.
+AV1 encoders at current moment not good at multithreading so encoding limited to single or couple of cores at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 

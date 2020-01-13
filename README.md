@@ -11,8 +11,6 @@
 
 <h2 align="center">  Easy And Efficient </h2>
 
-
-
 Start using AV1 encoding. At current moment only available encoders are Aomenc, Rav1e.
  
 Example with default parameters:
@@ -25,9 +23,7 @@ Your own parameters:
 
 <h2 align="center">Main Features</h2>
 
-#### Spliting video by scenes for parallel encoding
-
-AV1 encoders at current moment not good at multithreading so encoding limited to single or couple of cores at the same time.
+**Spliting video by scenes for parallel encoding** because AV1 encoders at current moment not good at multithreading so encoding limited to single or couple of cores at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 

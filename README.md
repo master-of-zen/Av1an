@@ -5,31 +5,40 @@
     </br>
 </h1>
 
-<h2 align="center">All-in-one tool for streamline and easy av1 encoding</h2>
+<h2 align="center">All-in-one tool for streamlining av1 encoding</h2>
 
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/665760393498460196/banner.jpg)
 
-<h2 align="center">  Easy And Efficient </h2>
+<h2 align="center">Easy And Efficient </h2>
 
-Start using AV1 encoding. At current moment only available encoders are Aomenc, Rav1e.
- 
+Start using AV1 encoding. At the moment only Aomenc and Rav1e are supported
+
 Example with default parameters:
 
     ./avian.py -i input
 
-Your own parameters:
+With your own parameters:
 
     ./avian.py -i input -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
 
+<h2 align="center">Usage</h2>
+
+    -i --file_path          Input file
+    -enc --encoder          Encoder to use (aomenc or rav1e)
+    -e --encoding_params    Encoder settings flags
+    -a --audio_params       FFmpeg audio settings flags
+    -t --workers            Maximum number of workers
+    -tr --threshold         PySceneDetect threshold
+
 <h2 align="center">Main Features</h2>
 
-**Spliting video by scenes for parallel encoding** because AV1 encoders at current moment not good at multithreading so encoding limited to single or couple of cores at the same time.
+**Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading encoding is limited to single threads or couple of cores at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
 Simple and clean console look
 
-Automatic determination of how many workers PC can handle
+Automatic determination of how many workers the host can handle
 
 Building encoding queue with bigger files first, minimizing waiting for last scene to encode
 

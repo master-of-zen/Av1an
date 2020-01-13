@@ -66,7 +66,7 @@ class Av1an:
         self.args = None
         self.audio = ''
         self.threshold = 20
-        self.logging = '&> /dev/null'
+        self.logging = None
 
     def arg_parsing(self):
         """
@@ -87,14 +87,22 @@ class Av1an:
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
 
         self.args = parser.parse_args()
+        logging_ux = '&> /dev/null'
+        logging_win = '> NUL'
 
         if self.logging != self.args.logging:
             if sys.platform == 'linux':
                 self.logging = f'&>> {self.args.logging}.log'
+                os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
+            else:
+                self.logging = '> NUL'
         else:
-            self.logging = '> NUL'
+            if sys.platform == 'linux':
+                self.logging = '&> /dev/null'
+            else:
+                self.logging = '> NUL'
 
-        os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
+
 
     def determine_resources(self):
         """

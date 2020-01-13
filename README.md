@@ -31,7 +31,8 @@ With your own parameters:
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e can use tiles that uses multiple threads, example:  
                             '--tile-rows 2 --tile-cols 2' load 2.5 to 3.5 threads, 4 is optimal for 6/12 cpu 
-    -tr --threshold         PySceneDetect threshold (Optimal values in range 15 - 50. Bigger value = less sensitive )
+    -tr --threshold         PySceneDetect threshold (Optimal values in range 15 - 50.
+     Bigger value = less sensitive )
 
 
 <h2 align="center">Main Features</h2>

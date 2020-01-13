@@ -27,7 +27,7 @@ Your own parameters:
 
 #### Spliting video by scenes for parallel encoding
 
-AV1 encoders at current moment not good at multithreading so encoding limited to single core.
+AV1 encoders at current moment not good at multithreading so encoding limited to single or couple of cores at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
@@ -44,6 +44,7 @@ And many more to go..
 ## Dependencies
 
 * [FFmpeg](https://ffmpeg.org/download.html)
-* [AOMENC](https://aomedia.googlesource.com/aom/)
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
+* [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
+* [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
+* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/) 
 * [mkvmerge/python-pymkv](https://pypi.org/project/pymkv/)

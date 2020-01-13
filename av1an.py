@@ -90,9 +90,8 @@ class Av1an:
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging. ')
 
+        self.args = parser.parse_args()
 
-        args = parser.parse_args()
-        return args
 
     def determine_resources(self):
         """
@@ -135,6 +134,7 @@ class Av1an:
         """
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
         check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
+
         os.system(check)
 
         cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
@@ -242,9 +242,10 @@ class Av1an:
                                for file in file_paths]
             return pass_1_commands
 
-    def main(self, arg):
+    def main(self):
 
-        self.args = arg
+        # Parse initial arguments
+        self.arg_parsing()
 
         # Check validity of request and create temp folders/files
         self.setup(self.args.file_path)
@@ -261,10 +262,10 @@ class Av1an:
         self.determine_resources()
 
         # Make encode queue
-        commands = self.compose_encoding_queue(self.args.encoding_params, files, arg.encoder)
+        commands = self.compose_encoding_queue(self.args.encoding_params, files, self.args.encoder)
 
         # Creating threading pool to encode bunch of files at the same time
-        print(f'Starting encoding with {self.workers} workers. \nParameters:{arg.encoding_params}\nEncoding..')
+        print(f'Starting encoding with {self.workers} workers. \nParameters:{self.args.encoding_params}\nEncoding..')
 
         # Progress bar
         bar = ProgressBar(len(vid_queue))
@@ -274,7 +275,7 @@ class Av1an:
 
         bar.tick()
 
-        self.concatenate_video(arg.file_path)
+        self.concatenate_video(self.args.file_path)
 
 
 if __name__ == '__main__':
@@ -284,7 +285,7 @@ if __name__ == '__main__':
     start = time.time()
 
     av1an = Av1an()
-    av1an.main(av1an.arg_parsing())
+    av1an.main()
 
     print(f'\n Completed in {round(time.time()-start, 1)} seconds')
 

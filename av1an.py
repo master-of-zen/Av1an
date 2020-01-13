@@ -140,7 +140,7 @@ class Av1an:
         PySceneDetect used split video by scenes and pass it to encoder
         Optimal threshold settings 15-50
         """
-        cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold 20 split-video -c'
+        cmd2 = f'scenedetect -q -i {input_vid}  --output .temp/split detect-content --threshold {self.threshold} split-video -c'
         call(cmd2, shell=True)
         print(f'\rVideo {input_vid} splitted')
 

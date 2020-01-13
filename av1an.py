@@ -68,6 +68,14 @@ class Av1an:
         self.threshold = 20
         self.logging = None
 
+        # OS specific NULL pointer
+        if sys.platform == 'linux':
+            self.null = '&> /dev/null'
+            self.point = '&>'
+        else:
+            self.point = '>'
+            self.null = '> NUL'
+
     def arg_parsing(self):
         """
         Command line parser
@@ -88,17 +96,13 @@ class Av1an:
 
         self.args = parser.parse_args()
 
+        # Setting logging depending on OS
         if self.logging != self.args.logging:
             if sys.platform == 'linux':
                 self.logging = f'&>> {self.args.logging}.log'
                 os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
-            else:
-                self.logging = '> NUL'
         else:
-            if sys.platform == 'linux':
-                self.logging = '&> /dev/null'
-            else:
-                self.logging = '> NUL'
+            self.logging = self.null
 
     def determine_resources(self):
         """
@@ -141,11 +145,7 @@ class Av1an:
         """
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
-        # OS specific stuff
-        if sys.platform == 'linux':
-            check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
-        else:
-            check = fr'{ffprobe} -i {join(self.here,input_vid)} > {join(self.here,".temp","audio_check.txt")}'
+        check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
 
         os.system(check)
         cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")} {self.logging}'

@@ -23,23 +23,24 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i --file_path          Input file (relative or absolute path)
+    -i   --file_path        Input file (relative or absolute path)
     
     -enc --encoder          Encoder to use (aomenc or rav1e. Default: aomenc. Example: -enc rav1e)
     
-    -e --encoding_params    Encoder settings flags 
+    -e   --encoding_params  Encoder settings flags 
     
-    -a --audio_params       FFmpeg audio settings flags (Default: copy audio from source to output)
+    -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
     
-    -t --workers            Maximum number of workers (overrides automatically set number of workers.
+    -t   --workers          Maximum number of workers (overrides automatically set number of workers.
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e can use tiles that uses multiple threads, 
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
                             4 workers is optimal for 6/12 cpu 
     
-    -tr --threshold         PySceneDetect threshold (Optimal values in range 15 - 50.
+    -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
-
+    
+    -log --logging          Path to .log file(Default: no logging) 
 
 <h2 align="center">Main Features</h2>
 

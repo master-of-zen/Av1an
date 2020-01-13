@@ -5,6 +5,7 @@ Option for KeyFrame Separation
 Fix error if no audio stream
 Windows PySceneDetect fail
 """
+import sys
 import os
 import shutil
 from os.path import join
@@ -88,7 +89,11 @@ class Av1an:
         self.args = parser.parse_args()
 
         if self.logging != self.args.logging:
-            self.logging = f'&>> {self.args.logging}.log'
+            if sys.platform == 'linux':
+                self.logging = f'&>> {self.args.logging}.log'
+            #else:
+            #    self.logging = f'> {self.args.logging}.log'
+
             os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
 
     def determine_resources(self):

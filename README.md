@@ -15,11 +15,11 @@ Start using AV1 encoding. At the moment only Aomenc and Rav1e are supported
 
 Example with default parameters:
 
-    ./avian.py -i input
+    ./av1an.py -i input
 
 With your own parameters:
 
-    ./avian.py -i input -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
+    ./av1an.py -i input -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
 
 <h2 align="center">Usage</h2>
 

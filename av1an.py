@@ -130,8 +130,9 @@ class Av1an:
         Extracting audio from video file
         Encoding audio if needed
         """
-        # check = fr'ffprobe -hide_banner -loglevel error -i {join(self.here,input_vid)} -show_streams -select_streams a'
-        # os.system(check)
+        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
+        check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
+        os.system(check)
 
         cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
         Popen(cmd, shell=True).wait()

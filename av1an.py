@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-
+"""
+Todo:
+Option for KeyFrame Separation
+Fix error if no audio stream
+"""
 import os
 import shutil
 from os.path import join
@@ -16,7 +20,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-FFMPEG = 'ffmpeg -hide_banner -loglevel error '
+FFMPEG = 'ffmpeg -hide_banner'
 
 
 class ProgressBar:
@@ -79,7 +83,7 @@ class Av1an:
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
-        parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging. ')
+        parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
 
         self.args = parser.parse_args()
 
@@ -131,8 +135,8 @@ class Av1an:
 
         os.system(check)
 
-        cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")}'
-        Popen(cmd, shell=True).wait()
+        cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")} {self.logging}'
+        os.system(cmd)
 
     def split_video(self, input_vid):
         """
@@ -183,8 +187,8 @@ class Av1an:
         audio = f'-i {join(self.here, ".temp", "audio.mkv")}'
         output = f'{input_video.split(".")[0]}_av1.mkv'
 
-        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output}'
-        Popen(cmd, shell=True).wait()
+        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {output} {self.logging}'
+        os.system(cmd)
 
     def compose_encoding_queue(self, encoding_params, files, encoder):
         """
@@ -209,7 +213,7 @@ class Av1an:
                        f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                        file_name) for file_name in files]
 
-        ffmpeg_pipe = '-pix_fmt yuv420p -f yuv4mpegpipe - |'
+        ffmpeg_pipe = f'-loglevel error -pix_fmt yuv420p -f yuv4mpegpipe - |'
         if encoder == 'aomenc':
             single_pass = 'aomenc -q --passes=1 '
             two_pass_1_aom = '--passes=2 --pass=1'
@@ -217,22 +221,22 @@ class Av1an:
 
             pass_1_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
-                 f'  {single_pass} {encoding_params} -o {file[1]} -',  file[2])
+                 f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}',  file[2])
                 for file in file_paths]
 
             pass_2_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null -',
+                 f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
                  f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} -'
+                 f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
 
             return pass_2_commands
 
         if encoder == 'rav1e':
-            pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe}' +
-                                f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf')
+            pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
+                                f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
                                for file in file_paths]
             return pass_1_commands
 

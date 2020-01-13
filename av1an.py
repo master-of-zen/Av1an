@@ -100,8 +100,6 @@ class Av1an:
             else:
                 self.logging = '> NUL'
 
-
-
     def determine_resources(self):
         """
         Returns number of workers that machine can handle with selected encoder
@@ -142,7 +140,12 @@ class Av1an:
         Encoding audio if needed
         """
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
-        check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
+
+        # OS specific stuff
+        if sys.platform == 'linux':
+            check = fr'{ffprobe} -i {join(self.here,input_vid)} &> {join(self.here,".temp","audio_check.txt")}'
+        else:
+            check = fr'{ffprobe} -i {join(self.here,input_vid)} > {join(self.here,".temp","audio_check.txt")}'
 
         os.system(check)
         cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")} {self.logging}'

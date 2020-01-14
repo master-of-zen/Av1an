@@ -3,7 +3,6 @@
 Todo:
 Option for KeyFrame Separation
 Windows PySceneDetect fail
-Aomenc pipe fault
 """
 import sys
 import os
@@ -313,7 +312,6 @@ class Av1an:
 if __name__ == '__main__':
 
     # Main thread
-
     start = time.time()
 
     av1an = Av1an()

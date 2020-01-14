@@ -279,9 +279,12 @@ class Av1an:
         if is_audio_here:
             self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
 
-        output = f'{input_video.split(".")[0]}_av1.mkv'
+        if self.output_file == self.args.output_file:
+            self.output_file = f'{input_video.split(".")[0]}_av1.mkv'
+        else:
+            self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
-        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {output} {self.logging}'
+        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file} {self.logging}'
         os.system(cmd)
 
     def main(self):

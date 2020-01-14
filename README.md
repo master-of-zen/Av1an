@@ -40,6 +40,9 @@ With your own parameters:
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
     
+    -p   --pass             Set number of passes for encoding (Default: Aomenc: 2, Rav1e: 1)
+                            At current moment 2nd pass rav1e not working
+    
     -log --logging          Path to .log file(Default: no logging) 
 
 <h2 align="center">Main Features</h2>

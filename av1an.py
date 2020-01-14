@@ -195,6 +195,8 @@ class Av1an:
 
         if self.args.encoding_params == '':
             self.encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
+        else:
+            self.encoding_params = self.args.encoding_params
 
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 

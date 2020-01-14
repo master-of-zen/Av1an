@@ -223,7 +223,7 @@ class Av1an:
         """
         
         if self.args.encoding_params == '':
-            self.encoding_params = '--speed=10 --tile-rows 2 --tile-cols 2'
+            self.encoding_params = '--speed=5 --tile-rows 2 --tile-cols 2'
 
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 

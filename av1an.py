@@ -97,6 +97,7 @@ class Av1an:
 
         self.args = parser.parse_args()
         self.encode_pass = self.args.encode_pass
+
         # Setting logging depending on OS
         if self.logging != self.args.logging:
             if sys.platform == 'linux':
@@ -271,7 +272,7 @@ class Av1an:
 
         concat = join(self.here, ".temp", "concat.txt")
 
-        is_audio_here = os.path.getsize(join(self.here,".temp", "audio_check.txt"))
+        is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
         if is_audio_here:
             self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
 

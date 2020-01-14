@@ -225,12 +225,12 @@ class Av1an:
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         single_pass = 'aomenc -q --passes=1 '
-        two_pass_1_aom = '--passes=2 --pass=1'
-        two_pass_2_aom = '--passes=2 --pass=2'
+        two_pass_1_aom = 'aomenc -q --passes=2 --pass=1'
+        two_pass_2_aom = 'aomenc -q --passes=2 --pass=2'
 
         if self.encode_pass == 1:
             pass_1_commands = [
-                (f'-i {file[0]} {ffmpeg_pipe}' +
+                (f'-i {file[0]} {ffmpeg_pipe} ' +
                  f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}', file[2])
                 for file in file_paths]
             return pass_1_commands
@@ -238,9 +238,9 @@ class Av1an:
         if self.encode_pass == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
+                 f' {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
                  f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
+                 f' {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
             return pass_2_commands

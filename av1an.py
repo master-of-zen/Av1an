@@ -69,6 +69,7 @@ class Av1an:
         self.logging = None
         self.encode_pass = 2
         self.encoding_params = ''
+        self.output_file = ''
 
         # OS specific NULL pointer
         if sys.platform == 'linux':
@@ -95,6 +96,7 @@ class Av1an:
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
+        parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
 
         self.args = parser.parse_args()
         self.encode_pass = self.args.encode_pass

@@ -81,12 +81,11 @@ class Av1an:
         Command line parser
         Have default params
         """
-        default_encode_aomenc = '--cpu-used=6 --end-usage=q --cq-level=40'
+
         default_audio = '-c:a copy'
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--encoding_params', '-e', type=str, default=default_encode_aomenc,
-                            help='encoding settings')
+        parser.add_argument('--encoding_params', '-e', type=str, default='', help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
@@ -189,6 +188,11 @@ class Av1an:
         aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
         """
 
+        if self.args.encoding_params == '':
+            encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
+        else:
+            encoding_params = self.args.encoding_params
+
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         single_pass = 'aomenc -q --passes=1 '
@@ -212,12 +216,18 @@ class Av1an:
                 for file in file_paths]
             return pass_2_commands
 
-    def rav1e_encode(self, encoding_params, file_paths):
+    def rav1e_encode(self, file_paths):
         """
         rav1e Single Pass:
         ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
         rav1e - --speed = 5 - -tile - rows 2 - -tile - cols 2 - -output output.ivf
         """
+        
+        if self.args.encoding_params == '':
+            encoding_params = '--speed=10 --tile-rows 2 --tile-cols 2'
+        else:
+            encoding_params = self.args.encoding_params
+
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
@@ -225,7 +235,7 @@ class Av1an:
                            for file in file_paths]
         return pass_1_commands
 
-    def compose_encoding_queue(self, encoding_params, files, encoder):
+    def compose_encoding_queue(self, files, encoder):
 
         file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
                        f'{join(os.getcwd(), ".temp", "encode", file_name)}',
@@ -235,7 +245,7 @@ class Av1an:
             return self.aomenc_encode(encoding_params, file_paths)
 
         elif encoder == 'rav1e':
-            return self.rav1e_encode(encoding_params, file_paths)
+            return self.rav1e_encode(file_paths)
 
         else:
             print('No valid encoder')
@@ -293,7 +303,7 @@ class Av1an:
         self.determine_resources()
 
         # Make encode queue
-        commands = self.compose_encoding_queue(self.args.encoding_params, files, self.args.encoder)
+        commands = self.compose_encoding_queue(files, self.args.encoder)
 
         # Creating threading pool to encode bunch of files at the same time
         print(f'Starting encoding with {self.workers} workers. \nParameters:{self.args.encoding_params}\nEncoding..')

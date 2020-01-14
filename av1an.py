@@ -67,6 +67,7 @@ class Av1an:
         self.audio = ''
         self.threshold = 20
         self.logging = None
+        self.encode_pass = 2
 
         # OS specific NULL pointer
         if sys.platform == 'linux':
@@ -93,6 +94,7 @@ class Av1an:
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
+        parser.add_argument('--pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
 
         self.args = parser.parse_args()
 
@@ -235,10 +237,7 @@ class Av1an:
             two_pass_1_aom = '--passes=2 --pass=1'
             two_pass_2_aom = '--passes=2 --pass=2'
 
-            pass_1_commands = [
-                (f'-i {file[0]} {ffmpeg_pipe}' +
-                 f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}',  file[2])
-                for file in file_paths]
+
 
             pass_2_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
@@ -247,8 +246,14 @@ class Av1an:
                  f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
-
-            return pass_2_commands
+            if self.encode_pass == 1:
+                pass_1_commands = [
+                    (f'-i {file[0]} {ffmpeg_pipe}' +
+                     f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}', file[2])
+                    for file in file_paths]
+                return pass_1_commands
+            else:
+                return pass_2_commands
 
         if encoder == 'rav1e':
             pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +

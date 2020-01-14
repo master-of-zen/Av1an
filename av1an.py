@@ -3,6 +3,7 @@
 Todo:
 Option for KeyFrame Separation
 Windows PySceneDetect fail
+Easier and streamline install for Av1an, or one
 """
 import sys
 import os

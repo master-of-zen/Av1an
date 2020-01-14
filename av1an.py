@@ -227,9 +227,7 @@ class Av1an:
         single_pass = 'aomenc -q --passes=1 '
         two_pass_1_aom = '--passes=2 --pass=1'
         two_pass_2_aom = '--passes=2 --pass=2'
-
-        print(self.encode_pass)
-        exit()
+        
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +

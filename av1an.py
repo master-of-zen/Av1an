@@ -242,7 +242,7 @@ class Av1an:
                        file_name) for file_name in files]
 
         if encoder == 'aomenc':
-            return self.aomenc_encode(encoding_params, file_paths)
+            return self.aomenc_encode(file_paths)
 
         elif encoder == 'rav1e':
             return self.rav1e_encode(file_paths)

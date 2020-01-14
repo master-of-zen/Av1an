@@ -21,7 +21,7 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-FFMPEG = 'ffmpeg -hide_banner'
+FFMPEG = 'ffmpeg -hide_banner -loglevel error'
 
 
 class ProgressBar:
@@ -94,10 +94,10 @@ class Av1an:
         parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
-        parser.add_argument('--pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
+        parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
 
         self.args = parser.parse_args()
-
+        self.encode_pass = self.args.encode_pass
         # Setting logging depending on OS
         if self.logging != self.args.logging:
             if sys.platform == 'linux':
@@ -208,10 +208,8 @@ class Av1an:
         cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {output} {self.logging}'
         os.system(cmd)
 
-    def compose_encoding_queue(self, encoding_params, files, encoder):
+    def aomenc_encode(self, encoding_params, file_paths):
         """
-        Composing encoding commands
-        Examples:
         1_pass Aomenc:
         ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
         aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
@@ -222,23 +220,24 @@ class Av1an:
 
         ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
         aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
-
-        rav1e:
-        ffmpeg -i bruh.mp4 -pix_fmt yuv420p -f yuv4mpegpipe - |
-         rav1e - --speed=5 --tile-rows 2 --tile-cols 2 --output  output.ivf
         """
-        file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
-                       f'{join(os.getcwd(), ".temp", "encode", file_name)}',
-                       file_name) for file_name in files]
 
-        ffmpeg_pipe = f'-loglevel error -pix_fmt yuv420p -f yuv4mpegpipe - |'
-        if encoder == 'aomenc':
-            single_pass = 'aomenc -q --passes=1 '
-            two_pass_1_aom = '--passes=2 --pass=1'
-            two_pass_2_aom = '--passes=2 --pass=2'
+        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
+        single_pass = 'aomenc -q --passes=1 '
+        two_pass_1_aom = '--passes=2 --pass=1'
+        two_pass_2_aom = '--passes=2 --pass=2'
 
+        print(self.encode_pass)
+        exit()
+        if self.encode_pass == 1:
+            pass_1_commands = [
+                (f'-i {file[0]} {ffmpeg_pipe}' +
+                 f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}', file[2])
+                for file in file_paths]
+            return pass_1_commands
 
+        if self.encode_pass == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
                  f' aomenc -q {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
@@ -246,20 +245,36 @@ class Av1an:
                  f' aomenc -q {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
-            if self.encode_pass == 1:
-                pass_1_commands = [
-                    (f'-i {file[0]} {ffmpeg_pipe}' +
-                     f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}', file[2])
-                    for file in file_paths]
-                return pass_1_commands
-            else:
-                return pass_2_commands
+            return pass_2_commands
 
-        if encoder == 'rav1e':
-            pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
-                                f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
-                               for file in file_paths]
-            return pass_1_commands
+    def rav1e_encode(self, encoding_params, file_paths):
+        """
+        rav1e Single Pass:
+        ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
+        rav1e - --speed = 5 - -tile - rows 2 - -tile - cols 2 - -output output.ivf
+        """
+        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
+
+        pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
+                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
+                           for file in file_paths]
+        return pass_1_commands
+
+    def compose_encoding_queue(self, encoding_params, files, encoder):
+
+        file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
+                       f'{join(os.getcwd(), ".temp", "encode", file_name)}',
+                       file_name) for file_name in files]
+
+        if encoder == 'aomenc':
+            return self.aomenc_encode(encoding_params, file_paths)
+
+        elif encoder == 'rav1e':
+            return self.rav1e_encode(encoding_params, file_paths)
+
+        else:
+            print('No valid encoder')
+            exit()
 
     def main(self):
 

@@ -175,39 +175,7 @@ class Av1an:
         print(f'Splited videos: {len(videos)}')
         return videos
 
-    def encode(self, commands):
-        """
-        Passing encoding params to ffmpeg for encoding
-        TODO:
-        Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
-        """
-        for i in commands[:-1]:
-            cmd = rf'{FFMPEG} -an {i}  {self.logging}'
-            os.system(cmd)
-
-    def concatenate_video(self, input_video):
-        """
-        Using FFMPEG to concatenate all encoded videos to 1 file.
-        Reading all files in A-Z order and saving it to concat.txt
-        """
-        with open(f'{join(self.here, ".temp", "concat.txt")}', 'w') as f:
-
-            for root, firs, files in os.walk(join(self.here, '.temp', 'encode')):
-                for file in sorted(files):
-                    f.write(f"file '{join(root, file)}'\n")
-
-        concat = join(self.here, ".temp", "concat.txt")
-
-        is_audio_here = os.path.getsize(join(self.here,".temp", "audio_check.txt"))
-        if is_audio_here:
-            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
-
-        output = f'{input_video.split(".")[0]}_av1.mkv'
-
-        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {output} {self.logging}'
-        os.system(cmd)
-
-    def aomenc_encode(self, encoding_params, file_paths):
+    def aomenc_encode(self, file_paths):
         """
         1_pass Aomenc:
         ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
@@ -272,6 +240,38 @@ class Av1an:
         else:
             print('No valid encoder')
             exit()
+
+    def encode(self, commands):
+        """
+        Passing encoding params to ffmpeg for encoding
+        TODO:
+        Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
+        """
+        for i in commands[:-1]:
+            cmd = rf'{FFMPEG} -an {i}  {self.logging}'
+            os.system(cmd)
+
+    def concatenate_video(self, input_video):
+        """
+        Using FFMPEG to concatenate all encoded videos to 1 file.
+        Reading all files in A-Z order and saving it to concat.txt
+        """
+        with open(f'{join(self.here, ".temp", "concat.txt")}', 'w') as f:
+
+            for root, firs, files in os.walk(join(self.here, '.temp', 'encode')):
+                for file in sorted(files):
+                    f.write(f"file '{join(root, file)}'\n")
+
+        concat = join(self.here, ".temp", "concat.txt")
+
+        is_audio_here = os.path.getsize(join(self.here,".temp", "audio_check.txt"))
+        if is_audio_here:
+            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
+
+        output = f'{input_video.split(".")[0]}_av1.mkv'
+
+        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {output} {self.logging}'
+        os.system(cmd)
 
     def main(self):
 

@@ -2,8 +2,8 @@
 """
 Todo:
 Option for KeyFrame Separation
-Fix error if no audio stream
 Windows PySceneDetect fail
+Aomenc pipe fault
 """
 import sys
 import os
@@ -227,7 +227,7 @@ class Av1an:
         single_pass = 'aomenc -q --passes=1 '
         two_pass_1_aom = '--passes=2 --pass=1'
         two_pass_2_aom = '--passes=2 --pass=2'
-        
+
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +

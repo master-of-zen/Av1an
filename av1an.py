@@ -67,6 +67,7 @@ class Av1an:
         self.threshold = 20
         self.logging = None
         self.encode_pass = 2
+        self.encoding_params = ''
 
         # OS specific NULL pointer
         if sys.platform == 'linux':
@@ -85,7 +86,7 @@ class Av1an:
         default_audio = '-c:a copy'
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('--encoding_params', '-e', type=str, default='', help='encoding settings')
+        parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
@@ -189,9 +190,7 @@ class Av1an:
         """
 
         if self.args.encoding_params == '':
-            encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
-        else:
-            encoding_params = self.args.encoding_params
+            self.encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
 
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
@@ -202,16 +201,16 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe} ' +
-                 f'  {single_pass} {encoding_params} -o {file[1]} - {self.logging}', file[2])
+                 f'  {single_pass} {self.encoding_params} -o {file[1]} - {self.logging}', file[2])
                 for file in file_paths]
             return pass_1_commands
 
         if self.encode_pass == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' {two_pass_1_aom} {encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
+                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
                  f'-i {file[0]} {ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
+                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
             return pass_2_commands
@@ -224,14 +223,12 @@ class Av1an:
         """
         
         if self.args.encoding_params == '':
-            encoding_params = '--speed=10 --tile-rows 2 --tile-cols 2'
-        else:
-            encoding_params = self.args.encoding_params
+            self.encoding_params = '--speed=10 --tile-rows 2 --tile-cols 2'
 
         ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
-                            f' rav1e -  {encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
+                            f' rav1e -  {self.encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
                            for file in file_paths]
         return pass_1_commands
 
@@ -306,7 +303,7 @@ class Av1an:
         commands = self.compose_encoding_queue(files, self.args.encoder)
 
         # Creating threading pool to encode bunch of files at the same time
-        print(f'Starting encoding with {self.workers} workers. \nParameters:{self.args.encoding_params}\nEncoding..')
+        print(f'Starting encoding with {self.workers} workers. \nParameters:{self.encoding_params}\nEncoding..')
 
         # Progress bar
         bar = ProgressBar(len(vid_queue))

@@ -124,6 +124,10 @@ class Av1an:
 
         elif self.encoder == 'rav1e':
             self.workers = ceil(min(cpu, ram/1.2)) // 3
+
+        elif self.encoder == 'svt_av1':
+            self.workers = ceil(min(cpu, ram)) // 5
+
         else:
             print('Error: no valid encoder')
             exit()
@@ -274,20 +278,18 @@ class Av1an:
                        f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                        file_name) for file_name in files]
 
-        if self.args.encoder == '':
-            self.encoder = 'aomenc'
-
         if self.encoder == 'aomenc':
             return self.aomenc_encode(file_paths)
 
         elif self.encoder == 'rav1e':
             return self.rav1e_encode(file_paths)
 
-        # elif self.encoder == 'svt':
-        #     return self.svt_av1_encode(file_paths)
+        elif self.encoder == 'svt_av1':
+            return self.svt_av1_encode(file_paths)
 
         else:
-            print('No valid encoder')
+            print(self.encoder)
+            print(f'No valid encoder : "{self.encoder}"')
             exit()
 
     def encode(self, commands):

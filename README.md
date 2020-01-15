@@ -47,7 +47,7 @@ With your own parameters:
 
 <h2 align="center">Main Features</h2>
 
-**Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading encoding is limited to single threads or couple of cores at the same time.
+**Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 

@@ -85,8 +85,6 @@ class Av1an:
         Have default params
         """
 
-
-
         parser = argparse.ArgumentParser()
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
@@ -167,7 +165,6 @@ class Av1an:
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
         else:
             self.audio = ''
-
 
     def split_video(self, input_vid):
         """

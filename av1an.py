@@ -85,14 +85,14 @@ class Av1an:
         Have default params
         """
 
-        default_audio = '-c:a copy'
+
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
-        parser.add_argument('--audio_params', '-a', type=str, default=default_audio, help='FFmpeg audio settings')
+        parser.add_argument('--audio_params', '-a', type=str, default=self.audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
@@ -143,18 +143,34 @@ class Av1an:
         os.makedirs(join(self.here, '.temp', 'split'))
         os.makedirs(join(self.here, '.temp', 'encode'))
 
-    def extract_audio(self, input_vid, audio_params):
+    def extract_audio(self, input_vid):
         """
         Extracting audio from video file
         Encoding audio if needed
         """
+        default_audio_params = '-c:a copy'
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
+        # Generate file with audio check
         check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
-
         os.system(check)
-        cmd = f'{FFMPEG} -i {join(self.here,input_vid)} -vn {audio_params} {join(os.getcwd(),".temp","audio.mkv")} {self.logging}'
-        os.system(cmd)
+        is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
+
+        if is_audio_here > 0 and self.args.audio_params == '':
+                print('default audio')
+                cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+                os.system(cmd)
+                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+
+        elif is_audio_here > 0 and len(self.args.audio_params) > 1:
+                print('custom audio')
+                cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+                os.system(cmd)
+                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+        else:
+            print('no audio')
+            self.audio = ''
+
 
     def split_video(self, input_vid):
         """
@@ -300,7 +316,7 @@ class Av1an:
         self.setup(self.args.file_path)
 
         # Extracting audio
-        self.extract_audio(self.args.file_path, self.args.audio_params)
+        self.extract_audio(self.args.file_path)
 
         # Splitting video and sorting big-first
         self.split_video(self.args.file_path)

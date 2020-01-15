@@ -197,7 +197,8 @@ class Av1an:
         # SvtAv1EncApp -i input.yuv -w 1920 -h 1080 -fps 24 -rc 2 -tbr 10000 -enc-mode 5 -b output.ivf
 
         if self.args.encoding_params == '':
-            print('-w -h -fps is required parameters')
+            print('-w -h -fps is required parameters for svt_av1 encoder')
+            exit()
         else:
             self.encoding_params = self.args.encoding_params
 

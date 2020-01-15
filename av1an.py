@@ -324,7 +324,7 @@ class Av1an:
         commands = self.compose_encoding_queue(files, self.args.encoder)
 
         # Creating threading pool to encode bunch of files at the same time
-        print(f'Starting encoding with {self.workers} workers. \nParameters:{self.encoding_params}\nEncoding..')
+        print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
 
         # Progress bar
         bar = ProgressBar(len(vid_queue))

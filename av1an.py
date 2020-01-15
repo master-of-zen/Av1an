@@ -157,18 +157,15 @@ class Av1an:
         is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 
         if is_audio_here > 0 and self.args.audio_params == '':
-                print('default audio')
                 cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
                 os.system(cmd)
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
 
         elif is_audio_here > 0 and len(self.args.audio_params) > 1:
-                print('custom audio')
                 cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
                 os.system(cmd)
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
         else:
-            print('no audio')
             self.audio = ''
 
 

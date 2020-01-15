@@ -7,7 +7,7 @@
 
 <h2 align="center">All-in-one tool for streamlining av1 encoding</h2>
 
-![alt text](https://cdn.discordapp.com/attachments/665440744567472169/665760393498460196/banner.jpg)
+![alt text](https://cdn.discordapp.com/attachments/665440744567472169/666865780012482571/Screenshot_20200115_064531.png)
 
 <h2 align="center">Easy And Efficient </h2>
 

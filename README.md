@@ -11,7 +11,7 @@
 
 <h2 align="center">Easy And Efficient </h2>
 
-Start using AV1 encoding. At the moment only Aomenc and Rav1e are supported
+Start using AV1 encoding. All open-source encoders are supported (Aomenc, Rav1e, SVT-AV1)
 
 Example with default parameters:
 
@@ -25,23 +25,23 @@ With your own parameters:
 
     -i   --file_path        Input file (relative or absolute path)
     
-    -enc --encoder          Encoder to use (aomenc or rav1e. Default: aomenc. Example: -enc rav1e)
+    -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc. Example: -enc rav1e)
     
-    -e   --encoding_params  Encoder settings flags 
+    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. Required for SVT-AV1s)
     
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
     
     -t   --workers          Maximum number of workers (overrides automatically set number of workers.
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
-                            Rav1e can use tiles that uses multiple threads, 
+                            Rav1e and SVT-AV1 uses multiple threads, 
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
-                            4 workers is optimal for 6/12 cpu 
+                            4 rav1e workers is optimal for 6/12 cpu 
     
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
     
     -p   --pass             Set number of passes for encoding (Default: Aomenc: 2, Rav1e: 1)
-                            At current moment 2nd pass rav1e not working
+                            At current moment 2nd pass Rav1e and SVT-AV1 not working
     
     -log --logging          Path to .log file(Default: no logging) 
 

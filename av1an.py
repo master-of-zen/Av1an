@@ -65,7 +65,7 @@ class Av1an:
         self.encoder = 'aomenc'
         self.args = None
         self.audio = ''
-        self.threshold = 20
+        self.threshold = 30
         self.logging = None
         self.encode_pass = 2
         self.encoding_params = ''

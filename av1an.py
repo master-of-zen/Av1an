@@ -88,7 +88,7 @@ class Av1an:
         parser = argparse.ArgumentParser()
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
-        parser.add_argument('--encoder', '-enc', type=str, default='aomenc', help='Choosing encoder')
+        parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=self.audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
@@ -189,6 +189,24 @@ class Av1an:
         print(f'Splited videos: {len(videos)}')
         return videos
 
+    def svt_av1_encode(self, file_paths):
+        # SvtAv1EncApp -i input.yuv -w 1920 -h 1080 -fps 24 -rc 2 -tbr 10000 -enc-mode 5 -b output.ivf
+
+        if self.args.encoding_params == '':
+            print('-w -h -fps is required parameters')
+        else:
+            self.encoding_params = self.args.encoding_params
+
+        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
+
+        single_pass = 'SvtAv1EncApp '
+
+        pass_1_commands = [
+            (f'-i {file[0]} {ffmpeg_pipe} ' +
+             f'  {single_pass} -i stdin {self.encoding_params} -b {file[1]} - {self.logging}', file[2])
+            for file in file_paths]
+        return pass_1_commands
+
     def aomenc_encode(self, file_paths):
         """
         1_pass Aomenc:
@@ -250,17 +268,23 @@ class Av1an:
                            for file in file_paths]
         return pass_1_commands
 
-    def compose_encoding_queue(self, files, encoder):
+    def compose_encoding_queue(self, files):
 
         file_paths = [(f'{join(os.getcwd(), ".temp", "split", file_name)}',
                        f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                        file_name) for file_name in files]
 
-        if encoder == 'aomenc':
+        if self.args.encoder == '':
+            self.encoder = 'aomenc'
+
+        if self.encoder == 'aomenc':
             return self.aomenc_encode(file_paths)
 
-        elif encoder == 'rav1e':
+        elif self.encoder == 'rav1e':
             return self.rav1e_encode(file_paths)
+
+        # elif self.encoder == 'svt':
+        #     return self.svt_av1_encode(file_paths)
 
         else:
             print('No valid encoder')
@@ -321,7 +345,7 @@ class Av1an:
         self.determine_resources()
 
         # Make encode queue
-        commands = self.compose_encoding_queue(files, self.args.encoder)
+        commands = self.compose_encoding_queue(files)
 
         # Creating threading pool to encode bunch of files at the same time
         print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')

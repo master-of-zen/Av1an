@@ -21,7 +21,6 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-FFMPEG = 'ffmpeg -hide_banner -loglevel error'
 
 
 class ProgressBar:
@@ -70,7 +69,9 @@ class Av1an:
         self.encode_pass = 2
         self.encoding_params = ''
         self.output_file = ''
-
+        self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
+        self.force_fps = None
+        self.ffmpeg_pipe = None
         # OS specific NULL pointer
         if sys.platform == 'linux':
             self.null = '&> /dev/null'
@@ -78,6 +79,7 @@ class Av1an:
         else:
             self.point = '>'
             self.null = '> NUL'
+
 
     def arg_parsing(self):
         """
@@ -97,6 +99,7 @@ class Av1an:
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
 
         self.args = parser.parse_args()
+
         self.encode_pass = self.args.encode_pass
 
         # Setting logging depending on OS
@@ -159,12 +162,12 @@ class Av1an:
         is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 
         if is_audio_here > 0 and self.args.audio_params == '':
-                cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
                 os.system(cmd)
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
 
         elif is_audio_here > 0 and len(self.args.audio_params) > 1:
-                cmd = f'{FFMPEG} -i {join(self.here, input_vid)} -vn {self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn {self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
                 os.system(cmd)
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
         else:
@@ -202,12 +205,10 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
-
         single_pass = 'SvtAv1EncApp '
 
         pass_1_commands = [
-            (f'-i {file[0]} {ffmpeg_pipe} ' +
+            (f'-i {file[0]} {self.ffmpeg_pipe} ' +
              f'  {single_pass} -i stdin {self.encoding_params} -b {file[1]} - {self.logging}', file[2])
             for file in file_paths]
         return pass_1_commands
@@ -231,24 +232,22 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
-
         single_pass = 'aomenc -q --passes=1 '
         two_pass_1_aom = 'aomenc -q --passes=2 --pass=1'
         two_pass_2_aom = 'aomenc -q --passes=2 --pass=2'
 
         if self.encode_pass == 1:
             pass_1_commands = [
-                (f'-i {file[0]} {ffmpeg_pipe} ' +
+                (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {single_pass} {self.encoding_params} -o {file[1]} - {self.logging}', file[2])
                 for file in file_paths]
             return pass_1_commands
 
         if self.encode_pass == 2:
             pass_2_commands = [
-                (f'-i {file[0]} {ffmpeg_pipe}' +
+                (f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
-                 f'-i {file[0]} {ffmpeg_pipe}' +
+                 f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
                  , file[2])
                 for file in file_paths]
@@ -266,9 +265,7 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        ffmpeg_pipe = f' -pix_fmt yuv420p -f yuv4mpegpipe - |'
-
-        pass_1_commands = [(f'-i {file[0]} {ffmpeg_pipe} ' +
+        pass_1_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' +
                             f' rav1e -  {self.encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
                            for file in file_paths]
         return pass_1_commands
@@ -300,7 +297,7 @@ class Av1an:
         Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
         """
         for i in commands[:-1]:
-            cmd = rf'{FFMPEG} -an {i}  {self.logging}'
+            cmd = rf'{self.FFMPEG} -an {i}  {self.logging}'
             os.system(cmd)
 
     def concatenate_video(self, input_video):
@@ -325,7 +322,7 @@ class Av1an:
         else:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
-        cmd = f'{FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file} {self.logging}'
+        cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file} {self.logging}'
         os.system(cmd)
 
     def main(self):

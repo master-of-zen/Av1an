@@ -41,6 +41,14 @@ With your own parameters:
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
                             4 rav1e workers is optimal for 6/12 cpu 
     
+    -fps --force_fps        Forces fps of video. Needed when you need to change fps of video,
+                            to prevent encoders from changing video length.
+                            Usefully for SVT-AV1 encoder. No need to set up fps num/denum.
+                            Example:
+                            .. -e '-fps-num 30000 -fps-denom 1001 ..' (SVT-AV1 29.97)
+                            .. -fps 30 -e ' -fps 30 ..' (Force FPS)
+
+
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
     

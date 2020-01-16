@@ -377,4 +377,6 @@ if __name__ == '__main__':
     # Delete temp folders
     rmtree(join(os.getcwd(), ".temp"))
 
-    os.popen('stty sane', 'r')
+    # Prevent linux terminal from hanging
+    if sys.platform == 'linux':
+        os.popen('stty sane', 'r')

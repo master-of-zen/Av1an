@@ -27,7 +27,8 @@ With your own parameters:
     
     -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc. Example: -enc rav1e)
     
-    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. Required for SVT-AV1s)
+    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 
+                            Required for SVT-AV1s)
     
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
     

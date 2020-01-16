@@ -27,9 +27,9 @@ With your own parameters:
     
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
     
-    -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc. 
-                            Example: -enc rav1e)
-    
+    -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc)
+                            Example: -enc rav1e
+
     -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 
                             Required for SVT-AV1s)
     

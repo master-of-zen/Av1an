@@ -95,12 +95,21 @@ class Av1an:
         parser.add_argument('--audio_params', '-a', type=str, default=self.audio, help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
-        parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify 1 or 2 pass encoding')
+        parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
+        parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
 
+        # Parse arguments
         self.args = parser.parse_args()
 
         self.encode_pass = self.args.encode_pass
+
+        if self.args.force_fps == 0:
+            self.force_fps = ''
+        else:
+            self.force_fps = f' -r {self.args.force_fps}'
+
+        self.ffmpeg_pipe = f' {self.force_fps} -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         # Setting logging depending on OS
         if self.logging != self.args.logging:

@@ -78,7 +78,6 @@ class Av1an:
         # Command line parser
         # Have default params
 
-
         parser = argparse.ArgumentParser()
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
@@ -162,14 +161,16 @@ class Av1an:
         is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 
         if is_audio_here > 0 and self.args.audio_params == '':
-                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
-                os.system(cmd)
-                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+            cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} ' \
+                  f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+            os.system(cmd)
+            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
 
         elif is_audio_here > 0 and len(self.args.audio_params) > 1:
-                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn {self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
-                os.system(cmd)
-                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+            cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
+                  f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
+            os.system(cmd)
+            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
         else:
             self.audio = ''
 
@@ -178,7 +179,8 @@ class Av1an:
         # PySceneDetect used split video by scenes and pass it to encoder
         # Optimal threshold settings 15-50
 
-        cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content --threshold {self.threshold} list-scenes  split-video -c {self.logging}'
+        cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content ' \
+               f'--threshold {self.threshold} list-scenes  split-video -c {self.logging}'
         os.system(cmd2)
         print(f'\rVideo {input_vid} splitted')
 
@@ -247,8 +249,8 @@ class Av1an:
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}'
-                 , file[2])
+                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}',
+                 file[2])
                 for file in file_paths]
             return pass_2_commands
 
@@ -264,7 +266,8 @@ class Av1an:
             self.encoding_params = self.args.encoding_params
 
         pass_1_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                            f' rav1e -  {self.encoding_params}  --output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
+                            f' rav1e -  {self.encoding_params}  '
+                            f'--output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
                            for file in file_paths]
         return pass_1_commands
 

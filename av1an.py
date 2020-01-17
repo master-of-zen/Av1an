@@ -17,12 +17,9 @@ except ImportError:
     print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
-
-
 class ProgressBar:
-    """
-    Progress Bar for tracking encoding progress
-    """
+
+    # Progress Bar for tracking encoding progress
 
     def __init__(self, tasks):
         self.bar_iteration: int = 0
@@ -76,12 +73,11 @@ class Av1an:
             self.point = '>'
             self.null = '> NUL'
 
-
     def arg_parsing(self):
-        """
-        Command line parser
-        Have default params
-        """
+
+        # Command line parser
+        # Have default params
+
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
@@ -116,10 +112,9 @@ class Av1an:
             self.logging = self.null
 
     def determine_resources(self):
-        """
-        Returns number of workers that machine can handle with selected encoder
-        :return: int
-        """
+
+        # Returns number of workers that machine can handle with selected encoder
+
         self.encoder = self.args.encoder.strip()
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
@@ -154,10 +149,10 @@ class Av1an:
         os.makedirs(join(self.here, '.temp', 'encode'))
 
     def extract_audio(self, input_vid):
-        """
-        Extracting audio from video file
-        Encoding audio if needed
-        """
+
+        # Extracting audio from video file
+        # Encoding audio if needed
+
         default_audio_params = '-c:a copy'
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
@@ -179,18 +174,18 @@ class Av1an:
             self.audio = ''
 
     def split_video(self, input_vid):
-        """
-        PySceneDetect used split video by scenes and pass it to encoder
-        Optimal threshold settings 15-50
-        """
+
+        # PySceneDetect used split video by scenes and pass it to encoder
+        # Optimal threshold settings 15-50
+
         cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content --threshold {self.threshold} list-scenes  split-video -c {self.logging}'
         os.system(cmd2)
         print(f'\rVideo {input_vid} splitted')
 
     def get_video_queue(self, source_path):
-        """
-        Returns sorted list of all videos that need to be encoded. Big first
-        """
+
+        # Returns sorted list of all videos that need to be encoded. Big first
+
         videos = []
         for root, dirs, files in os.walk(source_path):
             for file in files:
@@ -219,18 +214,17 @@ class Av1an:
         return pass_1_commands
 
     def aomenc_encode(self, file_paths):
-        """
-        1_pass Aomenc:
-        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output_file
 
-        2_pass Aomenc:
-        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        aomenc -q --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
+        # 1_pass Aomenc:
+        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        # aomenc -q   --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output
 
-        ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output_file -
-        """
+        # 2_pass Aomenc:
+        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        # aomenc -q --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
+
+        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
+        # aomenc -q --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output -
 
         if self.args.encoding_params == '':
             self.encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
@@ -259,12 +253,11 @@ class Av1an:
             return pass_2_commands
 
     def rav1e_encode(self, file_paths):
-        """
-        rav1e Single Pass:
-        ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
-        rav1e - --speed = 5 - -tile - rows 2 - -tile - cols 2 - -output output.ivf
-        """
-        
+
+        # rav1e Single Pass:
+        # ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
+        # rav1e - --speed = 5 - -tile - rows 2 - -tile - cols 2 - -output output.ivf
+
         if self.args.encoding_params == '':
             self.encoding_params = '--speed=5 --tile-rows 2 --tile-cols 2'
         else:
@@ -296,20 +289,19 @@ class Av1an:
             exit()
 
     def encode(self, commands):
-        """
-        Passing encoding params to ffmpeg for encoding
-        TODO:
-        Replace ffmpeg with aomenc because ffmpeg libaom doen't work with parameters properly
-        """
+
+        # Passing encoding params to ffmpeg for encoding
+        # Replace ffmpeg with aomenc because ffmpeg libaom doesn't work with parameters properly
+
         for i in commands[:-1]:
             cmd = rf'{self.FFMPEG} -an {i}  {self.logging}'
             os.system(cmd)
 
     def concatenate_video(self, input_video):
-        """
-        Using FFMPEG to concatenate all encoded videos to 1 file.
-        Reading all files in A-Z order and saving it to concat.txt
-        """
+
+        # Using FFMPEG to concatenate all encoded videos to 1 file.
+        # Reading all files in A-Z order and saving it to concat.txt
+
         with open(f'{join(self.here, ".temp", "concat.txt")}', 'w') as f:
 
             for root, firs, files in os.walk(join(self.here, '.temp', 'encode')):

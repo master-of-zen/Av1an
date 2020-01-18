@@ -65,7 +65,9 @@ class Av1an:
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
         self.force_fps = None
         self.ffmpeg_pipe = None
+
         # OS specific NULL pointer
+
         if sys.platform == 'linux':
             self.null = '&> /dev/null'
             self.point = '&>'

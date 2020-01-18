@@ -353,12 +353,11 @@ class Av1an:
         print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
 
         # Progress bar
-        bar = ProgressBar(len(vid_queue))
+        bar = ProgressBar(len(files))
         pool = Pool(self.workers)
         for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
             bar.tick()
 
-        bar.tick()
 
         self.concatenate_video(self.args.file_path)
 

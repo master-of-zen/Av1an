@@ -197,6 +197,7 @@ class Av1an:
                 videos.append([file, f])
 
         videos = sorted(videos, key=lambda x: -x[1])
+        videos = [i[0] for i in videos[:-1]]
         print(f'Splited videos: {len(videos)}')
         return videos
 
@@ -340,8 +341,7 @@ class Av1an:
 
         # Splitting video and sorting big-first
         self.split_video(self.args.file_path)
-        vid_queue = self.get_video_queue('.temp/split')
-        files = [i[0] for i in vid_queue[:-1]]
+        files = self.get_video_queue('.temp/split')
 
         # Determine resources
         self.determine_resources()

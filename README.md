@@ -83,7 +83,9 @@ And many more to go..
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
-Run av1an with command: `python -i ./avian.py params..`
+Install all requirements listed in `requirements` file
+
+Run with command: `python -i ./avian.py params..`
 
 ## Install on Linux
 
@@ -94,3 +96,9 @@ Run av1an with command: `python -i ./avian.py params..`
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+
+Install all requirements listed in `requirements` file
+
+Optionally add Av1an to your PATH
+
+Run with command: `av1an.py params...`

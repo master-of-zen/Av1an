@@ -32,7 +32,8 @@ With your own parameters:
 
     -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 
                             Required for SVT-AV1s)
-    
+                            Must be inside ' ' or " " 
+     
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
     
     -t   --workers          Maximum number of workers (overrides automatically set number of workers.

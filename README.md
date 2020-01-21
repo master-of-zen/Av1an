@@ -56,6 +56,9 @@ With your own parameters:
     -p   --pass             Set number of passes for encoding (Default: Aomenc: 2, Rav1e: 1)
                             At current moment 2nd pass Rav1e and SVT-AV1 not working
     
+    -vf  --video_filter     FFmpeg video filter options. Example: ... -vf 'scale=320:240'  ...
+    
+    
     -log --logging          Path to .log file(Default: no logging) 
 
 <h2 align="center">Main Features</h2>

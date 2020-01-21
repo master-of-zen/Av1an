@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Todo:
+# Fix Windows log not working
+# Add Avif support
+# Add FFmpeg filter option
 
 import sys
 import os

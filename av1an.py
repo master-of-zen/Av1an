@@ -57,19 +57,20 @@ class Av1an:
 
     def __init__(self):
         self.here = os.getcwd()
+        self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
+        self.threshold = 30
+        self.encode_pass = 2
+
         self.workers = 0
         self.encoder = 'aomenc'
         self.args = None
         self.audio = ''
-        self.threshold = 30
         self.logging = None
-        self.encode_pass = 2
         self.encoding_params = ''
         self.output_file = ''
-        self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
         self.force_fps = None
         self.ffmpeg_pipe = None
-
+        self.video_filter = ''
         # OS specific NULL pointer
 
         if sys.platform == 'linux':

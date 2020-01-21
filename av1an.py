@@ -97,7 +97,7 @@ class Av1an:
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
         parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
 
-        # Parse arguments
+        # Pass command line args that were passed
         self.args = parser.parse_args()
 
         self.encode_pass = self.args.encode_pass
@@ -116,6 +116,7 @@ class Av1an:
                 os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
         else:
             self.logging = self.null
+
 
     def determine_resources(self):
 
@@ -266,7 +267,7 @@ class Av1an:
 
         # rav1e Single Pass:
         # ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
-        # rav1e - --speed = 5 - -tile - rows 2 - -tile - cols 2 - -output output.ivf
+        # rav1e - --speed= 5 --tile-rows 2 --tile-cols 2 - -output output.ivf
 
         if self.args.encoding_params == '':
             self.encoding_params = '--speed=5 --tile-rows 2 --tile-cols 2'

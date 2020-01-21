@@ -96,18 +96,22 @@ class Av1an:
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
         parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
+        parser.add_argument('--video_filter', '-vf', type=str, default=self.video_filter, help='FFmpeg video options')
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
         self.encode_pass = self.args.encode_pass
 
+        if self.args.video_filter != self.video_filter:
+            self.video_filter = f' -vf {self.args.video_filter} '
+
         if self.args.force_fps == 0:
             self.force_fps = ''
         else:
             self.force_fps = f' -r {self.args.force_fps}'
 
-        self.ffmpeg_pipe = f' {self.force_fps} -pix_fmt yuv420p -f yuv4mpegpipe - |'
+        self.ffmpeg_pipe = f' {self.video_filter} {self.force_fps} -pix_fmt yuv420p -f yuv4mpegpipe - |'
 
         # Setting logging depending on OS
         if self.logging != self.args.logging:

@@ -4,6 +4,7 @@
 # Fix Windows log not working
 # Add Avif support
 # Add FFmpeg filter option
+# Add 8-10 bit options
 
 import sys
 import os
@@ -120,7 +121,6 @@ class Av1an:
                 os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
         else:
             self.logging = self.null
-
 
     def determine_resources(self):
 
@@ -367,7 +367,6 @@ class Av1an:
         pool = Pool(self.workers)
         for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
             bar.tick()
-
 
         self.concatenate_video(self.args.file_path)
 

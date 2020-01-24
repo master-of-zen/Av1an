@@ -359,6 +359,9 @@ class Av1an:
         # Make encode queue
         commands = self.compose_encoding_queue(files)
 
+        # Reduce number of workers if needed
+        self.workers = min(len(commands), self.workers)
+
         # Creating threading pool to encode bunch of files at the same time
         print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
 

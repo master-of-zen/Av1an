@@ -5,6 +5,7 @@
 # Add Avif support
 # Add FFmpeg filter option
 # Add 8-10 bit options
+# Add rav1e 2 pass
 
 import sys
 import os

@@ -279,10 +279,20 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        pass_1_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' +
+        pass_1_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' 
                             f' rav1e -  {self.encoding_params}  '
                             f'--output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
-                           for file in file_paths]
+                            for file in file_paths]
+
+        pass_2_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                            f' rav1e - --first-pass {file[0]}.json  {self.encoding_params}  '
+                            f'--output {file[1]}.ivf',
+                            f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                            f' rav1e - --second-pass {file[0]}.json  {self.encoding_params}  '
+                            f'--output {file[1]}.ivf',
+                            f'{file[2]}.ivf {self.logging}')
+                            for file in file_paths]
+
         return pass_1_commands
 
     def compose_encoding_queue(self, files):

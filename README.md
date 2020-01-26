@@ -53,8 +53,9 @@ With your own parameters:
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
     
-    -p   --pass             Set number of passes for encoding (Default: Aomenc: 2, Rav1e: 1)
-                            At current moment 2nd pass Rav1e and SVT-AV1 not working
+    -p   --pass             Set number of passes for encoding 
+                            (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
+                            At current moment 2nd pass Rav1e not working
     
     -vf  --video_filter     FFmpeg video filter options. Example: 
                             ... -vf 'scale=320:240'  ...

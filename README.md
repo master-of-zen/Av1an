@@ -60,6 +60,8 @@ With your own parameters:
     -vf  --video_filter     FFmpeg video filter options. Example: 
                             ... -vf 'scale=320:240'  ...
     
+    -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
+                            Example for 10 bit: 'yuv420p10le'
     
     -log --logging          Path to .log file(Default: no logging)
                             Currently not working on Windows

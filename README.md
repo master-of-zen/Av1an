@@ -37,7 +37,8 @@ With your own parameters:
 
     -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 
                             Required for SVT-AV1s)
-                            Must be inside ' ' or " " 
+                            Can be set for both video and image mode
+                            Must be inside ' ' or " "
      
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
     

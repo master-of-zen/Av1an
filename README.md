@@ -27,6 +27,8 @@ With your own parameters:
     
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
     
+    -m   --mode              0 - Video encoding (Default), 1 - Image encoding 
+    
     -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc)
                             Example: -enc rav1e
 
@@ -71,6 +73,8 @@ With your own parameters:
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+
+Both Video and Avif Image encoding
 
 Simple and clean console look
 

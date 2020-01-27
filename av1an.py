@@ -380,10 +380,20 @@ class Av1an:
         os.system(cmd)
 
     def image(self, image_path):
-        print('Encoding Image..')
-        cmd = (rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - ' +
-               rf'| rav1e -s 3 - -o {"".join(image_path.split(".")[:-1])}.ivf {self.logging}')
-        os.system(cmd)
+        print('Encoding Image..', end='')
+
+        image_pipe = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
+        output = rf'{"".join(image_path.split(".")[:-1])}.ivf'
+        if self.encoder == 'aomenc':
+            aomenc = ' aomenc --passes=1 --pass=1 -q --end-usage=q  -b 10 --input-bit-depth=10 '
+            cmd = (rf' {image_pipe} ' +
+                   rf'{aomenc} {self.encoding_params} -o {output} - {self.logging}')
+            os.system(cmd)
+
+        elif self.encoder == 'rav1e':
+            cmd = (rf' {image_pipe} ' +
+                   rf' rav1e {self.encoding_params} - -o {output} {self.logging}')
+            os.system(cmd)
 
     def main(self):
 

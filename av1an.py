@@ -120,7 +120,6 @@ class Av1an:
         if self.args.video_filter != self.video_filter:
             self.video_filter = f' -vf {self.args.video_filter} '
 
-
         # Forcing FPS option
         if self.args.force_fps == 0:
             self.force_fps = ''
@@ -146,7 +145,6 @@ class Av1an:
     def determine_resources(self):
 
         # Returns number of workers that machine can handle with selected encoder
-
 
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)

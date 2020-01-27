@@ -380,8 +380,9 @@ class Av1an:
         os.system(cmd)
 
     def image(self, image_path):
-        print('Encoding Image..', end='')
-        cmd = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | rav1e -s 3 - -o {image_path}.ivf {self.logging}'
+        print('Encoding Image..')
+        cmd = (rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - ' +
+               rf'| rav1e -s 3 - -o {"".join(image_path.split(".")[:-1])}.ivf {self.logging}')
         os.system(cmd)
 
     def main(self):

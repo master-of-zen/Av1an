@@ -105,6 +105,7 @@ Install all requirements listed in `requirements` file.
 
 If installed programs don't added to enviroment variable, 
 executables can be put in same folder with av1an
+
 Run with command: `python -i ./avian.py params..`
 
 ## Install on Linux

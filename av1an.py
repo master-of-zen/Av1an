@@ -107,6 +107,9 @@ class Av1an:
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
+        # Set encoder if provided
+        self.encoder = self.args.encoder.strip()
+
         # Set mode (Video/Picture)
         self.mode = self.args.mode
 
@@ -144,7 +147,7 @@ class Av1an:
 
         # Returns number of workers that machine can handle with selected encoder
 
-        self.encoder = self.args.encoder.strip()
+
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 

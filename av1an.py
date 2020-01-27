@@ -394,6 +394,9 @@ class Av1an:
             cmd = (rf' {image_pipe} ' +
                    rf' rav1e {self.encoding_params} - -o {output} {self.logging}')
             os.system(cmd)
+        else:
+            print(f'Not valid encoder: {self.encoder}')
+            exit()
 
     def main(self):
 

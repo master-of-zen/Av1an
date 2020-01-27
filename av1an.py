@@ -73,6 +73,7 @@ class Av1an:
         self.force_fps = None
         self.ffmpeg_pipe = None
         self.video_filter = ''
+        self.pix_format = 'yuv420p'
         # OS specific NULL pointer
 
         if sys.platform == 'linux':
@@ -99,21 +100,31 @@ class Av1an:
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
         parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
         parser.add_argument('--video_filter', '-vf', type=str, default=self.video_filter, help='FFmpeg video options')
+        parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
+        # Number of encoder passes
         self.encode_pass = self.args.encode_pass
 
+        # Adding filter
         if self.args.video_filter != self.video_filter:
             self.video_filter = f' -vf {self.args.video_filter} '
 
+        # Forcing FPS option
         if self.args.force_fps == 0:
             self.force_fps = ''
         else:
             self.force_fps = f' -r {self.args.force_fps}'
 
-        self.ffmpeg_pipe = f' {self.video_filter} {self.force_fps} -pix_fmt yuv420p -f yuv4mpegpipe - |'
+        # Changing pixel format, bit format
+        if self.args.pix_format != self.pix_format:
+            self.pix_format = f' -strict -1 -pix_fmt {self.args.pix_format}'
+        else:
+            self.pix_format = f'-pix_fmt {self.args.pix_format}'
+
+        self.ffmpeg_pipe = f' {self.video_filter} {self.force_fps} {self.pix_format} -f yuv4mpegpipe - |'
 
         # Setting logging depending on OS
         if self.logging != self.args.logging:
@@ -213,6 +224,7 @@ class Av1an:
         return videos
 
     def svt_av1_encode(self, file_paths):
+        # Single pass:
         # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
         # SvtAv1EncApp -i - -w 1920 -h 1080 -fps 24 -rc 2 -tbr 10000 -enc-mode 5 -b output.ivf
 

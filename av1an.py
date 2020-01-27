@@ -138,7 +138,6 @@ class Av1an:
         if self.logging != self.args.logging:
             if sys.platform == 'linux':
                 self.logging = f'&>> {self.args.logging}.log'
-                os.system(f'echo " Av1an Logging "> {self.args.logging}.log')
         else:
             self.logging = self.null
 

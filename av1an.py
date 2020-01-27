@@ -59,6 +59,7 @@ class Av1an:
 
     def __init__(self):
         self.here = os.getcwd()
+        self.mode = 0
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
         self.threshold = 30
         self.encode_pass = 2
@@ -89,6 +90,7 @@ class Av1an:
         # Have default params
 
         parser = argparse.ArgumentParser()
+        parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
@@ -105,12 +107,16 @@ class Av1an:
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
+        # Set mode (Video/Picture)
+        self.mode = self.args.mode
+
         # Number of encoder passes
         self.encode_pass = self.args.encode_pass
 
         # Adding filter
         if self.args.video_filter != self.video_filter:
             self.video_filter = f' -vf {self.args.video_filter} '
+
 
         # Forcing FPS option
         if self.args.force_fps == 0:
@@ -373,40 +379,52 @@ class Av1an:
         cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file} {self.logging}'
         os.system(cmd)
 
+    def image(self, image_path):
+        print('Encoding Image..', end='')
+        cmd = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | rav1e -s 3 - -o {image_path}.ivf {self.logging}'
+        os.system(cmd)
+
     def main(self):
 
         # Parse initial arguments
         self.arg_parsing()
+        # Video Mode
+        if self.mode == 0:
+            # Check validity of request and create temp folders/files
+            self.setup(self.args.file_path)
 
-        # Check validity of request and create temp folders/files
-        self.setup(self.args.file_path)
+            # Extracting audio
+            self.extract_audio(self.args.file_path)
 
-        # Extracting audio
-        self.extract_audio(self.args.file_path)
+            # Splitting video and sorting big-first
+            self.split_video(self.args.file_path)
+            files = self.get_video_queue('.temp/split')
 
-        # Splitting video and sorting big-first
-        self.split_video(self.args.file_path)
-        files = self.get_video_queue('.temp/split')
+            # Determine resources
+            self.determine_resources()
 
-        # Determine resources
-        self.determine_resources()
+            # Make encode queue
+            commands = self.compose_encoding_queue(files)
 
-        # Make encode queue
-        commands = self.compose_encoding_queue(files)
+            # Reduce number of workers if needed
+            self.workers = min(len(commands), self.workers)
 
-        # Reduce number of workers if needed
-        self.workers = min(len(commands), self.workers)
+            # Creating threading pool to encode bunch of files at the same time
+            print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
 
-        # Creating threading pool to encode bunch of files at the same time
-        print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
+            # Progress bar
+            bar = ProgressBar(len(files))
+            pool = Pool(self.workers)
+            for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
+                bar.tick()
 
-        # Progress bar
-        bar = ProgressBar(len(files))
-        pool = Pool(self.workers)
-        for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
-            bar.tick()
+            self.concatenate_video(self.args.file_path)
 
-        self.concatenate_video(self.args.file_path)
+            # Delete temp folders
+            rmtree(join(os.getcwd(), ".temp"))
+
+        if self.mode == 1:
+            self.image(self.args.file_path)
 
 
 if __name__ == '__main__':
@@ -417,10 +435,7 @@ if __name__ == '__main__':
     av1an = Av1an()
     av1an.main()
 
-    print(f'\n Completed in {round(time.time()-start, 1)} seconds')
-
-    # Delete temp folders
-    rmtree(join(os.getcwd(), ".temp"))
+    print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
 
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':

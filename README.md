@@ -27,7 +27,9 @@ With your own parameters:
     
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
     
-    -m   --mode              0 - Video encoding (Default), 1 - Image encoding 
+    -m   --mode              0 - Video encoding (Default), 1 - Image encoding
+                            By default used 10 bit encoding. 
+                            Constant quality mode for Aomenc
     
     -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc)
                             Example: -enc rav1e
@@ -64,6 +66,7 @@ With your own parameters:
     
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
                             Example for 10 bit: 'yuv420p10le'
+                            Encoding options should be adjusted accordingly
     
     -log --logging          Path to .log file(Default: no logging)
                             Currently not working on Windows

@@ -28,7 +28,7 @@ With your own parameters:
     
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
     
-    -m   --mode              0 - Video encoding (Default), 1 - Image encoding
+    -m   --mode             0 - Video encoding (Default), 1 - Image encoding
                             By default used 10 bit encoding. 
                             Constant quality mode for Aomenc
     

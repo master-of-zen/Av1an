@@ -11,7 +11,8 @@
 
 <h2 align="center">Easy And Efficient </h2>
 
-Start using AV1 encoding. All open-source encoders are supported (Aomenc, Rav1e, SVT-AV1)
+Start using AV1 encoding. All open-source encoders are supported (Aomenc, Rav1e, SVT-AV1).
+Avif encoding supported (Aomenc, Rav1e)
 
 Example with default parameters:
 

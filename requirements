@@ -3,3 +3,4 @@ opencv-python
 tqdm
 scenedetect
 psutil
+pymkv

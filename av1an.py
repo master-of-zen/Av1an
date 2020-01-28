@@ -192,7 +192,7 @@ class Av1an:
 
         # Generate file with audio check
         check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
-        self.call_cmd(check)
+        os.system(check)
         
         is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 

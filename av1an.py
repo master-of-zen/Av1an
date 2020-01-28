@@ -161,6 +161,7 @@ class Av1an:
             print('Error: no valid encoder')
             exit()
 
+        # fix if workers round up to 0
         if self.workers == 0:
             self.workers += 1
 

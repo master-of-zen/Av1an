@@ -161,6 +161,9 @@ class Av1an:
             print('Error: no valid encoder')
             exit()
 
+        if self.workers == 0:
+            self.workers += 1
+
     def setup(self, input_file):
 
         if not os.path.exists(input_file):

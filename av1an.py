@@ -81,6 +81,10 @@ class Av1an:
             self.point = '>'
             self.null = '> NUL'
 
+    def call_cmd(self, cmd):
+        cmd = rf'{cmd} {self.logging}'
+        os.system(cmd)
+
     def arg_parsing(self):
 
         # Command line parser
@@ -184,23 +188,24 @@ class Av1an:
         # Encoding audio if needed
 
         default_audio_params = '-c:a copy'
-        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
+        ffprobe = 'ffprobe -hide_banner  -show_streams -select_streams a'
 
         # Generate file with audio check
         check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
-        os.system(check)
+        self.call_cmd(check)
+        
         is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 
         if is_audio_here > 0 and self.args.audio_params == '':
             cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} ' \
-                  f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
-            os.system(cmd)
+                  f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
+            self.call_cmd(cmd)
             self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
 
         elif is_audio_here > 0 and len(self.args.audio_params) > 1:
             cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
-                  f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")} {self.logging}'
-            os.system(cmd)
+                  f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
+            self.call_cmd(cmd)
             self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
         else:
             self.audio = ''
@@ -211,8 +216,8 @@ class Av1an:
         # Optimal threshold settings 15-50
 
         cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content ' \
-               f'--threshold {self.threshold} list-scenes  split-video -c {self.logging}'
-        os.system(cmd2)
+               f'--threshold {self.threshold} list-scenes  split-video -c'
+        self.call_cmd(cmd2)
         print(f'\rVideo {input_vid} splitted')
 
     def get_video_queue(self, source_path):
@@ -244,7 +249,7 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1]} - {self.logging}', file[2])
+                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1]} -', file[2])
                 for file in file_paths]
             return pass_1_commands
 
@@ -253,9 +258,9 @@ class Av1an:
             p2o = ' -output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0]}.stat -b {file[0]}.bk - {self.logging}',
+                 f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0]}.stat -b {file[0]}.bk - ',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0]}.stat -b {file[1]} - {self.logging}',
+                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0]}.stat -b {file[1]} - ',
                  file[2])
                 for file in file_paths]
             return pass_2_commands
@@ -278,23 +283,23 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        single_pass = 'aomenc -q --passes=1 '
-        two_pass_1_aom = 'aomenc -q --passes=2 --pass=1'
-        two_pass_2_aom = 'aomenc -q --passes=2 --pass=2'
+        single_pass = 'aomenc  --passes=1 '
+        two_pass_1_aom = 'aomenc  --passes=2 --pass=1'
+        two_pass_2_aom = 'aomenc  --passes=2 --pass=2'
 
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.encoding_params} -o {file[1]} - {self.logging}', file[2])
+                 f'  {single_pass} {self.encoding_params} -o {file[1]} - ', file[2])
                 for file in file_paths]
             return pass_1_commands
 
         if self.encode_pass == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - {self.logging}',
+                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - {self.logging}',
+                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - ',
                  file[2])
                 for file in file_paths]
             return pass_2_commands
@@ -310,19 +315,21 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        pass_1_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                            f' rav1e -  {self.encoding_params}  '
-                            f'--output {file[1]}.ivf', f'{file[2]}.ivf {self.logging}')
-                            for file in file_paths]
+        pass_1_commands = [
+            (f'-i {file[0]} {self.ffmpeg_pipe} ' 
+             f' rav1e -  {self.encoding_params}  '
+             f'--output {file[1]}.ivf', f'{file[2]}.ivf ')
+            for file in file_paths]
 
-        pass_2_commands = [(f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                            f' rav1e - --first-pass {file[0]}.json  {self.encoding_params}  '
-                            f'--output {file[1]}.ivf',
-                            f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                            f' rav1e - --second-pass {file[0]}.json  {self.encoding_params}  '
-                            f'--output {file[1]}.ivf',
-                            f'{file[2]}.ivf {self.logging}')
-                            for file in file_paths]
+        pass_2_commands = [
+            (f'-i {file[0]} {self.ffmpeg_pipe} ' 
+             f' rav1e - --first-pass {file[0]}.json  {self.encoding_params} '
+             f'--output {file[1]}.ivf',
+             f'-i {file[0]} {self.ffmpeg_pipe} ' 
+             f' rav1e - --second-pass {file[0]}.json  {self.encoding_params} '
+             f'--output {file[1]}.ivf',
+             f'{file[2]}.ivf')
+            for file in file_paths]
 
         return pass_1_commands
 
@@ -352,8 +359,8 @@ class Av1an:
         # Replace ffmpeg with aomenc because ffmpeg libaom doesn't work with parameters properly
 
         for i in commands[:-1]:
-            cmd = rf'{self.FFMPEG} -an {i}  {self.logging}'
-            os.system(cmd)
+            cmd = rf'{self.FFMPEG} -an {i}'
+            self.call_cmd(cmd)
 
     def concatenate_video(self, input_video):
 
@@ -377,8 +384,8 @@ class Av1an:
         else:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
-        cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file} {self.logging}'
-        os.system(cmd)
+        cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'
+        self.call_cmd(cmd)
 
     def image(self, image_path):
         print('Encoding Image..', end='')
@@ -386,15 +393,15 @@ class Av1an:
         image_pipe = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
         output = rf'{"".join(image_path.split(".")[:-1])}.ivf'
         if self.encoder == 'aomenc':
-            aomenc = ' aomenc --passes=1 --pass=1 -q --end-usage=q  -b 10 --input-bit-depth=10 '
+            aomenc = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
             cmd = (rf' {image_pipe} ' +
-                   rf'{aomenc} {self.encoding_params} -o {output} - {self.logging}')
-            os.system(cmd)
+                   rf'{aomenc} {self.encoding_params} -o {output} - ')
+            self.call_cmd(cmd)
 
         elif self.encoder == 'rav1e':
             cmd = (rf' {image_pipe} ' +
-                   rf' rav1e {self.encoding_params} - -o {output} {self.logging}')
-            os.system(cmd)
+                   rf' rav1e {self.encoding_params} - -o {output} ')
+            self.call_cmd(cmd)
         else:
             print(f'Not valid encoder: {self.encoder}')
             exit()

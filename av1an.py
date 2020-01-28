@@ -54,7 +54,7 @@ class ProgressBar:
 
 class Av1an:
 
-    def __init__(self):
+    def __init__(self, args=None):
         self.here = os.getcwd()
         self.mode = 0
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
@@ -63,7 +63,7 @@ class Av1an:
 
         self.workers = 0
         self.encoder = 'aomenc'
-        self.args = None
+        self.args = args
         self.audio = ''
         self.logging = None
         self.encoding_params = ''
@@ -102,7 +102,7 @@ class Av1an:
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
 
         # Pass command line args that were passed
-        self.args = parser.parse_args()
+        self.args = parser.parse_args(args=self.args)
 
         # Set encoder if provided
         self.encoder = self.args.encoder.strip()

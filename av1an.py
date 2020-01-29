@@ -178,7 +178,7 @@ class Av1an:
         # Encoding audio if needed
 
         default_audio_params = '-c:a copy'
-        ffprobe = 'ffprobe -hide_banner  -show_streams -select_streams a'
+        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
         # Generate file with audio check
         check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'

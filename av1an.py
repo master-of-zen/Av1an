@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-# Todo:
-# Fix Windows log not working
-# Add rav1e 2 pass
-
 import sys
 import os
 import shutil
@@ -14,10 +10,6 @@ import time
 from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
-try:
-    import scenedetect
-except ImportError:
-    print('ERROR: No PyScenedetect installed, try: sudo pip install scenedetect')
 
 
 class ProgressBar:
@@ -56,22 +48,21 @@ class Av1an:
 
     def __init__(self):
         self.here = os.getcwd()
-        self.mode = 0
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
-        self.threshold = 30
-        self.encode_pass = 2
-
-        self.workers = 0
-        self.encoder = 'aomenc'
-        self.args = None
-        self.audio = ''
-        self.logging = None
-        self.encoding_params = ''
-        self.output_file = ''
-        self.force_fps = None
-        self.ffmpeg_pipe = None
-        self.video_filter = ''
         self.pix_format = 'yuv420p'
+        self.encoder = 'aomenc'
+        self.encode_pass = 2
+        self.threshold = 30
+        self.workers = 0
+        self.mode = 0
+        self.ffmpeg_pipe = None
+        self.force_fps = None
+        self.logging = None
+        self.args = None
+        self.encoding_params = ''
+        self.video_filter = ''
+        self.output_file = ''
+        self.audio = ''
         # OS specific NULL pointer
 
         if sys.platform == 'linux':
@@ -87,8 +78,7 @@ class Av1an:
 
     def arg_parsing(self):
 
-        # Command line parser
-        # Have default params
+        # Command line parse and assigning defined and user defined params
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
@@ -230,8 +220,7 @@ class Av1an:
                 f = os.path.getsize(os.path.join(root, file))
                 videos.append([file, f])
 
-        videos = sorted(videos, key=lambda x: -x[1])
-        videos = [i[0] for i in videos[:-1]]
+        videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])[:-1]]
         print(f'Splited videos: {len(videos)}')
         return videos
 
@@ -307,31 +296,34 @@ class Av1an:
     def rav1e_encode(self, file_paths):
 
         # rav1e Single Pass:
-        # ffmpeg - i bruh.mp4 - pix_fmt yuv420p - f yuv4mpegpipe - |
+        # ffmpeg - i input - pix_fmt yuv420p - f yuv4mpegpipe - |
         # rav1e - --speed= 5 --tile-rows 2 --tile-cols 2 - -output output.ivf
 
         if self.args.encoding_params == '':
             self.encoding_params = '--speed=5 --tile-rows 2 --tile-cols 2'
         else:
             self.encoding_params = self.args.encoding_params
+        if self.encode_pass == 1 or self.encode_pass == 2:
+            pass_1_commands = [
+                (f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                 f' rav1e -  {self.encoding_params}  '
+                 f'--output {file[1]}.ivf', f'{file[2]}.ivf ')
+                for file in file_paths]
+            return pass_1_commands
+        if self.encode_pass == 2:
 
-        pass_1_commands = [
-            (f'-i {file[0]} {self.ffmpeg_pipe} ' 
-             f' rav1e -  {self.encoding_params}  '
-             f'--output {file[1]}.ivf', f'{file[2]}.ivf ')
-            for file in file_paths]
+            # 2 encode pass not working with FFmpeg pipes :(
+            pass_2_commands = [
+                (f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                 f' rav1e - --first-pass {file[0]}stat {self.encoding_params} '
+                 f'--output {file[1]}.ivf',
+                 f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                 f' rav1e - --second-pass {file[0]}stat {self.encoding_params} '
+                 f'--output {file[1]}.ivf',
+                 f'{file[2]}.ivf')
+                for file in file_paths]
 
-        pass_2_commands = [
-            (f'-i {file[0]} {self.ffmpeg_pipe} ' 
-             f' rav1e - --first-pass {file[0]}.json  {self.encoding_params} '
-             f'--output {file[1]}.ivf',
-             f'-i {file[0]} {self.ffmpeg_pipe} ' 
-             f' rav1e - --second-pass {file[0]}.json  {self.encoding_params} '
-             f'--output {file[1]}.ivf',
-             f'{file[2]}.ivf')
-            for file in file_paths]
-
-        return pass_1_commands
+            return pass_2_commands
 
     def compose_encoding_queue(self, files):
 

@@ -70,7 +70,7 @@ class Av1an:
             self.point = '&>'
         else:
             self.point = '>'
-            self.null = '> NUL'
+            self.null = '> nul 2>&1'
 
     def call_cmd(self, cmd):
         cmd = rf'{cmd} {self.logging}'

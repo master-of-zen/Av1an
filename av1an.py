@@ -204,11 +204,11 @@ class Av1an:
 
         # PySceneDetect used split video by scenes and pass it to encoder
         # Optimal threshold settings 15-50
+        print(f'\rSpliting video..', end='\r')
 
         cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content ' \
                f'--threshold {self.threshold} list-scenes  split-video -c'
         self.call_cmd(cmd2)
-        print(f'\rVideo {input_vid} splitted')
 
     def get_video_queue(self, source_path):
 
@@ -221,7 +221,7 @@ class Av1an:
                 videos.append([file, f])
 
         videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])[:-1]]
-        print(f'Splited videos: {len(videos)}')
+        print(f'Clips:{len(videos)} ', end='')
         return videos
 
     def svt_av1_encode(self, file_paths):
@@ -424,7 +424,7 @@ class Av1an:
             self.workers = min(len(commands), self.workers)
 
             # Creating threading pool to encode bunch of files at the same time
-            print(f'Starting encoding with {self.workers} workers. \nParameters: {self.encoding_params}\nEncoding..')
+            print(f'Workers: {self.workers}\nParams: {self.encoding_params}')
 
             # Progress bar
             bar = ProgressBar(len(files))

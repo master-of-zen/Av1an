@@ -10,6 +10,7 @@ import time
 from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
+# Fix frame cuts
 
 
 class ProgressBar:

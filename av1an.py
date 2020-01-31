@@ -3,6 +3,7 @@
 import sys
 import os
 import shutil
+import csv
 from os.path import join
 from psutil import virtual_memory
 import argparse
@@ -207,9 +208,16 @@ class Av1an:
         # Optimal threshold settings 15-50
         print(f'\rSpliting video..', end='\r')
 
-        cmd2 = f'scenedetect -i {input_vid}  --output .temp/split detect-content ' \
-               f'--threshold {self.threshold} list-scenes  split-video -c'
+        cmd2 = f'scenedetect -i {input_vid}  --output .temp/ detect-content ' \
+               f'--threshold {self.threshold} list-scenes '
         self.call_cmd(cmd2)
+        scenes = '.'.join(input_vid.split('.')[:-1])
+        with open(f'{join(self.here, ".temp", f"{scenes}-Scenes.csv")}') as csv_file:
+            stamps = next(csv.reader(csv_file))
+            stamps = stamps[1:]
+            stamps = ','.join(stamps)
+            cmd = f'{self.FFMPEG} -i {input_vid}  -an -f segment -segment_times {stamps} -c copy -avoid_negative_ts 1 .temp/split/%02d.mkv'
+            self.call_cmd(cmd)
 
     def get_video_queue(self, source_path):
 
@@ -221,7 +229,7 @@ class Av1an:
                 f = os.path.getsize(os.path.join(root, file))
                 videos.append([file, f])
 
-        videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])[:-1]]
+        videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])]
         print(f'Clips: {len(videos)} ', end='')
         return videos
 

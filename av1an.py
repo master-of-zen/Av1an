@@ -222,7 +222,7 @@ class Av1an:
                 videos.append([file, f])
 
         videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])[:-1]]
-        print(f'Clips:{len(videos)} ', end='')
+        print(f'Clips: {len(videos)} ', end='')
         return videos
 
     def svt_av1_encode(self, file_paths):

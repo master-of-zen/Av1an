@@ -97,6 +97,13 @@ class Av1an:
         parser.add_argument('--video_filter', '-vf', type=str, default=self.video_filter, help='FFmpeg video options')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
 
+        # Test
+        try:
+            import scenedetect
+        except ImportError:
+            print('PySceneDetect not found. Please check installation')
+            exit()
+
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -162,7 +169,6 @@ class Av1an:
             self.workers += 1
 
     def setup(self, input_file):
-
         if not os.path.exists(input_file):
             print("File don't exist")
             exit()
@@ -178,29 +184,32 @@ class Av1an:
 
         # Extracting audio from video file
         # Encoding audio if needed
+        try:
+            default_audio_params = '-c:a copy'
+            ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
-        default_audio_params = '-c:a copy'
-        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
+            # Generate file with audio check
+            check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
+            os.system(check)
 
-        # Generate file with audio check
-        check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
-        os.system(check)
-        
-        is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
+            is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
 
-        if is_audio_here > 0 and self.args.audio_params == '':
-            cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} ' \
-                  f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
-            self.call_cmd(cmd)
-            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+            if is_audio_here > 0 and self.args.audio_params == '':
+                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} ' \
+                      f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
+                self.call_cmd(cmd)
+                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
 
-        elif is_audio_here > 0 and len(self.args.audio_params) > 1:
-            cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
-                  f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
-            self.call_cmd(cmd)
-            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
-        else:
-            self.audio = ''
+            elif is_audio_here > 0 and len(self.args.audio_params) > 1:
+                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
+                      f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
+                self.call_cmd(cmd)
+                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
+            else:
+                self.audio = ''
+        except FileNotFoundError:
+            print('Audio stream file not found. Error in audio extraction')
+            exit()
 
     def split_video(self, input_vid):
 
@@ -216,7 +225,7 @@ class Av1an:
             stamps = next(csv.reader(csv_file))
             stamps = stamps[1:]
             stamps = ','.join(stamps)
-            cmd = f'{self.FFMPEG} -i {input_vid}  -an -f segment -segment_times {stamps} -c copy -avoid_negative_ts 1 .temp/split/%02d.mkv'
+            cmd = f'{self.FFMPEG} -i {input_vid}  -an -f segment -segment_times {stamps} -c copy -avoid_negative_ts 1 .temp/split/%04d.mkv'
             self.call_cmd(cmd)
 
     def get_video_queue(self, source_path):
@@ -444,7 +453,7 @@ class Av1an:
             self.concatenate_video(self.args.file_path)
 
             # Delete temp folders
-            rmtree(join(os.getcwd(), ".temp"))
+            rmtree(join(self.here, ".temp"))
 
         if self.mode == 1:
             self.image(self.args.file_path)

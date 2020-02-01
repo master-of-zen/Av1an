@@ -95,8 +95,7 @@ And many more to go..
 
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/) 
-* [mkvmerge/python-pymkv](https://pypi.org/project/pymkv/) and add it on env variable
+* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
@@ -112,8 +111,7 @@ Run with command: `python -i ./avian.py params..`
 
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/) 
-* [mkvmerge/python-pymkv](https://pypi.org/project/pymkv/)
+* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder

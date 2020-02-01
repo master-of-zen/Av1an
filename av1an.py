@@ -315,10 +315,10 @@ class Av1an:
 
         # rav1e Single Pass:
         # ffmpeg - i input - pix_fmt yuv420p - f yuv4mpegpipe - |
-        # rav1e - --speed= 5 --tile-rows 2 --tile-cols 2 - -output output.ivf
+        # rav1e - --speed= 5  -output output.ivf
 
         if self.args.encoding_params == '':
-            self.encoding_params = '--speed=5 --tile-rows 2 --tile-cols 2'
+            self.encoding_params = '--speed=5'
         else:
             self.encoding_params = self.args.encoding_params
         if self.encode_pass == 1 or self.encode_pass == 2:
@@ -333,10 +333,10 @@ class Av1an:
             # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                 f' rav1e - --first-pass {file[0]}stat {self.encoding_params} '
-                 f'--output {file[1]}.ivf',
+                 f' rav1e - --first-pass {file[0]}.stat {self.encoding_params} '
+                 f'--output {file[0]}.ivf',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                 f' rav1e - --second-pass {file[0]}stat {self.encoding_params} '
+                 f' rav1e - --second-pass {file[0]}.stat {self.encoding_params} '
                  f'--output {file[1]}.ivf',
                  f'{file[2]}.ivf')
                 for file in file_paths]

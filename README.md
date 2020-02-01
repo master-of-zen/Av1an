@@ -32,7 +32,7 @@ With your own parameters:
                             By default used 10 bit encoding. 
                             Constant quality mode for Aomenc
     
-    -enc --encoder          Encoder to use (aomenc or rav1e or svt_av1. Default: aomenc)
+    -enc --encoder          Encoder to use (aom or rav1e or svt_av1. Default: aom)
                             Example: -enc rav1e
 
     -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 

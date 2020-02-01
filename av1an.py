@@ -383,10 +383,12 @@ class Av1an:
                     f.write(f"file '{join(root, file)}'\n")
 
         concat = join(self.here, ".temp", "concat.txt")
-
-        is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
-        if is_audio_here:
-            self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
+        try:
+            is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
+            if is_audio_here:
+                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
+        except FileNotFoundError:
+            print('Error at point of ')
 
         if self.output_file == self.args.output_file:
             self.output_file = f'{input_video.split(".")[0]}_av1.mkv'

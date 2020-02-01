@@ -52,7 +52,6 @@ class Av1an:
         self.here = os.getcwd()
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
-        self.encoder = 'aomenc'
         self.encoder = 'aom'
         self.encode_pass = 2
         self.threshold = 30
@@ -155,7 +154,7 @@ class Av1an:
         if self.args.workers != 0:
             self.workers = self.args.workers
 
-        elif self.encoder == 'aomenc':
+        elif self.encoder == 'aom':
             self.workers = ceil(min(cpu, ram/1.5))
 
         elif self.encoder == 'rav1e':
@@ -272,7 +271,7 @@ class Av1an:
                 for file in file_paths]
             return pass_2_commands
 
-    def aomenc_encode(self, file_paths):
+    def aom_encode(self, file_paths):
 
         # 1_pass Aomenc:
         # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
@@ -349,8 +348,8 @@ class Av1an:
                        f'{join(os.getcwd(), ".temp", "encode", file_name)}',
                        file_name) for file_name in files]
 
-        if self.encoder == 'aomenc':
-            return self.aomenc_encode(file_paths)
+        if self.encoder == 'aom':
+            return self.aom_encode(file_paths)
 
         elif self.encoder == 'rav1e':
             return self.rav1e_encode(file_paths)
@@ -366,7 +365,7 @@ class Av1an:
     def encode(self, commands):
 
         # Passing encoding params to ffmpeg for encoding
-        # Replace ffmpeg with aomenc because ffmpeg libaom doesn't work with parameters properly
+        # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly
 
         for i in commands[:-1]:
             cmd = rf'{self.FFMPEG} -an {i}'
@@ -402,10 +401,10 @@ class Av1an:
 
         image_pipe = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
         output = rf'{"".join(image_path.split(".")[:-1])}.ivf'
-        if self.encoder == 'aomenc':
-            aomenc = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
+        if self.encoder == 'aom':
+            aom = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
             cmd = (rf' {image_pipe} ' +
-                   rf'{aomenc} {self.encoding_params} -o {output} - ')
+                   rf'{aom} {self.encoding_params} -o {output} - ')
             self.call_cmd(cmd)
 
         elif self.encoder == 'rav1e':

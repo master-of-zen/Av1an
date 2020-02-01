@@ -55,9 +55,15 @@ With your own parameters:
                             .. -e '-fps-num 30000 -fps-denom 1001 ..' (SVT-AV1 29.97)
                             .. -fps 30 -e ' -fps 30 ..' (Force FPS)
 
-
+        
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
+    
+    -s   --scenes           Path to PySceneDetect generated .csv file.
+                            If file not exist, new one will be generated in current folder
+                            Example of usage:
+                            First run to generate: `-s anything`
+                            All next runs to reuse generated file: `-s video-Scenes.scv`
     
     -p   --pass             Set number of passes for encoding 
                             (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)

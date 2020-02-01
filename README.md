@@ -11,7 +11,7 @@
 
 <h2 align="center">Easy And Efficient </h2>
 
-Start using AV1 encoding. All open-source encoders are supported (Aomenc, Rav1e, SVT-AV1).
+Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SVT-AV1).
 Avif encoding supported (Aomenc, Rav1e)
 
 Example with default parameters:
@@ -20,7 +20,7 @@ Example with default parameters:
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aomenc -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
+    ./av1an.py -i input -enc aom -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
 
 <h2 align="center">Usage</h2>
 

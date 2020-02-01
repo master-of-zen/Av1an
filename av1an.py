@@ -224,7 +224,8 @@ class Av1an:
             stamps = next(csv.reader(csv_file))
             stamps = stamps[1:]
             stamps = ','.join(stamps)
-            cmd = f'{self.FFMPEG} -i {input_vid}  -an -f segment -segment_times {stamps} -c copy -avoid_negative_ts 1 .temp/split/%04d.mkv'
+            cmd = f'{self.FFMPEG} -i {input_vid} -map_metadata -1  -an -f segment -segment_times {stamps} ' \
+                  f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
             self.call_cmd(cmd)
 
     def get_video_queue(self, source_path):
@@ -388,15 +389,19 @@ class Av1an:
             if is_audio_here:
                 self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
         except FileNotFoundError:
-            print('Error at point of ')
+            print('Error: audio file for concatenation not found')
 
         if self.output_file == self.args.output_file:
             self.output_file = f'{input_video.split(".")[0]}_av1.mkv'
         else:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
-        cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'
-        self.call_cmd(cmd)
+        try:
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'
+            self.call_cmd(cmd)
+        except:
+            print('Concatenation failed')
+            exit()
 
     def image(self, image_path):
         print('Encoding Image..', end='')

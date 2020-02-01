@@ -241,6 +241,7 @@ class Av1an:
                 stamps = self.read_csv(file_path)
                 self.split(input_vid, stamps)
             else:
+                print(f'\rSpliting video..', end='\r')
                 self.scenedetect(input_vid, '.')
                 video = '.'.join(input_vid.split('.')[:-1])
                 file_path = f'{join(self.here, f"{video}-Scenes.csv")}'

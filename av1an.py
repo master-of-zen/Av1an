@@ -221,8 +221,16 @@ class Av1an:
         self.call_cmd(cmd2)
 
     def split(self, video, timecodes):
-        cmd = f'{self.FFMPEG} -i {video} -map_metadata -1  -an -f segment -segment_times {timecodes} ' \
-              f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
+
+        # Splits video with provided timecodes
+        # If video is single scene, just copy video
+
+        if len(timecodes) == 0:
+            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1  -an -c copy -avoid_negative_ts 1 .temp/split/0.mkv'
+        else:
+            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1  -an -f segment -segment_times {timecodes} ' \
+                  f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
+
         self.call_cmd(cmd)
 
     def read_csv(self, file_path):

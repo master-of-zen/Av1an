@@ -154,11 +154,8 @@ class Av1an:
         if self.args.workers != 0:
             self.workers = self.args.workers
 
-        elif self.encoder == 'aom':
+        elif self.encoder == 'aom' or 'rav1e':
             self.workers = ceil(min(cpu, ram/1.5))
-
-        elif self.encoder == 'rav1e':
-            self.workers = ceil(min(cpu, ram/1.2)) // 3
 
         elif self.encoder == 'svt_av1':
             self.workers = ceil(min(cpu, ram)) // 5

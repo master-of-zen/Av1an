@@ -64,6 +64,7 @@ class Av1an:
         self.encoding_params = ''
         self.video_filter = ''
         self.output_file = ''
+        self.scenes = ''
         self.audio = ''
         # OS specific NULL pointer
 
@@ -96,6 +97,7 @@ class Av1an:
         parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
         parser.add_argument('--video_filter', '-vf', type=str, default=self.video_filter, help='FFmpeg video options')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
+        parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
 
         # Test
         try:
@@ -106,6 +108,9 @@ class Av1an:
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
+
+        # Set scenes if provided
+        self.scenes = self.args.scenes
 
         # Set encoder if provided
         self.encoder = self.args.encoder.strip()
@@ -207,23 +212,50 @@ class Av1an:
             print('Audio stream file not found. Error in audio extraction')
             exit()
 
-    def split_video(self, input_vid):
-
+    def scenedetect(self, video, output):
         # PySceneDetect used split video by scenes and pass it to encoder
         # Optimal threshold settings 15-50
-        print(f'\rSpliting video..', end='\r')
 
-        cmd2 = f'scenedetect -i {input_vid}  --output .temp/ detect-content ' \
+        cmd2 = f'scenedetect -i {video}  --output {output} detect-content ' \
                f'--threshold {self.threshold} list-scenes '
         self.call_cmd(cmd2)
-        scenes = '.'.join(input_vid.split('.')[:-1])
-        with open(f'{join(self.here, ".temp", f"{scenes}-Scenes.csv")}') as csv_file:
+
+    def split(self, video, timecodes):
+        cmd = f'{self.FFMPEG} -i {video} -map_metadata -1  -an -f segment -segment_times {timecodes} ' \
+              f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
+        self.call_cmd(cmd)
+
+    def read_csv(self, file_path):
+        with open(file_path) as csv_file:
             stamps = next(csv.reader(csv_file))
             stamps = stamps[1:]
             stamps = ','.join(stamps)
-            cmd = f'{self.FFMPEG} -i {input_vid} -map_metadata -1  -an -f segment -segment_times {stamps} ' \
-                  f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
-            self.call_cmd(cmd)
+            return stamps
+
+    def split_video(self, input_vid):
+
+        if self.scenes:
+
+            file_path = join(self.here, self.scenes)
+            if os.path.exists(file_path):
+                stamps = self.read_csv(file_path)
+                self.split(input_vid, stamps)
+            else:
+                self.scenedetect(input_vid, '.')
+                video = '.'.join(input_vid.split('.')[:-1])
+                file_path = f'{join(self.here, f"{video}-Scenes.csv")}'
+
+                stamps = self.read_csv(file_path)
+                self.split(input_vid, stamps)
+        else:
+            print(f'\rSpliting video..', end='\r')
+
+            self.scenedetect(input_vid, '.temp')
+            video = '.'.join(input_vid.split('.')[:-1])
+            file_path = f'{join(self.here, ".temp", f"{video}-Scenes.csv")}'
+
+            stamps = self.read_csv(file_path)
+            self.split(input_vid, stamps)
 
     def get_video_queue(self, source_path):
 

@@ -53,6 +53,7 @@ class Av1an:
         self.FFMPEG = 'ffmpeg -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
         self.encoder = 'aomenc'
+        self.encoder = 'aom'
         self.encode_pass = 2
         self.threshold = 30
         self.workers = 0
@@ -109,6 +110,9 @@ class Av1an:
 
         # Set encoder if provided
         self.encoder = self.args.encoder.strip()
+        if self.encoder not in ('svt_av1', 'rav1e', 'aom'):
+            print(f'Not valid encoder {self.encoder}')
+            exit()
 
         # Set mode (Video/Picture)
         self.mode = self.args.mode
@@ -159,10 +163,6 @@ class Av1an:
 
         elif self.encoder == 'svt_av1':
             self.workers = ceil(min(cpu, ram)) // 5
-
-        else:
-            print('Error: no valid encoder')
-            exit()
 
         # fix if workers round up to 0
         if self.workers == 0:

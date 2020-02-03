@@ -217,7 +217,7 @@ class Av1an:
         # Optimal threshold settings 15-50
 
         cmd2 = f'scenedetect -i {video}  --output {output} detect-content ' \
-               f'--threshold {self.threshold} list-scenes '
+               f'--threshold {self.threshold} -m 50  list-scenes '
         self.call_cmd(cmd2)
 
     def split(self, video, timecodes):

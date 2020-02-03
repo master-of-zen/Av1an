@@ -331,7 +331,6 @@ class Av1an:
 
     def rav1e_encode(self, file_paths):
 
-
         if self.args.encoding_params == '':
             self.encoding_params = '--speed=5'
         else:

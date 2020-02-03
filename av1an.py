@@ -58,11 +58,10 @@ class Av1an:
         self.workers = 0
         self.mode = 0
         self.ffmpeg_pipe = None
-        self.force_fps = None
+        self.ffmpeg_com = None
         self.logging = None
         self.args = None
         self.encoding_params = ''
-        self.video_filter = ''
         self.output_file = ''
         self.scenes = ''
         self.audio = ''
@@ -94,8 +93,7 @@ class Av1an:
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
-        parser.add_argument('--force_fps', '-fps', type=int, default=0, help='Force fps of output file')
-        parser.add_argument('--video_filter', '-vf', type=str, default=self.video_filter, help='FFmpeg video options')
+        parser.add_argument('--ffmpeg_com', '-ff', type=str, default='', help='FFmpeg commands')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
 
@@ -124,15 +122,11 @@ class Av1an:
         # Number of encoder passes
         self.encode_pass = self.args.encode_pass
 
-        # Adding filter
-        if self.args.video_filter != self.video_filter:
-            self.video_filter = f' -vf {self.args.video_filter} '
-
         # Forcing FPS option
-        if self.args.force_fps == 0:
-            self.force_fps = ''
+        if self.args.ffmpeg_com == 0:
+            self.ffmpeg_com = ''
         else:
-            self.force_fps = f' -r {self.args.force_fps}'
+            self.ffmpeg_com = self.args.ffmpeg_com
 
         # Changing pixel format, bit format
         if self.args.pix_format != self.pix_format:
@@ -140,7 +134,7 @@ class Av1an:
         else:
             self.pix_format = f'-pix_fmt {self.args.pix_format}'
 
-        self.ffmpeg_pipe = f' {self.video_filter} {self.force_fps} {self.pix_format} -f yuv4mpegpipe - |'
+        self.ffmpeg_pipe = f' {self.ffmpeg_com} {self.pix_format} -f yuv4mpegpipe - |'
 
         # Setting logging depending on OS
         if self.logging != self.args.logging:

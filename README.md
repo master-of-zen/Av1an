@@ -41,20 +41,13 @@ With your own parameters:
                             Must be inside ' ' or " "
      
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
+                            Example: -a '-c:a libopus -b:a  64k'
     
     -t   --workers          Maximum number of workers (overrides automatically set number of workers.
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e and SVT-AV1 uses multiple threads, 
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
                             4 rav1e workers is optimal for 6/12 cpu 
-    
-    -fps --force_fps        Forces fps of video. Needed when you need to change fps of video,
-                            to prevent encoders from changing video length.
-                            Usefully for SVT-AV1 encoder. No need to set up fps num/denum.
-                            Example:
-                            .. -e '-fps-num 30000 -fps-denom 1001 ..' (SVT-AV1 29.97)
-                            .. -fps 30 -e ' -fps 30 ..' (Force FPS)
-
         
     -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
                             Bigger value = less sensitive )
@@ -69,8 +62,8 @@ With your own parameters:
                             (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
                             At current moment 2nd pass Rav1e not working
     
-    -vf  --video_filter     FFmpeg video filter options. Example: 
-                            ... -vf 'scale=320:240'  ...
+    -ff  ----ffmpeg_com     FFmpeg options. Example: 
+                            --ff ' -r 24 -vf scale=320:240 '  
     
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
                             Example for 10 bit: 'yuv420p10le'

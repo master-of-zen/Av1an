@@ -469,12 +469,12 @@ class Av1an:
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
 
-            # Extracting audio
-            self.extract_audio(self.args.file_path)
-
             # Splitting video and sorting big-first
             self.split_video(self.args.file_path)
             files = self.get_video_queue('.temp/split')
+
+            # Extracting audio
+            self.extract_audio(self.args.file_path)
 
             # Determine resources
             self.determine_resources()

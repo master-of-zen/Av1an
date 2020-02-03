@@ -281,10 +281,7 @@ class Av1an:
         return videos
 
     def svt_av1_encode(self, file_paths):
-        # Single pass:
-        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        # SvtAv1EncApp -i - -w 1920 -h 1080 -fps 24 -rc 2 -tbr 10000 -enc-mode 5 -b output.ivf
-
+        
         if self.args.encoding_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
             exit()
@@ -311,17 +308,6 @@ class Av1an:
             return pass_2_commands
 
     def aom_encode(self, file_paths):
-
-        # 1_pass Aomenc:
-        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        # aomenc --passes=1 --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 -o output
-
-        # 2_pass Aomenc:
-        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        # aomenc --passes=2 --pass=1  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o /dev/null -
-
-        # ffmpeg -i input_file -pix_fmt yuv420p -f yuv4mpegpipe - |
-        # aomenc --passes=2 --pass=2  --cpu-used=8 --end-usage=q --cq-level=63 --aq-mode=0 --log_file -o output -
 
         if self.args.encoding_params == '':
             self.encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'

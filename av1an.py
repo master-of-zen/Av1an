@@ -413,9 +413,9 @@ class Av1an:
             print('Error: audio file for concatenation not found')
 
         if self.output_file == self.args.output_file:
-            self.output_file = f'{input_video.split(".")[0]}_av1.mkv'
+            self.output_file = f'{input_video.split(".")[0]}_av1.webm'
         else:
-            self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
+            self.output_file = f'{join(self.here, self.args.output_file)}.webm'
 
         try:
             cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'

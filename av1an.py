@@ -337,9 +337,6 @@ class Av1an:
 
     def rav1e_encode(self, file_paths):
 
-        # rav1e Single Pass:
-        # ffmpeg - i input - pix_fmt yuv420p - f yuv4mpegpipe - |
-        # rav1e - --speed= 5  -output output.ivf
 
         if self.args.encoding_params == '':
             self.encoding_params = '--speed=5'

@@ -308,9 +308,9 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
 
-        single_pass = 'aomenc  --passes=1 '
-        two_pass_1_aom = 'aomenc  --passes=2 --pass=1'
-        two_pass_2_aom = 'aomenc  --passes=2 --pass=2'
+        single_pass = 'aomenc  --verbose --passes=1 '
+        two_pass_1_aom = 'aomenc  --verbose --passes=2 --pass=1'
+        two_pass_2_aom = 'aomenc  --verbose --passes=2 --pass=2'
 
         if self.encode_pass == 1:
             pass_1_commands = [

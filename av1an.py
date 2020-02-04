@@ -285,7 +285,7 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1]} -', file[2])
+                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1]}.ivf -', file[2])
                 for file in file_paths]
             return pass_1_commands
 
@@ -296,7 +296,7 @@ class Av1an:
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0]}.stat -b {file[0]}.bk - ',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0]}.stat -b {file[1]} - ',
+                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0]}.stat -b {file[1]}.ivf - ',
                  file[2])
                 for file in file_paths]
             return pass_2_commands
@@ -315,7 +315,7 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.encoding_params} -o {file[1]} - ', file[2])
+                 f'  {single_pass} {self.encoding_params} -o {file[1]}.ivf - ', file[2])
                 for file in file_paths]
             return pass_1_commands
 

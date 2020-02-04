@@ -62,7 +62,7 @@ With your own parameters:
                             (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
                             At current moment 2nd pass Rav1e not working
     
-    -ff  ----ffmpeg_com     FFmpeg options. Example: 
+    -ff  --ffmpeg_com       FFmpeg options. Example: 
                             --ff ' -r 24 -vf scale=320:240 '  
     
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')

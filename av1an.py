@@ -324,7 +324,7 @@ class Av1an:
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o /dev/null - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]} - ',
+                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]}.ivf - ',
                  file[2])
                 for file in file_paths]
             return pass_2_commands

@@ -11,7 +11,6 @@ import time
 from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
-# Fix frame cuts
 
 
 class ProgressBar:
@@ -54,7 +53,6 @@ class Av1an:
         self.pix_format = 'yuv420p'
         self.encoder = 'aom'
         self.encode_pass = 2
-        self.threshold = 30
         self.workers = 0
         self.mode = 0
         self.ffmpeg_pipe = None
@@ -63,6 +61,7 @@ class Av1an:
         self.args = None
         self.encoding_params = ''
         self.output_file = ''
+        self.pyscene = ''
         self.scenes = ''
         self.audio = ''
         # OS specific NULL pointer
@@ -89,7 +88,7 @@ class Av1an:
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default=self.audio, help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=int, default=self.threshold, help='PySceneDetect Threshold')
+        parser.add_argument('--pyscene', '-sc', type=str, default=self.pyscene, help='PySceneDetect Options')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=str, default='', help='Specify output file')
@@ -211,7 +210,7 @@ class Av1an:
         # Optimal threshold settings 15-50
 
         cmd2 = f'scenedetect -i {video}  --output {output} detect-content ' \
-               f'--threshold {self.threshold} -m 50  list-scenes '
+               f'{self.pyscene}  list-scenes '
         self.call_cmd(cmd2)
 
     def split(self, video, timecodes):

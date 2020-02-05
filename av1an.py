@@ -14,7 +14,7 @@ from multiprocessing import Pool
 
 if sys.version_info < (3, 7):
     print('Av1an requires at least Python 3.7 to run.')
-    sys.exit(1)
+    sys.exit()
 
 
 class ProgressBar:
@@ -105,7 +105,7 @@ class Av1an:
             import scenedetect
         except ImportError:
             print('PySceneDetect not found. Please check installation')
-            exit()
+            sys.exit()
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
@@ -117,7 +117,7 @@ class Av1an:
         self.encoder = self.args.encoder.strip()
         if self.encoder not in ('svt_av1', 'rav1e', 'aom'):
             print(f'Not valid encoder {self.encoder}')
-            exit()
+            sys.exit()
 
         # Set mode (Video/Picture)
         self.mode = self.args.mode
@@ -169,7 +169,7 @@ class Av1an:
     def setup(self, input_file):
         if not os.path.exists(input_file):
             print("File don't exist")
-            exit()
+            sys.exit()
 
         # Make temporal directories, and remove them if already presented
         if os.path.isdir(join(os.getcwd(), ".temp")):
@@ -207,7 +207,7 @@ class Av1an:
                 self.audio = ''
         except FileNotFoundError:
             print('Audio stream file not found. Error in audio extraction')
-            exit()
+            sys.exit()
 
     def scenedetect(self, video, output):
         # PySceneDetect used split video by scenes and pass it to encoder
@@ -281,7 +281,7 @@ class Av1an:
         
         if self.args.encoding_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
-            exit()
+            sys.exit()
         else:
             self.encoding_params = self.args.encoding_params
         encoder = 'SvtAv1EncApp '
@@ -378,7 +378,7 @@ class Av1an:
         else:
             print(self.encoder)
             print(f'No valid encoder : "{self.encoder}"')
-            exit()
+            sys.exit()
 
     def encode(self, commands):
 
@@ -418,7 +418,7 @@ class Av1an:
             self.call_cmd(cmd)
         except:
             print('Concatenation failed')
-            exit()
+            sys.exit()
 
     def image(self, image_path):
         print('Encoding Image..', end='')
@@ -437,7 +437,7 @@ class Av1an:
             self.call_cmd(cmd)
         else:
             print(f'Not valid encoder: {self.encoder}')
-            exit()
+            sys.exit()
 
     def main(self):
 

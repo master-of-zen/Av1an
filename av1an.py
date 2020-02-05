@@ -484,6 +484,9 @@ class Av1an:
 
 if __name__ == '__main__':
 
+    # Windows fix for multiprocessing
+    multiprocessing.freeze_support()
+
     # Main thread
     start = time.time()
 

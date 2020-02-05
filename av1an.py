@@ -12,6 +12,10 @@ from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
 
+if sys.version_info < (3, 7):
+    print('Av1an requires at least Python 3.7 to run.')
+    sys.exit(1)
+
 
 class ProgressBar:
 

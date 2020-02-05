@@ -11,6 +11,7 @@ import time
 from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
+import multiprocessing
 
 if sys.version_info < (3, 7):
     print('Av1an requires at least Python 3.7 to run.')

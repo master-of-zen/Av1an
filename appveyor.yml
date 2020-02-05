@@ -1,0 +1,13 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+environment:
+  matrix:
+  - PYTHON: C:\Python38-x64
+install:
+- cmd: '"%PYTHON%\python.exe" -m pip install numpy opencv-python tqdm scenedetect psutil'
+- cmd: '"%PYTHON%\python.exe" -m pip install pyinstaller'
+build_script:
+- cmd: '"%PYTHON%\Scripts\pyinstaller" -F av1an.py'
+test: off
+artifacts:
+- path: dist/av1an.exe

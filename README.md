@@ -49,8 +49,8 @@ With your own parameters:
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
                             4 rav1e workers is optimal for 6/12 cpu 
         
-    -tr  --threshold        PySceneDetect threshold (Optimal values in range 15 - 50.
-                            Bigger value = less sensitive )
+    -sc  --pyscene          PySceneDetect options.Example:
+                            -sc ' -t 30 -d 7 -m 48 '
     
     -s   --scenes           Path to PySceneDetect generated .csv file.
                             If file not exist, new one will be generated in current folder

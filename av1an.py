@@ -217,13 +217,58 @@ class Av1an:
             print('Audio stream file not found. Error in audio extraction')
             sys.exit()
 
-    def scenedetect(self, video, output):
+    def scenedetect(self, video):
         # PySceneDetect used split video by scenes and pass it to encoder
         # Optimal threshold settings 15-50
+        video_manager = VideoManager([video])
+        scene_manager = SceneManager()
+        scene_manager.add_detector(ContentDetector(threshold=self.threshold))
+        base_timecode = video_manager.get_base_timecode()
 
-        cmd2 = f'scenedetect -i {video}  --output {output} detect-content ' \
-               f'{self.pyscene}  list-scenes '
-        self.call_cmd(cmd2)
+        try:
+            # If stats file exists, load it.
+            if self.scenes and os.path.exists(join(self.here, self.scenes)):
+                # Read stats from CSV file opened in read mode:
+                with open(join(self.here, self.scenes), 'r') as stats_file:
+                    print('reading and run')
+                    stats = stats_file.read()
+                    return stats
+
+            # Set video_manager duration to read frames from 00:00:00 to 00:00:20.
+            video_manager.set_duration()
+
+            # Set downscale factor to improve processing speed.
+            video_manager.set_downscale_factor()
+
+            # Start video_manager.
+            video_manager.start()
+
+            # Perform scene detection on video_manager.
+            scene_manager.detect_scenes(frame_source=video_manager)
+
+            # Obtain list of detected scenes.
+            scene_list = scene_manager.get_scene_list(base_timecode)
+            # Like FrameTimecodes, each scene in the scene_list can be sorted if the
+            # list of scenes becomes unsorted.
+
+            scenes = []
+            for i, scene in enumerate(scene_list):
+                scenes.append(scene[0].get_timecode())
+
+            scenes = ','.join(scenes[1:])
+
+            # We only write to the stats file if a save is required:
+            if self.scenes:
+                with open(join(self.here, self.scenes), 'w') as stats_file:
+                    stats_file.write(scenes)
+                    print('writing scenes and making run')
+                    return scenes
+            else:
+                print('just making run')
+                return scenes
+        except:
+            print('Error in PySceneDetect')
+            sys.exit()
 
     def split(self, video, timecodes):
 
@@ -237,39 +282,6 @@ class Av1an:
                   f'-c copy -avoid_negative_ts 1  .temp/split/%04d.mkv'
 
         self.call_cmd(cmd)
-
-    def read_csv(self, file_path):
-        with open(file_path) as csv_file:
-            stamps = next(csv.reader(csv_file))
-            stamps = stamps[1:]
-            stamps = ','.join(stamps)
-            return stamps
-
-    def split_video(self, input_vid):
-
-        if self.scenes:
-
-            file_path = join(self.here, self.scenes)
-            if os.path.exists(file_path):
-                stamps = self.read_csv(file_path)
-                self.split(input_vid, stamps)
-            else:
-                print(f'\rSpliting video..', end='\r')
-                self.scenedetect(input_vid, '.')
-                video = '.'.join(input_vid.split('.')[:-1])
-                file_path = f'{join(self.here, f"{video}-Scenes.csv")}'
-
-                stamps = self.read_csv(file_path)
-                self.split(input_vid, stamps)
-        else:
-            print(f'\rSpliting video..', end='\r')
-
-            self.scenedetect(input_vid, '.temp')
-            video = '.'.join(input_vid.split('.')[:-1])
-            file_path = f'{join(self.here, ".temp", f"{video}-Scenes.csv")}'
-
-            stamps = self.read_csv(file_path)
-            self.split(input_vid, stamps)
 
     def get_video_queue(self, source_path):
 
@@ -457,7 +469,8 @@ class Av1an:
             self.setup(self.args.file_path)
 
             # Splitting video and sorting big-first
-            self.split_video(self.args.file_path)
+            timestamps = self.scenedetect(self.args.file_path)
+            self.split(self.args.file_path, timestamps)
             files = self.get_video_queue('.temp/split')
 
             # Extracting audio

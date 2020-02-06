@@ -48,15 +48,13 @@ With your own parameters:
                             Rav1e and SVT-AV1 uses multiple threads, 
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
                             4 rav1e workers is optimal for 6/12 cpu 
-        
-    -sc  --pyscene          PySceneDetect options.Example:
-                            -sc ' -t 30 -d 7 -m 48 '
     
-    -s   --scenes           Path to PySceneDetect generated .csv file.
-                            If file not exist, new one will be generated in current folder
-                            Example of usage:
-                            First run to generate: `-s anything`
-                            All next runs to reuse generated file: `-s video-Scenes.scv`
+    -s   --scenes           Path to file with scenes timestamps.
+                            If file not exist, new will be generated in current folder
+                            First run to generate stamps, all next reuse it. 
+                            Example: `-s scenes`
+    
+    -tr  --threshold        PySceneDetect threshold for scene detection
     
     -p   --pass             Set number of passes for encoding 
                             (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
@@ -94,7 +92,6 @@ And many more to go..
 
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
@@ -110,7 +107,6 @@ Run with command: `python -i ./avian.py params..`
 
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe
-* [PyScenedetect](https://pyscenedetect.readthedocs.io/en/latest/)
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 * [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 * [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder

@@ -230,7 +230,6 @@ class Av1an:
             if self.scenes and os.path.exists(join(self.here, self.scenes)):
                 # Read stats from CSV file opened in read mode:
                 with open(join(self.here, self.scenes), 'r') as stats_file:
-                    print('reading and run')
                     stats = stats_file.read()
                     return stats
 
@@ -261,10 +260,8 @@ class Av1an:
             if self.scenes:
                 with open(join(self.here, self.scenes), 'w') as stats_file:
                     stats_file.write(scenes)
-                    print('writing scenes and making run')
                     return scenes
             else:
-                print('just making run')
                 return scenes
         except:
             print('Error in PySceneDetect')

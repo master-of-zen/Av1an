@@ -11,6 +11,7 @@ from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
 import multiprocessing
+import subprocess
 
 try:
     import scenedetect
@@ -84,15 +85,13 @@ class Av1an:
         # OS specific NULL pointer
 
         if sys.platform == 'linux':
-            self.null = '&> /dev/null'
             self.point = '&>'
         else:
             self.point = '>'
-            self.null = '> nul 2>&1'
 
     def call_cmd(self, cmd):
-        cmd = rf'{cmd} {self.logging}'
-        os.system(cmd)
+        with open(self.logging, 'a') as log:
+            subprocess.call(cmd, shell=True, stdout=log, stderr=log)
 
     def arg_parsing(self):
 
@@ -147,12 +146,11 @@ class Av1an:
 
         self.ffmpeg_pipe = f' {self.ffmpeg_com} {self.pix_format} -f yuv4mpegpipe - |'
 
-        # Setting logging depending on OS
-        if self.logging != self.args.logging:
-            if sys.platform == 'linux':
-                self.logging = f'&>> {self.args.logging}.log'
+        # Setting logging file
+        if self.args.logging:
+            self.logging = f"{self.args.logging}.log"
         else:
-            self.logging = self.null
+            self.logging = os.devnull
 
     def determine_resources(self):
 

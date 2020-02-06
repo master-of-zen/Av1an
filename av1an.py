@@ -3,7 +3,6 @@
 import sys
 import os
 import shutil
-import csv
 from os.path import join
 from psutil import virtual_memory
 import argparse
@@ -12,6 +11,18 @@ from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
 import multiprocessing
+
+try:
+    import scenedetect
+except ImportError:
+    print('PySceneDetect not found. Please check installation')
+    sys.exit()
+
+
+from scenedetect.video_manager import VideoManager
+from scenedetect.scene_manager import SceneManager
+from scenedetect.detectors import ContentDetector
+
 
 if sys.version_info < (3, 7):
     print('Av1an requires at least Python 3.7 to run.')
@@ -102,18 +113,13 @@ class Av1an:
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
 
-        # Test
-        try:
-            import scenedetect
-        except ImportError:
-            print('PySceneDetect not found. Please check installation')
-            sys.exit()
-
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
         # Set scenes if provided
         self.scenes = self.args.scenes
+
+        self.threshold = self.args.threshold
 
         # Set encoder if provided
         self.encoder = self.args.encoder.strip()

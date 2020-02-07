@@ -84,17 +84,13 @@ class Av1an:
         self.output_file = ''
         self.pyscene = ''
         self.scenes = ''
-        self.audio = ''
-        # OS specific NULL pointer
 
-        if sys.platform == 'linux':
-            self.point = '&>'
-        else:
-            self.point = '>'
+    def call_cmd(self, cmd, capture_output=False):
+        if capture_output:
+            return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
-    def call_cmd(self, cmd):
         with open(self.logging, 'a') as log:
-            subprocess.call(cmd, shell=True, stdout=log, stderr=log)
+            subprocess.run(cmd, shell=True, stdout=log, stderr=log)
 
     def arg_parsing(self):
 
@@ -106,7 +102,7 @@ class Av1an:
         parser.add_argument('--file_path', '-i', type=str, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
-        parser.add_argument('--audio_params', '-a', type=str, default=self.audio, help='FFmpeg audio settings')
+        parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=float, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
@@ -188,35 +184,20 @@ class Av1an:
         os.makedirs(join(self.here, '.temp', 'encode'))
 
     def extract_audio(self, input_vid):
-
         # Extracting audio from video file
         # Encoding audio if needed
-        try:
-            default_audio_params = '-c:a copy'
-            ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
+        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
-            # Generate file with audio check
-            check = fr'{ffprobe} -i {join(self.here,input_vid)} {self.point} {join(self.here,".temp","audio_check.txt")}'
-            os.system(check)
+        # Capture output to check if audio is present
+        check = fr'{ffprobe} -i {join(self.here,input_vid)}'
+        is_audio_here = len(self.call_cmd(check, capture_output=True)) > 0
 
-            is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
-
-            if is_audio_here > 0 and self.args.audio_params == '':
-                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} ' \
-                      f'-vn {default_audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
-                self.call_cmd(cmd)
-                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
-
-            elif is_audio_here > 0 and len(self.args.audio_params) > 1:
-                cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
-                      f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
-                self.call_cmd(cmd)
-                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} {default_audio_params}'
-            else:
-                self.audio = ''
-        except FileNotFoundError:
-            print('Audio stream file not found. Error in audio extraction')
-            sys.exit()
+        if is_audio_here:
+            cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
+                    f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
+            self.call_cmd(cmd)
+        else:
+            print("Warning: No audio found in the input file")
 
     def scenedetect(self, video):
         # PySceneDetect used split video by scenes and pass it to encoder
@@ -419,12 +400,11 @@ class Av1an:
                     f.write(f"file '{join(root, file)}'\n")
 
         concat = join(self.here, ".temp", "concat.txt")
-        try:
-            is_audio_here = os.path.getsize(join(self.here, ".temp", "audio_check.txt"))
-            if is_audio_here:
-                self.audio = f'-i {join(self.here, ".temp", "audio.mkv")} -c copy'
-        except FileNotFoundError:
-            print('Error: audio file for concatenation not found')
+
+        # Add the audio file if one was extracted from the input
+        audio_file = join(self.here, ".temp", "audio.mkv")
+        if os.path.exists(audio_file):
+            audio = f'-i {audio_file} -c:a copy'
 
         if self.output_file == self.args.output_file:
             self.output_file = f'{input_video.split(".")[0]}_av1.mkv'
@@ -432,7 +412,7 @@ class Av1an:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {audio} -y {self.output_file}'
             self.call_cmd(cmd)
         except:
             print('Concatenation failed')

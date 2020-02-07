@@ -2,6 +2,7 @@
 
 # Todo:
 # Benchmarking
+# Add conf file
 
 import sys
 import os

@@ -4,13 +4,13 @@
 # Benchmarking
 # Add conf file
 
+from tqdm import tqdm
 import sys
 import os
 import shutil
 from os.path import join
 from psutil import virtual_memory
 import argparse
-import time
 from shutil import rmtree
 from math import ceil
 from multiprocessing import Pool
@@ -224,7 +224,7 @@ class Av1an:
             video_manager.start()
 
             # Perform scene detection on video_manager.
-            scene_manager.detect_scenes(frame_source=video_manager)
+            scene_manager.detect_scenes(frame_source=video_manager, show_progress=False)
 
             # Obtain list of detected scenes.
             scene_list = scene_manager.get_scene_list(base_timecode)
@@ -272,7 +272,6 @@ class Av1an:
                 videos.append([file, f])
 
         videos = [i[0] for i in sorted(videos, key=lambda x: -x[1])]
-        print(f'Clips: {len(videos)} ', end='')
         return videos
 
     def svt_av1_encode(self, file_paths):
@@ -466,13 +465,13 @@ class Av1an:
             self.workers = min(len(commands), self.workers)
 
             # Creating threading pool to encode bunch of files at the same time
-            print(f'Workers: {self.workers}\nParams: {self.encoding_params}')
+            print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
 
             # Progress bar
-            bar = ProgressBar(len(files))
+            # bar = ProgressBar(len(files))
             pool = Pool(self.workers)
-            for i, _ in enumerate(pool.imap_unordered(self.encode, commands), 1):
-                bar.tick()
+            for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=False), 1):
+                pass
 
             self.concatenate_video(self.args.file_path)
 
@@ -489,12 +488,8 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     # Main thread
-    start = time.time()
-
     av1an = Av1an()
     av1an.main()
-
-    print(f'\nCompleted in {round(time.time()-start, 1)} seconds')
 
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':

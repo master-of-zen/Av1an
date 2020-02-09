@@ -244,7 +244,7 @@ class Av1an:
                     return scenes
             else:
                 return scenes
-        except:
+        except Exception:
             print('Error in PySceneDetect')
             sys.exit()
 
@@ -404,7 +404,8 @@ class Av1an:
         audio_file = join(self.here, ".temp", "audio.mkv")
         if os.path.exists(audio_file):
             audio = f'-i {audio_file} -c:a copy'
-        else: audio = ''
+        else:
+            audio = ''
 
         if self.output_file == self.args.output_file:
             self.output_file = f'{input_video.split(".")[0]}_av1.mkv'
@@ -412,10 +413,10 @@ class Av1an:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
         try:
-
             cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {self.output_file}'
             self.call_cmd(cmd)
-        except:
+
+        except Exception:
             print('Concatenation failed')
             sys.exit()
 

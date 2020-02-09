@@ -433,7 +433,7 @@ class Av1an:
             self.output_file = f'{join(self.here, self.args.output_file)}.mkv'
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -y {self.output_file}'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {self.audio} -c copy -y {self.output_file}'
             self.call_cmd(cmd)
         except:
             print('Concatenation failed')

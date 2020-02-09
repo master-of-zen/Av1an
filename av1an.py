@@ -196,8 +196,6 @@ class Av1an:
             cmd = f'{self.FFMPEG} -i {join(self.here, input_vid)} -vn ' \
                     f'{self.args.audio_params} {join(os.getcwd(), ".temp", "audio.mkv")}'
             self.call_cmd(cmd)
-        else:
-            print("Warning: No audio found in the input file")
 
     def scenedetect(self, video):
         # PySceneDetect used split video by scenes and pass it to encoder

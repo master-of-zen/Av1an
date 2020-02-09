@@ -12,7 +12,7 @@
 <h2 align="center">Easy And Efficient </h2>
 
 Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SVT-AV1).
-Avif encoding supported (Aomenc, Rav1e)
+Image to .ivf encoding supported (Aomenc, Rav1e)
 
 Example with default parameters:
 
@@ -76,7 +76,7 @@ With your own parameters:
 
 [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
-Both Video and Avif Image encoding
+Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
 
 Simple and clean console look
 

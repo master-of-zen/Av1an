@@ -405,6 +405,7 @@ class Av1an:
         audio_file = join(self.here, ".temp", "audio.mkv")
         if os.path.exists(audio_file):
             audio = f'-i {audio_file} -c:a copy'
+        else: audio = ''
 
         if self.output_file == self.args.output_file:
             self.output_file = f'{input_video.split(".")[0]}_av1.mkv'

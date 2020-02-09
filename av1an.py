@@ -468,9 +468,9 @@ class Av1an:
             print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
 
             # Progress bar
-            # bar = ProgressBar(len(files))
+
             pool = Pool(self.workers)
-            for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=False), 1):
+            for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
                 pass
 
             self.concatenate_video(self.args.file_path)

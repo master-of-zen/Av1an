@@ -34,38 +34,6 @@ if sys.version_info < (3, 7):
     sys.exit()
 
 
-class ProgressBar:
-
-    # Progress Bar for tracking encoding progress
-
-    def __init__(self, tasks):
-        self.bar_iteration: int = 0
-        self.tasks = tasks
-
-        # Print empty bar on initialization
-        self.print()
-
-    def print(self):
-        terminal_size, _ = shutil.get_terminal_size((80, 20))
-        bar_length = terminal_size - (2 * len(str(self.tasks))) - 13
-
-        if self.bar_iteration == 0:
-            percent = 0
-            fill_size = 0
-        else:
-            percent = round(100 * (self.bar_iteration / self.tasks), 1)
-            fill_size = int(bar_length * self.bar_iteration // self.tasks)
-
-        end = f'{percent}% {self.bar_iteration}/{self.tasks}'
-        in_bar = ('█' * fill_size) + '-' * (bar_length - fill_size)
-
-        print(f'\r|{in_bar}| {end} ', end='')
-
-    def tick(self):
-        self.bar_iteration += 1
-        self.print()
-
-
 class Av1an:
 
     def __init__(self):
@@ -478,8 +446,12 @@ class Av1an:
             # Delete temp folders
             rmtree(join(self.here, ".temp"))
 
-        if self.mode == 1:
+        elif self.mode == 1:
             self.image(self.args.file_path)
+
+        else:
+            print('No valid work mode')
+            exit()
 
 
 if __name__ == '__main__':

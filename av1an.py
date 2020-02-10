@@ -195,7 +195,7 @@ class Av1an:
             # If stats file exists, load it.
             if self.scenes and self.scenes.exists():
                 # Read stats from CSV file opened in read mode:
-                with open(self.scenes(), 'r') as stats_file:
+                with self.scenes.open() as stats_file:
                     stats = stats_file.read()
                     return stats
 
@@ -224,7 +224,7 @@ class Av1an:
 
             # We only write to the stats file if a save is required:
             if self.scenes:
-                with open(self.scenes, 'w') as stats_file:
+                with self.scenes.open(mode='w') as stats_file:
                     stats_file.write(scenes)
             return scenes
         except Exception:

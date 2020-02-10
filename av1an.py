@@ -175,6 +175,9 @@ class Av1an:
         base_timecode = video_manager.get_base_timecode()
 
         try:
+            if self.scenes.isdigit():
+                if int(self.scenes) == 0:
+                    return ''
             # If stats file exists, load it.
             if self.scenes and os.path.exists(join(self.here, self.scenes)):
                 # Read stats from CSV file opened in read mode:

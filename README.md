@@ -91,8 +91,8 @@ And many more to go..
 
 ## Install on Windows
 
-#### Use ready [release](https://github.com/master-of-zen/Av1an/releases)
-    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
+#### Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
+   Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
     
 #### Install install program with dependancies
 * [Python3](https://www.python.org/downloads/)

@@ -50,6 +50,7 @@ With your own parameters:
                             4 rav1e workers is optimal for 6/12 cpu 
     
     -s   --scenes           Path to file with scenes timestamps.
+                            If given `0` spliting will be ingnored
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it. 
                             Example: `-s scenes`

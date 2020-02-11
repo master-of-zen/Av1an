@@ -81,7 +81,7 @@ class Av1an:
         parser.add_argument('--ffmpeg_com', '-ff', type=str, default='', help='FFmpeg commands')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
-
+        parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -159,11 +159,13 @@ class Av1an:
             sys.exit()
 
         # Make temporal directories, and remove them if already presented
-        if self.temp_dir.is_dir():
-            shutil.rmtree(self.temp_dir)
-
-        (self.temp_dir / 'split').mkdir(parents=True)
-        (self.temp_dir / 'encode').mkdir()
+        if self.temp_dir.exists() and self.args.resume:
+            pass
+        else:
+            if self.temp_dir.is_dir():
+                shutil.rmtree(self.temp_dir)
+            (self.temp_dir / 'split').mkdir(parents=True)
+            (self.temp_dir / 'encode').mkdir()
 
     def extract_audio(self, input_vid: Path):
         # Extracting audio from video file

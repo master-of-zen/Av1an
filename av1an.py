@@ -436,6 +436,11 @@ class Av1an:
             # Make encode queue
             commands = self.compose_encoding_queue(files)
 
+            # Catch Error
+            if len(commands) == 0:
+              print('Wrong encoding settings')
+              sys.exit()
+
             # Reduce number of workers if needed
             self.workers = min(len(commands), self.workers)
 

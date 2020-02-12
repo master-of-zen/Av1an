@@ -8,7 +8,6 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
-from os.path import join
 from psutil import virtual_memory
 import argparse
 from math import ceil
@@ -16,7 +15,7 @@ from multiprocessing import Pool
 import multiprocessing
 import subprocess
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 try:
     import scenedetect
@@ -155,7 +154,7 @@ class Av1an:
 
     def setup(self, input_file: Path):
         if not input_file.exists():
-            print("File don't exist")
+            print(f'File: {input_file} not exist')
             sys.exit()
 
         # Make temporal directories, and remove them if already presented
@@ -221,12 +220,14 @@ class Av1an:
                 scenes.append(scene[0].get_timecode())
 
             scenes = ','.join(scenes[1:])
+            scenes = [scene[0].get_timecode() for scene in scene_list]
+            scenes = ','.join(scenes[1:])
 
             # We only write to the stats file if a save is required:
             if self.scenes:
-                with self.scenes.open(mode='w') as stats_file:
-                    stats_file.write(scenes)
+                self.scenes.write_text(scenes)
             return scenes
+
         except Exception:
             print('Error in PySceneDetect')
             sys.exit()

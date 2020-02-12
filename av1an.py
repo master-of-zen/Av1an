@@ -139,7 +139,6 @@ class Av1an:
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 
-        if self.args.workers != 0:
             self.workers = self.args.workers
 
         elif self.encoder == 'aom' or 'rav1e':
@@ -438,15 +437,19 @@ class Av1an:
                 print('Wrong encoding settings')
                 sys.exit()
 
-            # Determine resources
-            self.determine_resources()
+            # Determine resources if workers don't set
+            if self.args.workers != 0:
+                self.workers = self.args.workers
+            else:
+                self.determine_resources()
 
-            # Creating threading pool to encode bunch of files at the same time
-            print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
-
-            # Progress bar
+            # Creating threading pool to encode bunch of files at the same time and show progress bar
             with Pool(self.workers) as pool:
+
                 self.workers = min(len(commands), self.workers)
+
+                print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
+
                 for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
                     pass
 

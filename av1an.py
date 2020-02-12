@@ -165,8 +165,14 @@ class Av1an:
         (self.temp_dir / 'encode').mkdir()
 
     def extract_audio(self, input_vid: Path):
+
         # Extracting audio from video file
         # Encoding audio if needed
+
+        audio_file = self.temp_dir / 'audio.mkv'
+        if audio_file.exists():
+            return
+
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
 
         # Capture output to check if audio is present
@@ -175,7 +181,7 @@ class Av1an:
 
         if is_audio_here:
             cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
-                    f'{self.args.audio_params} {self.temp_dir / "audio.mkv"}'
+                    f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
 
     def scenedetect(self, video: Path):

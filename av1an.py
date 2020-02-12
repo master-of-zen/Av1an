@@ -8,7 +8,6 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
-from os.path import join
 from psutil import virtual_memory
 import argparse
 from math import ceil

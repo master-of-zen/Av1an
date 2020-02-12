@@ -4,35 +4,39 @@
 # Benchmarking
 # Add conf file
 
-from tqdm import tqdm
 import sys
 import os
 import shutil
 from os.path import join
-from psutil import virtual_memory
 import argparse
 from math import ceil
 from multiprocessing import Pool
 import multiprocessing
 import subprocess
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, List
+from hashlib import blake2b
 
-try:
-    import scenedetect
-except ImportError:
-    print('PySceneDetect not found. Please check installation')
-    sys.exit()
-
-
-from scenedetect.video_manager import VideoManager
-from scenedetect.scene_manager import SceneManager
-from scenedetect.detectors import ContentDetector
+from tqdm import tqdm
+from psutil import virtual_memory
+from scenedetect import VideoManager, SceneManager, ContentDetector
 
 
 if sys.version_info < (3, 7):
     print('Av1an requires at least Python 3.7 to run.')
     sys.exit()
+
+
+def hash_file(file: Path) -> str:
+    ''' Hash the content of a file and return the digest. '''
+    chunksize = 1024 * 1024 # 1M
+    h = blake2b()
+    with file.open('rb') as f:
+        chunk = f.read(chunksize)
+        while len(chunk) != 0:
+            h.update(chunk)
+            chunk = f.read(chunksize)
+    return h.hexdigest()
 
 
 class Av1an:
@@ -153,19 +157,56 @@ class Av1an:
         if self.workers == 0:
             self.workers += 1
 
+    def is_same_input(self, input_file: Path) -> Tuple[bool, str]:
+        '''
+            Check if a work on the same input was interrupted before.
+            If no saved work was found, return also False.
+
+            Returns:
+            - Whether the input file is the same
+            - Its hash
+        '''
+        # Get the hash the current input
+        input_hash = hash_file(input_file)
+
+        # Get the hash of the past input
+        saved_hash_file = self.temp_dir / 'input.hash'
+        if not saved_hash_file.exists():
+            return (False, input_hash)
+
+        saved_hash = saved_hash_file.read_text()
+        return (input_hash == saved_hash, input_hash)
+
     def setup(self, input_file: Path):
         if not input_file.exists():
-            print("File don't exist")
+            print(f'File "{input_file}" does not exist')
             sys.exit()
 
-        # Make temporal directories, and remove them if already presented
         if self.temp_dir.is_dir():
-            shutil.rmtree(self.temp_dir)
+            # Check if the input file is the same so that the directory can be reused
+            same_work, input_hash = self.is_same_input(input_file)
+            if same_work:
+                print("Unfinished work found for the same input. Reusing saved work")
+                return
 
+            # Remove the old work directory
+            shutil.rmtree(self.temp_dir)
+        else:
+            input_hash = hash_file(input_file)
+
+        # Create the .temp directory architecture
         (self.temp_dir / 'split').mkdir(parents=True)
         (self.temp_dir / 'encode').mkdir()
+        (self.temp_dir / 'done').mkdir()
+
+        # Write the input hash file
+        (self.temp_dir / 'input.hash').write_text(input_hash)
 
     def extract_audio(self, input_vid: Path):
+        audio_file = self.temp_dir / 'audio.mkv'
+        if audio_file.exists():
+            return
+
         # Extracting audio from video file
         # Encoding audio if needed
         ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
@@ -176,10 +217,10 @@ class Av1an:
 
         if is_audio_here:
             cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
-                    f'{self.args.audio_params} {self.temp_dir / "audio.mkv"}'
+                    f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
 
-    def scenedetect(self, video: Path):
+    def scenedetect(self, video: Path) -> str:
         # Skip scene detection if the user choosed to
         if self.skip_scenes:
             return ''
@@ -191,13 +232,6 @@ class Av1an:
             scene_manager = SceneManager()
             scene_manager.add_detector(ContentDetector(threshold=self.threshold))
             base_timecode = video_manager.get_base_timecode()
-
-            # If stats file exists, load it.
-            if self.scenes and self.scenes.exists():
-                # Read stats from CSV file opened in read mode:
-                with self.scenes.open() as stats_file:
-                    stats = stats_file.read()
-                    return stats
 
             # Set video_manager duration to read frames from 00:00:00 to 00:00:20.
             video_manager.set_duration()
@@ -216,17 +250,13 @@ class Av1an:
             # Like FrameTimecodes, each scene in the scene_list can be sorted if the
             # list of scenes becomes unsorted.
 
-            scenes = []
-            for i, scene in enumerate(scene_list):
-                scenes.append(scene[0].get_timecode())
-
-            scenes = ','.join(scenes[1:])
-
-            # We only write to the stats file if a save is required:
+            # Write the scenes file for reuse
+            scenes = [scene[0].get_timecode() for scene in scene_list]
+            scenes_csv = ','.join(scenes[1:])
             if self.scenes:
-                with self.scenes.open(mode='w') as stats_file:
-                    stats_file.write(scenes)
-            return scenes
+                self.scenes.write_text(scenes_csv)
+
+            return scenes_csv
         except Exception:
             print('Error in PySceneDetect')
             sys.exit()
@@ -244,13 +274,22 @@ class Av1an:
 
         self.call_cmd(cmd)
 
-    def get_video_queue(self, source_path: Path):
+    def get_video_queue(self, source_path: Path) -> List[Path]:
 
         # Returns sorted list of all videos that need to be encoded. Big first
         return sorted(source_path.iterdir(), key=lambda f: -f.stat().st_size)
 
+    def remove_encoded_from_video_queue(self, files: List[Path]) -> List[Path]:
+        ''' Check which files have already been encoded '''
+
+        # Check which files have been encoded (remove their '.ivf' suffix)
+        done_files = set(file.stem for file in (self.temp_dir / 'done').iterdir())
+
+        # Return all files that have not been encoded
+        return [file for file in files if file.stem not in done_files]
+
     def svt_av1_encode(self, file_paths):
-        
+
         if self.args.encoding_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
             sys.exit()
@@ -260,7 +299,7 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1]}.ivf -', file[2])
+                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1].with_suffix(".ivf")} -', file[2].name)
                 for file in file_paths]
             return pass_1_commands
 
@@ -269,10 +308,10 @@ class Av1an:
             p2o = ' -output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0]}.stat -b {file[0]}.bk - ',
+                 f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0]}.stat -b {file[1]}.ivf - ',
-                 file[2])
+                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
+                 file[2].name)
                 for file in file_paths]
             return pass_2_commands
 
@@ -290,17 +329,17 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.encoding_params} -o {file[1]}.ivf - ', file[2])
+                 f'  {single_pass} {self.encoding_params} -o {file[1].with_suffix(".ivf")} - ', file[2].name)
                 for file in file_paths]
             return pass_1_commands
 
         if self.encode_pass == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0]}.log -o {os.devnull} - ',
+                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0]}.log -o {file[1]}.ivf - ',
-                 file[2])
+                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                 file[2].name)
                 for file in file_paths]
             return pass_2_commands
 
@@ -312,30 +351,30 @@ class Av1an:
             self.encoding_params = self.args.encoding_params
         if self.encode_pass == 1 or self.encode_pass == 2:
             pass_1_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} ' 
+                (f'-i {file[0]} {self.ffmpeg_pipe} '
                  f' rav1e -  {self.encoding_params}  '
-                 f'--output {file[1]}.ivf', f'{file[2]}.ivf ')
+                 f'--output {file[1].with_suffix(".ivf")}', file[2].name)
                 for file in file_paths]
             return pass_1_commands
         if self.encode_pass == 2:
 
             # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                 f' rav1e - --first-pass {file[0]}.stat {self.encoding_params} '
-                 f'--output {file[0]}.ivf',
-                 f'-i {file[0]} {self.ffmpeg_pipe} ' 
-                 f' rav1e - --second-pass {file[0]}.stat {self.encoding_params} '
-                 f'--output {file[1]}.ivf',
-                 f'{file[2]}.ivf')
+                (f'-i {file[0]} {self.ffmpeg_pipe} '
+                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.encoding_params} '
+                 f'--output {file[1].with_suffix(".ivf")}',
+                 f'-i {file[0]} {self.ffmpeg_pipe} '
+                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.encoding_params} '
+                 f'--output {file[1].with_suffix(".ivf")}',
+                 file[2].name)
                 for file in file_paths]
 
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
-        file_paths = [(f'{self.temp_dir / "split" / file.name}',
-                       f'{self.temp_dir / "encode" / file.name}',
-                       str(file)) for file in files]
+        file_paths = [(self.temp_dir / "split" / file.name,
+                       self.temp_dir / "encode" / file.name,
+                       file) for file in files]
 
         if self.encoder == 'aom':
             return self.aom_encode(file_paths)
@@ -360,6 +399,14 @@ class Av1an:
             cmd = rf'{self.FFMPEG} {i}'
             self.call_cmd(cmd)
 
+        # Move the cmd output file to the 'done' directory
+        # to avoid reencoding it if the work is interrupted
+        file_name_ivf = Path(commands[-1]).with_suffix('.ivf')
+
+        output_file = self.temp_dir / 'encode' / file_name_ivf
+        moved_file = self.temp_dir / 'done' / file_name_ivf
+        shutil.move(output_file, moved_file)
+
     def concatenate_video(self):
 
         # Using FFMPEG to concatenate all encoded videos to 1 file.
@@ -369,7 +416,7 @@ class Av1an:
         with open(f'{concat}', 'w') as f:
             # Write all files that need to be concatenated
             # Their path must be relative to the directory where "concat.txt" is
-            encode_files = sorted((self.temp_dir / 'encode').iterdir())
+            encode_files = sorted((self.temp_dir / 'done').iterdir())
             f.writelines(f"file '{file.relative_to(self.temp_dir)}'\n" for file in encode_files)
 
         # Add the audio file if one was extracted from the input
@@ -415,31 +462,41 @@ class Av1an:
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
 
-            # Splitting video and sorting big-first
-            timestamps = self.scenedetect(self.args.file_path)
-            self.split(self.args.file_path, timestamps)
-            files = self.get_video_queue(self.temp_dir / 'split')
+            # Check if the scene-splitting has already been done
+            split_files = self.get_video_queue(self.temp_dir / 'split')
+            if len(split_files) == 0:
+                # Split video and sort scenes big-first
+                timestamps = self.scenedetect(self.args.file_path)
+                self.split(self.args.file_path, timestamps)
+                split_files = self.get_video_queue(self.temp_dir / 'split')
 
-            # Extracting audio
-            self.extract_audio(self.args.file_path)
+            if len(split_files) == 0:
+                print("No scene found in the input file")
+                exit()
 
-            # Determine resources
-            self.determine_resources()
+            files_to_encode = self.remove_encoded_from_video_queue(split_files)
+            if len(files_to_encode) > 0:
+                # Extracting audio
+                self.extract_audio(self.args.file_path)
 
-            # Make encode queue
-            commands = self.compose_encoding_queue(files)
+                # Determine resources
+                self.determine_resources()
 
-            # Reduce number of workers if needed
-            self.workers = min(len(commands), self.workers)
+                # Make encode queue
+                commands = self.compose_encoding_queue(files_to_encode)
 
-            # Creating threading pool to encode bunch of files at the same time
-            print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
+                # Reduce number of workers if needed
+                self.workers = min(len(commands), self.workers)
 
-            # Progress bar
+                # Creating threading pool to encode bunch of files at the same time
+                print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
 
-            pool = Pool(self.workers)
-            for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
-                pass
+                # Progress bar
+                with Pool(self.workers) as pool:
+                    total = len(split_files)
+                    initial = total - len(files_to_encode)
+                    for _ in tqdm(pool.imap_unordered(self.encode, commands), initial=initial, total=total, leave=True):
+                        pass
 
             self.concatenate_video()
 

@@ -221,11 +221,6 @@ class Av1an:
             # Like FrameTimecodes, each scene in the scene_list can be sorted if the
             # list of scenes becomes unsorted.
 
-            scenes = []
-            for i, scene in enumerate(scene_list):
-                scenes.append(scene[0].get_timecode())
-
-            scenes = ','.join(scenes[1:])
             scenes = [scene[0].get_timecode() for scene in scene_list]
             scenes = ','.join(scenes[1:])
 
@@ -235,6 +230,7 @@ class Av1an:
             return scenes
 
         except Exception:
+
             print('Error in PySceneDetect')
             sys.exit()
 
@@ -340,6 +336,7 @@ class Av1an:
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
+
         file_paths = [(f'{self.temp_dir / "split" / file.name}',
                        f'{self.temp_dir / "encode" / file.name}',
                        str(file)) for file in files]
@@ -372,10 +369,11 @@ class Av1an:
         # Using FFMPEG to concatenate all encoded videos to 1 file.
         # Reading all files in A-Z order and saving it to concat.txt
 
-        concat = self.temp_dir / "concat.txt"
-        with open(f'{concat}', 'w') as f:
+        with open(f'{self.temp_dir / "concat"}', 'w') as f:
+
             # Write all files that need to be concatenated
             # Their path must be relative to the directory where "concat.txt" is
+
             encode_files = sorted((self.temp_dir / 'encode').iterdir())
             f.writelines(f"file '{file.relative_to(self.temp_dir)}'\n" for file in encode_files)
 
@@ -387,7 +385,7 @@ class Av1an:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {concat} {audio} -c copy -y {self.output_file}'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y {self.output_file}'
             self.call_cmd(cmd)
 
         except Exception:
@@ -417,8 +415,10 @@ class Av1an:
 
         # Parse initial arguments
         self.arg_parsing()
+
         # Video Mode
         if self.mode == 0:
+
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
 
@@ -430,28 +430,25 @@ class Av1an:
             # Extracting audio
             self.extract_audio(self.args.file_path)
 
-            # Determine resources
-            self.determine_resources()
-
             # Make encode queue
             commands = self.compose_encoding_queue(files)
 
             # Catch Error
             if len(commands) == 0:
-              print('Wrong encoding settings')
-              sys.exit()
+                print('Wrong encoding settings')
+                sys.exit()
 
-            # Reduce number of workers if needed
-            self.workers = min(len(commands), self.workers)
+            # Determine resources
+            self.determine_resources()
 
             # Creating threading pool to encode bunch of files at the same time
             print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
 
             # Progress bar
-
-            pool = Pool(self.workers)
-            for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
-                pass
+            with Pool(self.workers) as pool:
+                self.workers = min(len(commands), self.workers)
+                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
+                    pass
 
             self.concatenate_video()
 

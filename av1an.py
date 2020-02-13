@@ -279,7 +279,7 @@ class Av1an:
     def aom_encode(self, file_paths):
 
         if self.args.encoding_params == '':
-            self.encoding_params = '--cpu-used=6 --end-usage=q --cq-level=40'
+            self.encoding_params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
         else:
             self.encoding_params = self.args.encoding_params
 
@@ -307,7 +307,7 @@ class Av1an:
     def rav1e_encode(self, file_paths):
 
         if self.args.encoding_params == '':
-            self.encoding_params = '--speed=5'
+            self.encoding_params = ' --tiles=4 --speed=5'
         else:
             self.encoding_params = self.args.encoding_params
         if self.encode_pass == 1 or self.encode_pass == 2:

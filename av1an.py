@@ -320,7 +320,7 @@ class Av1an:
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
-                 (file[0],file[2]))
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
 
@@ -380,7 +380,7 @@ class Av1an:
         for i in commands[:-1]:
             cmd = rf'{self.FFMPEG} {i}'
             self.call_cmd(cmd)
-        source, target = Path(commands[-1][0]), Path(commands[-1][0])
+        source, target = Path(commands[-1][0]), Path(commands[-1][1])
         self.frame_check(source, target)
 
     def concatenate_video(self):

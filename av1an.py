@@ -246,6 +246,22 @@ class Av1an:
 
         self.call_cmd(cmd)
 
+    def frame_check(self, source: Path, encoded: Path):
+        # if self.args.no_check:
+        #    print('NO CHECK')
+        # done_file = self.temp_dir / 'done.txt'
+        done_file = Path('done.txt')
+        cmd = [(f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' +
+                f'-of default=nokey=1:noprint_wrappers=1 {i}') for i in (source, encoded)]
+        s1 = int((self.call_cmd(cmd[0], capture_output=True)).strip())
+        s2 = int((self.call_cmd(cmd[1], capture_output=True)).strip())
+        print(s1, s2)
+        if s1 == s2:
+            with done_file.open('a') as done:
+                done.write(source.name + ',')
+        else:
+            print(f'Frame Count Differ for Source {source.}: {s2}/{s1}')
+
     def get_video_queue(self, source_path: Path):
 
         # Returns sorted list of all videos that need to be encoded. Big first

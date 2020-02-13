@@ -252,7 +252,9 @@ class Av1an:
         # done_file = self.temp_dir / 'done.txt'
         done_file = Path('done.txt')
         cmd = [(f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' +
-                f'-of default=nokey=1:noprint_wrappers=1 {i}') for i in (source, encoded)]
+                f'-of default=nokey=1:noprint_wrappers=1 {i.absolute()}') for i in (source, encoded)]
+
+        print(source, encoded)
         s1 = int((self.call_cmd(cmd[0], capture_output=True)).strip())
         s2 = int((self.call_cmd(cmd[1], capture_output=True)).strip())
         print(s1, s2)
@@ -260,7 +262,7 @@ class Av1an:
             with done_file.open('a') as done:
                 done.write(source.name + ',')
         else:
-            print(f'Frame Count Differ for Source {source.}: {s2}/{s1}')
+            print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
 
     def get_video_queue(self, source_path: Path):
 
@@ -318,7 +320,7 @@ class Av1an:
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
-                 file[2].name)
+                 (file[0],file[2]))
                 for file in file_paths]
             return pass_2_commands
 
@@ -378,6 +380,8 @@ class Av1an:
         for i in commands[:-1]:
             cmd = rf'{self.FFMPEG} {i}'
             self.call_cmd(cmd)
+        source, target = Path(commands[-1][0]), Path(commands[-1][0])
+        self.frame_check(source, target)
 
     def concatenate_video(self):
 

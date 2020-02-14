@@ -493,8 +493,14 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     # Main thread
-    av1an = Av1an()
-    av1an.main()
+    try:
+        av1an = Av1an()
+        av1an.main()
+    except KeyboardInterrupt:
+        print('Encoding stopped')
+        if sys.platform == 'linux':
+            os.popen('stty sane', 'r')
+        sys.exit()
 
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':

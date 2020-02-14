@@ -3,7 +3,10 @@
 # Todo:
 # Benchmarking
 # Add conf file
+# Add new paths for frame check to all encoders
+# Make it not split if splits are there
 
+import time
 from tqdm import tqdm
 import sys
 import os
@@ -82,7 +85,7 @@ class Av1an:
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
-        parser.add_argument('--no_check','-n', help='Do not check encodings', action='store_true')
+        parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -300,7 +303,7 @@ class Av1an:
 
         if self.encode_pass == 2:
             p2i = '-input-stat-file '
-            p2o = ' -output-stat-file '
+            p2o = '-output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
@@ -400,6 +403,7 @@ class Av1an:
         self.frame_check(source, target)
 
     def concatenate_video(self):
+
         # Using FFMPEG to concatenate all encoded videos to 1 file.
         # Reading all files in A-Z order and saving it to concat.txt
 
@@ -454,7 +458,7 @@ class Av1an:
         # Video Mode
         if self.mode == 0:
 
-            if bool(self.args.resume) != bool(self.temp_dir.exists()):
+            if not (self.args.resume and self.temp_dir.exists()):
                 # Check validity of request and create temp folders/files
                 self.setup(self.args.file_path)
 
@@ -512,8 +516,10 @@ if __name__ == '__main__':
 
     # Main thread
     try:
+        start = time.time()
         av1an = Av1an()
         av1an.main()
+        print(f'Finished: {round(time.time() - start, 1)}s')
     except KeyboardInterrupt:
         print('Encoding stopped')
         if sys.platform == 'linux':

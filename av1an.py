@@ -408,12 +408,11 @@ class Av1an:
         # Reading all files in A-Z order and saving it to concat.txt
 
         with open(f'{self.temp_dir / "concat"}', 'w') as f:
-
             # Write all files that need to be concatenated
             # Their path must be relative to the directory where "concat.txt" is
 
             encode_files = sorted((self.temp_dir / 'encode').iterdir())
-            f.writelines(f"file '{file.relative_to(self.temp_dir)}'\n" for file in encode_files)
+            f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
 
         # Add the audio file if one was extracted from the input
         audio_file = self.temp_dir / "audio.mkv"

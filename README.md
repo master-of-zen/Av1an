@@ -25,49 +25,58 @@ With your own parameters:
 <h2 align="center">Usage</h2>
 
     -i   --file_path        Input file (relative or absolute path)
-    
+
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
-    
-    -m   --mode             0 - Video encoding (Default), 1 - Image encoding
-                            By default used 10 bit encoding. 
-                            Constant quality mode for Aomenc
-    
+
     -enc --encoder          Encoder to use (aom or rav1e or svt_av1. Default: aom)
                             Example: -enc rav1e
 
-    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters. 
+    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters.
                             Required for SVT-AV1s)
                             Can be set for both video and image mode
                             Must be inside ' ' or " "
-     
+
+    -p   --pass             Set number of passes for encoding
+                            (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
+                            At current moment 2nd pass Rav1e not working
+
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
-    
+
     -t   --workers          Maximum number of workers (overrides automatically set number of workers.
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
-                            Rav1e and SVT-AV1 uses multiple threads, 
+                            Rav1e and SVT-AV1 uses multiple threads,
                             Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
-                            4 rav1e workers is optimal for 6/12 cpu 
-    
+                            4 rav1e workers is optimal for 6/12 cpu
+
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored
                             If file not exist, new will be generated in current folder
-                            First run to generate stamps, all next reuse it. 
-                            Example: `-s scenes`
-    
+                            First run to generate stamps, all next reuse it.
+                            Example: `-s scenes.csv`
+
     -tr  --threshold        PySceneDetect threshold for scene detection
-    
-    -p   --pass             Set number of passes for encoding 
-                            (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
-                            At current moment 2nd pass Rav1e not working
-    
-    -ff  --ffmpeg_com       FFmpeg options. Example: 
-                            --ff ' -r 24 -vf scale=320:240 '  
-    
+
+    -ff  --ffmpeg_com       FFmpeg options. Example:
+                            --ff ' -r 24 -vf scale=320:240 '
+
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
                             Example for 10 bit: 'yuv420p10le'
+
+    --resume                If encode was stopped/quit resumes encode with saving all progress
+                            Resuming automatically skips scenedetection, audio encoding/copy,
+                            spliting, so resuming only possible after actuall encoding is started.
+                            /.temp folder must be presented for resume.
+
+    --no_check              Skip checking numbers of frames for source and encoded chunks
+                            Needed if framerate changes.
+                            By default any differences in frames of encoded files will be reported
+
+     -m   --mode            0 - Video encoding (Default), 1 - Image encoding
+                            By default used 10 bit encoding.
+                            Constant quality mode for Aomenc
                             Encoding options should be adjusted accordingly
-    
+
     -log --logging          Path to .log file(Default: no logging)
                             Currently not working on Windows
 
@@ -75,17 +84,21 @@ With your own parameters:
 
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
-[PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+* [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
-Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
+* Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
 
-Simple and clean console look
+* Resuming encoding without loss of encoded progress
 
-Automatic determination of how many workers the host can handle
+* Simple and clean console look
 
-Building encoding queue with bigger files first, minimizing waiting for last scene to encode
+* Automatic determination of how many workers the host can handle
 
-Both video and audio encoding option with FFmpeg
+* Building encoding queue with bigger files first, minimizing waiting for last scene to encode
+
+* Both video and audio encoding option with FFmpeg
+
+* Logging of progress of all encoders
 
 And many more to go..
 
@@ -93,7 +106,7 @@ And many more to go..
 
 #### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
-    
+
 #### 2. Install install program with dependancies
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
@@ -103,7 +116,7 @@ And many more to go..
 
 Install all requirements listed in `requirements` file.
 
-If installed programs don't added to enviroment variable, 
+If installed programs don't added to enviroment variable,
 executables can be put in same folder with av1an
 
 Run with command: `python -i ./avian.py params..`

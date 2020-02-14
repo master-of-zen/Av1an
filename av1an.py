@@ -3,11 +3,15 @@
 # Todo:
 # Benchmarking
 # Add conf file
+# Add new paths for frame check to all encoders
+# Make it not split if splits are there
 
+import time
 from tqdm import tqdm
 import sys
 import os
 import shutil
+from ast import literal_eval
 from psutil import virtual_memory
 import argparse
 from math import ceil
@@ -80,7 +84,8 @@ class Av1an:
         parser.add_argument('--ffmpeg_com', '-ff', type=str, default='', help='FFmpeg commands')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
-
+        parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
+        parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -155,11 +160,13 @@ class Av1an:
             sys.exit()
 
         # Make temporal directories, and remove them if already presented
-        if self.temp_dir.is_dir():
-            shutil.rmtree(self.temp_dir)
-
-        (self.temp_dir / 'split').mkdir(parents=True)
-        (self.temp_dir / 'encode').mkdir()
+        if self.temp_dir.exists() and self.args.resume:
+            pass
+        else:
+            if self.temp_dir.is_dir():
+                shutil.rmtree(self.temp_dir)
+            (self.temp_dir / 'split').mkdir(parents=True)
+            (self.temp_dir / 'encode').mkdir()
 
     def extract_audio(self, input_vid: Path):
 
@@ -201,7 +208,7 @@ class Av1an:
                     stats = stats_file.read()
                     return stats
 
-            # Set video_manager duration to read frames from 00:00:00 to 00:00:20.
+            # Work on whole video
             video_manager.set_duration()
 
             # Set downscale factor to improve processing speed.
@@ -244,10 +251,39 @@ class Av1an:
 
         self.call_cmd(cmd)
 
+    def frame_check(self, source: Path, encoded: Path):
+
+        done_file = Path(self.temp_dir / 'done.txt')
+
+        if self.args.no_check:
+            with done_file.open('a') as done:
+                done.write('"' + source.name + '", ')
+                return
+
+        cmd = [(f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' +
+                f'-of default=nokey=1:noprint_wrappers=1 {i.absolute()}') for i in (source, encoded)]
+
+        s1 = int((self.call_cmd(cmd[0], capture_output=True)).strip())
+        s2 = int((self.call_cmd(cmd[1], capture_output=True)).strip())
+        if s1 == s2:
+            with done_file.open('a') as done:
+                done.write('"' + source.name + '", ')
+        else:
+            print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+
     def get_video_queue(self, source_path: Path):
 
         # Returns sorted list of all videos that need to be encoded. Big first
-        return sorted(source_path.iterdir(), key=lambda f: -f.stat().st_size)
+        queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+        if self.args.resume:
+            done_file = self.temp_dir / 'done.txt'
+            if done_file.exists():
+                with open(done_file, 'r') as f:
+                    data = literal_eval(f.read())
+                    queue = [x for x in queue if x.name not in data]
+
+        queue = sorted(queue, key=lambda x: -x.stat().st_size)
+        return queue
 
     def svt_av1_encode(self, file_paths):
 
@@ -260,19 +296,20 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1].with_suffix(".ivf")} -', file[2].name)
+                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1].with_suffix(".ivf")} -',
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
 
         if self.encode_pass == 2:
             p2i = '-input-stat-file '
-            p2o = ' -output-stat-file '
+            p2o = '-output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
-                 file[2].name)
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
 
@@ -290,7 +327,8 @@ class Av1an:
         if self.encode_pass == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.encoding_params} -o {file[1].with_suffix(".ivf")} - ', file[2].name)
+                 f'  {single_pass} {self.encoding_params} -o {file[1].with_suffix(".ivf")} - ',
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
 
@@ -300,7 +338,7 @@ class Av1an:
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
-                 file[2].name)
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
 
@@ -314,7 +352,8 @@ class Av1an:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} '
                  f' rav1e -  {self.encoding_params}  '
-                 f'--output {file[1].with_suffix(".ivf")}', file[2].name)
+                 f'--output {file[1].with_suffix(".ivf")}',
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
         if self.encode_pass == 2:
@@ -327,7 +366,7 @@ class Av1an:
                  f'-i {file[0]} {self.ffmpeg_pipe} '
                  f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.encoding_params} '
                  f'--output {file[1].with_suffix(".ivf")}',
-                 file[2].name)
+                 (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
 
             return pass_2_commands
@@ -360,6 +399,8 @@ class Av1an:
         for i in commands[:-1]:
             cmd = rf'{self.FFMPEG} {i}'
             self.call_cmd(cmd)
+        source, target = Path(commands[-1][0]), Path(commands[-1][1])
+        self.frame_check(source, target)
 
     def concatenate_video(self):
 
@@ -417,23 +458,24 @@ class Av1an:
         # Video Mode
         if self.mode == 0:
 
-            # Check validity of request and create temp folders/files
-            self.setup(self.args.file_path)
+            if not (self.args.resume and self.temp_dir.exists()):
+                # Check validity of request and create temp folders/files
+                self.setup(self.args.file_path)
 
-            # Splitting video and sorting big-first
-            timestamps = self.scenedetect(self.args.file_path)
-            self.split(self.args.file_path, timestamps)
+                # Splitting video and sorting big-first
+                timestamps = self.scenedetect(self.args.file_path)
+                self.split(self.args.file_path, timestamps)
+                # Extracting audio
+                self.extract_audio(self.args.file_path)
+
             files = self.get_video_queue(self.temp_dir / 'split')
-
-            # Extracting audio
-            self.extract_audio(self.args.file_path)
 
             # Make encode queue
             commands = self.compose_encoding_queue(files)
 
             # Catch Error
             if len(commands) == 0:
-                print('Wrong encoding settings')
+                print('No clips to encode')
                 sys.exit()
 
             # Determine resources if workers don't set
@@ -449,7 +491,9 @@ class Av1an:
 
                 print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
 
-                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=len(files), leave=True), 1):
+                enc_path = self.temp_dir / 'split'
+                initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
+                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=initial, initial=initial - len(files), leave=False), 1):
                     pass
 
             self.concatenate_video()
@@ -471,8 +515,16 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     # Main thread
-    av1an = Av1an()
-    av1an.main()
+    try:
+        start = time.time()
+        av1an = Av1an()
+        av1an.main()
+        print(f'Finished: {round(time.time() - start, 1)}s')
+    except KeyboardInterrupt:
+        print('Encoding stopped')
+        if sys.platform == 'linux':
+            os.popen('stty sane', 'r')
+        sys.exit()
 
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':

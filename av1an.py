@@ -145,7 +145,7 @@ class Av1an:
         ram = round(virtual_memory().total / 2 ** 30)
 
         if self.encoder == 'aom' or self.encoder == 'rav1e':
-            self.workers = ceil(min(cpu, ram/1.5))
+            self.workers = ceil(min(cpu/2, ram/1.5))
 
         elif self.encoder == 'svt_av1':
             self.workers = ceil(min(cpu, ram)) // 5

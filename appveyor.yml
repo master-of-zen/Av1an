@@ -5,7 +5,7 @@ environment:
 install:
 - cmd: >-
     "%PYTHON%\python.exe" -m pip install -r requirements
-    "%PYTHON%\python.exe" -m pip install pypiwin32
+    "%PYTHON%\python.exe" pip install pypiwin32
     "%PYTHON%\python.exe" -m pip install pyinstaller
 build_script:
 - cmd: '"%PYTHON%\Scripts\pyinstaller" --onefile av1an.py'

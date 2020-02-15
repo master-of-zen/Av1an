@@ -218,7 +218,7 @@ class Av1an:
             video_manager.start()
 
             # Perform scene detection on video_manager.
-            scene_manager.detect_scenes(frame_source=video_manager, show_progress=False)
+            scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
 
             # Obtain list of detected scenes.
             scene_list = scene_manager.get_scene_list(base_timecode)

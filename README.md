@@ -108,7 +108,7 @@ And many more to go..
 #### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
 
-#### 2. Install install program with dependancies
+#### 2. Install with dependancies
 * [Python3](https://www.python.org/downloads/)
 * [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
 * [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder

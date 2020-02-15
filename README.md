@@ -79,7 +79,6 @@ With your own parameters:
                             Encoding options should be adjusted accordingly
 
     -log --logging          Path to .log file(Default: no logging)
-                            Currently not working on Windows
 
 <h2 align="center">Main Features</h2>
 

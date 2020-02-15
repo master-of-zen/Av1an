@@ -9,6 +9,7 @@
 
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/666865780012482571/Screenshot_20200115_064531.png)
 
+<h4 align="center"> <img src="https://ci.appveyor.com/api/projects/status/cvweipdgphbjkkar?svg=true" alt="Project Badge"> <a href="https://codeclimate.com/github/master-of-zen/Av1an/maintainability"><img src="https://api.codeclimate.com/v1/badges/41ea7ad221dcdad3fe8d/maintainability" /></a></h4>
 <h2 align="center">Easy And Efficient </h2>
 
 Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SVT-AV1).

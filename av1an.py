@@ -312,7 +312,7 @@ class Av1an:
     def aom_encode(self, file_paths):
 
         if self.args.encoding_params == '':
-            self.encoding_params = '--threads=4 --end-usage=q --cq-level=40'
+            self.encoding_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
         else:
             self.video_params = self.args.video_params
 

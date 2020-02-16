@@ -104,6 +104,8 @@ And many more to go..
 
 ## Install on Windows
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/75960961ad934d1b988faa24dfab4417)](https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard)
+
 #### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
 

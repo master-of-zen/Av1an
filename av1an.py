@@ -21,12 +21,6 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-try:
-    import scenedetect
-except ImportError:
-    print('PySceneDetect not found. Please check installation')
-    sys.exit()
-
 
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager

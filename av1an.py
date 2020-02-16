@@ -403,6 +403,7 @@ class Av1an:
             self.call_cmd(cmd)
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         self.frame_check(source, target)
+        return self.frame_probe(source)
 
     def concatenate_video(self):
 
@@ -489,15 +490,18 @@ class Av1an:
             with Pool(self.workers) as pool:
 
                 self.workers = min(len(commands), self.workers)
-
-                print(f'\rWorkers: {self.workers} Params: {self.video_params}')
-
                 enc_path = self.temp_dir / 'split'
                 initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
-                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands),
-                                           total=initial, initial=initial - len(files),
-                                           dynamic_ncols=True, leave=False), 1):
-                    pass
+                print(f'\rClips: {initial} Workers: {self.workers} Params: {self.encoding_params}')
+
+                bar = tqdm(total=self.frame_probe(self.args.file_path),
+                           initial=0, dynamic_ncols=True, leave=False)
+                loop = pool.imap_unordered(self.encode, commands)
+                for b in loop:
+                    bar.update(n=b)
+                # for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands),
+                #                           total=self.frame_probe(self.args.file_path), initial=0,
+                #                           dynamic_ncols=True, leave=False), 1):
 
             self.concatenate_video()
 

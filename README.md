@@ -88,21 +88,19 @@ With your own parameters:
 
 *   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
-*   Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
+*   Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer).
 
-*   Resuming encoding without loss of encoded progress
+*   Resuming encoding without loss of encoded progress.
 
-*   Simple and clean console look
+*   Simple and clean console look.
 
-*   Automatic determination of how many workers the host can handle
+*   Automatic determination of how many workers the host can handle.
 
-*   Building encoding queue with bigger files first, minimizing waiting for last scene to encode
+*   Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
 
-*   Both video and audio encoding option with FFmpeg
+*   Both video and audio encoding option with FFmpeg.
 
-*   Logging of progress of all encoders
-
-And many more to go..
+*   Logging of progress of all encoders.
 
 ## Install on Windows
 

@@ -1,4 +1,3 @@
-
 <h1 align="center">
     <br>
     Av1an
@@ -87,35 +86,35 @@ With your own parameters:
 
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
-* [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+*   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 
-* Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
+*   Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer)
 
-* Resuming encoding without loss of encoded progress
+*   Resuming encoding without loss of encoded progress
 
-* Simple and clean console look
+*   Simple and clean console look
 
-* Automatic determination of how many workers the host can handle
+*   Automatic determination of how many workers the host can handle
 
-* Building encoding queue with bigger files first, minimizing waiting for last scene to encode
+*   Building encoding queue with bigger files first, minimizing waiting for last scene to encode
 
-* Both video and audio encoding option with FFmpeg
+*   Both video and audio encoding option with FFmpeg
 
-* Logging of progress of all encoders
+*   Logging of progress of all encoders
 
 And many more to go..
 
 ## Install on Windows
 
-#### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
+### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
 
-#### 2. Install with dependancies
-* [Python3](https://www.python.org/downloads/)
-* [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
-* [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
-* [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
-* [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+### 2. Install with dependancies
+*   [Python3](https://www.python.org/downloads/)
+*   [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
+*   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
+*   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
+*   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
 Install all requirements listed in `requirements` file.
 
@@ -126,11 +125,11 @@ Run with command: `python -i ./avian.py params..`
 
 ## Install on Linux
 
-* [Python3](https://www.python.org/downloads/)
-* [FFmpeg](https://ffmpeg.org/download.html) with ffprobe
-* [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
-* [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
-* [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+*   [Python3](https://www.python.org/downloads/)
+*   [FFmpeg](https://ffmpeg.org/download.html) with ffprobe
+*   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
+*   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
+*   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
 Install all requirements listed in `requirements` file
 

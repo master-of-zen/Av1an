@@ -250,6 +250,12 @@ class Av1an:
 
         self.call_cmd(cmd)
 
+    def frame_probe(self, source: Path):
+        cmd = f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' \
+              f'-of default=nokey=1:noprint_wrappers=1 {source.absolute()}'
+        frames = int(self.call_cmd(cmd, capture_output=True).strip())
+        return frames
+
     def frame_check(self, source: Path, encoded: Path):
 
         done_file = Path(self.temp_dir / 'done.txt')
@@ -259,11 +265,8 @@ class Av1an:
                 done.write('"' + source.name + '", ')
                 return
 
-        cmd = [(f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' +
-                f'-of default=nokey=1:noprint_wrappers=1 {i.absolute()}') for i in (source, encoded)]
+        s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
 
-        s1 = int((self.call_cmd(cmd[0], capture_output=True)).strip())
-        s2 = int((self.call_cmd(cmd[1], capture_output=True)).strip())
         if s1 == s2:
             with done_file.open('a') as done:
                 done.write('"' + source.name + '", ')
@@ -491,7 +494,9 @@ class Av1an:
 
                 enc_path = self.temp_dir / 'split'
                 initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
-                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=initial, initial=initial - len(files), leave=False), 1):
+                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands),
+                                           total=initial, initial=initial - len(files),
+                                           dynamic_ncols=True, leave=False), 1):
                     pass
 
             self.concatenate_video()

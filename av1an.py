@@ -317,8 +317,8 @@ class Av1an:
 
     def aom_encode(self, file_paths):
 
-        if self.args.video_params == '':
-            self.video_params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+        if self.args.encoding_params == '':
+            self.encoding_params = '--threads=4 --end-usage=q --cq-level=40'
         else:
             self.video_params = self.args.video_params
 
@@ -492,16 +492,14 @@ class Av1an:
                 self.workers = min(len(commands), self.workers)
                 enc_path = self.temp_dir / 'split'
                 initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
-                print(f'\rClips: {initial} Workers: {self.workers} Params: {self.encoding_params}')
+                print(f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
 
                 bar = tqdm(total=self.frame_probe(self.args.file_path),
-                           initial=0, dynamic_ncols=True, leave=False)
+                           initial=0, dynamic_ncols=True, unit=" frames",
+                           leave=False)
                 loop = pool.imap_unordered(self.encode, commands)
                 for b in loop:
                     bar.update(n=b)
-                # for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands),
-                #                           total=self.frame_probe(self.args.file_path), initial=0,
-                #                           dynamic_ncols=True, leave=False), 1):
 
             self.concatenate_video()
 

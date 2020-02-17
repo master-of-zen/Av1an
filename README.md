@@ -40,7 +40,7 @@ With your own parameters:
                             Can be set for both video and image mode
                             Must be inside ' ' or " "
 
-    -p   --pass             Set number of passes for encoding
+    -p   --passes           Set number of passes for encoding
                             (Default: Aomenc: 2, Rav1e: 1, SVT-AV1: 2)
                             At current moment 2nd pass Rav1e not working
 

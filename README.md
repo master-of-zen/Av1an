@@ -65,6 +65,7 @@ With your own parameters:
 
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
                             Example for 10 bit: 'yuv420p10le'
+                            Encoding options should be adjusted accordingly.
 
     --resume                If encode was stopped/quit resumes encode with saving all progress
                             Resuming automatically skips scenedetection, audio encoding/copy,
@@ -75,11 +76,9 @@ With your own parameters:
                             Needed if framerate changes.
                             By default any differences in frames of encoded files will be reported
 
-     -m   --mode            0 - Video encoding (Default), 1 - Image encoding
-                            By default used 10 bit encoding.
-                            Constant quality mode for Aomenc
-                            Encoding options should be adjusted accordingly
-
+     -m   --mode            0 - Video encoding (Default), 
+                            1 - Image encoding. Using 10 bit encoding and constant quality mode Aom.
+                            
     -log --logging          Path to .log file(Default: no logging)
 
 <h2 align="center">Main Features</h2>

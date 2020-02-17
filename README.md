@@ -23,7 +23,8 @@ Example with default parameters:
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aom -e '--cpu-used=3 --end-usage=q --cq-level=30' -a '-c:a libopus -b:a 24k'
+    ./av1an.py -i input -enc aom -e ' --cpu-used=3 --end-usage=q --cq-level=30' -vf ' scale=1280:-1 '
+    -t 10 -p 2 -a '-c:a libopus -b:a 24k' -s scenes.csv -log my_log -o output_file 
 
 <h2 align="center">Usage</h2>
 

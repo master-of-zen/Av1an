@@ -53,7 +53,7 @@ class Av1an:
         self.ffmpeg_com = None
         self.logging = None
         self.args = None
-        self.encoding_params = ''
+        self.video_params = ''
         self.output_file: Optional[Path] = None
         self.pyscene = ''
         self.scenes: Optional[Path] = None
@@ -72,7 +72,7 @@ class Av1an:
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
-        parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
+        parser.add_argument('--video_params', '-v', type=str, default=self.video_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=Path, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
@@ -286,16 +286,16 @@ class Av1an:
 
     def svt_av1_encode(self, file_paths):
 
-        if self.args.encoding_params == '':
+        if self.args.video_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
             sys.exit()
         else:
-            self.encoding_params = self.args.encoding_params
+            self.video_params = self.args.video_params
         encoder = 'SvtAv1EncApp '
         if self.passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} -b {file[1].with_suffix(".ivf")} -',
+                 f'  {encoder} -i stdin {self.video_params} -b {file[1].with_suffix(".ivf")} -',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
@@ -305,19 +305,19 @@ class Av1an:
             p2o = '-output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
+                 f'  {encoder} -i stdin {self.video_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.encoding_params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
+                 f'  {encoder} -i stdin {self.video_params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
 
     def aom_encode(self, file_paths):
 
-        if self.args.encoding_params == '':
-            self.encoding_params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+        if self.args.video_params == '':
+            self.video_params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
         else:
-            self.encoding_params = self.args.encoding_params
+            self.video_params = self.args.video_params
 
         single_pass = 'aomenc  --verbose --passes=1 '
         two_pass_1_aom = 'aomenc  --verbose --passes=2 --pass=1'
@@ -326,7 +326,7 @@ class Av1an:
         if self.passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.encoding_params} -o {file[1].with_suffix(".ivf")} - ',
+                 f'  {single_pass} {self.video_params} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
@@ -334,23 +334,23 @@ class Av1an:
         if self.passes == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f' {two_pass_1_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                 f' {two_pass_2_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
 
     def rav1e_encode(self, file_paths):
 
-        if self.args.encoding_params == '':
-            self.encoding_params = ' --tiles=4 --speed=10'
+        if self.args.video_params == '':
+            self.video_params = ' --tiles=4 --speed=10'
         else:
-            self.encoding_params = self.args.encoding_params
+            self.video_params = self.args.video_params
         if self.passes == 1 or self.passes == 2:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e -  {self.encoding_params}  '
+                 f' rav1e -  {self.video_params}  '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
@@ -360,10 +360,10 @@ class Av1an:
             # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.encoding_params} '
+                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.video_params} '
                  f'--output {file[1].with_suffix(".ivf")}',
                  f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.encoding_params} '
+                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.video_params} '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
@@ -437,12 +437,12 @@ class Av1an:
         if self.encoder == 'aom':
             aom = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
             cmd = (rf' {image_pipe} ' +
-                   rf'{aom} {self.encoding_params} -o {output} - ')
+                   rf'{aom} {self.video_params} -o {output} - ')
             self.call_cmd(cmd)
 
         elif self.encoder == 'rav1e':
             cmd = (rf' {image_pipe} ' +
-                   rf' rav1e {self.encoding_params} - -o {output} ')
+                   rf' rav1e {self.video_params} - -o {output} ')
             self.call_cmd(cmd)
         else:
             print(f'Not valid encoder: {self.encoder}')
@@ -487,7 +487,7 @@ class Av1an:
 
                 self.workers = min(len(commands), self.workers)
 
-                print(f'\rWorkers: {self.workers} Params: {self.encoding_params}')
+                print(f'\rWorkers: {self.workers} Params: {self.video_params}')
 
                 enc_path = self.temp_dir / 'split'
                 initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])

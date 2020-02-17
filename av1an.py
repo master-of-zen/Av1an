@@ -50,7 +50,7 @@ class Av1an:
         self.workers = 0
         self.mode = 0
         self.ffmpeg_pipe = None
-        self.ffmpeg_com = None
+        self.ffmpeg = None
         self.logging = None
         self.args = None
         self.video_params = ''
@@ -81,7 +81,7 @@ class Av1an:
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--passes', '-p', type=int, default=self.passes, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
-        parser.add_argument('--ffmpeg_com', '-ff', type=str, default='', help='FFmpeg commands')
+        parser.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
@@ -117,10 +117,10 @@ class Av1an:
             self.output_file = self.args.output_file.with_suffix('.mkv')
 
         # Forcing FPS option
-        if self.args.ffmpeg_com == 0:
-            self.ffmpeg_com = ''
+        if self.args.ffmpeg == 0:
+            self.ffmpeg = ''
         else:
-            self.ffmpeg_com = self.args.ffmpeg_com
+            self.ffmpeg = self.args.ffmpeg
 
         # Changing pixel format, bit format
         if self.args.pix_format != self.pix_format:
@@ -128,7 +128,7 @@ class Av1an:
         else:
             self.pix_format = f'-pix_fmt {self.args.pix_format}'
 
-        self.ffmpeg_pipe = f' {self.ffmpeg_com} {self.pix_format} -f yuv4mpegpipe - |'
+        self.ffmpeg_pipe = f' {self.ffmpeg} {self.pix_format} -f yuv4mpegpipe - |'
 
         # Setting logging file
         if self.args.logging:

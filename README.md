@@ -61,7 +61,7 @@ With your own parameters:
 
     -tr  --threshold        PySceneDetect threshold for scene detection
 
-    -ff  --ffmpeg_com       FFmpeg options. Example:
+    -ff  --ffmpeg           FFmpeg options. Example:
                             --ff ' -r 24 -vf scale=320:240 '
 
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')

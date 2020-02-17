@@ -46,11 +46,11 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -t   --workers          Maximum number of workers (overrides automatically set number of workers.
+    -t   --workers          Overrides automatically set number of workers. 
+                            Adjust accordingly to your system
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e and SVT-AV1 uses multiple threads,
-                            Example: '--tile-rows 2 --tile-cols 2' load 2.5 - 3.5 threads
-                            4 rav1e workers is optimal for 6/12 cpu
+                            Example: Rav1e settings ' ... --tile-rows 2 --tile-cols 2 ... ' -t 3
 
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored

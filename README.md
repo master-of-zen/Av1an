@@ -35,7 +35,7 @@ With your own parameters:
     -enc --encoder          Encoder to use (aom or rav1e or svt_av1. Default: aom)
                             Example: -enc rav1e
 
-    -e   --encoding_params  Encoder settings flags (If not set, will be used default parameters.
+    -v   --video_params     Encoder settings flags (If not set, will be used default parameters.
                             Required for SVT-AV1s)
                             Can be set for both video and image mode
                             Must be inside ' ' or " "
@@ -47,7 +47,7 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -t   --workers          Overrides automatically set number of workers. 
+    -w   --workers          Overrides automatically set number of workers. 
                             Adjust accordingly to your system
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e and SVT-AV1 uses multiple threads,

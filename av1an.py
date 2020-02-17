@@ -45,7 +45,7 @@ class Av1an:
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
         self.encoder = 'aom'
-        self.encode_pass = 2
+        self.passes = 2
         self.threshold = 30
         self.workers = 0
         self.mode = 0
@@ -79,7 +79,7 @@ class Av1an:
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=float, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
-        parser.add_argument('--encode_pass', '-p', type=int, default=self.encode_pass, help='Specify encoding passes')
+        parser.add_argument('--passes', '-p', type=int, default=self.passes, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
         parser.add_argument('--ffmpeg_com', '-ff', type=str, default='', help='FFmpeg commands')
         parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
@@ -109,8 +109,7 @@ class Av1an:
         self.mode = self.args.mode
 
         # Number of encoder passes
-        self.encode_pass = self.args.encode_pass
-
+        self.passes = self.args.passes
         # Set output file
         if self.args.output_file is None:
             self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
@@ -293,7 +292,7 @@ class Av1an:
         else:
             self.encoding_params = self.args.encoding_params
         encoder = 'SvtAv1EncApp '
-        if self.encode_pass == 1:
+        if self.passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {encoder} -i stdin {self.encoding_params} -b {file[1].with_suffix(".ivf")} -',
@@ -301,7 +300,7 @@ class Av1an:
                 for file in file_paths]
             return pass_1_commands
 
-        if self.encode_pass == 2:
+        if self.passes == 2:
             p2i = '-input-stat-file '
             p2o = '-output-stat-file '
             pass_2_commands = [
@@ -324,7 +323,7 @@ class Av1an:
         two_pass_1_aom = 'aomenc  --verbose --passes=2 --pass=1'
         two_pass_2_aom = 'aomenc  --verbose --passes=2 --pass=2'
 
-        if self.encode_pass == 1:
+        if self.passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
                  f'  {single_pass} {self.encoding_params} -o {file[1].with_suffix(".ivf")} - ',
@@ -332,7 +331,7 @@ class Av1an:
                 for file in file_paths]
             return pass_1_commands
 
-        if self.encode_pass == 2:
+        if self.passes == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
                  f' {two_pass_1_aom} {self.encoding_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
@@ -348,7 +347,7 @@ class Av1an:
             self.encoding_params = ' --tiles=4 --speed=10'
         else:
             self.encoding_params = self.args.encoding_params
-        if self.encode_pass == 1 or self.encode_pass == 2:
+        if self.passes == 1 or self.passes == 2:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} '
                  f' rav1e -  {self.encoding_params}  '
@@ -356,7 +355,7 @@ class Av1an:
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
-        if self.encode_pass == 2:
+        if self.passes == 2:
 
             # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [

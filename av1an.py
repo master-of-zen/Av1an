@@ -489,7 +489,7 @@ class Av1an:
                 print(f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
 
                 bar = tqdm(total=self.frame_probe(self.args.file_path),
-                           initial=0, dynamic_ncols=True, unit=" frames",
+                           initial=0, dynamic_ncols=True, unit="frame",
                            leave=False)
                 loop = pool.imap_unordered(self.encode, commands)
                 for b in loop:

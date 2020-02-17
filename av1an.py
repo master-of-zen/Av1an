@@ -75,7 +75,7 @@ class Av1an:
         parser.add_argument('--encoding_params', '-e', type=str, default=self.encoding_params, help='encoding settings')
         parser.add_argument('--file_path', '-i', type=Path, default='bruh.mp4', help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
-        parser.add_argument('--workers', '-t', type=int, default=0, help='Number of workers')
+        parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=float, default=self.threshold, help='PySceneDetect Threshold')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')

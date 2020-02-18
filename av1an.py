@@ -149,6 +149,7 @@ class Av1an:
             self.workers += 1
 
     def setup(self, input_file: Path):
+
         if not input_file.exists():
             print(f'File: {input_file} not exist')
             sys.exit()
@@ -429,11 +430,11 @@ class Av1an:
             print('Concatenation failed')
             sys.exit()
 
-    def image(self, image_path: Path):
+    def image_encoding(self):
         print('Encoding Image..', end='')
 
-        image_pipe = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
-        output = image_path.with_suffix('.ivf')
+        image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
+        output = self.args.file_path.with_suffix('.ivf')
 
         if self.encoder == 'aom':
             aom = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
@@ -449,6 +450,70 @@ class Av1an:
             print(f'Not valid encoder: {self.encoder}')
             sys.exit()
 
+    def encoding_loop(self, commands):
+        # Creating threading pool to encode bunch of files at the same time and show progress bar
+        with Pool(self.workers) as pool:
+
+            self.workers = min(len(commands), self.workers)
+            enc_path = self.temp_dir / 'split'
+            if self.args.resume:
+                done_path = Path('.temp/done.txt')
+                if done_path.exists():
+                    with open(done_path, 'r') as f:
+                        done = literal_eval(f.read())
+
+                    initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
+            else:
+                initial = 0
+            print(
+                f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
+
+            bar = tqdm(total=self.frame_probe(self.args.file_path),
+                       initial=initial, dynamic_ncols=True, unit="fr",
+                       leave=False)
+            loop = pool.imap_unordered(self.encode, commands)
+            try:
+                for enc_frames in loop:
+                    bar.update(n=enc_frames)
+            except (ValueError, Exception):
+                print('Encoding error')
+                sys.exit()
+
+    def video_encoding(self):
+
+        if not (self.args.resume and self.temp_dir.exists()):
+            # Check validity of request and create temp folders/files
+            self.setup(self.args.file_path)
+
+            # Splitting video and sorting big-first
+            timestamps = self.scenedetect(self.args.file_path)
+            self.split(self.args.file_path, timestamps)
+            # Extracting audio
+            self.extract_audio(self.args.file_path)
+
+        files = self.get_video_queue(self.temp_dir / 'split')
+
+        # Make encode queue
+        commands = self.compose_encoding_queue(files)
+
+        # Catch Error
+        if len(commands) == 0:
+            print('Error: splitting and making encoding queue')
+            sys.exit()
+
+        # Determine resources if workers don't set
+        if self.args.workers != 0:
+            self.workers = self.args.workers
+        else:
+            self.determine_resources()
+
+        self.encoding_loop(commands)
+
+        self.concatenate_video()
+
+        # Delete temp folders
+        shutil.rmtree(self.temp_dir)
+
     def main(self):
 
         # Parse initial arguments
@@ -456,59 +521,10 @@ class Av1an:
 
         # Video Mode
         if self.mode == 0:
-
-            if not (self.args.resume and self.temp_dir.exists()):
-                # Check validity of request and create temp folders/files
-                self.setup(self.args.file_path)
-
-                # Splitting video and sorting big-first
-                timestamps = self.scenedetect(self.args.file_path)
-                self.split(self.args.file_path, timestamps)
-                # Extracting audio
-                self.extract_audio(self.args.file_path)
-
-            files = self.get_video_queue(self.temp_dir / 'split')
-
-            # Make encode queue
-            commands = self.compose_encoding_queue(files)
-
-            # Catch Error
-            if len(commands) == 0:
-                print('Error: splitting and making encoding queue')
-                sys.exit()
-
-            # Determine resources if workers don't set
-            if self.args.workers != 0:
-                self.workers = self.args.workers
-            else:
-                self.determine_resources()
-
-            # Creating threading pool to encode bunch of files at the same time and show progress bar
-            with Pool(self.workers) as pool:
-
-                self.workers = min(len(commands), self.workers)
-                enc_path = self.temp_dir / 'split'
-                initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
-                print(f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
-
-                bar = tqdm(total=self.frame_probe(self.args.file_path),
-                           initial=0, dynamic_ncols=True, unit="fr",
-                           leave=False)
-                loop = pool.imap_unordered(self.encode, commands)
-                try:
-                    for b in loop:
-                        bar.update(n=b)
-                except ValueError:
-                    print('Encoding error')
-                    sys.exit()
-
-            self.concatenate_video()
-
-            # Delete temp folders
-            shutil.rmtree(self.temp_dir)
+            self.video_encoding()
 
         elif self.mode == 1:
-            self.image(self.args.file_path)
+            self.image_encoding()
 
         else:
             print('No valid work mode')

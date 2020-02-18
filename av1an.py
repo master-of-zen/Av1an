@@ -468,8 +468,7 @@ class Av1an:
             else:
                 initial = 0
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"]) 
-            print(
-                f'\rClips: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
+            print(f'\rClips: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
 
             bar = tqdm(total=self.frame_probe(self.args.file_path),
                        initial=initial, dynamic_ncols=True, unit="fr",

@@ -80,6 +80,7 @@ class Av1an:
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
+
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -420,7 +421,9 @@ class Av1an:
 
         try:
             cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y {self.output_file}'
-            self.call_cmd(cmd)
+            concat = self.call_cmd(cmd, capture_output=True)
+            if len(concat) > 0:
+                raise Exception
 
         except Exception:
             print('Concatenation failed')
@@ -471,7 +474,7 @@ class Av1an:
 
             # Catch Error
             if len(commands) == 0:
-                print('No clips to encode')
+                print('Error: splitting and making encoding queue')
                 sys.exit()
 
             # Determine resources if workers don't set
@@ -489,11 +492,15 @@ class Av1an:
                 print(f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
 
                 bar = tqdm(total=self.frame_probe(self.args.file_path),
-                           initial=0, dynamic_ncols=True, unit="frame",
+                           initial=0, dynamic_ncols=True, unit="fr",
                            leave=False)
                 loop = pool.imap_unordered(self.encode, commands)
-                for b in loop:
-                    bar.update(n=b)
+                try:
+                    for b in loop:
+                        bar.update(n=b)
+                except ValueError:
+                    print('Encoding error')
+                    sys.exit()
 
             self.concatenate_video()
 

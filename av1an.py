@@ -315,8 +315,8 @@ class Av1an:
 
     def aom_encode(self, file_paths):
 
-        if self.args.encoding_params == '':
-            self.encoding_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
+        if self.args.video_params == '':
+            self.video_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
         else:
             self.video_params = self.args.video_params
 
@@ -468,7 +468,7 @@ class Av1an:
             else:
                 initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
             print(
-                f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
+                f'\rClips: {initial} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
 
             bar = tqdm(total=self.frame_probe(self.args.file_path),
                        initial=initial, dynamic_ncols=True, unit="fr",

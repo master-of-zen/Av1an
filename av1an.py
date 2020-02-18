@@ -172,10 +172,9 @@ class Av1an:
         if audio_file.exists():
             return
 
-        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
-
         # Capture output to check if audio is present
-        check = fr'{ffprobe} -i {input_vid}'
+
+        check = fr'{self.FFMPEG} -ss 0 -i {input_vid} -t 0 -vn -c:a copy -f null -'
         is_audio_here = len(self.call_cmd(check, capture_output=True)) > 0
 
         if is_audio_here:

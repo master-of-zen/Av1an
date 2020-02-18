@@ -107,7 +107,7 @@ With your own parameters:
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an).
    
-   All .exe for ffmpeg, ffprobe, and encoders should be in same folder
+   All .exe for ffmpeg, and encoders should be in same folder
 
 ### 2. Install with dependancies
 *   [Python3](https://www.python.org/downloads/)

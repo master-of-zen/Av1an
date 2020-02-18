@@ -246,9 +246,12 @@ class Av1an:
         self.call_cmd(cmd)
 
     def frame_probe(self, source: Path):
-        cmd = f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' \
-              f'-of default=nokey=1:noprint_wrappers=1 {source.absolute()}'
-        frames = int(self.call_cmd(cmd, capture_output=True).strip())
+        # FFmpeg decoding for getting frame counts
+
+        cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an -c:v copy -f null - '
+        frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
+        frames = int(frames[frames.find('frame=') + 6:frames.find('fps=')])
+
         return frames
 
     def frame_check(self, source: Path, encoded: Path):

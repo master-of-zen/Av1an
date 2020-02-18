@@ -111,7 +111,7 @@ With your own parameters:
 
 ### 2. Install with dependancies
 *   [Python3](https://www.python.org/downloads/)
-*   [FFmpeg](https://ffmpeg.org/download.html) with ffprobe and add it on env variable
+*   [FFmpeg](https://ffmpeg.org/download.html) 
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
@@ -128,7 +128,7 @@ Run with command: `python -i ./avian.py params..`
 ## Install on Linux
 
 *   [Python3](https://www.python.org/downloads/)
-*   [FFmpeg](https://ffmpeg.org/download.html) with ffprobe
+*   [FFmpeg](https://ffmpeg.org/download.html)
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder

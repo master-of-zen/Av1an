@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 
-# Todo:
-# Benchmarking
-# Add conf file
-# Add new paths for frame check to all encoders
-# Make it not split if splits are there
-
 import time
 from tqdm import tqdm
 import sys
@@ -20,12 +14,6 @@ import multiprocessing
 import subprocess
 from pathlib import Path
 from typing import Optional
-
-try:
-    import scenedetect
-except ImportError:
-    print('PySceneDetect not found. Please check installation')
-    sys.exit()
 
 
 from scenedetect.video_manager import VideoManager
@@ -86,6 +74,7 @@ class Av1an:
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
+
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -154,6 +143,7 @@ class Av1an:
             self.workers += 1
 
     def setup(self, input_file: Path):
+
         if not input_file.exists():
             print(f'File: {input_file} not exist')
             sys.exit()
@@ -176,11 +166,10 @@ class Av1an:
         if audio_file.exists():
             return
 
-        ffprobe = 'ffprobe -hide_banner -loglevel error -show_streams -select_streams a'
-
         # Capture output to check if audio is present
-        check = fr'{ffprobe} -i {input_vid}'
-        is_audio_here = len(self.call_cmd(check, capture_output=True)) > 0
+
+        check = fr'{self.FFMPEG} -ss 0 -i {input_vid} -t 0 -vn -c:a copy -f null -'
+        is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
         if is_audio_here:
             cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
@@ -193,8 +182,10 @@ class Av1an:
             return ''
 
         try:
+
             # PySceneDetect used split video by scenes and pass it to encoder
             # Optimal threshold settings 15-50
+
             video_manager = VideoManager([str(video)])
             scene_manager = SceneManager()
             scene_manager.add_detector(ContentDetector(threshold=self.threshold))
@@ -250,6 +241,15 @@ class Av1an:
 
         self.call_cmd(cmd)
 
+    def frame_probe(self, source: Path):
+        # FFmpeg decoding for getting frame counts
+
+        cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an -c:v copy -f null - '
+        frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
+        frames = int(frames[frames.find('frame=') + 6:frames.find('fps=')])
+
+        return frames
+
     def frame_check(self, source: Path, encoded: Path):
 
         done_file = Path(self.temp_dir / 'done.txt')
@@ -259,11 +259,8 @@ class Av1an:
                 done.write('"' + source.name + '", ')
                 return
 
-        cmd = [(f'ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames ' +
-                f'-of default=nokey=1:noprint_wrappers=1 {i.absolute()}') for i in (source, encoded)]
+        s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
 
-        s1 = int((self.call_cmd(cmd[0], capture_output=True)).strip())
-        s2 = int((self.call_cmd(cmd[1], capture_output=True)).strip())
         if s1 == s2:
             with done_file.open('a') as done:
                 done.write('"' + source.name + '", ')
@@ -273,6 +270,7 @@ class Av1an:
     def get_video_queue(self, source_path: Path):
 
         # Returns sorted list of all videos that need to be encoded. Big first
+
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
         if self.args.resume:
             done_file = self.temp_dir / 'done.txt'
@@ -315,7 +313,7 @@ class Av1an:
     def aom_encode(self, file_paths):
 
         if self.args.video_params == '':
-            self.video_params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+            self.video_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
         else:
             self.video_params = self.args.video_params
 
@@ -400,6 +398,7 @@ class Av1an:
             self.call_cmd(cmd)
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         self.frame_check(source, target)
+        return self.frame_probe(source)
 
     def concatenate_video(self):
 
@@ -407,8 +406,6 @@ class Av1an:
         # Reading all files in A-Z order and saving it to concat.txt
 
         with open(f'{self.temp_dir / "concat"}', 'w') as f:
-            # Write all files that need to be concatenated
-            # Their path must be relative to the directory where "concat.txt" is
 
             encode_files = sorted((self.temp_dir / 'encode').iterdir())
             f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
@@ -422,17 +419,20 @@ class Av1an:
 
         try:
             cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y {self.output_file}'
-            self.call_cmd(cmd)
+            concat = self.call_cmd(cmd, capture_output=True)
+            if len(concat) > 0:
+                raise Exception
 
         except Exception:
             print('Concatenation failed')
             sys.exit()
 
-    def image(self, image_path: Path):
+    def image_encoding(self):
+
         print('Encoding Image..', end='')
 
-        image_pipe = rf'{self.FFMPEG} -i {image_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
-        output = image_path.with_suffix('.ivf')
+        image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
+        output = self.args.file_path.with_suffix('.ivf')
 
         if self.encoder == 'aom':
             aom = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
@@ -448,6 +448,73 @@ class Av1an:
             print(f'Not valid encoder: {self.encoder}')
             sys.exit()
 
+    def encoding_loop(self, commands):
+
+        # Creating threading pool to encode bunch of files at the same time and show progress bar
+
+        with Pool(self.workers) as pool:
+
+            self.workers = min(len(commands), self.workers)
+            enc_path = self.temp_dir / 'split'
+            if self.args.resume:
+                done_path = Path('.temp/done.txt')
+                if done_path.exists():
+                    with open(done_path, 'r') as f:
+                        done = literal_eval(f.read())
+
+                    initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
+            else:
+                initial = 0
+            clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
+            print(f'\rClips: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
+
+            bar = tqdm(total=self.frame_probe(self.args.file_path),
+                       initial=initial, dynamic_ncols=True, unit="fr",
+                       leave=False)
+            loop = pool.imap_unordered(self.encode, commands)
+            try:
+                for enc_frames in loop:
+                    bar.update(n=enc_frames)
+            except (ValueError, Exception):
+                print('Encoding error')
+                sys.exit()
+
+    def video_encoding(self):
+
+        if not (self.args.resume and self.temp_dir.exists()):
+            # Check validity of request and create temp folders/files
+            self.setup(self.args.file_path)
+
+            # Splitting video and sorting big-first
+            timestamps = self.scenedetect(self.args.file_path)
+            self.split(self.args.file_path, timestamps)
+
+            # Extracting audio
+            self.extract_audio(self.args.file_path)
+
+        files = self.get_video_queue(self.temp_dir / 'split')
+
+        # Make encode queue
+        commands = self.compose_encoding_queue(files)
+
+        # Catch Error
+        if len(commands) == 0:
+            print('Error: splitting and making encoding queue')
+            sys.exit()
+
+        # Determine resources if workers don't set
+        if self.args.workers != 0:
+            self.workers = self.args.workers
+        else:
+            self.determine_resources()
+
+        self.encoding_loop(commands)
+
+        self.concatenate_video()
+
+        # Delete temp folders
+        shutil.rmtree(self.temp_dir)
+
     def main(self):
 
         # Parse initial arguments
@@ -455,52 +522,11 @@ class Av1an:
 
         # Video Mode
         if self.mode == 0:
+            self.video_encoding()
 
-            if not (self.args.resume and self.temp_dir.exists()):
-                # Check validity of request and create temp folders/files
-                self.setup(self.args.file_path)
-
-                # Splitting video and sorting big-first
-                timestamps = self.scenedetect(self.args.file_path)
-                self.split(self.args.file_path, timestamps)
-                # Extracting audio
-                self.extract_audio(self.args.file_path)
-
-            files = self.get_video_queue(self.temp_dir / 'split')
-
-            # Make encode queue
-            commands = self.compose_encoding_queue(files)
-
-            # Catch Error
-            if len(commands) == 0:
-                print('No clips to encode')
-                sys.exit()
-
-            # Determine resources if workers don't set
-            if self.args.workers != 0:
-                self.workers = self.args.workers
-            else:
-                self.determine_resources()
-
-            # Creating threading pool to encode bunch of files at the same time and show progress bar
-            with Pool(self.workers) as pool:
-
-                self.workers = min(len(commands), self.workers)
-
-                print(f'\rWorkers: {self.workers} Params: {self.video_params}')
-
-                enc_path = self.temp_dir / 'split'
-                initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
-                for i, _ in enumerate(tqdm(pool.imap_unordered(self.encode, commands), total=initial, initial=initial - len(files), leave=False), 1):
-                    pass
-
-            self.concatenate_video()
-
-            # Delete temp folders
-            shutil.rmtree(self.temp_dir)
-
+        # Video Mode
         elif self.mode == 1:
-            self.image(self.args.file_path)
+            self.image_encoding()
 
         else:
             print('No valid work mode')

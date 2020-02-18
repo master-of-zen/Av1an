@@ -463,7 +463,7 @@ class Av1an:
 
                     initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
             else:
-                initial = 0
+                initial = len([x for x in enc_path.iterdir() if x.suffix == '.mkv'])
             print(
                 f'\rClips: {initial} Workers: {self.workers} Passes: {self.encode_pass}\nParams: {self.encoding_params}')
 

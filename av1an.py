@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-# Todo:
-# Benchmarking
-# Add conf file
-# Add new paths for frame check to all encoders
-# Make it not split if splits are there
-
+"""
+Av1an 1.5 Counting Frames, Less dependency, Faster.
+"""
 import time
 from tqdm import tqdm
 import sys
@@ -188,8 +185,10 @@ class Av1an:
             return ''
 
         try:
+
             # PySceneDetect used split video by scenes and pass it to encoder
             # Optimal threshold settings 15-50
+
             video_manager = VideoManager([str(video)])
             scene_manager = SceneManager()
             scene_manager.add_detector(ContentDetector(threshold=self.threshold))
@@ -274,6 +273,7 @@ class Av1an:
     def get_video_queue(self, source_path: Path):
 
         # Returns sorted list of all videos that need to be encoded. Big first
+
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
         if self.args.resume:
             done_file = self.temp_dir / 'done.txt'
@@ -409,8 +409,6 @@ class Av1an:
         # Reading all files in A-Z order and saving it to concat.txt
 
         with open(f'{self.temp_dir / "concat"}', 'w') as f:
-            # Write all files that need to be concatenated
-            # Their path must be relative to the directory where "concat.txt" is
 
             encode_files = sorted((self.temp_dir / 'encode').iterdir())
             f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
@@ -433,6 +431,7 @@ class Av1an:
             sys.exit()
 
     def image_encoding(self):
+
         print('Encoding Image..', end='')
 
         image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
@@ -453,7 +452,9 @@ class Av1an:
             sys.exit()
 
     def encoding_loop(self, commands):
+
         # Creating threading pool to encode bunch of files at the same time and show progress bar
+
         with Pool(self.workers) as pool:
 
             self.workers = min(len(commands), self.workers)
@@ -525,6 +526,7 @@ class Av1an:
         if self.mode == 0:
             self.video_encoding()
 
+        # Video Mode
         elif self.mode == 1:
             self.image_encoding()
 

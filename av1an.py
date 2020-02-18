@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 Av1an 1.5 Counting Frames, Less dependency, Faster.
 """
@@ -172,7 +171,7 @@ class Av1an:
         # Capture output to check if audio is present
 
         check = fr'{self.FFMPEG} -ss 0 -i {input_vid} -t 0 -vn -c:a copy -f null -'
-        is_audio_here = len(self.call_cmd(check, capture_output=True)) > 0
+        is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
         if is_audio_here:
             cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
@@ -468,7 +467,7 @@ class Av1an:
                     initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
             else:
                 initial = 0
-            clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"]) 
+            clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
             print(f'\rClips: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
 
             bar = tqdm(total=self.frame_probe(self.args.file_path),
@@ -491,6 +490,7 @@ class Av1an:
             # Splitting video and sorting big-first
             timestamps = self.scenedetect(self.args.file_path)
             self.split(self.args.file_path, timestamps)
+
             # Extracting audio
             self.extract_audio(self.args.file_path)
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Av1an 1.5 Counting Frames, Less dependency, Faster.
-"""
+
 import time
 from tqdm import tqdm
 import sys

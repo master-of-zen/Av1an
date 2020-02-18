@@ -106,6 +106,7 @@ With your own parameters:
 
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an)
+   All .exe for ffmpeg, ffprobe, and encoders should be in same folder
 
 ### 2. Install with dependancies
 *   [Python3](https://www.python.org/downloads/)
@@ -113,6 +114,8 @@ With your own parameters:
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+
+All .exe for ffmpeg, ffprobe, and encoders should be in same folder
 
 Install all requirements listed in `requirements` file.
 

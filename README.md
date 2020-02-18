@@ -6,7 +6,7 @@
 
 <h2 align="center">All-in-one tool for streamlining av1 encoding</h2>
 
-![alt text](https://cdn.discordapp.com/attachments/665440744567472169/678627425973698599/172948_16_02_202.png)
+![alt text](https://cdn.discordapp.com/attachments/665440744567472169/679248203731697694/av1an15.png)
 
 <h4 align="center"> <img src="https://ci.appveyor.com/api/projects/status/cvweipdgphbjkkar?svg=true" alt="Project Badge"> <a href="https://codeclimate.com/github/master-of-zen/Av1an/maintainability"><img src="https://api.codeclimate.com/v1/badges/41ea7ad221dcdad3fe8d/maintainability" />
 <img= src="https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard"></a>

@@ -431,11 +431,11 @@ class Av1an:
 
         print('Encoding Image..', end='')
 
-        image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p10le -f yuv4mpegpipe -strict -1 - | '
+        image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p -f yuv4mpegpipe -strict -1 - | '
         output = self.args.file_path.with_suffix('.ivf')
 
         if self.encoder == 'aom':
-            aom = ' aomenc --passes=1 --pass=1 --end-usage=q  -b 10 --input-bit-depth=10 '
+            aom = ' aomenc --passes=1 --pass=1 --end-usage=q '
             cmd = (rf' {image_pipe} ' +
                    rf'{aom} {self.video_params} -o {output} - ')
             self.call_cmd(cmd)

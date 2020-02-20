@@ -272,6 +272,7 @@ class Av1an:
         # Returns sorted list of all videos that need to be encoded. Big first
 
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+
         if self.args.resume:
             done_file = self.temp_dir / 'done.txt'
             if done_file.exists():
@@ -280,6 +281,11 @@ class Av1an:
                     queue = [x for x in queue if x.name not in data]
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
+
+        if len(queue) == 0:
+            print('Error: No files found in .temp/split, probably splitting not working')
+            sys.exit()
+
         return queue
 
     def svt_av1_encode(self, file_paths):
@@ -499,7 +505,7 @@ class Av1an:
 
         # Catch Error
         if len(commands) == 0:
-            print('Error: splitting and making encoding queue')
+            print('Error in making command queue')
             sys.exit()
 
         # Determine resources if workers don't set

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Todo: Rav1e 2 pass, SVT-AV1 2 pass on windows
+# AV1 encoding wiki
 
 import time
 from tqdm import tqdm
+import logging
 import sys
 import os
 import shutil

@@ -179,7 +179,7 @@ class Av1an:
                     f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
 
-    def scenedetect(self, video: Path):
+    def scene_detect(self, video: Path):
         # Skip scene detection if the user choosed to
         if self.skip_scenes:
             return ''
@@ -495,7 +495,7 @@ class Av1an:
             self.setup(self.args.file_path)
 
             # Splitting video and sorting big-first
-            timestamps = self.scenedetect(self.args.file_path)
+            timestamps = self.scene_detect(self.args.file_path)
             self.split(self.args.file_path, timestamps)
 
             # Extracting audio

@@ -32,6 +32,7 @@ if sys.version_info < (3, 7):
 class Av1an:
 
     def __init__(self):
+        Av1an - AV1 wrapper for AV1 encoders
         self.temp_dir = Path('.temp')
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
@@ -50,6 +51,7 @@ class Av1an:
         self.scenes: Optional[Path] = None
         self.skip_scenes = False
 
+        self.logger = logging.getLogger()
     def call_cmd(self, cmd, capture_output=False):
         if capture_output:
             return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
@@ -235,7 +237,7 @@ class Av1an:
 
         # Splits video with provided timecodes
         # If video is single scene, just copy video
-
+        # at current moment not work properly because of windows terminal size limitations
         if len(timecodes) == 0:
             cmd = f'{self.FFMPEG} -i {video} -map_metadata 0 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
         else:

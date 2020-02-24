@@ -32,6 +32,7 @@ if sys.version_info < (3, 7):
 class Av1an:
 
     def __init__(self):
+        """
         Av1an - AV1 wrapper for AV1 encoders
         self.temp_dir = Path('.temp')
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
@@ -52,6 +53,7 @@ class Av1an:
         self.skip_scenes = False
 
         self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
     def call_cmd(self, cmd, capture_output=False):
         if capture_output:
             return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout

@@ -134,3 +134,4 @@ dmypy.json
 .pyre/
 *.avi
 *.mkv
+*.exe

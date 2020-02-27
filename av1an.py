@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Todo: Rav1e 2 pass, SVT-AV1 2 pass on windows
 # AV1 encoding wiki
+# Testing
 
 import time
 from tqdm import tqdm
@@ -71,7 +72,7 @@ class Av1an:
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
         parser.add_argument('--video_params', '-v', type=str, default=self.video_params, help='encoding settings')
-        parser.add_argument('--file_path', '-i', type=Path, default='bruh.mp4', help='Input File', required=True)
+        parser.add_argument('--file_path', '-i', type=Path, help='Input File', required=True)
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')

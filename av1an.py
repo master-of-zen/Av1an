@@ -37,7 +37,7 @@ class Av1an:
         Av1an - AV1 wrapper for AV1 encoders
         """
         self.temp_dir = Path('.temp')
-        
+
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
         self.encoder = 'aom'
@@ -480,6 +480,8 @@ class Av1an:
                         done = literal_eval(f.read())
 
                     initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
+                else:
+                    initial = 0
             else:
                 initial = 0
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])

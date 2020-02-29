@@ -271,8 +271,8 @@ class Av1an:
 
         cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an  -map 0:v:0 -c:v copy -f null - '
         frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
-        frames = int(frames[frames.find('frame=') + 6:frames.find('fps=')])
-
+        frames = int(frames[frames.rfind('frame=') + 6:frames.rfind('fps=')])
+        print(frames)
         return frames
 
     def frame_check(self, source: Path, encoded: Path):

@@ -269,7 +269,7 @@ class Av1an:
     def frame_probe(self, source: Path):
         # FFmpeg decoding for getting frame counts
 
-        cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an -c:v copy -f null - '
+        cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an  -map 0:v:0 -c:v copy -f null - '
         frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
         frames = int(frames[frames.find('frame=') + 6:frames.find('fps=')])
 

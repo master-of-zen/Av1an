@@ -105,6 +105,8 @@ With your own parameters:
 ## Install on Windows
 
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
+   Just unpack it to desired folder and use like ` av1an.exe params`
+   
    Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an).
    
    All .exe for ffmpeg, and encoders should be in same folder

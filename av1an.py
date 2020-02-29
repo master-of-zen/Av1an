@@ -158,7 +158,7 @@ class Av1an:
         if not input_file.exists():
             prnt = f'File: {input_file} not exist'
             print(prnt)
-            self.log(prnt + '\n\n')
+            self.log(prnt)
             sys.exit()
 
         # Make temporal directories, and remove them if already presented
@@ -179,7 +179,7 @@ class Av1an:
         # Encoding audio if needed
         audio_file = self.temp_dir / 'audio.mkv'
         if audio_file.exists():
-            self.log('Reusing Audio File\n\n')
+            self.log('Reusing Audio File\n')
             return
 
         # Capture output to check if audio is present
@@ -189,7 +189,7 @@ class Av1an:
 
         if is_audio_here:
             self.log(f'Audio processing\n'
-                     f'Params: {self.args.audio_params}\n\n')
+                     f'Params: {self.args.audio_params}\n')
             cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
                   f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
@@ -197,7 +197,7 @@ class Av1an:
     def scene_detect(self, video: Path):
         # Skip scene detection if the user choosed to
         if self.skip_scenes:
-            self.log('Skipping scene detection\n\n')
+            self.log('Skipping scene detection\n')
             return ''
 
         try:
@@ -215,7 +215,7 @@ class Av1an:
                 # Read stats from CSV file opened in read mode:
                 with self.scenes.open() as stats_file:
                     stats = stats_file.read()
-                    self.log('Using Saved Scenes\n\n')
+                    self.log('Using Saved Scenes\n')
                     return stats
 
             # Work on whole video
@@ -228,7 +228,7 @@ class Av1an:
             video_manager.start()
 
             # Perform scene detection on video_manager.
-            self.log(f'Starting scene detection\nDetection Threshold: {self.threshold}\n\n')
+            self.log(f'Starting scene detection Threshold: {self.threshold}\n')
             scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
 
             # Obtain list of detected scenes.
@@ -236,7 +236,7 @@ class Av1an:
             # Like FrameTimecodes, each scene in the scene_list can be sorted if the
             # list of scenes becomes unsorted.
 
-            self.log(f'Found scenes: {len(scene_list)}\n\n')
+            self.log(f'Found scenes: {len(scene_list)}\n')
 
             scenes = [scene[0].get_timecode() for scene in scene_list]
             scenes = ','.join(scenes[1:])
@@ -247,7 +247,7 @@ class Av1an:
             return scenes
 
         except Exception:
-            self.log('Error in PySceneDetect\n\n')
+            self.log('Error in PySceneDetect\n')
             print('Error in PySceneDetect')
             sys.exit()
 
@@ -257,9 +257,11 @@ class Av1an:
         # If video is single scene, just copy video
         # at current moment not work properly because of windows terminal size limitations
         if len(timecodes) == 0:
-            cmd = f'{self.FFMPEG} -i {video} -map_metadata 0 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
+            self.log('Copying video for encode\n')
+            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
         else:
-            cmd = f'{self.FFMPEG} -i {video} -map_metadata 0 -an -f segment -segment_times {timecodes} ' \
+            self.log('Splitting video\n')
+            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
                   f'-c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "%04d.mkv"}'
 
         self.call_cmd(cmd)
@@ -419,7 +421,7 @@ class Av1an:
 
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {self.encoder.upper()} Queue Size: {len(queue)} Passes: {self.passes}\n'
-                 f'Params: {self.video_params}\n\n')
+                 f'Params: {self.video_params}\n')
 
         return queue
 
@@ -432,7 +434,7 @@ class Av1an:
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
 
-        self.log(f'Started: {source.name}, {frame_probe_source} frames\n\n')
+        self.log(f'Started: {source.name}, {frame_probe_source} frames\n')
 
         # Queue execution
         for i in commands[:-1]:
@@ -445,8 +447,7 @@ class Av1an:
         enc_time = round(time.time() - st_time ,2)
         
         self.log(f'Finished: {source.name} in {enc_time} sec\n'
-                 f'Encoded Frames: {frame_probe}\n'
-                 f'Fps: {round( frame_probe/enc_time,4)}\n\n')
+                 f'Encoded Frames: {frame_probe} Fps: {round( frame_probe/enc_time,4)}\n')
         return self.frame_probe(source)
 
     def concatenate_video(self):
@@ -472,14 +473,14 @@ class Av1an:
             if len(concat) > 0:
                 raise Exception
 
-            self.log('Concatenated\n\n')
+            self.log('Concatenated\n')
 
             # Delete temp folders
             shutil.rmtree(self.temp_dir)
 
         except Exception:
             print('Concatenation failed')
-            self.log('Concatenation failed, aborting')
+            self.log('Concatenation failed, aborting\n')
             sys.exit()
 
     def image_encoding(self):
@@ -513,7 +514,7 @@ class Av1an:
             enc_path = self.temp_dir / 'split'
             if self.args.resume:
 
-                self.log('Resuming...\n\n')
+                self.log('Resuming...\n')
 
                 done_path = Path('.temp/done.txt')
                 if done_path.exists():
@@ -535,7 +536,7 @@ class Av1an:
                        leave=False)
 
             loop = pool.imap_unordered(self.encode, commands)
-            self.log(f'Started encoding queue with {self.workers} workers\n\n')
+            self.log(f'Started encoding queue with {self.workers} workers\n')
 
             try:
                 for enc_frames in loop:
@@ -579,6 +580,9 @@ class Av1an:
 
     def main(self):
 
+        # Start time
+        tm = time.time()
+
         # Parse initial arguments
         self.arg_parsing()
 
@@ -590,9 +594,12 @@ class Av1an:
         elif self.mode == 1:
             self.image_encoding()
 
+
         else:
             print('No valid work mode')
             exit()
+
+        print(f'Finished: {round(time.time() - tm, 1)}s')
 
 
 if __name__ == '__main__':
@@ -603,9 +610,7 @@ if __name__ == '__main__':
     # Main thread
     try:
         start = time.time()
-        av1an = Av1an()
-        av1an.main()
-        print(f'Finished: {round(time.time() - start, 1)}s')
+        Av1an().main()
     except KeyboardInterrupt:
         print('Encoding stopped')
         if sys.platform == 'linux':

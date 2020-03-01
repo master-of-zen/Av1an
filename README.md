@@ -141,5 +141,5 @@ Optionally add Av1an to your PATH
 
 Run with command: `av1an.py params...`
 
-### Support
+### Threadreaper x3990
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

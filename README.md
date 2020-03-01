@@ -23,8 +23,8 @@ Example with default parameters:
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aom -v ' --cpu-used=3 --end-usage=q --cq-level=30' -ff ' -vf scale=1280:-1 '
-    -w 10 -p 2 -a '-c:a libopus -b:a 24k' -s scenes.csv -log my_log -o output_file 
+    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30' -ff " -vf scale=1280:-1 "
+    -w 10 -p 2 -a "-c:a libopus -b:a 24k" -s scenes.csv -log my_log -o output_file 
 
 <h2 align="center">Usage</h2>
 
@@ -51,18 +51,18 @@ With your own parameters:
                             Adjust accordingly to your system
                             Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
                             Rav1e and SVT-AV1 uses multiple threads,
-                            Example: Rav1e settings ' ... --tile-rows 2 --tile-cols 2 ... ' -t 3
+                            Example: Rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -t 3
 
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it.
-                            Example: `-s scenes.csv`
+                            Example: "-s scenes.csv"
 
     -tr  --threshold        PySceneDetect threshold for scene detection
 
     -ff  --ffmpeg           FFmpeg options. Example:
-                            --ff ' -r 24 -vf scale=320:240 '
+                            --ff " -r 24 -vf scale=320:240 "
 
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
                             Example for 10 bit: 'yuv420p10le'

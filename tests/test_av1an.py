@@ -4,6 +4,7 @@ import os
 from av1an import Av1an
 from pathlib import Path
 
+
 def test_log():
     av = Av1an()
     av.logging = 'test_log'
@@ -19,7 +20,7 @@ def test_log():
 
 def test_call_cmd():
     av = Av1an()
-    out = av.call_cmd('ls',capture_output=True)
+    out = av.call_cmd('ls', capture_output=True)
     assert len(out) > 0
 
 

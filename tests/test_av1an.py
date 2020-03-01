@@ -15,7 +15,7 @@ def test_log():
 
     os.remove('test_log')
 
-    assert  'test' in r
+    assert 'test' in r
 
 
 def test_call_cmd():

@@ -428,7 +428,7 @@ class Av1an:
 
         # Passing encoding params to ffmpeg for encoding
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly
-        
+
         st_time = time.time()
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
@@ -442,9 +442,9 @@ class Av1an:
 
         self.frame_check(source, target)
         frame_probe = self.frame_probe(target)
-        
+
         enc_time = round(time.time() - st_time ,2)
-        
+
         self.log(f'Finished: {source.name} in {enc_time} sec\n'
                  f'Encoded Frames: {frame_probe} Fps: {round( frame_probe/enc_time,4)}\n')
         return self.frame_probe(source)

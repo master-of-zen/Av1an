@@ -107,7 +107,7 @@ With your own parameters:
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Just unpack it to desired folder and use like ` av1an.exe params`
    
-   Autobuilding .exe from current git available at [AppVeyour](https://ci.appveyor.com/project/master-of-zen/av1an).
+   Autobuilding .exe from current git available at [AppVeyor](https://ci.appveyor.com/project/master-of-zen/av1an).
    
    All .exe for ffmpeg, and encoders should be in same folder
 
@@ -125,7 +125,7 @@ Install all requirements listed in `requirements` file.
 If installed programs don't added to enviroment variable,
 executables can be put in same folder with av1an
 
-Run with command: `python -i ./avian.py params..`
+Run with command: `python -i ./av1an.py params..`
 
 ## Install on Linux
 

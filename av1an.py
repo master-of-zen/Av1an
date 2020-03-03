@@ -184,13 +184,13 @@ class Av1an:
 
         # Capture output to check if audio is present
 
-        check = fr'{self.FFMPEG} -ss 0 -i {input_vid} -t 0 -vn -c:a copy -f null -'
+        check = fr'{self.FFMPEG} -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
         is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
         if is_audio_here:
             self.log(f'Audio processing\n'
                      f'Params: {self.args.audio_params}\n')
-            cmd = f'{self.FFMPEG} -i {input_vid} -vn ' \
+            cmd = f'{self.FFMPEG} -i "{input_vid}" -vn ' \
                   f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
 
@@ -258,10 +258,10 @@ class Av1an:
         # at current moment not work properly because of windows terminal size limitations
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
-            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
         else:
             self.log('Splitting video\n')
-            cmd = f'{self.FFMPEG} -i {video} -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
                   f'-c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "%04d.mkv"}'
 
         self.call_cmd(cmd)
@@ -269,7 +269,7 @@ class Av1an:
     def frame_probe(self, source: Path):
         # FFmpeg decoding for getting frame counts
 
-        cmd = f'ffmpeg -hide_banner  -i {source.absolute()} -an  -map 0:v:0 -c:v copy -f null - '
+        cmd = f'ffmpeg -hide_banner  -i "{source.absolute()}" -an  -map 0:v:0 -c:v copy -f null - '
         frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
         frames = int(frames[frames.rfind('frame=') + 6:frames.rfind('fps=')])
         return frames
@@ -467,7 +467,7 @@ class Av1an:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y {self.output_file}'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y "{self.output_file}"'
             concat = self.call_cmd(cmd, capture_output=True)
             if len(concat) > 0:
                 raise Exception

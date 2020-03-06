@@ -6,7 +6,7 @@
 
 <h2 align="center">All-in-one tool for streamlining av1 encoding</h2>
 
-![alt text](https://cdn.discordapp.com/attachments/665440744567472169/681087488852230147/ban.png)
+![alt text](https://cdn.discordapp.com/attachments/665440744567472169/685103807952060447/143740_05_03_20.png)
 
 <h4 align="center"> <img src="https://ci.appveyor.com/api/projects/status/cvweipdgphbjkkar?svg=true" alt="Project Badge"> <a href="https://codeclimate.com/github/master-of-zen/Av1an/maintainability"><img src="https://api.codeclimate.com/v1/badges/41ea7ad221dcdad3fe8d/maintainability" />
 <img= src="https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard"></a>
@@ -23,7 +23,7 @@ Example with default parameters:
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30' -ff " -vf scale=1280:-1 "
+    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30" -ff " -vf scale=1280:-1 "
     -w 10 -p 2 -a "-c:a libopus -b:a 24k" -s scenes.csv -log my_log -o output_file 
 
 <h2 align="center">Usage</h2>

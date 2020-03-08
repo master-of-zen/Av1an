@@ -76,9 +76,6 @@ With your own parameters:
     --no_check              Skip checking numbers of frames for source and encoded chunks
                             Needed if framerate changes.
                             By default any differences in frames of encoded files will be reported
-
-     -m   --mode            0 - Video encoding (Default), 
-                            1 - Image encoding. Using 10 bit encoding and constant quality mode Aom.
                             
     -log --logging          Path to .log file(Default: no logging)
 

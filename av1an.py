@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from math import ceil
 import time
 from tqdm import tqdm
 import sys
@@ -15,6 +16,9 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+import cv2
+import numpy as np
+import statistics
 
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
@@ -83,6 +87,8 @@ class Av1an:
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
         parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
+        parser.add_argument('--boost', help='Experimental feature', action='store_true')
+        parser.add_argument('-r', default=15, type=int, help='Range/strenght of CQ change')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -434,6 +440,52 @@ class Av1an:
 
         return queue
 
+    def get_brightness(self, video):
+        brightness = []
+        cap = cv2.VideoCapture(video)
+        try:
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+
+                # Our operations on the frame come here
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                # Display the resulting frame
+                mean = cv2.mean(gray)
+                brightness.append(mean[0])
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+        except cv2.error:
+            pass
+
+        # When everything done, release the capture
+        cap.release()
+        brightness_mean = statistics.mean(brightness)
+        brig_geom = statistics.geometric_mean([x+1 for x in brightness])
+        brig_harm = statistics.harmonic_mean(brightness)
+
+        return (f'Mean: {round(brightness_mean,1 )}, Geom: {round(brig_geom - 1, 1)} Harm: {round(brig_harm, 1)} ' \
+               f'25th percentile: {round(np.percentile(brightness, 25),1)}', brig_geom, brig_harm, brightness_mean)
+
+    def boost(self, command: str, br_geom):
+        mt = '--cq-level='
+        cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
+
+        if br_geom < 128:
+            new_cq = cq - ceil(( 128 - br_geom) / 128 * self.args.r)
+
+            # Cap on boosting
+            if new_cq < 10:
+                new_cq = 10
+
+            cmd0 = command[:command.find(mt) + 11] + \
+                str(new_cq) + command[command.find(mt) + 13:]
+
+            return cmd0, new_cq
+
+        return command, cq
+
     def encode(self, commands):
 
         # Passing encoding params to ffmpeg for encoding
@@ -443,7 +495,20 @@ class Av1an:
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
 
-        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
+        if self.args.boost:
+            br, br_geom, br_harm, br_mean = self.get_brightness(source.absolute().as_posix())
+
+            com0, cq = self.boost(commands[0], br_geom)
+            com1, cq = self.boost(commands[1], br_geom)
+
+            commands = (com0, com1) + commands[2:]
+            
+            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n'
+                     f'Avg brightness: {br}\n'
+                     f'Adjusted CQ: {cq}\n\n')
+            
+        else:
+            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
 
         # Queue execution
         for i in commands[:-1]:
@@ -551,8 +616,8 @@ class Av1an:
             try:
                 for enc_frames in loop:
                     bar.update(n=enc_frames)
-            except (ValueError, Exception):
-                print('Encoding error')
+            except Exception as e:
+                print(f'Encoding error: {e}')
                 sys.exit()
 
     def video_encoding(self):

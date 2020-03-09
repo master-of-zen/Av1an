@@ -430,7 +430,7 @@ class Av1an:
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
 
-        self.log(f'Started: {source.name}, {frame_probe_source} frames\n')
+        self.log(f'Start:  {source.name}, {frame_probe_source} frames\n')
 
         # Queue execution
         for i in commands[:-1]:
@@ -442,8 +442,8 @@ class Av1an:
 
         enc_time = round(time.time() - st_time ,2)
 
-        self.log(f'Finished: {source.name} in {enc_time} sec\n'
-                 f'Encoded Frames: {frame_probe} Fps: {round( frame_probe/enc_time,4)}\n')
+        self.log(f'Finish: {source.name}\n'
+                 f'Frames: {frame_probe} Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n')
         return self.frame_probe(source)
 
     def concatenate_video(self):

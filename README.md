@@ -76,9 +76,6 @@ With your own parameters:
     --no_check              Skip checking numbers of frames for source and encoded chunks
                             Needed if framerate changes.
                             By default any differences in frames of encoded files will be reported
-
-     -m   --mode            0 - Video encoding (Default), 
-                            1 - Image encoding. Using 10 bit encoding and constant quality mode Aom.
                             
     -log --logging          Path to .log file(Default: no logging)
 
@@ -141,5 +138,5 @@ Optionally add Av1an to your PATH
 
 Run with command: `av1an.py params...`
 
-### Threadreaper x3990 dream
+##### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

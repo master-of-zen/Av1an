@@ -430,7 +430,7 @@ class Av1an:
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
 
-        self.log(f'Start:  {source.name}, {frame_probe_source} frames\n')
+        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
 
         # Queue execution
         for i in commands[:-1]:
@@ -442,8 +442,8 @@ class Av1an:
 
         enc_time = round(time.time() - st_time ,2)
 
-        self.log(f'Finish: {source.name}\n'
-                 f'Frames: {frame_probe} Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n')
+        self.log(f'Done: {source.name} Fr: {frame_probe}\n'
+                 f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n\n')
         return self.frame_probe(source)
 
     def concatenate_video(self):
@@ -532,7 +532,7 @@ class Av1an:
                        leave=False)
 
             loop = pool.imap_unordered(self.encode, commands)
-            self.log(f'Started encoding queue with {self.workers} workers\n')
+            self.log(f'Started encoding queue with {self.workers} workers\n\n')
 
             try:
                 for enc_frames in loop:

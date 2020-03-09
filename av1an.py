@@ -53,7 +53,7 @@ class Av1an:
 
     def log(self, info):
         with open(self.logging, 'a') as log:
-            log.write(info)
+            log.write(time.strftime('%X') + ' ' + info)
 
     def call_cmd(self, cmd, capture_output=False):
         if capture_output:

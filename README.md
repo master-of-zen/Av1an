@@ -114,9 +114,9 @@ With your own parameters:
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
-All .exe for ffmpeg, ffprobe, and encoders should be in same folder
+All .exe for ffmpeg and encoders should be in same folder
 
-Install all requirements listed in `requirements` file.
+Install all requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
 
 If installed programs don't added to enviroment variable,
 executables can be put in same folder with av1an

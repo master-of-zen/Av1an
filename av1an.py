@@ -191,6 +191,14 @@ class Av1an:
                   f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
 
+    def reduce_scenes(self, scenes):
+        """Windows terminal can't handle more than ~600 scenes in length"""
+
+        if len(scenes) > 600:
+            scenes = scenes[::2]
+            self.reduce_scenes(scenes)
+        return scenes
+
     def scene_detect(self, video: Path):
         # Skip scene detection if the user choosed to
         if self.skip_scenes:
@@ -236,6 +244,11 @@ class Av1an:
             self.log(f'Found scenes: {len(scene_list)}\n')
 
             scenes = [scene[0].get_timecode() for scene in scene_list]
+
+            # Fix for windows character limit
+            if sys.platform != 'linux':
+                scenes = self.reduce_scenes(scenes)
+
             scenes = ','.join(scenes[1:])
 
             # We only write to the stats file if a save is required:

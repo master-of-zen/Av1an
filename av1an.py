@@ -82,7 +82,7 @@ class Av1an:
         parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
-
+        parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -485,7 +485,8 @@ class Av1an:
             self.log('Concatenated\n')
 
             # Delete temp folders
-            shutil.rmtree(self.temp_dir)
+            if not self.args.keep:
+                shutil.rmtree(self.temp_dir)
 
         except Exception:
             print('Concatenation failed')

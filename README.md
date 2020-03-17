@@ -75,6 +75,8 @@ With your own parameters:
     --no_check              Skip checking numbers of frames for source and encoded chunks
                             Needed if framerate changes.
                             By default any differences in frames of encoded files will be reported
+    
+    --keep                  Not deleting temprally folders after encode finished
                             
     -log --logging          Path to .log file(Default: no logging)
 

@@ -88,7 +88,9 @@ class Av1an:
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
         parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
         parser.add_argument('--boost', help='Experimental feature', action='store_true')
-        parser.add_argument('-r', default=15, type=int, help='Range/strenght of CQ change')
+        parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
+        parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
+
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -473,11 +475,11 @@ class Av1an:
         cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
 
         if br_geom < 128:
-            new_cq = cq - ceil(( 128 - br_geom) / 128 * self.args.r)
+            new_cq = cq - ceil((128 - br_geom) / 128 * self.args.br)
 
             # Cap on boosting
-            if new_cq < 10:
-                new_cq = 10
+            if new_cq < self.args.bl:
+                new_cq = self.args.bl
 
             cmd0 = command[:command.find(mt) + 11] + \
                 str(new_cq) + command[command.find(mt) + 13:]
@@ -499,9 +501,12 @@ class Av1an:
             br, br_geom, br_harm, br_mean = self.get_brightness(source.absolute().as_posix())
 
             com0, cq = self.boost(commands[0], br_geom)
-            com1, cq = self.boost(commands[1], br_geom)
 
-            commands = (com0, com1) + commands[2:]
+            if self.passes == 2:
+                com1, cq = self.boost(commands[1], br_geom)
+                commands = (com0, com1) + commands[2:]
+            else:
+                commands = com0 + commands[1:]
             
             self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n'
                      f'Avg brightness: {br}\n'
@@ -518,7 +523,7 @@ class Av1an:
         self.frame_check(source, target)
         frame_probe = self.frame_probe(target)
 
-        enc_time = round(time.time() - st_time ,2)
+        enc_time = round(time.time() - st_time, 2)
 
         self.log(f'Done: {source.name} Fr: {frame_probe}\n'
                  f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n\n')

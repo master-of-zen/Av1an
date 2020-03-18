@@ -264,9 +264,9 @@ class Av1an:
                 self.scenes.write_text(scenes)
             return scenes
 
-        except Exception:
-            self.log('Error in PySceneDetect\n')
-            print('Error in PySceneDetect')
+        except Exception as e:
+            self.log(f'Error in PySceneDetect: {e}\n')
+            print(f'Error in PySceneDetect{e}\n')
             sys.exit()
 
     def split(self, video, timecodes):
@@ -351,9 +351,12 @@ class Av1an:
             p2o = '-output-stat-file '
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.video_params} {p2o} {file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
-                 f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.video_params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
+                 f'  {encoder} -i stdin {self.video_params} {p2o} '
+                 f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
+                 f'-i {file[0]} {self.ffmpeg_pipe} '
+                 +
+                 f'{encoder} -i stdin {self.video_params} {p2i} '
+                 f'{file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands
@@ -467,8 +470,8 @@ class Av1an:
         brig_geom = statistics.geometric_mean([x+1 for x in brightness])
         brig_harm = statistics.harmonic_mean(brightness)
 
-        return (f'Mean: {round(brightness_mean,1 )}, Geom: {round(brig_geom - 1, 1)} Harm: {round(brig_harm, 1)} ' \
-               f'25th percentile: {round(np.percentile(brightness, 25),1)}', brig_geom, brig_harm, brightness_mean)
+        return (f'Mean: {round(brightness_mean,1 )}, Geom: {round(brig_geom - 1, 1)} Harm: {round(brig_harm, 1)} '
+                f'25th percentile: {round(np.percentile(brightness, 25),1)}', brig_geom, brig_harm, brightness_mean)
 
     def boost(self, command: str, br_geom):
         mt = '--cq-level='
@@ -558,9 +561,9 @@ class Av1an:
             if not self.args.keep:
                 shutil.rmtree(self.temp_dir)
 
-        except Exception:
-            print('Concatenation failed')
-            self.log('Concatenation failed, aborting\n')
+        except Exception as e:
+            print(f'Concatenation failed, error: {e}')
+            self.log(f'Concatenation failed, aborting, error: {e}\n')
             sys.exit()
 
     def image_encoding(self):
@@ -673,7 +676,6 @@ class Av1an:
         # Video Mode
         elif self.mode == 1:
             self.image_encoding()
-
 
         else:
             print('No valid work mode')

@@ -466,12 +466,9 @@ class Av1an:
 
         # When everything done, release the capture
         cap.release()
-        brightness_mean = statistics.mean(brightness)
-        brig_geom = statistics.geometric_mean([x+1 for x in brightness])
-        brig_harm = statistics.harmonic_mean(brightness)
+        brig_geom = round(statistics.geometric_mean([x+1 for x in brightness]), 1)
 
-        return (f'Mean: {round(brightness_mean,1 )}, Geom: {round(brig_geom - 1, 1)} Harm: {round(brig_harm, 1)} '
-                f'25th percentile: {round(np.percentile(brightness, 25),1)}', brig_geom, brig_harm, brightness_mean)
+        return brig_geom
 
     def boost(self, command: str, br_geom):
         mt = '--cq-level='
@@ -501,12 +498,12 @@ class Av1an:
         frame_probe_source = self.frame_probe(source)
 
         if self.args.boost:
-            br, br_geom, br_harm, br_mean = self.get_brightness(source.absolute().as_posix())
+            br = self.get_brightness(source.absolute().as_posix())
 
-            com0, cq = self.boost(commands[0], br_geom)
+            com0, cq = self.boost(commands[0], br)
 
             if self.passes == 2:
-                com1, cq = self.boost(commands[1], br_geom)
+                com1, cq = self.boost(commands[1], br)
                 commands = (com0, com1) + commands[2:]
             else:
                 commands = com0 + commands[1:]

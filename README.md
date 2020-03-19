@@ -79,6 +79,12 @@ With your own parameters:
     --keep                  Not deleting temprally folders after encode finished
                             
     -log --logging          Path to .log file(Default: no logging)
+    
+    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release
+    
+    -bl                     CQ limit for boosting.   
+    
+    -br                     CQ range for boosting.
 
 <h2 align="center">Main Features</h2>
 

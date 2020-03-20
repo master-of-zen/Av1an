@@ -47,9 +47,6 @@ With your own parameters:
                             Example: -a '-c:a libopus -b:a  64k'
 
     -w   --workers          Overrides automatically set number of workers. 
-                            Adjust accordingly to your system
-                            Aomenc recommended value is YOUR_THREADS - 2 (Single thread per worker)
-                            Rav1e and SVT-AV1 uses multiple threads,
                             Example: Rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -t 3
 
     -s   --scenes           Path to file with scenes timestamps.

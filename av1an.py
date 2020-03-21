@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""Todo:
+audio in parallel
+"""
 
 from math import ceil
 import time

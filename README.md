@@ -22,7 +22,7 @@ Example with default parameters:
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 " -ff " -vf scale=1280:-1 "
+    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 " -ff " -vf scale=-1:720 "
     -w 10 -p 2 -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output_file 
 
 <h2 align="center">Usage</h2>
@@ -55,7 +55,7 @@ With your own parameters:
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
 
-    -tr  --threshold        PySceneDetect threshold for scene detection
+    -tr  --threshold        PySceneDetect threshold for scene detection Default: 30
 
     -ff  --ffmpeg           FFmpeg options. Example:
                             --ff " -r 24 -vf scale=320:240 "

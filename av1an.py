@@ -91,7 +91,7 @@ class Av1an:
         parser.add_argument('--boost', help='Experimental feature', action='store_true')
         parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
-
+        parser.add_argument('--temp_dir', '-t', type=Path, default=self.temp_dir, help='Path for storing temporary files')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -156,7 +156,7 @@ class Av1an:
         if self.args.logging:
             self.logging = f"{self.args.logging}.log"
         else:
-            self.logging = self.temp_dir / 'log.log'
+            self.logging = self.args.temp_dir / 'log.log'
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
@@ -166,20 +166,20 @@ class Av1an:
             sys.exit()
 
         # Make temporal directories, and remove them if already presented
-        if self.temp_dir.exists() and self.args.resume:
+        if self.args.temp_dir.exists() and self.args.resume:
             pass
         else:
-            if self.temp_dir.is_dir():
-                shutil.rmtree(self.temp_dir)
-            (self.temp_dir / 'split').mkdir(parents=True)
-            (self.temp_dir / 'encode').mkdir()
+            if self.args.temp_dir.is_dir():
+                shutil.rmtree(self.args.temp_dir)
+            (self.args.temp_dir / 'split').mkdir(parents=True)
+            (self.args.temp_dir / 'encode').mkdir()
 
         if self.logging is os.devnull:
-            self.logging = self.temp_dir / 'log.log'
+            self.logging = self.args.temp_dir / 'log.log'
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
-        audio_file = self.temp_dir / 'audio.mkv'
+        audio_file = self.args.temp_dir / 'audio.mkv'
         if audio_file.exists():
             self.log('Reusing Audio File\n')
             return
@@ -270,11 +270,11 @@ class Av1an:
         """Spliting video by timecodes, or just copying video."""
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.args.temp_dir / "split" / "0.mkv"}'
         else:
             self.log('Splitting video\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
-                  f'-c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "%04d.mkv"}'
+                  f'-c copy -avoid_negative_ts 1 {self.args.temp_dir / "split" / "%04d.mkv"}'
 
         self.call_cmd(cmd)
 
@@ -287,7 +287,7 @@ class Av1an:
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video framecounts match"""
-        status_file = Path(self.temp_dir / 'done.txt')
+        status_file = Path(self.args.temp_dir / 'done.txt')
 
         if self.args.no_check:
             with status_file.open('a') as done:
@@ -307,7 +307,7 @@ class Av1an:
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
         if self.args.resume:
-            done_file = self.temp_dir / 'done.txt'
+            done_file = self.args.temp_dir / 'done.txt'
             if done_file.exists():
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
@@ -413,8 +413,8 @@ class Av1an:
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splitted videos."""
-        file_paths = [(self.temp_dir / "split" / file.name,
-                       self.temp_dir / "encode" / file.name,
+        file_paths = [(self.args.temp_dir / "split" / file.name,
+                       self.args.temp_dir / "encode" / file.name,
                        file) for file in files]
 
         if self.encoder == 'aom':
@@ -525,20 +525,20 @@ class Av1an:
 
     def concatenate_video(self):
         """With FFMPEG concatenate encoded segments into final file."""
-        with open(f'{self.temp_dir / "concat"}', 'w') as f:
+        with open(f'{self.args.temp_dir / "concat"}', 'w') as f:
 
-            encode_files = sorted((self.temp_dir / 'encode').iterdir())
+            encode_files = sorted((self.args.temp_dir / 'encode').iterdir())
             f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
 
         # Add the audio file if one was extracted from the input
-        audio_file = self.temp_dir / "audio.mkv"
+        audio_file = self.args.temp_dir / "audio.mkv"
         if audio_file.exists():
             audio = f'-i {audio_file} -c:a copy'
         else:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y "{self.output_file}"'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.args.temp_dir / "concat"} {audio} -c copy -y "{self.output_file}"'
             concat = self.call_cmd(cmd, capture_output=True)
             if len(concat) > 0:
                 raise Exception
@@ -547,7 +547,7 @@ class Av1an:
 
             # Delete temp folders
             if not self.args.keep:
-                shutil.rmtree(self.temp_dir)
+                shutil.rmtree(self.args.temp_dir)
 
         except Exception as e:
             print(f'Concatenation failed, error: {e}')
@@ -559,7 +559,7 @@ class Av1an:
         with Pool(self.workers) as pool:
 
             self.workers = min(len(commands), self.workers)
-            enc_path = self.temp_dir / 'split'
+            enc_path = self.args.temp_dir / 'split'
             done_path = Path('.temp/done.txt')
             if self.args.resume and done_path.exists():
 
@@ -598,7 +598,7 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
-        if not (self.args.resume and self.temp_dir.exists()):
+        if not (self.args.resume and self.args.temp_dir.exists()):
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
 
@@ -613,7 +613,7 @@ class Av1an:
         else:
             self.set_logging()
 
-        files = self.get_video_queue(self.temp_dir / 'split')
+        files = self.get_video_queue(self.args.temp_dir / 'split')
 
         # Make encode queue
         commands = self.compose_encoding_queue(files)

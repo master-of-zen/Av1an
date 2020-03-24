@@ -79,6 +79,7 @@ class Av1an:
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
         parser.add_argument('--threshold', '-tr', type=float, default=self.threshold, help='PySceneDetect Threshold')
+        parser.add_argument('--temp', type=Path, default=self.temp_dir, help='Set temp folder path')
         parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
         parser.add_argument('--passes', '-p', type=int, default=self.passes, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
@@ -94,6 +95,9 @@ class Av1an:
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
+
+        # Set temp dir
+        self.temp_dir = self.args.temp
 
         # Set scenes if provided
         if self.args.scenes:
@@ -560,7 +564,7 @@ class Av1an:
 
             self.workers = min(len(commands), self.workers)
             enc_path = self.temp_dir / 'split'
-            done_path = Path('.temp/done.txt')
+            done_path = Path(self.temp_dir / 'done.txt')
             if self.args.resume and done_path.exists():
 
                 self.log('Resuming...\n')
@@ -576,7 +580,7 @@ class Av1an:
 
             else:
                 initial = 0
-                with open(Path('.temp/done.txt'), 'w') as f:
+                with open(Path(self.temp_dir / 'done.txt'), 'w') as f:
                     total = self.frame_probe(self.args.file_path)
                     f.write(f'{total}\n')
 

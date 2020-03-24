@@ -324,7 +324,7 @@ class Av1an:
             if done_file.exists():
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
-                    data = literal_eval(data[1])
+                    data = literal_eval(data[-1])
                     queue = [x for x in queue if x.name not in data]
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
@@ -605,7 +605,7 @@ class Av1an:
                 if done_path.exists():
                     with open(done_path, 'r') as f:
                         data = [line for line in f]
-                        done = literal_eval(data[1])
+                        done = literal_eval(data[-1])
 
                     self.log(f'Resumed with {len(done)} encoded clips done\n\n')
 

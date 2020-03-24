@@ -37,7 +37,6 @@ class Av1an:
 
     def __init__(self):
         """Av1an - AV1 wrapper for AV1 encoders."""
-
         self.temp_dir = Path('.temp')
 
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
@@ -72,7 +71,6 @@ class Av1an:
 
     def arg_parsing(self):
         """Command line parse and assigning defined and user defined params."""
-
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
         parser.add_argument('--video_params', '-v', type=str, default=self.video_params, help='encoding settings')
@@ -140,7 +138,6 @@ class Av1an:
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""
-
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 
@@ -163,7 +160,6 @@ class Av1an:
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
-
         if not input_file.exists():
             prnt = f'No file: {input_file}\nCheck paths'
             print(prnt)
@@ -183,7 +179,6 @@ class Av1an:
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
-
         audio_file = self.temp_dir / 'audio.mkv'
         if audio_file.exists():
             self.log('Reusing Audio File\n')
@@ -203,7 +198,6 @@ class Av1an:
 
     def reduce_scenes(self, scenes):
         """Windows terminal can't handle more than ~600 scenes in length."""
-
         if len(scenes) > 600:
             scenes = scenes[::2]
             self.reduce_scenes(scenes)
@@ -274,7 +268,6 @@ class Av1an:
 
     def split(self, video, timecodes):
         """Spliting video by timecodes, or just copying video."""
-
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
@@ -287,7 +280,6 @@ class Av1an:
 
     def frame_probe(self, source: Path):
         """Get frame count."""
-
         cmd = f'ffmpeg -hide_banner  -i "{source.absolute()}" -an  -map 0:v:0 -c:v copy -f null - '
         frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
         frames = int(frames[frames.rfind('frame=') + 6:frames.rfind('fps=')])
@@ -312,7 +304,6 @@ class Av1an:
 
     def get_video_queue(self, source_path: Path):
         """Returns sorted list of all videos that need to be encoded. Big first."""
-
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
         if self.args.resume:
@@ -333,7 +324,6 @@ class Av1an:
 
     def svt_av1_encode(self, file_paths):
         """SVT-AV1 encoding command composition."""
-
         if self.args.video_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
             sys.exit()
@@ -365,7 +355,6 @@ class Av1an:
 
     def aom_encode(self, file_paths):
         """AOM encoding command composition."""
-
         if self.args.video_params == '':
             self.video_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
         else:
@@ -395,7 +384,6 @@ class Av1an:
 
     def rav1e_encode(self, file_paths):
         """Rav1e encoding command composition."""
-
         if self.args.video_params == '':
             self.video_params = ' --tiles=4 --speed=10'
         else:
@@ -425,7 +413,6 @@ class Av1an:
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splitted videos."""
-
         file_paths = [(self.temp_dir / "split" / file.name,
                        self.temp_dir / "encode" / file.name,
                        file) for file in files]
@@ -538,7 +525,6 @@ class Av1an:
 
     def concatenate_video(self):
         """With FFMPEG concatenate encoded segments into final file."""
-
         with open(f'{self.temp_dir / "concat"}', 'w') as f:
 
             encode_files = sorted((self.temp_dir / 'encode').iterdir())
@@ -570,7 +556,6 @@ class Av1an:
 
     def encoding_loop(self, commands):
         """ Creating process pool for encoders, creating progress bar."""
-
         with Pool(self.workers) as pool:
 
             self.workers = min(len(commands), self.workers)

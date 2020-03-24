@@ -568,30 +568,8 @@ class Av1an:
             self.log(f'Concatenation failed, aborting, error: {e}\n')
             sys.exit()
 
-    def image_encoding(self):
-
-        print('Encoding Image..', end='')
-
-        image_pipe = rf'{self.FFMPEG} -i {self.args.file_path} -pix_fmt yuv420p -f yuv4mpegpipe -strict -1 - | '
-        output = self.args.file_path.with_suffix('.ivf')
-
-        if self.encoder == 'aom':
-            aom = ' aomenc --passes=1 --pass=1 --end-usage=q '
-            cmd = (rf' {image_pipe} ' +
-                   rf'{aom} {self.video_params} -o {output} - ')
-            self.call_cmd(cmd)
-
-        elif self.encoder == 'rav1e':
-            cmd = (rf' {image_pipe} ' +
-                   rf' rav1e {self.video_params} - -o {output} ')
-            self.call_cmd(cmd)
-        else:
-            print(f'Not valid encoder: {self.encoder}')
-            sys.exit()
-
     def encoding_loop(self, commands):
-
-        # Creating threading pool to encode bunch of files at the same time and show progress bar
+        """ Creating process pool for encoders, creating progress bar"""
 
         with Pool(self.workers) as pool:
 
@@ -683,8 +661,8 @@ class Av1an:
             self.video_encoding()
 
         # Video Mode
-        elif self.mode == 1:
-            self.image_encoding()
+        # elif self.mode == 1:
+        #    self.image_encoding()
 
         else:
             print('No valid work mode')

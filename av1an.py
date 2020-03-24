@@ -139,8 +139,7 @@ class Av1an:
         self.ffmpeg_pipe = f' {self.ffmpeg} {self.pix_format} -f yuv4mpegpipe - |'
 
     def determine_resources(self):
-
-        # Returns number of workers that machine can handle with selected encoder
+        """Returns number of workers that machine can handle with selected encoder"""
 
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
@@ -163,6 +162,7 @@ class Av1an:
             self.logging = self.temp_dir / 'log.log'
 
     def setup(self, input_file: Path):
+        """Creating temporally folders when needed"""
 
         if not input_file.exists():
             prnt = f'No file: {input_file}\nCheck paths'
@@ -182,9 +182,8 @@ class Av1an:
             self.logging = self.temp_dir / 'log.log'
 
     def extract_audio(self, input_vid: Path):
+        """Extracting audio from source, transcoding if needed"""
 
-        # Extracting audio from video file
-        # Encoding audio if needed
         audio_file = self.temp_dir / 'audio.mkv'
         if audio_file.exists():
             self.log('Reusing Audio File\n')
@@ -211,6 +210,7 @@ class Av1an:
         return scenes
 
     def scene_detect(self, video: Path):
+        """Running scene detection on source video for segmenting"""
         # Skip scene detection if the user choosed to
         if self.skip_scenes:
             self.log('Skipping scene detection\n')
@@ -273,10 +273,8 @@ class Av1an:
             sys.exit()
 
     def split(self, video, timecodes):
+        """Spliting video by timecodes, or just copying video"""
 
-        # Splits video with provided timecodes
-        # If video is single scene, just copy video
-        # at current moment not work properly because of windows terminal size limitations
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
@@ -288,7 +286,7 @@ class Av1an:
         self.call_cmd(cmd)
 
     def frame_probe(self, source: Path):
-        # FFmpeg decoding for getting frame counts
+        """Get frame count"""
 
         cmd = f'ffmpeg -hide_banner  -i "{source.absolute()}" -an  -map 0:v:0 -c:v copy -f null - '
         frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
@@ -296,7 +294,7 @@ class Av1an:
         return frames
 
     def frame_check(self, source: Path, encoded: Path):
-
+        """Checking is source and encoded video framecounts match"""
         status_file = Path(self.temp_dir / 'done.txt')
 
         if self.args.no_check:
@@ -313,8 +311,7 @@ class Av1an:
             print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
 
     def get_video_queue(self, source_path: Path):
-
-        # Returns sorted list of all videos that need to be encoded. Big first
+        """Returns sorted list of all videos that need to be encoded. Big first"""
 
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
@@ -335,6 +332,7 @@ class Av1an:
         return queue
 
     def svt_av1_encode(self, file_paths):
+        """SVT-AV1 encoding command composition"""
 
         if self.args.video_params == '':
             print('-w -h -fps is required parameters for svt_av1 encoder')
@@ -366,6 +364,7 @@ class Av1an:
             return pass_2_commands
 
     def aom_encode(self, file_paths):
+        """AOM encoding command composition"""
 
         if self.args.video_params == '':
             self.video_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
@@ -395,6 +394,7 @@ class Av1an:
             return pass_2_commands
 
     def rav1e_encode(self, file_paths):
+        """Rav1e encoding command composition"""
 
         if self.args.video_params == '':
             self.video_params = ' --tiles=4 --speed=10'
@@ -424,6 +424,7 @@ class Av1an:
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
+        """Composing encoding queue with splitted videos"""
 
         file_paths = [(self.temp_dir / "split" / file.name,
                        self.temp_dir / "encode" / file.name,
@@ -450,6 +451,7 @@ class Av1an:
         return queue
 
     def get_brightness(self, video):
+        """Getting average brightness value for single video"""
         brightness = []
         cap = cv2.VideoCapture(video)
         try:
@@ -475,6 +477,7 @@ class Av1an:
         return brig_geom
 
     def boost(self, command: str, br_geom):
+        """Based on average brightness of video decrease(boost) Quantizer value for encoding"""
         mt = '--cq-level='
         cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
 
@@ -493,7 +496,7 @@ class Av1an:
         return command, cq
 
     def encode(self, commands):
-
+        """Single encoder command queue and logging output"""
         # Passing encoding params to ffmpeg for encoding
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly
 
@@ -511,11 +514,11 @@ class Av1an:
                 commands = (com0, com1) + commands[2:]
             else:
                 commands = com0 + commands[1:]
-            
+
             self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n'
                      f'Avg brightness: {br}\n'
                      f'Adjusted CQ: {cq}\n\n')
-            
+
         else:
             self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
 
@@ -534,9 +537,7 @@ class Av1an:
         return self.frame_probe(source)
 
     def concatenate_video(self):
-
-        # Using FFMPEG to concatenate all encoded videos to 1 file.
-        # Reading all files in A-Z order and saving it to concat.txt
+        """With FFMPEG concatenate encoded segments into final file"""
 
         with open(f'{self.temp_dir / "concat"}', 'w') as f:
 
@@ -611,7 +612,7 @@ class Av1an:
                 sys.exit()
 
     def video_encoding(self):
-
+        """Encoding video on local machine"""
         if not (self.args.resume and self.temp_dir.exists()):
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
@@ -648,7 +649,7 @@ class Av1an:
         self.concatenate_video()
 
     def main(self):
-
+        """Main"""
         # Start time
         tm = time.time()
 

@@ -309,7 +309,7 @@ class Av1an:
 
         if s1 == s2:
             with status_file.open('a') as done:
-                done.write('"' + source.name + '", ')
+                done.write(f'({s1}, "{source.name}"), ')
         else:
             print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
 
@@ -325,7 +325,7 @@ class Av1an:
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
                     data = literal_eval(data[-1])
-                    queue = [x for x in queue if x.name not in data]
+                    queue = [x for x in queue if x.name not in [x[1] for x in data]]
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
@@ -597,28 +597,32 @@ class Av1an:
 
             self.workers = min(len(commands), self.workers)
             enc_path = self.temp_dir / 'split'
-            if self.args.resume:
+            done_path = Path('.temp/done.txt')
+            if self.args.resume and done_path.exists():
 
                 self.log('Resuming...\n')
+                with open(done_path, 'r') as f:
+                    lines = [line for line in f]
+                    data = literal_eval(lines[-1])
+                    total = int(lines[0])
+                    done = [x[1] for x in data]
 
-                done_path = Path('.temp/done.txt')
-                if done_path.exists():
-                    with open(done_path, 'r') as f:
-                        data = [line for line in f]
-                        done = literal_eval(data[-1])
+                self.log(f'Resumed with {len(done)} encoded clips done\n\n')
 
-                    self.log(f'Resumed with {len(done)} encoded clips done\n\n')
+                initial = sum([int(x[0]) for x in data])
 
-                    initial = sum([self.frame_probe(x) for x in enc_path.iterdir() if x.name in done])
-                else:
-                    initial = 0
             else:
                 initial = 0
+                with open(Path('.temp/done.txt'), 'w') as f:
+                    total = self.frame_probe(self.args.file_path)
+                    f.write(f'{total}\n')
+
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
             print(f'\rQueue: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
 
-            bar = tqdm(total=self.frame_probe(self.args.file_path),
-                       initial=initial, dynamic_ncols=True, unit="fr",
+            total = self.frame_probe(self.args.file_path) 
+            
+            bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr",
                        leave=False)
 
             loop = pool.imap_unordered(self.encode, commands)

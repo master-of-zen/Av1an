@@ -165,9 +165,8 @@ class Av1an:
     def setup(self, input_file: Path):
 
         if not input_file.exists():
-            prnt = f'File: {input_file} not exist'
+            prnt = f'No file: {input_file}\nCheck paths'
             print(prnt)
-            self.log(prnt)
             sys.exit()
 
         # Make temporal directories, and remove them if already presented

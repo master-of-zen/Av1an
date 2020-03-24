@@ -63,7 +63,7 @@ class Av1an:
             log.write(time.strftime('%X') + ' ' + info)
 
     def call_cmd(self, cmd, capture_output=False):
-        """Calling system shell, if capture_ouput=True output string will be returned"""
+        """Calling system shell, if capture_output=True output string will be returned"""
         if capture_output:
             return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
@@ -138,12 +138,6 @@ class Av1an:
 
         self.ffmpeg_pipe = f' {self.ffmpeg} {self.pix_format} -f yuv4mpegpipe - |'
 
-        # Setting logging file
-        if self.args.logging:
-            self.logging = f"{self.args.logging}.log"
-        else:
-            self.logging = os.devnull
-
     def determine_resources(self):
 
         # Returns number of workers that machine can handle with selected encoder
@@ -160,6 +154,13 @@ class Av1an:
         # fix if workers round up to 0
         if self.workers == 0:
             self.workers += 1
+
+    def set_logging(self):
+        # Setting logging file
+        if self.args.logging:
+            self.logging = f"{self.args.logging}.log"
+        else:
+            self.logging = self.temp_dir / 'log.log'
 
     def setup(self, input_file: Path):
 
@@ -297,17 +298,17 @@ class Av1an:
 
     def frame_check(self, source: Path, encoded: Path):
 
-        done_file = Path(self.temp_dir / 'done.txt')
+        status_file = Path(self.temp_dir / 'done.txt')
 
         if self.args.no_check:
-            with done_file.open('a') as done:
+            with status_file.open('a') as done:
                 done.write('"' + source.name + '", ')
                 return
 
         s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
 
         if s1 == s2:
-            with done_file.open('a') as done:
+            with status_file.open('a') as done:
                 done.write('"' + source.name + '", ')
         else:
             print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
@@ -322,7 +323,8 @@ class Av1an:
             done_file = self.temp_dir / 'done.txt'
             if done_file.exists():
                 with open(done_file, 'r') as f:
-                    data = literal_eval(f.read())
+                    data = [line for line in f]
+                    data = literal_eval(data[1])
                     queue = [x for x in queue if x.name not in data]
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
@@ -602,7 +604,8 @@ class Av1an:
                 done_path = Path('.temp/done.txt')
                 if done_path.exists():
                     with open(done_path, 'r') as f:
-                        done = literal_eval(f.read())
+                        data = [line for line in f]
+                        done = literal_eval(data[1])
 
                     self.log(f'Resumed with {len(done)} encoded clips done\n\n')
 
@@ -634,12 +637,16 @@ class Av1an:
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
 
+            self.set_logging()
+
             # Splitting video and sorting big-first
             timestamps = self.scene_detect(self.args.file_path)
             self.split(self.args.file_path, timestamps)
 
             # Extracting audio
             self.extract_audio(self.args.file_path)
+        else:
+            self.set_logging()
 
         files = self.get_video_queue(self.temp_dir / 'split')
 

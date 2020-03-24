@@ -620,8 +620,6 @@ class Av1an:
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
             print(f'\rQueue: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
 
-            total = self.frame_probe(self.args.file_path) 
-            
             bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr",
                        leave=False)
 

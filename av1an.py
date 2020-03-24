@@ -317,7 +317,7 @@ class Av1an:
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
         if len(queue) == 0:
-            print('Error: No files found in .temp/split, probably splitting not working')
+            print(f'Error: No files found in {self.args.temp_dir}/split, probably splitting not working')
             sys.exit()
 
         return queue
@@ -560,7 +560,7 @@ class Av1an:
 
             self.workers = min(len(commands), self.workers)
             enc_path = self.args.temp_dir / 'split'
-            done_path = Path('.temp/done.txt')
+            done_path = Path(f'{self.args.temp_dir}/done.txt')
             if self.args.resume and done_path.exists():
 
                 self.log('Resuming...\n')
@@ -576,7 +576,7 @@ class Av1an:
 
             else:
                 initial = 0
-                with open(Path('.temp/done.txt'), 'w') as f:
+                with open(Path(f'{self.args.temp_dir}/done.txt'), 'w') as f:
                     total = self.frame_probe(self.args.file_path)
                     f.write(f'{total}\n')
 

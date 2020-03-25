@@ -77,7 +77,9 @@ With your own parameters:
                             
     -log --logging          Path to .log file(Default: no logging)
     
-    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release
+    --temp                  Set path for temporally forlders. Default: .temp
+    
+    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes
     
     -bl                     CQ limit for boosting.   
     

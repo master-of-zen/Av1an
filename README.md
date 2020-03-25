@@ -79,7 +79,7 @@ With your own parameters:
     
     --temp                  Set path for temporally forlders. Default: .temp
     
-    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release
+    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes
     
     -bl                     CQ limit for boosting.   
     

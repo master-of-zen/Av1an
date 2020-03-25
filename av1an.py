@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Todo:
-audio in parallel
-"""
 
-from math import ceil
 import time
 from tqdm import tqdm
 import sys
 import os
 import shutil
+from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
 import argparse
@@ -109,13 +106,28 @@ class Av1an:
 
         self.threshold = self.args.threshold
 
+        if not find_executable('ffmpeg'):
+            print('No ffmpeg')
+            sys.exit()
+
         # Set encoder if provided
         self.encoder = self.args.encoder.strip()
-        if self.encoder not in ('svt_av1', 'rav1e', 'aom'):
+
+        # Check if encoder executable is reachable
+        if self.encoder in ('svt_av1', 'rav1e', 'aom'):
+            if self.encoder == 'rav1e':
+                enc = 'rav1e'
+            elif self.encoder == 'aom':
+                enc = 'aomenc'
+            elif self.encoder == 'svt_av1':
+                enc = 'SvtAv1EncApp'
+            if not find_executable(enc):
+                print(f'Encoder {enc} not found')
+        else:
             print(f'Not valid encoder {self.encoder}')
             sys.exit()
 
-        # Set mode (Video/Picture)
+        # Set mode
         self.mode = self.args.mode
 
         # Number of encoder passes
@@ -637,6 +649,10 @@ class Av1an:
 
         self.concatenate_video()
 
+    def check_setup(self):
+        """Checking is all programs are available"""
+
+
     def main(self):
         """Main."""
         # Start time
@@ -645,14 +661,21 @@ class Av1an:
         # Parse initial arguments
         self.arg_parsing()
 
+        # Programs check
+        self.check_setup()
+
         # Video Mode
         if self.mode == 0:
             self.video_encoding()
 
-        # Video Mode
-        # elif self.mode == 1:
-        #    self.image_encoding()
+        # Encoder mode
+        elif self.mode == 1:
+            pass
 
+        # Manager mode
+        elif self.mode == 2:
+            pass
+            
         else:
             print('No valid work mode')
             exit()

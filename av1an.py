@@ -123,6 +123,7 @@ class Av1an:
                 enc = 'SvtAv1EncApp'
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
+                sys.exit()
         else:
             print(f'Not valid encoder {self.encoder}')
             sys.exit()

@@ -1,4 +1,3 @@
-import pytest
 import shutil
 import os
 from av1an import Av1an

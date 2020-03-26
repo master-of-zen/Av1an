@@ -23,7 +23,7 @@ Example with default parameters:
 With your own parameters:
 
     ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 " -ff " -vf scale=-1:720 "
-    -w 10 -p 2 -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output_file 
+    -w 10 -p 2 -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output_file
 
 <h2 align="center">Usage</h2>
 
@@ -46,7 +46,7 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -w   --workers          Overrides automatically set number of workers. 
+    -w   --workers          Overrides automatically set number of workers.
                             Example: Rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -t 3
 
     -s   --scenes           Path to file with scenes timestamps.
@@ -72,17 +72,17 @@ With your own parameters:
     --no_check              Skip checking numbers of frames for source and encoded chunks
                             Needed if framerate changes.
                             By default any differences in frames of encoded files will be reported
-    
+
     --keep                  Not deleting temprally folders after encode finished
-                            
+
     -log --logging          Path to .log file(Default: no logging)
-    
+
     --temp                  Set path for temporally forlders. Default: .temp
-    
+
     --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes
-    
-    -bl                     CQ limit for boosting.   
-    
+
+    -bl                     CQ limit for boosting.
+
     -br                     CQ range for boosting.
 
 <h2 align="center">Main Features</h2>
@@ -90,33 +90,26 @@ With your own parameters:
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 *   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-
 *   Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer).
-
 *   Resuming encoding without loss of encoded progress.
-
 *   Simple and clean console look.
-
 *   Automatic determination of how many workers the host can handle.
-
 *   Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
-
 *   Both video and audio encoding option with FFmpeg.
-
 *   Logging of progress of all encoders.
 
 ## Install on Windows
 
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
    Just unpack it to desired folder and use like ` av1an.exe params`
-   
+
    Autobuilding .exe from current git available at [AppVeyor](https://ci.appveyor.com/project/master-of-zen/av1an).
-   
+
    All .exe for ffmpeg, and encoders should be in same folder
 
 ### 2. Install with dependancies
 *   [Python3](https://www.python.org/downloads/)
-*   [FFmpeg](https://ffmpeg.org/download.html) 
+*   [FFmpeg](https://ffmpeg.org/download.html)
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
@@ -144,5 +137,5 @@ Optionally add Av1an to your PATH
 
 Run with command: `av1an.py params...`
 
-##### Donations for Threadripper 3990x dream
+### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

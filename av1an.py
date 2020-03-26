@@ -302,7 +302,7 @@ class Av1an:
         return frames
 
     def frame_check(self, source: Path, encoded: Path):
-        """Checking is source and encoded video framecounts match"""
+        """Checking is source and encoded video framecounts match."""
         status_file = Path(self.temp_dir / 'done.txt')
 
         if self.args.no_check:
@@ -460,7 +460,7 @@ class Av1an:
         try:
             while True:
                 # Capture frame-by-frame
-                ret, frame = cap.read()
+                _, frame = cap.read()
 
                 # Our operations on the frame come here
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

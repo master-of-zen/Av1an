@@ -84,6 +84,8 @@ With your own parameters:
     -bl                     CQ limit for boosting.
 
     -br                     CQ range for boosting.
+    
+    --vmaf                  Calculate vmaf for each encoded clip.
 
 <h2 align="center">Main Features</h2>
 

@@ -9,7 +9,6 @@ from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
 import argparse
-from math import ceil
 from multiprocessing import Pool
 import multiprocessing
 import subprocess
@@ -158,10 +157,10 @@ class Av1an:
         ram = round(virtual_memory().total / 2 ** 30)
 
         if self.encoder == 'aom' or self.encoder == 'rav1e':
-            self.workers = ceil(min(cpu/2, ram/1.5))
+            self.workers = round(min(cpu / 2, ram / 1.5))
 
         elif self.encoder == 'svt_av1':
-            self.workers = ceil(min(cpu, ram)) // 5
+            self.workers = round(min(cpu, ram)) // 5
 
         # fix if workers round up to 0
         if self.workers == 0:
@@ -479,24 +478,23 @@ class Av1an:
 
         return brig_geom
 
-    def boost(self, command: str, br_geom):
+    def boost(self, command: str, br_geom, new_cq=0):
         """Based on average brightness of video decrease(boost) Quantizer value for encoding."""
         mt = '--cq-level='
         cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
+        if not new_cq:
+            if br_geom < 128:
+                new_cq = cq - round((128 - br_geom) / 128 * self.args.br)
 
-        if br_geom < 128:
-            new_cq = cq - ceil((128 - br_geom) / 128 * self.args.br)
+                # Cap on boosting
+                if new_cq < self.args.bl:
+                    new_cq = self.args.bl
+            else:
+                new_cq = cq
+        cmd = command[:command.find(mt) + 11] + \
+              str(new_cq) + command[command.find(mt) + 13:]
 
-            # Cap on boosting
-            if new_cq < self.args.bl:
-                new_cq = self.args.bl
-
-            cmd0 = command[:command.find(mt) + 11] + \
-                str(new_cq) + command[command.find(mt) + 13:]
-
-            return cmd0, new_cq
-
-        return command, cq
+        return cmd, new_cq
 
     def encode(self, commands):
         """Single encoder command queue and logging output."""
@@ -513,7 +511,7 @@ class Av1an:
             com0, cq = self.boost(commands[0], br)
 
             if self.passes == 2:
-                com1, cq = self.boost(commands[1], br)
+                com1, _ = self.boost(commands[1], br, cq)
                 commands = (com0, com1) + commands[2:]
             else:
                 commands = com0 + commands[1:]

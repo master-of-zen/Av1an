@@ -688,9 +688,9 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Encoding stopped')
         if sys.platform == 'linux':
-            os.popen('stty sane', 'r')
+            os.system('stty sane')
         sys.exit()
 
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':
-        os.popen('stty sane', 'r')
+        os.system('stty sane')

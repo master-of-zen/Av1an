@@ -650,10 +650,6 @@ class Av1an:
 
         self.concatenate_video()
 
-    def check_setup(self):
-        """Checking is all programs are available"""
-
-
     def main(self):
         """Main."""
         # Start time
@@ -661,9 +657,6 @@ class Av1an:
 
         # Parse initial arguments
         self.arg_parsing()
-
-        # Programs check
-        self.check_setup()
 
         # Video Mode
         if self.mode == 0:

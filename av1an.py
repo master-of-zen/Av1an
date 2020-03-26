@@ -376,14 +376,14 @@ class Av1an:
         else:
             self.video_params = self.args.video_params
 
-        single_pass = 'aomenc  -q --passes=1 '
-        two_pass_1_aom = 'aomenc -q --passes=2 --pass=1'
-        two_pass_2_aom = 'aomenc  -q --passes=2 --pass=2'
+        single_p = 'aomenc  -q --passes=1 '
+        two_p_1_aom = 'aomenc -q --passes=2 --pass=1'
+        two_p_2_aom = 'aomenc  -q --passes=2 --pass=2'
 
         if self.passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_pass} {self.video_params} -o {file[1].with_suffix(".ivf")} - ',
+                 f'  {single_p} {self.video_params} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_1_commands
@@ -391,9 +391,9 @@ class Av1an:
         if self.passes == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_1_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f' {two_p_1_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_pass_2_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                 f' {two_p_2_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in file_paths]
             return pass_2_commands

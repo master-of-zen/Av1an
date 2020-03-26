@@ -87,6 +87,7 @@ class Av1an:
         parser.add_argument('--boost', help='Experimental feature', action='store_true')
         parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
+        parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
@@ -131,6 +132,7 @@ class Av1an:
 
         # Number of encoder passes
         self.passes = self.args.passes
+
         # Set output file
         if self.args.output_file is None:
             self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
@@ -210,6 +212,13 @@ class Av1an:
             cmd = f'{self.FFMPEG} -i "{input_vid}" -vn ' \
                   f'{self.args.audio_params} {audio_file}'
             self.call_cmd(cmd)
+
+    def get_vmaf(self, source: Path, encoded: Path, ):
+        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  -filter_complex "[-1:v][1:v]libvmaf" ' \
+              f'-max_muxing_queue_size 1023 -f null - '
+
+        result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
+        return result[-2]
 
     def reduce_scenes(self, scenes):
         """Windows terminal can't handle more than ~600 scenes in length."""
@@ -529,12 +538,18 @@ class Av1an:
             self.call_cmd(cmd)
 
         self.frame_check(source, target)
+
         frame_probe = self.frame_probe(target)
 
         enc_time = round(time.time() - st_time, 2)
 
+        if self.args.vmaf:
+            vmaf = f'Vmaf: {self.get_vmaf(source, target)}\n'
+        else:
+            vmaf = ''
+
         self.log(f'Done: {source.name} Fr: {frame_probe}\n'
-                 f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n\n')
+                 f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
         return self.frame_probe(source)
 
     def concatenate_video(self):

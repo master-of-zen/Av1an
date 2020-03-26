@@ -95,8 +95,9 @@ With your own parameters:
 *   Simple and clean console look.
 *   Automatic determination of how many workers the host can handle.
 *   Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
-*   Both video and audio encoding option with FFmpeg.
+*   Both video and audio transcoding with FFmpeg.
 *   Logging of progress of all encoders.
+*   "Boosting" quality of scenes based on their brightness
 
 ## Install on Windows
 

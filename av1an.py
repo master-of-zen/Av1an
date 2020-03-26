@@ -214,11 +214,11 @@ class Av1an:
             self.call_cmd(cmd)
 
     def get_vmaf(self, source: Path, encoded: Path, ):
-        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  -filter_complex "[-1:v][1:v]libvmaf" ' \
-              f'-max_muxing_queue_size 1023 -f null - '
+        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  -filter_complex "[0:v][1:v]libvmaf" ' \
+              f'-max_muxing_queue_size 1024 -f null - '
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
-        return result[-2]
+        return result[-1]
 
     def reduce_scenes(self, scenes):
         """Windows terminal can't handle more than ~600 scenes in length."""

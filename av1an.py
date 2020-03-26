@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Optional
 
 import cv2
-import numpy as np
 import statistics
 
 from scenedetect.video_manager import VideoManager

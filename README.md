@@ -86,6 +86,7 @@ With your own parameters:
     -br                     CQ range for boosting.
     
     --vmaf                  Calculate vmaf for each encoded clip.
+                            Requires: Installed FFMPEG with libvmaf and installed libvmaf
 
 <h2 align="center">Main Features</h2>
 

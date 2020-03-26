@@ -572,7 +572,7 @@ class Av1an:
             sys.exit()
 
     def encoding_loop(self, commands):
-        """ Creating process pool for encoders, creating progress bar."""
+        """Creating process pool for encoders, creating progress bar."""
         with Pool(self.workers) as pool:
 
             self.workers = min(len(commands), self.workers)
@@ -669,7 +669,7 @@ class Av1an:
         # Manager mode
         elif self.mode == 2:
             pass
-            
+
         else:
             print('No valid work mode')
             exit()

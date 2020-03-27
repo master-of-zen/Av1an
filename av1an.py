@@ -88,6 +88,7 @@ class Av1an:
         parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
+        parser.add_argument('--vmaf_path', type=str, default='', help='Path to vmaf models')
 
         # Pass command line args that were passed
         self.args = parser.parse_args()
@@ -214,11 +215,21 @@ class Av1an:
             self.call_cmd(cmd)
 
     def get_vmaf(self, source: Path, encoded: Path, ):
-        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  -filter_complex "[0:v][1:v]libvmaf" ' \
+        if self.args.vmaf_path != '':
+            model = f'=model_path={self.args.vmaf_path}'
+        else:
+            model = ''
+
+        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  ' \
+              f'-filter_complex "[0:v][1:v]libvmaf{model}" ' \
               f'-max_muxing_queue_size 1024 -f null - '
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
-        return result[-1]
+        try:
+            res = float(result[-1])
+            return res
+        except:
+            return 'Nan'
 
     def reduce_scenes(self, scenes):
         """Windows terminal can't handle more than ~600 scenes in length."""

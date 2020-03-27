@@ -69,24 +69,26 @@ With your own parameters:
                             spliting, so resuming only possible after actuall encoding is started.
                             /.temp folder must be presented for resume.
 
-    --no_check              Skip checking numbers of frames for source and encoded chunks
+    --no_check              Skip checking numbers of frames for source and encoded chunks.
                             Needed if framerate changes.
-                            By default any differences in frames of encoded files will be reported
+                            By default any differences in frames of encoded files will be reported.
 
-    --keep                  Not deleting temprally folders after encode finished
+    --keep                  Not deleting temprally folders after encode finished.
 
     -log --logging          Path to .log file(Default: no logging)
 
     --temp                  Set path for temporally forlders. Default: .temp
 
-    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes
+    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
 
     -bl                     CQ limit for boosting.
 
     -br                     CQ range for boosting.
     
     --vmaf                  Calculate vmaf for each encoded clip.
-                            Requires: Installed FFMPEG with libvmaf and installed libvmaf
+                            Requires: Installed FFMPEG with libvmaf and installed libvmaf.
+                            
+    --vmaf_path             Custom path to libvmaf models, by default used installed system wide one.
 
 <h2 align="center">Main Features</h2>
 

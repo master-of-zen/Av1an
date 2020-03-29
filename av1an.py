@@ -225,7 +225,11 @@ class Av1an:
               f'-max_muxing_queue_size 1024 -f null - '
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
+
+        if 'monotonically' in result:
+            return 'Nan. Non monotonically increasing dts to muxer. Check your source'
         try:
+
             res = float(result[-1])
             return res
         except:

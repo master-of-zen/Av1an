@@ -31,7 +31,7 @@ if sys.version_info < (3, 7):
 class Av1an:
 
     def __init__(self):
-        """Av1an - AV1 wrapper for AV1 encoders."""
+        """Av1an - Python wrapper for AV1 encoders."""
         self.temp_dir = Path('.temp')
 
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'

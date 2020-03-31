@@ -36,7 +36,6 @@ With your own parameters:
 
     -v   --video_params     Encoder settings flags (If not set, will be used default parameters.
                             Required for SVT-AV1s)
-                            Can be set for both video and image mode
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding

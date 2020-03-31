@@ -33,7 +33,6 @@ class Av1an:
     def __init__(self):
         """Av1an - Python wrapper for AV1 encoders."""
         self.temp_dir = Path('.temp')
-
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
         self.encoder = 'aom'
@@ -640,8 +639,9 @@ class Av1an:
                 print(f'Encoding error: {e}')
                 sys.exit()
 
-    def video_encoding(self):
-        """Encoding video on local machine."""
+    def setup_routine(self):
+        """All pre encoding routine.
+        Scene detection, splitting, audio extraction"""
         if not (self.args.resume and self.temp_dir.exists()):
             # Check validity of request and create temp folders/files
             self.setup(self.args.file_path)
@@ -658,6 +658,10 @@ class Av1an:
             self.set_logging()
 
         files = self.get_video_queue(self.temp_dir / 'split')
+
+    def video_encoding(self):
+        """Encoding video on local machine."""
+        self.setup_routine()
 
         # Make encode queue
         commands = self.compose_encoding_queue(files)
@@ -677,6 +681,24 @@ class Av1an:
 
         self.concatenate_video()
 
+    def master_mode(self):
+        """Master mode. Splitting, managing queue, sending chunks, receiving chunks, concat videos."""
+        print('Working in master mode')
+
+        # Setup
+        self.setup_routine()
+        # Creating Queue
+        # Sending Chunks to server
+
+    def server(self):
+        """Encoder mode: Connecting, Receiving, Encoding."""
+        print('Working in server mode')
+
+        # while chunks
+        # receive chunks
+        # encode
+        # send back
+
     def main(self):
         """Main."""
         # Start time
@@ -691,11 +713,11 @@ class Av1an:
 
         # Encoder mode
         elif self.mode == 1:
-            pass
+            self.encoder_mode()
 
-        # Manager mode
+        # Master mode
         elif self.mode == 2:
-            pass
+            self.master_mode()
 
         else:
             print('No valid work mode')

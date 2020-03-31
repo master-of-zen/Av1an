@@ -87,7 +87,7 @@ With your own parameters:
     --vmaf                  Calculate vmaf for each encoded clip.
                             Requires: Installed FFMPEG with libvmaf and installed libvmaf.
                             
-    --vmaf_path             Custom path to libvmaf models, by default used installed system wide one.
+    --vmaf_path             Custom path to libvmaf models, by default used system one.
 
 <h2 align="center">Main Features</h2>
 

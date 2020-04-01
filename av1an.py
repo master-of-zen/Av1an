@@ -657,11 +657,12 @@ class Av1an:
         else:
             self.set_logging()
 
-        files = self.get_video_queue(self.temp_dir / 'split')
-
     def video_encoding(self):
         """Encoding video on local machine."""
+
         self.setup_routine()
+
+        files = self.get_video_queue(self.temp_dir / 'split')
 
         # Make encode queue
         commands = self.compose_encoding_queue(files)

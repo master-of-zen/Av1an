@@ -33,7 +33,6 @@ class Av1an:
     def __init__(self):
         """Av1an - Python wrapper for AV1 encoders."""
         self.temp_dir = Path('.temp')
-
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.pix_format = 'yuv420p'
         self.encoder = 'aom'
@@ -540,12 +539,11 @@ class Av1an:
             else:
                 commands = com0 + commands[1:]
 
-            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n'
-                     f'Avg brightness: {br}\n'
-                     f'Adjusted CQ: {cq}\n\n')
-
+            boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
         else:
-            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
+            boost = ''
+
+        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{boost}\n')
 
         # Queue execution
         for i in commands[:-1]:

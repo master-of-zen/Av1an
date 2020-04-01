@@ -682,12 +682,32 @@ class Av1an:
 
         self.concatenate_video()
 
+    def send_message(self, sock, message, raw=False):
+        if not raw:
+            encoded_message = json.dumps(message) + '\n'
+        else:
+            encoded_message = message
+        self.log(f'Sending message'
+        sock.sendall(encoded_message)
+
+    def send_file(self, sock, file:Path):
+        size = os.path.getsize(filename)
+        self.log(f"Sending {file.name} of size {file.st_size // 1024}\n")
+        fd = open(filename, "r")
+        start = time.time()
+        sock.send(struct.pack("!i", size))
+        sock.sendall(fd.read())
+        self.log(f"Sent {size} in {int(end - start)}s. {(size / 1024) / (end - start)} kB/s\n")
+
     def master_mode(self):
         """Master mode. Splitting, managing queue, sending chunks, receiving chunks, concat videos."""
         print('Working in master mode')
 
         # Setup
         self.setup_routine()
+
+        files = self.get_video_queue(self.temp_dir / 'split')
+
         # Creating Queue
         # Sending Chunks to server
 

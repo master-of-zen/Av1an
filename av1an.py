@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import time
+import socket
 from tqdm import tqdm
 import sys
 import os
@@ -687,17 +688,39 @@ class Av1an:
             encoded_message = json.dumps(message) + '\n'
         else:
             encoded_message = message
-        self.log(f'Sending message'
+        self.log(f'Sending message')
         sock.sendall(encoded_message)
 
-    def send_file(self, sock, file:Path):
-        size = os.path.getsize(filename)
-        self.log(f"Sending {file.name} of size {file.st_size // 1024}\n")
-        fd = open(filename, "r")
-        start = time.time()
-        sock.send(struct.pack("!i", size))
-        sock.sendall(fd.read())
-        self.log(f"Sent {size} in {int(end - start)}s. {(size / 1024) / (end - start)} kB/s\n")
+    def receive_file(self, sock:socket, file:Path):
+        try:
+            sc, address = sock.accept()
+
+            with open(file.name, 'wb') as f:
+                while True:
+                    l = sc.recv(1024)
+                    while l:
+                        f.write(l)
+                        l = sc.recv(1024)
+            return True
+        except Exception as i:
+            print(f'Error: Receiving file failed\n{i}')
+
+    def send_file(self, sock:socket, file:Path):
+        try:
+            self.log(f"Sending {file.name} of size {file.st_size // 1024}\n")
+            start = time.time()
+
+            with open(file.absolute.as_posix, 'rb') as f:
+                l = f.read(1024)
+                while l:
+                    sock.send(l)
+                    l = f.read(1024)
+
+            self.log(f"Sent {size} in {int(end - start)}s. {(file.st_size // 1024) / (time.time() - start)} kB/s\n")
+            return True
+
+        except Exception as e:
+            print(f"Error: Failed to send file\n{e}")
 
     def master_mode(self):
         """Master mode. Splitting, managing queue, sending chunks, receiving chunks, concat videos."""
@@ -728,11 +751,11 @@ class Av1an:
         # Parse initial arguments
         self.arg_parsing()
 
-        # Video Mode
+        # Video Mode. Encoding on local machine
         if self.mode == 0:
             self.video_encoding()
 
-        # Encoder mode
+        # Encoder mode. Accepting files over network and encode them
         elif self.mode == 1:
             self.encoder_mode()
 

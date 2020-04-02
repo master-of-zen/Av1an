@@ -106,11 +106,14 @@ With your own parameters:
 ## Install on Windows
 
 ### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
-   Just unpack it to desired folder and use like ` av1an.exe params`
+   With every release included archive that have all needed executables.
+   No extra installation of dependencies is needed. 
+   Just unpack it to desired folder and use cmd or powershell
+   to execute ` av1an.exe all_params`
 
    Autobuilding .exe from current git available at [AppVeyor](https://ci.appveyor.com/project/master-of-zen/av1an).
 
-   All .exe for ffmpeg, and encoders should be in same folder
+   To ensure correct work all .exe for ffmpeg, and encoders should be in same folder.
 
 ### 2. Install with dependancies
 *   [Python3](https://www.python.org/downloads/)
@@ -119,9 +122,10 @@ With your own parameters:
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
-All .exe for ffmpeg and encoders should be in same folder
+All .exe for ffmpeg and encoders should be in same folder or 
+be accesable through `PATH`
 
-Install all requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
+Install all python requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
 
 If installed programs don't added to enviroment variable,
 executables can be put in same folder with av1an
@@ -136,7 +140,7 @@ Run with command: `python -i ./av1an.py params..`
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
-Install all requirements listed in `requirements` file
+Install all python requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
 
 Optionally add Av1an to your PATH
 

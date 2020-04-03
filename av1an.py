@@ -69,7 +69,7 @@ class Av1an:
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
         parser.add_argument('--video_params', '-v', type=str, default=self.video_params, help='encoding settings')
-        parser.add_argument('--file_path', '-i', type=Path, help='Input File', required=True)
+        parser.add_argument('--file_path', '-i', type=Path, help='Input File')
         parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
@@ -89,7 +89,7 @@ class Av1an:
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
         parser.add_argument('--vmaf_path', type=str, default='', help='Path to vmaf models')
-
+        parser.add_argument('--host', type=str, help='ip of host')
         # Pass command line args that were passed
         self.args = parser.parse_args()
 
@@ -135,6 +135,7 @@ class Av1an:
         self.passes = self.args.passes
 
         # Set output file
+        if self.mode != 2:
         if self.args.output_file is None:
             self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
         else:
@@ -178,6 +179,7 @@ class Av1an:
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
+        if self.mode != 2:
         if not input_file.exists():
             prnt = f'No file: {input_file}\nCheck paths'
             print(prnt)
@@ -731,12 +733,67 @@ class Av1an:
 
         files = self.get_video_queue(self.temp_dir / 'split')
 
+        HOST = '127.0.0.1'                  # Symbolic name meaning all available interfaces
+        PORT = 40995          # Arbitrary non-privileged port
+
+        #data to send
+        args_dict = str(vars(self.args)).encode()
+
+
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((HOST, PORT))
+                print('Connected to: ',HOST,PORT )
+                s.sendall(args_dict)
+                print('Encoding data send')
+        except ConnectionRefusedError:
+            print(f'Connection refused: {HOST}:{PORT}')
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            args_dict = vars(self.args)
+            try:
+                s.connect((HOST, PORT))
+                send = str(args_dict).encode()
+                print(type(send))
+                print(send)
+                s.sendall(send)
+                data = s.recv(1024)
+                print('Received: ', repr(data))
+            except ConnectionRefusedError:
+                print(f'Connection refused: {HOST}:{PORT}')
+        """
         # Creating Queue
         # Sending Chunks to server
 
     def server(self):
         """Encoder mode: Connecting, Receiving, Encoding."""
         print('Working in server mode')
+
+        HOST = '127.0.0.1'                 # Symbolic name meaning all available interfaces
+        PORT =  40995      # Arbitrary non-privileged port
+
+        print(f'Bind at {HOST} {PORT}')
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+
+            s.bind((HOST, PORT))
+            while True:
+                s.listen()
+                print('Stand by..')
+                conn, addr = s.accept()
+                print('Accepted connection: ', addr)
+                with conn:
+
+                    temp = b''
+                    while True:
+                        data = conn.recv(1024)
+                        if not data:
+                            break
+                        temp += data
+                    print('Received Settings from master:\n', temp)
+                    print('Receve file here','\nEncoding here', '\nWhen send file back','\nand back to stand by')
+                    conn.sendall(temp)
+
 
         # while chunks
         # receive chunks

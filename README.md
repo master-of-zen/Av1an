@@ -56,7 +56,8 @@ With your own parameters:
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 30
 
-    -ff  --ffmpeg           FFmpeg options. Example:
+    -ff  --ffmpeg             FFmpeg options. Applied to each segment individually 
+                            Example:
                             --ff " -r 24 -vf scale=320:240 "
 
     -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
@@ -94,14 +95,14 @@ With your own parameters:
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 *   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-*   Both Video and Image encoding* (Single frame to .ivf, can be viewed by videoplayer).
+*   Fastest way to encode AV1 without lossing quality, as fast as many cores cpu have :).
 *   Resuming encoding without loss of encoded progress.
 *   Simple and clean console look.
 *   Automatic determination of how many workers the host can handle.
 *   Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
 *   Both video and audio transcoding with FFmpeg.
 *   Logging of progress of all encoders.
-*   "Boosting" quality of scenes based on their brightness
+*   "Boosting" quality of scenes based on their brightness.
 
 ## Install on Windows
 

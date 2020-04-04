@@ -812,13 +812,13 @@ class Av1an:
         if self.mode == 0:
             self.video_encoding()
 
-        # Encoder mode. Accepting files over network and encode them
-        elif self.mode == 1:
-            self.encoder_mode()
-
         # Master mode
-        elif self.mode == 2:
+        elif self.mode == 1:
             self.master_mode()
+
+        # Encoder mode. Accepting files over network and encode them
+        elif self.mode == 2:
+            self.server()
 
         else:
             print('No valid work mode')

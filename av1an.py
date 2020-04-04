@@ -542,12 +542,11 @@ class Av1an:
             else:
                 commands = com0 + commands[1:]
 
-            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n'
-                     f'Avg brightness: {br}\n'
-                     f'Adjusted CQ: {cq}\n\n')
-
+            boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
         else:
-            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n\n')
+            boost = ''
+
+        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{boost}\n')
 
         # Queue execution
         for i in commands[:-1]:

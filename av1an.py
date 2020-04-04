@@ -136,10 +136,10 @@ class Av1an:
 
         # Set output file
         if self.mode != 2:
-        if self.args.output_file is None:
-            self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
-        else:
-            self.output_file = self.args.output_file.with_suffix('.mkv')
+            if self.args.output_file is None:
+                self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
+            else:
+                self.output_file = self.args.output_file.with_suffix('.mkv')
 
         # Forcing FPS option
         if self.args.ffmpeg == 0:
@@ -180,10 +180,10 @@ class Av1an:
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
         if self.mode != 2:
-        if not input_file.exists():
-            prnt = f'No file: {input_file}\nCheck paths'
-            print(prnt)
-            sys.exit()
+            if not input_file.exists():
+                prnt = f'No file: {input_file}\nCheck paths'
+                print(prnt)
+                sys.exit()
 
         # Make temporal directories, and remove them if already presented
         if self.temp_dir.exists() and self.args.resume:

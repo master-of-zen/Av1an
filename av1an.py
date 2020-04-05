@@ -408,27 +408,22 @@ class Av1an:
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splitted videos."""
-        file_paths = [(self.temp_dir / "split" / file.name,
-                       self.temp_dir / "encode" / file.name,
+        input_files = [(self.d.get('temp') / "split" / file.name,
+                       self.d.get('temp') / "encode" / file.name,
                        file) for file in files]
 
-        if self.encoder == 'aom':
-            queue = self.aom_encode(file_paths)
+        if self.d.get('encoder') == 'aom':
+            queue = self.aom_encode(input_files)
 
-        elif self.encoder == 'rav1e':
-            queue = self.rav1e_encode(file_paths)
+        elif self.d.get('encoder') == 'rav1e':
+            queue = self.rav1e_encode(input_files)
 
-        elif self.encoder == 'svt_av1':
-            queue = self.svt_av1_encode(file_paths)
-
-        else:
-            print(self.encoder)
-            print(f'No valid encoder : "{self.encoder}"')
-            sys.exit()
+        elif self.d.get('encoder') == 'svt_av1':
+            queue = self.svt_av1_encode(input_files)
 
         self.log(f'Encoding Queue Composed\n'
-                 f'Encoder: {self.encoder.upper()} Queue Size: {len(queue)} Passes: {self.passes}\n'
-                 f'Params: {self.video_params}\n')
+                 f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'
+                 f'Params: {self.d.get("video_params")}\n')
 
         return queue
 

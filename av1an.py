@@ -36,7 +36,7 @@ class Av1an:
 
     def log(self, info):
         """Default logging function, write to file."""
-        with open(self.logging, 'a') as log:
+        with open(self.d.get('logging'), 'a') as log:
             log.write(time.strftime('%X') + ' ' + info)
 
     def call_cmd(self, cmd, capture_output=False):
@@ -44,7 +44,7 @@ class Av1an:
         if capture_output:
             return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
-        with open(self.logging, 'a') as log:
+        with open(self.d.get('logging'), 'a') as log:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
 
     def arg_parsing(self):

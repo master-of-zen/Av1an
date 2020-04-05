@@ -138,10 +138,10 @@ class Av1an:
 
     def set_logging(self):
         """Setting logging file."""
-        if self.args.logging:
-            self.logging = f"{self.args.logging}.log"
+        if self.d.get('logging'):
+            self.d['logging'] = f"{self.d.get('logging')}.log"
         else:
-            self.logging = self.temp_dir / 'log.log'
+            self.d['logging']= self.d.get('temp') / 'log.log'
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""

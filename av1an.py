@@ -596,18 +596,18 @@ class Av1an:
     def setup_routine(self):
         """All pre encoding routine.
         Scene detection, splitting, audio extraction"""
-        if not (self.args.resume and self.temp_dir.exists()):
+        if not (self.d.get('resume') and self.d.get('temp').exists()):
             # Check validity of request and create temp folders/files
-            self.setup(self.args.file_path)
+            self.setup(self.d.get('input_file'))
 
             self.set_logging()
 
             # Splitting video and sorting big-first
-            timestamps = self.scene_detect(self.args.file_path)
-            self.split(self.args.file_path, timestamps)
+            timestamps = self.scene_detect(self.d.get('input_file'))
+            self.split(self.d.get('input_file'), timestamps)
 
             # Extracting audio
-            self.extract_audio(self.args.file_path)
+            self.extract_audio(self.d.get('input_file'))
         else:
             self.set_logging()
 

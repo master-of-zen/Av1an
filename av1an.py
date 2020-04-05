@@ -159,7 +159,7 @@ class Av1an:
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
-        audio_file = self.temp_dir / 'audio.mkv'
+        audio_file = self.d.get('temp') / 'audio.mkv'
         if audio_file.exists():
             self.log('Reusing Audio File\n')
             return
@@ -171,9 +171,9 @@ class Av1an:
 
         if is_audio_here:
             self.log(f'Audio processing\n'
-                     f'Params: {self.args.audio_params}\n')
+                     f'Params: {self.d.get("audio_params")}\n')
             cmd = f'{self.FFMPEG} -i "{input_vid}" -vn ' \
-                  f'{self.args.audio_params} {audio_file}'
+                  f'{self.d.get("audio_params")} {audio_file}'
             self.call_cmd(cmd)
 
     def get_vmaf(self, source: Path, encoded: Path, ):

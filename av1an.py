@@ -6,6 +6,7 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
+import json
 from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
@@ -14,11 +15,8 @@ from multiprocessing import Pool
 import multiprocessing
 import subprocess
 from pathlib import Path
-from typing import Optional
-
 import cv2
 import statistics
-
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector

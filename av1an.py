@@ -81,65 +81,60 @@ class Av1an:
             print('No ffmpeg')
             sys.exit()
 
-        # Set encoder if provided
-        self.encoder = self.args.encoder.strip()
-
         # Check if encoder executable is reachable
-        if self.encoder in ('svt_av1', 'rav1e', 'aom'):
-            if self.encoder == 'rav1e':
+        if self.d.get('encoder') in ('svt_av1', 'rav1e', 'aom'):
+            if self.d.get('encoder') == 'rav1e':
                 enc = 'rav1e'
-            elif self.encoder == 'aom':
+            elif self.d.get('encoder') == 'aom':
                 enc = 'aomenc'
-            elif self.encoder == 'svt_av1':
+            elif self.d.get('encoder') == 'svt_av1':
                 enc = 'SvtAv1EncApp'
+
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
                 sys.exit()
         else:
-            print(f'Not valid encoder {self.encoder}')
+            print(f'Not valid encoder {self.d.get("encoder")} ')
             sys.exit()
 
-        # Set mode
-        self.mode = self.args.mode
-
-        # Number of encoder passes
-        self.passes = self.args.passes
+        # Check input file
+        if self.d.get('mode') == 2 and self.d.get('input_file'):
+            print("Server mode, input file ignored")
+        elif self.d.get('mode') == 2:
+            pass
+        elif self.d.get('mode') != 2 and not self.d.get('input_file'):
+            print('No input file')
+            sys.exit()
+        elif not self.d.get('input_file').exists():
+            print(f'No file: {self.d.get("input_file")}')
+            sys.exit()
 
         # Set output file
-        if self.mode != 2:
-            if self.args.output_file is None:
-                self.output_file = Path(f'{self.args.file_path.stem}_av1.mkv')
+        if self.d.get('mode') != 2:
+            if self.d.get('output_file'):
+                    self.d['output_file'] = self.d.get('input_file').with_suffix('.mkv')
             else:
-                self.output_file = self.args.output_file.with_suffix('.mkv')
-
-        # Forcing FPS option
-        if self.args.ffmpeg == 0:
-            self.ffmpeg = ''
-        else:
-            self.ffmpeg = self.args.ffmpeg
+                    self.d['output_file'] = Path(f'{self.d.get("input_file").stem}_av1.mkv')
 
         # Changing pixel format, bit format
-        if self.args.pix_format != self.pix_format:
-            self.pix_format = f' -strict -1 -pix_fmt {self.args.pix_format}'
-        else:
-            self.pix_format = f'-pix_fmt {self.args.pix_format}'
+        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
 
-        self.ffmpeg_pipe = f' {self.ffmpeg} {self.pix_format} -f yuv4mpegpipe - |'
+        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 
-        if self.encoder == 'aom' or self.encoder == 'rav1e':
-            self.workers = round(min(cpu / 2, ram / 1.5))
+        if self.d.get('encoder') == 'aom' or self.d.get('encoder') == 'rav1e':
+            self.d['workers'] = round(min(cpu / 2, ram / 1.5))
 
-        elif self.encoder == 'svt_av1':
-            self.workers = round(min(cpu, ram)) // 5
+        elif self.d.get('encoder') == 'svt_av1':
+            self.d['workers'] = round(min(cpu, ram)) // 5
 
         # fix if workers round up to 0
-        if self.workers == 0:
-            self.workers += 1
+        if self.d.get('workers') == 0:
+            self.d['workers'] = 1
 
     def set_logging(self):
         """Setting logging file."""

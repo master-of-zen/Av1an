@@ -310,8 +310,9 @@ class Av1an:
             if done_file.exists():
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
-                    data = literal_eval(data[-1])
-                    queue = [x for x in queue if x.name not in [x[1] for x in data]]
+                    if len(data) > 1:
+                        data = literal_eval(data[1])
+                        queue = [x for x in queue if x.name not in [x[1] for x in data]]
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
@@ -563,13 +564,16 @@ class Av1an:
                 self.log('Resuming...\n')
                 with open(done_path, 'r') as f:
                     lines = [line for line in f]
-                    data = literal_eval(lines[-1])
-                    total = int(lines[0])
-                    done = [x[1] for x in data]
-
-                self.log(f'Resumed with {len(done)} encoded clips done\n\n')
-
-                initial = sum([int(x[0]) for x in data])
+                    if len(lines) > 1:
+                        data = literal_eval(lines[-1])
+                        total = int(lines[0])
+                        done = len([x[1] for x in data])
+                        initial = sum([int(x[0]) for x in data])
+                    else:
+                        done = 0
+                        initial = 0
+                        total = self.frame_probe(self.d.get('input_file'))
+                self.log(f'Resumed with {done} encoded clips done\n\n')
 
             else:
                 initial = 0

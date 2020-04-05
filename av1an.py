@@ -459,11 +459,11 @@ class Av1an:
         cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
         if not new_cq:
             if br_geom < 128:
-                new_cq = cq - round((128 - br_geom) / 128 * self.args.br)
+                new_cq = cq - round((128 - br_geom) / 128 * self.d.get('br'))
 
                 # Cap on boosting
-                if new_cq < self.args.bl:
-                    new_cq = self.args.bl
+                if new_cq < self.d.get('bl'):
+                    new_cq = self.d.get('bl')
             else:
                 new_cq = cq
         cmd = command[:command.find(mt) + 11] + \
@@ -480,12 +480,12 @@ class Av1an:
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
 
-        if self.args.boost:
+        if self.d.get('boost'):
             br = self.get_brightness(source.absolute().as_posix())
 
             com0, cq = self.boost(commands[0], br)
 
-            if self.passes == 2:
+            if self.d.get('passes') == 2:
                 com1, _ = self.boost(commands[1], br, cq)
                 commands = (com0, com1) + commands[2:]
             else:
@@ -508,7 +508,7 @@ class Av1an:
 
         enc_time = round(time.time() - st_time, 2)
 
-        if self.args.vmaf:
+        if self.d.get('vmaf'):
             vmaf = f'Vmaf: {self.get_vmaf(source, target)}\n'
         else:
             vmaf = ''

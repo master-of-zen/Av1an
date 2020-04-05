@@ -269,11 +269,11 @@ class Av1an:
         """Spliting video by timecodes, or just copying video."""
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "0.mkv"}'
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.d.get("temp") / "split" / "0.mkv"}'
         else:
             self.log('Splitting video\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
-                  f'-c copy -avoid_negative_ts 1 {self.temp_dir / "split" / "%04d.mkv"}'
+                  f'-c copy -avoid_negative_ts 1 {self.d.get("temp") / "split" / "%04d.mkv"}'
 
         self.call_cmd(cmd)
 
@@ -286,9 +286,9 @@ class Av1an:
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video framecounts match."""
-        status_file = Path(self.temp_dir / 'done.txt')
+        status_file = Path(self.d.get("temp") / 'done.txt')
 
-        if self.args.no_check:
+        if self.d.get("no_check"):
             with status_file.open('a') as done:
                 done.write('"' + source.name + '", ')
                 return

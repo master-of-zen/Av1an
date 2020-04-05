@@ -22,8 +22,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
 
-if sys.version_info < (3, 7):
-    print('Av1an requires at least Python 3.7 to run.')
+if sys.version_info < (3, 8):
+    print('Av1an requires at least Python 3.8+ to run.')
     sys.exit()
 
 

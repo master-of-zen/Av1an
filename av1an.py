@@ -48,22 +48,22 @@ class Av1an:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
 
     def arg_parsing(self):
-        """Command line parse and assigning defined and user defined params."""
+        """Command line parse and sanity checking"""
         parser = argparse.ArgumentParser()
-        parser.add_argument('--mode', '-m', type=int, default=self.mode, help='Mode 0 - video, Mode 1 - image')
-        parser.add_argument('--video_params', '-v', type=str, default=self.video_params, help='encoding settings')
-        parser.add_argument('--file_path', '-i', type=Path, help='Input File')
-        parser.add_argument('--encoder', '-enc', type=str, default=self.encoder, help='Choosing encoder')
+        parser.add_argument('--mode', '-m', type=int, default=0, help='Mode 0 - video, Mode 1 - image')
+        parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
+        parser.add_argument('--input_file', '-i', type=Path, help='Input File')
+        parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=float, default=self.threshold, help='PySceneDetect Threshold')
-        parser.add_argument('--temp', type=Path, default=self.temp_dir, help='Set temp folder path')
-        parser.add_argument('--logging', '-log', type=str, default=self.logging, help='Enable logging')
-        parser.add_argument('--passes', '-p', type=int, default=self.passes, help='Specify encoding passes')
+        parser.add_argument('--threshold', '-tr', type=float, default=30, help='PySceneDetect Threshold')
+        parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
+        parser.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
+        parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
         parser.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
-        parser.add_argument('--pix_format', '-fmt', type=str, default=self.pix_format, help='FFmpeg pixel format')
-        parser.add_argument('--scenes', '-s', type=str, default=self.scenes, help='File location for scenes')
+        parser.add_argument('--pix_format', '-fmt', type=str, default='yuv420p', help='FFmpeg pixel format')
+        parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
         parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
@@ -71,23 +71,11 @@ class Av1an:
         parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
-        parser.add_argument('--vmaf_path', type=str, default='', help='Path to vmaf models')
+        parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
         parser.add_argument('--host', type=str, help='ip of host')
+
         # Pass command line args that were passed
-        self.args = parser.parse_args()
-
-        # Set temp dir
-        self.temp_dir = self.args.temp
-
-        # Set scenes if provided
-        if self.args.scenes:
-            scenes = self.args.scenes.strip()
-            if scenes == '0':
-                self.skip_scenes = True
-            else:
-                self.scenes = Path(scenes)
-
-        self.threshold = self.args.threshold
+        self.d = vars(parser.parse_args())
 
         if not find_executable('ffmpeg'):
             print('No ffmpeg')

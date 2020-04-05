@@ -30,24 +30,9 @@ if sys.version_info < (3, 7):
 class Av1an:
 
     def __init__(self):
-        """Av1an - Python wrapper for AV1 encoders."""
-        self.temp_dir = Path('.temp')
+        """Av1an - Python wrapper for AV1 encode"""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
-        self.pix_format = 'yuv420p'
-        self.encoder = 'aom'
-        self.passes = 2
-        self.threshold = 30
-        self.workers = 0
-        self.mode = 0
-        self.ffmpeg_pipe = None
-        self.ffmpeg = None
-        self.logging = None
-        self.args = None
-        self.video_params = ''
-        self.output_file: Optional[Path] = None
-        self.pyscene = ''
-        self.scenes: Optional[Path] = None
-        self.skip_scenes = False
+        self.d = dict()
 
     def log(self, info):
         """Default logging function, write to file."""

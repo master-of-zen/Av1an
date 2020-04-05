@@ -145,23 +145,17 @@ class Av1an:
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
-        if self.mode != 2:
-            if not input_file.exists():
-                prnt = f'No file: {input_file}\nCheck paths'
-                print(prnt)
-                sys.exit()
-
         # Make temporal directories, and remove them if already presented
-        if self.temp_dir.exists() and self.args.resume:
+        if self.d.get('temp').exists() and self.d.get('resume'):
             pass
         else:
-            if self.temp_dir.is_dir():
-                shutil.rmtree(self.temp_dir)
-            (self.temp_dir / 'split').mkdir(parents=True)
-            (self.temp_dir / 'encode').mkdir()
+            if self.d.get('temp').is_dir():
+                shutil.rmtree(self.d.get('temp'))
+            (self.d.get('temp') / 'split').mkdir(parents=True)
+            (self.d.get('temp') / 'encode').mkdir()
 
-        if self.logging is os.devnull:
-            self.logging = self.temp_dir / 'log.log'
+        if self.d.get('logging') is os.devnull:
+            self.d['logging'] = self.d.get('temp') / 'log.log'
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""

@@ -550,12 +550,15 @@ class Av1an:
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
-        with Pool(self.workers) as pool:
+        with Pool(self.d.get('workers')) as pool:
 
-            self.workers = min(len(commands), self.workers)
-            enc_path = self.temp_dir / 'split'
-            done_path = Path(self.temp_dir / 'done.txt')
-            if self.args.resume and done_path.exists():
+            # Reduce if more workers than clips
+            self.d['workers'] = min(len(commands), self.d.get('workers'))
+
+            enc_path = self.d.get('temp') / 'split'
+            done_path = self.d.get('temp') / 'done.txt'
+
+            if self.d.get('resume') and done_path.exists():
 
                 self.log('Resuming...\n')
                 with open(done_path, 'r') as f:
@@ -570,18 +573,18 @@ class Av1an:
 
             else:
                 initial = 0
-                with open(Path(self.temp_dir / 'done.txt'), 'w') as f:
-                    total = self.frame_probe(self.args.file_path)
+                with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
+                    total = self.frame_probe(self.d.get('input_file'))
                     f.write(f'{total}\n')
 
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
-            print(f'\rQueue: {clips} Workers: {self.workers} Passes: {self.passes}\nParams: {self.video_params}')
+            print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\nParams: {self.d.get("video_params")}')
 
             bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr",
                        leave=False)
 
             loop = pool.imap_unordered(self.encode, commands)
-            self.log(f'Started encoding queue with {self.workers} workers\n\n')
+            self.log(f'Started encoding queue with {self.d.get("workers")} workers\n\n')
 
             try:
                 for enc_frames in loop:

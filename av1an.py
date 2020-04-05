@@ -205,29 +205,27 @@ class Av1an:
         return scenes
 
     def scene_detect(self, video: Path):
-        """Running scene detection on source video for segmenting."""
+        """Running PySceneDetect detection on source video for segmenting.
+        Optimal threshold settings 15-50"""
         # Skip scene detection if the user choosed to
-        if self.skip_scenes:
+        if self.d.get('scenes') == '0':
             self.log('Skipping scene detection\n')
             return ''
 
         try:
-
-            # PySceneDetect used split video by scenes and pass it to encoder
-            # Optimal threshold settings 15-50
-
             video_manager = VideoManager([str(video)])
             scene_manager = SceneManager()
-            scene_manager.add_detector(ContentDetector(threshold=self.threshold))
+            scene_manager.add_detector(ContentDetector(threshold=self.d.get('threshold')))
             base_timecode = video_manager.get_base_timecode()
 
             # If stats file exists, load it.
-            if self.scenes and self.scenes.exists():
-                # Read stats from CSV file opened in read mode:
-                with self.scenes.open() as stats_file:
-                    stats = stats_file.read()
-                    self.log('Using Saved Scenes\n')
-                    return stats
+            if (scenes:= self.d.get('scenes')):
+                if (scenes:= Path(scenes)).exists():
+                    # Read stats from CSV file opened in read mode:
+                    with scenes.open() as stats_file:
+                        stats = stats_file.read()
+                        self.log('Using Saved Scenes\n')
+                        return stats
 
             # Work on whole video
             video_manager.set_duration()
@@ -239,7 +237,7 @@ class Av1an:
             video_manager.start()
 
             # Perform scene detection on video_manager.
-            self.log(f'Starting scene detection Threshold: {self.threshold}\n')
+            self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
             scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
 
             # Obtain list of detected scenes.
@@ -258,8 +256,8 @@ class Av1an:
             scenes = ','.join(scenes[1:])
 
             # We only write to the stats file if a save is required:
-            if self.scenes:
-                self.scenes.write_text(scenes)
+            if self.d.get('scenes'):
+                Path(self.d.get('scenes')).write_text(scenes)
             return scenes
 
         except Exception as e:

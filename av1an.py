@@ -176,9 +176,9 @@ class Av1an:
                   f'{self.d.get("audio_params")} {audio_file}'
             self.call_cmd(cmd)
 
-    def get_vmaf(self, source: Path, encoded: Path, ):
-        if self.args.vmaf_path != '':
-            model = f'=model_path={self.args.vmaf_path}'
+    def get_vmaf(self, source: Path, encoded: Path):
+        if not self.d.get("vmaf_path"):
+            model = f'=model_path={self.d.get("vmaf_path")}'
         else:
             model = ''
 

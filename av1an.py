@@ -519,20 +519,20 @@ class Av1an:
 
     def concatenate_video(self):
         """With FFMPEG concatenate encoded segments into final file."""
-        with open(f'{self.temp_dir / "concat"}', 'w') as f:
+        with open(f'{self.d.get("temp") / "concat" }', 'w') as f:
 
-            encode_files = sorted((self.temp_dir / 'encode').iterdir())
+            encode_files = sorted((self.d.get('temp') / 'encode').iterdir())
             f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
 
         # Add the audio file if one was extracted from the input
-        audio_file = self.temp_dir / "audio.mkv"
+        audio_file = self.d.get('temp') / "audio.mkv"
         if audio_file.exists():
             audio = f'-i {audio_file} -c:a copy'
         else:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.temp_dir / "concat"} {audio} -c copy -y "{self.output_file}"'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.d.get("temp") / "concat"} {audio} -c copy -y "{self.d.get("output_file")}"'
             concat = self.call_cmd(cmd, capture_output=True)
             if len(concat) > 0:
                 raise Exception
@@ -540,8 +540,8 @@ class Av1an:
             self.log('Concatenated\n')
 
             # Delete temp folders
-            if not self.args.keep:
-                shutil.rmtree(self.temp_dir)
+            if not self.d.get('keep'):
+                shutil.rmtree(self.d.get('temp'))
 
         except Exception as e:
             print(f'Concatenation failed, error: {e}')

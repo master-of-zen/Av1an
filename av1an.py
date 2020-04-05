@@ -305,8 +305,8 @@ class Av1an:
         """Returns sorted list of all videos that need to be encoded. Big first."""
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
-        if self.args.resume:
-            done_file = self.temp_dir / 'done.txt'
+        if self.d.get('resume'):
+            done_file = self.d.get('temp') / 'done.txt'
             if done_file.exists():
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
@@ -321,92 +321,88 @@ class Av1an:
 
         return queue
 
-    def svt_av1_encode(self, file_paths):
+    def svt_av1_encode(self, input_files):
         """SVT-AV1 encoding command composition."""
-        if self.args.video_params == '':
+        if not self.d.get("video_params"):
             print('-w -h -fps is required parameters for svt_av1 encoder')
             sys.exit()
-        else:
-            self.video_params = self.args.video_params
+
         encoder = 'SvtAv1EncApp '
-        if self.passes == 1:
+        if self.d.get('passes') == 1:
             pass_1_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.video_params} -b {file[1].with_suffix(".ivf")} -',
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
+                 f'  {encoder} -i stdin {self.d.get("video_params")} -b {file[1].with_suffix(".ivf")} -',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
             return pass_1_commands
 
-        if self.passes == 2:
+        if self.d.get('passes') == 2:
             p2i = '-input-stat-file '
             p2o = '-output-stat-file '
             pass_2_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {encoder} -i stdin {self.video_params} {p2o} '
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
+                 f'  {encoder} -i stdin {self.d.get("video_params")} {p2o} '
                  f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
-                 f'-i {file[0]} {self.ffmpeg_pipe} '
+                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")} '
                  +
-                 f'{encoder} -i stdin {self.video_params} {p2i} '
+                 f'{encoder} -i stdin {self.d.get("video_params")} {p2i} '
                  f'{file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
             return pass_2_commands
 
-    def aom_encode(self, file_paths):
+    def aom_encode(self, input_files):
         """AOM encoding command composition."""
-        if self.args.video_params == '':
-            self.video_params = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
-        else:
-            self.video_params = self.args.video_params
+        if not self.d.get("video_params"):
+            self.d["video_params"] = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
 
         single_p = 'aomenc  -q --passes=1 '
         two_p_1_aom = 'aomenc -q --passes=2 --pass=1'
         two_p_2_aom = 'aomenc  -q --passes=2 --pass=2'
 
-        if self.passes == 1:
+        if self.d.get('passes') == 1:
             pass_1_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} ' +
-                 f'  {single_p} {self.video_params} -o {file[1].with_suffix(".ivf")} - ',
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
+                 f'  {single_p} {self.d.get("video_params")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
             return pass_1_commands
 
-        if self.passes == 2:
+        if self.d.get('passes') == 2:
             pass_2_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_p_1_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
-                 f'-i {file[0]} {self.ffmpeg_pipe}' +
-                 f' {two_p_2_aom} {self.video_params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
+                 f' {two_p_1_aom} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
+                 f' {two_p_2_aom} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
             return pass_2_commands
 
-    def rav1e_encode(self, file_paths):
+    def rav1e_encode(self, input_files):
         """Rav1e encoding command composition."""
-        if self.args.video_params == '':
-            self.video_params = ' --tiles=4 --speed=10'
-        else:
-            self.video_params = self.args.video_params
-        if self.passes == 1 or self.passes == 2:
+        if not self.d.get("video_params"):
+            self.d["video_params"] = ' --tiles=4 --speed=10'
+
+        if self.d.get('passes') == 1 or self.d.get('passes') == 2:
             pass_1_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e -  {self.video_params}  '
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} '
+                 f' rav1e -  {self.d.get("video_params")}  '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
             return pass_1_commands
-        if self.passes == 2:
+        if self.d.get('passes') == 2:
 
             # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [
-                (f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.video_params} '
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} '
+                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.d.get("video_params")} '
                  f'--output {file[1].with_suffix(".ivf")}',
-                 f'-i {file[0]} {self.ffmpeg_pipe} '
-                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.video_params} '
+                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")} '
+                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.d.get("video_params")} '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in file_paths]
+                for file in input_files]
 
             return pass_2_commands
 

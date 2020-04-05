@@ -616,7 +616,7 @@ class Av1an:
 
         self.setup_routine()
 
-        files = self.get_video_queue(self.temp_dir / 'split')
+        files = self.get_video_queue(self.d.get('temp') / 'split')
 
         # Make encode queue
         commands = self.compose_encoding_queue(files)
@@ -627,8 +627,8 @@ class Av1an:
             sys.exit()
 
         # Determine resources if workers don't set
-        if self.args.workers != 0:
-            self.workers = self.args.workers
+        if self.d.get('workers') != 0:
+            self.d['workers'] = self.d.get('workers')
         else:
             self.determine_resources()
 
@@ -647,7 +647,6 @@ class Av1an:
     def receive_file(self, sock:socket, file:Path):
         try:
             sc, address = sock.accept()
-
             with open(file.name, 'wb') as f:
                 while True:
                     l = sc.recv(1024)
@@ -661,15 +660,11 @@ class Av1an:
     def send_file(self, sock:socket, file:Path):
         try:
             self.log(f"Sending {file.name} of size {file.st_size // 1024}\n")
-            start = time.time()
-
             with open(file.absolute.as_posix, 'rb') as f:
                 l = f.read(1024)
                 while l:
                     sock.send(l)
                     l = f.read(1024)
-
-            self.log(f"Sent {size} in {int(end - start)}s. {(file.st_size // 1024) / (time.time() - start)} kB/s\n")
             return True
 
         except Exception as e:
@@ -682,13 +677,13 @@ class Av1an:
         # Setup
         self.setup_routine()
 
-        files = self.get_video_queue(self.temp_dir / 'split')
+        files = self.get_video_queue(self.d.get('temp') / 'split')
 
         HOST = '127.0.0.1'                  # Symbolic name meaning all available interfaces
         PORT = 40995          # Arbitrary non-privileged port
 
         #data to send
-        args_dict = str(vars(self.args)).encode()
+        args_dict = str(self.d).encode()
 
 
         try:
@@ -699,20 +694,6 @@ class Av1an:
                 print('Encoding data send')
         except ConnectionRefusedError:
             print(f'Connection refused: {HOST}:{PORT}')
-        """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            args_dict = vars(self.args)
-            try:
-                s.connect((HOST, PORT))
-                send = str(args_dict).encode()
-                print(type(send))
-                print(send)
-                s.sendall(send)
-                data = s.recv(1024)
-                print('Received: ', repr(data))
-            except ConnectionRefusedError:
-                print(f'Connection refused: {HOST}:{PORT}')
-        """
         # Creating Queue
         # Sending Chunks to server
 
@@ -734,7 +715,6 @@ class Av1an:
                 conn, addr = s.accept()
                 print('Accepted connection: ', addr)
                 with conn:
-
                     temp = b''
                     while True:
                         data = conn.recv(1024)
@@ -742,10 +722,7 @@ class Av1an:
                             break
                         temp += data
                     print('Received Settings from master:\n', temp)
-                    print('Receve file here','\nEncoding here', '\nWhen send file back','\nand back to stand by')
                     conn.sendall(temp)
-
-
         # while chunks
         # receive chunks
         # encode
@@ -760,22 +737,20 @@ class Av1an:
         self.arg_parsing()
 
         # Video Mode. Encoding on local machine
-        if self.mode == 0:
+        if self.d.get('mode') == 0:
             self.video_encoding()
-
+            print(f'Finished: {round(time.time() - tm, 1)}s')
         # Master mode
-        elif self.mode == 1:
+        elif self.d.get('mode') == 1:
             self.master_mode()
 
         # Encoder mode. Accepting files over network and encode them
-        elif self.mode == 2:
+        elif self.d.get('mode') == 2:
             self.server()
 
         else:
             print('No valid work mode')
             exit()
-
-        print(f'Finished: {round(time.time() - tm, 1)}s')
 
 
 if __name__ == '__main__':
@@ -785,14 +760,12 @@ if __name__ == '__main__':
 
     # Main thread
     try:
-        start = time.time()
         Av1an().main()
     except KeyboardInterrupt:
         print('Encoding stopped')
         if sys.platform == 'linux':
             os.system('stty sane')
         sys.exit()
-
     # Prevent linux terminal from hanging
     if sys.platform == 'linux':
         os.system('stty sane')

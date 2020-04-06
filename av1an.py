@@ -640,14 +640,6 @@ class Av1an:
 
         self.concatenate_video()
 
-    def send_message(self, sock, message, raw=False):
-        if not raw:
-            encoded_message = json.dumps(message) + '\n'
-        else:
-            encoded_message = message
-        self.log(f'Sending message')
-        sock.sendall(encoded_message)
-
     def receive_file(self, sock:socket, file:Path):
         try:
             sc, address = sock.accept()

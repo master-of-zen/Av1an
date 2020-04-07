@@ -454,10 +454,21 @@ class Av1an:
 
         return brig_geom
 
+    def man_cq(self, command: str, cq: int):
+        """If cq == -1 returns current value of cq in command
+        Else return command with new cq value"""
+        mt = '--cq-level='
+        if cq == -1:
+            mt = '--cq-level='
+            cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
+            return cq
+        else:
+            cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
+            return cmd
+
     def boost(self, command: str, br_geom, new_cq=0):
         """Based on average brightness of video decrease(boost) Quantizer value for encoding."""
-        mt = '--cq-level='
-        cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
+        cq = self.man_cq(command, -1)
         if not new_cq:
             if br_geom < 128:
                 new_cq = cq - round((128 - br_geom) / 128 * self.d.get('br'))
@@ -467,8 +478,7 @@ class Av1an:
                     new_cq = self.d.get('bl')
             else:
                 new_cq = cq
-        cmd = command[:command.find(mt) + 11] + \
-              str(new_cq) + command[command.find(mt) + 13:]
+        cmd = self.man_cq(command, new_cq)
 
         return cmd, new_cq
 

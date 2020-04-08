@@ -73,6 +73,7 @@ class Av1an:
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
         parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
         parser.add_argument('--host', type=str, help='ip of host')
+        parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
 
         # Pass command line args that were passed
         self.d = vars(parser.parse_args())

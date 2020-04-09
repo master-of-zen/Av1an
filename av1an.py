@@ -113,7 +113,7 @@ class Av1an:
         # Set output file
         if self.d.get('mode') != 2:
             if self.d.get('output_file'):
-                    self.d['output_file'] = self.d.get('input_file').with_suffix('.mkv')
+                    self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
             else:
                     self.d['output_file'] = Path(f'{self.d.get("input_file").stem}_av1.mkv')
 

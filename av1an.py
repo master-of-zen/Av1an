@@ -76,7 +76,8 @@ class Av1an:
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
         parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
         parser.add_argument('--host', type=str, help='ip of host')
-        parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
+        parser.add_argument('-tg_vmaf', type=float, help='Value of Vmaf to target')
+        parser.add_argument('-vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
 
         # Pass command line args that were passed
         self.d = vars(parser.parse_args())
@@ -497,13 +498,12 @@ class Av1an:
 
         # Make encoding fork
         q = (max(10,cq - 15),max(10,cq - 5), cq, min(cq + 5, 63), min(cq + 15, 63))
-        # print('Cq probes: ', q)
 
         # encoding probes
         single_p = 'aomenc  -q --passes=1 '
         cmd= [
-            [f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}")}.ivf - ',
-            probe, probe.with_name(f'v_{x}').with_suffix('.ivf'), x]
+            [f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+            probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x]
             for x in q]
 
         # Encoding probe and getting vmaf
@@ -513,9 +513,7 @@ class Av1an:
             v = self.get_vmaf(i[1],i[2])
             ls.append((v,i[3]))
         x = [x[1] for x in ls]
-        y = [x[0] for x in ls]
-
-        print()
+        y = [(float(x[0]) - self.d.get('vmaf_error')) for x in ls]
 
         # Interpolate data
         f = interpolate.interp1d(x, y, kind='cubic')
@@ -526,7 +524,7 @@ class Av1an:
         tl = list(zip(xnew, f(xnew)))
         tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
 
-        print('Target cq:', int(tg_cq[0]),' Vmaf: ', round(float(tg_cq[1]), 2))
+        # print('Target cq:', int(tg_cq[0]),' Vmaf: ', round(float(tg_cq[1]), 2))
 
         # Making plot for check
         plt.plot(xnew, f(xnew))
@@ -547,6 +545,10 @@ class Av1an:
         frame_probe_source = self.frame_probe(source)
 
         if self.d.get('tg_vmaf'):
+
+            # Make sure that vmaf calculated after encoding
+            self.d['vmaf'] = True
+
             tg_cq, tg_vf = self.target_vmaf(source,commands[0])
 
             cm1 = self.man_cq(commands[0], tg_cq)

@@ -511,6 +511,9 @@ class Av1an:
         for i in cmd:
             self.call_cmd(i[0])
             v = self.get_vmaf(i[1],i[2])
+            if type(v) == str:
+                return  int(cq), ('Error in vmaf calculation\n')
+
             ls.append((v,i[3]))
         x = [x[1] for x in ls]
         y = [(float(x[0]) - self.d.get('vmaf_error')) for x in ls]

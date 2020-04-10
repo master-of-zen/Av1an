@@ -542,64 +542,70 @@ class Av1an:
         """Single encoder command queue and logging output."""
         # Passing encoding params to ffmpeg for encoding.
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.
+        try:
+            st_time = time.time()
+            source, target = Path(commands[-1][0]), Path(commands[-1][1])
+            frame_probe_source = self.frame_probe(source)
 
-        st_time = time.time()
-        source, target = Path(commands[-1][0]), Path(commands[-1][1])
-        frame_probe_source = self.frame_probe(source)
+            if self.d.get('tg_vmaf'):
 
-        if self.d.get('tg_vmaf'):
+                # Make sure that vmaf calculated after encoding
+                self.d['vmaf'] = True
 
-            # Make sure that vmaf calculated after encoding
-            self.d['vmaf'] = True
+                tg_cq, tg_vf = self.target_vmaf(source,commands[0])
 
-            tg_cq, tg_vf = self.target_vmaf(source,commands[0])
+                cm1 = self.man_cq(commands[0], tg_cq)
 
-            cm1 = self.man_cq(commands[0], tg_cq)
+                if self.d.get('passes') == 2:
+                    cm2 = self.man_cq(commands[1], tg_cq)
+                    commands = (cm1, cm2) + commands[2:]
+                else:
+                    commands = cm1 + commands[1:]
 
-            if self.d.get('passes') == 2:
-                cm2 = self.man_cq(commands[1], tg_cq)
-                commands = (cm1, cm2) + commands[2:]
             else:
-                commands = cm1 + commands[1:]
+                tg_vf = ''
 
-        else:
-            tg_vf = ''
+            if self.d.get('boost'):
+                br = self.get_brightness(source.absolute().as_posix())
 
-        if self.d.get('boost'):
-            br = self.get_brightness(source.absolute().as_posix())
+                com0, cq = self.boost(commands[0], br)
 
-            com0, cq = self.boost(commands[0], br)
+                if self.d.get('passes') == 2:
+                    com1, _ = self.boost(commands[1], br, cq)
+                    commands = (com0, com1) + commands[2:]
+                else:
+                    commands = com0 + commands[1:]
 
-            if self.d.get('passes') == 2:
-                com1, _ = self.boost(commands[1], br, cq)
-                commands = (com0, com1) + commands[2:]
+                boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
             else:
-                commands = com0 + commands[1:]
+                boost = ''
 
-            boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
-        else:
-            boost = ''
+            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
 
-        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
+            # Queue execution
+            for i in commands[:-1]:
+                cmd = rf'{self.FFMPEG} {i}'
+                self.call_cmd(cmd)
 
-        # Queue execution
-        for i in commands[:-1]:
-            cmd = rf'{self.FFMPEG} {i}'
-            self.call_cmd(cmd)
+            self.frame_check(source, target)
 
-        self.frame_check(source, target)
+            frame_probe = self.frame_probe(target)
 
-        frame_probe = self.frame_probe(target)
+            enc_time = round(time.time() - st_time, 2)
 
-        enc_time = round(time.time() - st_time, 2)
+            if self.d.get('vmaf'):
+                if type(v:= self.get_vmaf(source, target)) == str:
+                    vmaf = f'Vmaf: {v}\n'
+                else:
+                    vmaf = f'Vmaf: {round(v, 2)}\n'
+            else: vmaf = ''
 
-        if self.d.get('vmaf'):
-            vmaf = f'Vmaf: {round(self.get_vmaf(source, target), 2)}\n'
-        else: vmaf = ''
-
-        self.log(f'Done: {source.name} Fr: {frame_probe}\n'
-                 f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
-        return self.frame_probe(source)
+            self.log(f'Done: {source.name} Fr: {frame_probe}\n'
+                    f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
+            return self.frame_probe(source)
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
     def concatenate_video(self):
         """With FFMPEG concatenate encoded segments into final file."""

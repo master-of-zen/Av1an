@@ -16,7 +16,10 @@ import multiprocessing
 import subprocess
 from pathlib import Path
 import cv2
+import numpy as np
 import statistics
+from scipy import interpolate
+import matplotlib.pyplot as plt
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
@@ -188,11 +191,9 @@ class Av1an:
               f'-max_muxing_queue_size 1024 -f null - '
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
-
         if 'monotonically' in result:
             return 'Nan. Non monotonically increasing dts to muxer. Check your source'
         try:
-
             res = float(result[-1])
             return res
         except:
@@ -483,6 +484,59 @@ class Av1an:
 
         return cmd, new_cq
 
+    def target_vmaf(self,source, command):
+        probe = source.with_suffix(".mp4")
+        tg = self.d.get('tg_vmaf')
+
+        # Making 3fps probing file
+        cq = self.man_cq(command,-1)
+        # print(f'Target vmaf: {tg} Default cq: {cq}')
+
+        cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} -r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
+        self.call_cmd(cmd)
+
+        # Make encoding fork
+        q = (max(10,cq - 15),max(10,cq - 5), cq, min(cq + 5, 63), min(cq + 15, 63))
+        # print('Cq probes: ', q)
+
+        # encoding probes
+        single_p = 'aomenc  -q --passes=1 '
+        cmd= [
+            [f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}")}.ivf - ',
+            probe, probe.with_name(f'v_{x}').with_suffix('.ivf'), x]
+            for x in q]
+
+        # Encoding probe and getting vmaf
+        ls = []
+        for i in cmd:
+            self.call_cmd(i[0])
+            v = self.get_vmaf(i[1],i[2])
+            ls.append((v,i[3]))
+        x = [x[1] for x in ls]
+        y = [x[0] for x in ls]
+
+        print()
+
+        # Interpolate data
+        f = interpolate.interp1d(x, y, kind='cubic')
+
+        xnew = np.linspace(min(x), max(x), max(x)-min(x))
+
+        # Getting value closest to target
+        tl = list(zip(xnew, f(xnew)))
+        tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
+
+        print('Target cq:', int(tg_cq[0]),' Vmaf: ', round(float(tg_cq[1]), 2))
+
+        # Making plot for check
+        plt.plot(xnew, f(xnew))
+        plt.plot(tg_cq[0], tg_cq[1],'o')
+        [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(x[1] for x in tl)), 100, 1)]
+        [plt.axvline(i, color='grey', linewidth=0.3) for i in range(int(min(xnew)), int(max(xnew)) + 1, 1)]
+        plt.savefig(probe.stem)
+        plt.close()
+        return int(tg_cq[0]), (f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n')
+
     def encode(self, commands):
         """Single encoder command queue and logging output."""
         # Passing encoding params to ffmpeg for encoding.
@@ -491,6 +545,20 @@ class Av1an:
         st_time = time.time()
         source, target = Path(commands[-1][0]), Path(commands[-1][1])
         frame_probe_source = self.frame_probe(source)
+
+        if self.d.get('tg_vmaf'):
+            tg_cq, tg_vf = self.target_vmaf(source,commands[0])
+
+            cm1 = self.man_cq(commands[0], tg_cq)
+
+            if self.d.get('passes') == 2:
+                cm2 = self.man_cq(commands[1], tg_cq)
+                commands = (cm1, cm2) + commands[2:]
+            else:
+                commands = cm1 + commands[1:]
+
+        else:
+            tg_vf = ''
 
         if self.d.get('boost'):
             br = self.get_brightness(source.absolute().as_posix())
@@ -507,7 +575,7 @@ class Av1an:
         else:
             boost = ''
 
-        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{boost}\n')
+        self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
 
         # Queue execution
         for i in commands[:-1]:
@@ -521,9 +589,8 @@ class Av1an:
         enc_time = round(time.time() - st_time, 2)
 
         if self.d.get('vmaf'):
-            vmaf = f'Vmaf: {self.get_vmaf(source, target)}\n'
-        else:
-            vmaf = ''
+            vmaf = f'Vmaf: {round(self.get_vmaf(source, target), 2)}\n'
+        else: vmaf = ''
 
         self.log(f'Done: {source.name} Fr: {frame_probe}\n'
                  f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')

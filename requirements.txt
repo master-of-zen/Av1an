@@ -3,3 +3,5 @@ scenedetect[opencv,progress_bar]
 opencv-python
 tqdm
 psutil
+scipy
+matplotlib

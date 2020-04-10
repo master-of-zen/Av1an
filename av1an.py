@@ -683,7 +683,8 @@ class Av1an:
                 for enc_frames in loop:
                     bar.update(n=enc_frames)
             except Exception as e:
-                print(f'Encoding error: {e}')
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
                 sys.exit()
 
     def setup_routine(self):
@@ -740,7 +741,8 @@ class Av1an:
                         l = sc.recv(1024)
             return True
         except Exception as i:
-            print(f'Error: Receiving file failed\n{i}')
+            _, _, exc_tb = sys.exc_info()
+            print(f'Error: Receiving file failed\n{i} at line: {exc_tb.tb_lineno}')
 
     def send_file(self, sock:socket, file:Path):
         try:

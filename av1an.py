@@ -491,15 +491,14 @@ class Av1an:
 
         # Making 3fps probing file
         cq = self.man_cq(command,-1)
-        # print(f'Target vmaf: {tg} Default cq: {cq}')
 
         cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} -r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
         self.call_cmd(cmd)
 
         # Make encoding fork
-        q = (max(10,cq - 15),max(10,cq - 5), cq, min(cq + 5, 63), min(cq + 15, 63))
+        q = (max(20,cq - 10),max(10,cq - 5), min(cq + 5, 63), min(cq + 10, 63))
 
-        # encoding probes
+        # Encoding probes
         single_p = 'aomenc  -q --passes=1 '
         cmd= [
             [f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',

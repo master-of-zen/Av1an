@@ -486,12 +486,11 @@ class Av1an:
         return cmd, new_cq
 
     def target_vmaf(self,source, command):
-        probe = source.with_suffix(".mp4")
         tg = self.d.get('tg_vmaf')
 
         # Making 3fps probing file
         cq = self.man_cq(command,-1)
-
+        probe = source.with_suffix(".mp4")
         cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} -r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
         self.call_cmd(cmd)
 
@@ -500,10 +499,8 @@ class Av1an:
 
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '
-        cmd= [
-            [f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
-            probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x]
-            for x in q]
+        cmd= [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+            probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
         # Encoding probe and getting vmaf
         ls = []
@@ -526,15 +523,14 @@ class Av1an:
         tl = list(zip(xnew, f(xnew)))
         tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
 
-        # print('Target cq:', int(tg_cq[0]),' Vmaf: ', round(float(tg_cq[1]), 2))
-
-        # Making plot for check
+        # Saving plot of got data
         plt.plot(xnew, f(xnew))
         plt.plot(tg_cq[0], tg_cq[1],'o')
         [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(x[1] for x in tl)), 100, 1)]
         [plt.axvline(i, color='grey', linewidth=0.3) for i in range(int(min(xnew)), int(max(xnew)) + 1, 1)]
         plt.savefig(probe.stem)
         plt.close()
+
         return int(tg_cq[0]), (f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n')
 
     def encode(self, commands):

@@ -6,7 +6,6 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
-import json
 from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
@@ -272,7 +271,8 @@ class Av1an:
         """Spliting video by timecodes, or just copying video."""
         if len(timecodes) == 0:
             self.log('Copying video for encode\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy -avoid_negative_ts 1 {self.d.get("temp") / "split" / "0.mkv"}'
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy ' \
+                  f'-avoid_negative_ts 1 {self.d.get("temp") / "split" / "0.mkv"}'
         else:
             self.log('Splitting video\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
@@ -377,7 +377,8 @@ class Av1an:
                 (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
                  f' {two_p_1_aom} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_2_aom} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                 f' {two_p_2_aom} {self.d.get("video_params")} '
+                 f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
             return pass_2_commands
@@ -499,7 +500,9 @@ class Av1an:
 
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '
-        cmd= [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} --threads=4 --end-usage=q --cpu-used=5 --cq-level={x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+        cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
+               f'--threads=4 --end-usage=q --cpu-used=5 --cq-level={x} '
+               f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
             probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
         # Encoding probe and getting vmaf
@@ -508,9 +511,9 @@ class Av1an:
             self.call_cmd(i[0])
             v = self.get_vmaf(i[1],i[2])
             if type(v) == str:
-                return  int(cq), ('Error in vmaf calculation\n')
+                return int(cq), 'Error in vmaf calculation\n'
 
-            ls.append((v,i[3]))
+            ls.append((v, i[3]))
         x = [x[1] for x in ls]
         y = [(float(x[0]) - self.d.get('vmaf_error')) for x in ls]
 
@@ -617,7 +620,8 @@ class Av1an:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.d.get("temp") / "concat"} {audio} -c copy -y "{self.d.get("output_file")}"'
+            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.d.get("temp") / "concat"} ' \
+                  f'{audio} -c copy -y "{self.d.get("output_file")}"'
             concat = self.call_cmd(cmd, capture_output=True)
             if len(concat) > 0:
                 raise Exception
@@ -666,7 +670,8 @@ class Av1an:
                     f.write(f'{total}\n')
 
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
-            print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\nParams: {self.d.get("video_params")}')
+            print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\n'
+                  f'Params: {self.d.get("video_params")}')
 
             bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr",
                        leave=False)
@@ -734,7 +739,6 @@ class Av1an:
                     while l:
                         f.write(l)
                         l = sc.recv(1024)
-            return True
         except Exception as i:
             _, _, exc_tb = sys.exc_info()
             print(f'Error: Receiving file failed\n{i} at line: {exc_tb.tb_lineno}')
@@ -784,7 +788,7 @@ class Av1an:
         print('Working in server mode')
 
         HOST = '127.0.0.1'                 # Symbolic name meaning all available interfaces
-        PORT =  40995      # Arbitrary non-privileged port
+        PORT = 40995      # Arbitrary non-privileged port
 
         print(f'Bind at {HOST} {PORT}')
 

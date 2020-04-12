@@ -678,7 +678,7 @@ class Av1an:
                 for enc_frames in loop:
                     bar.update(n=enc_frames)
             except Exception as e:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
+                _, _, exc_tb = sys.exc_info()
                 print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
                 sys.exit()
 

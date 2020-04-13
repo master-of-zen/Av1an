@@ -78,7 +78,7 @@ class Av1an:
         parser.add_argument('-tg_vmaf', type=float, help='Value of Vmaf to target')
         parser.add_argument('-vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
 
-        # Pass command line args that were passed
+        # Store all vars in dictionary
         self.d = vars(parser.parse_args())
 
         if not find_executable('ffmpeg'):
@@ -116,9 +116,9 @@ class Av1an:
         # Set output file
         if self.d.get('mode') != 2:
             if self.d.get('output_file'):
-                    self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
+                self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
             else:
-                    self.d['output_file'] = Path(f'{self.d.get("input_file").stem}_av1.mkv')
+                self.d['output_file'] = Path(f'{self.d.get("input_file").stem}_av1.mkv')
 
         # Changing pixel format, bit format
         self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
@@ -145,7 +145,7 @@ class Av1an:
         if self.d.get('logging'):
             self.d['logging'] = f"{self.d.get('logging')}.log"
         else:
-            self.d['logging']= self.d.get('temp') / 'log.log'
+            self.d['logging'] = self.d.get('temp') / 'log.log'
 
     def setup(self, input_file: Path):
         """Creating temporally folders when needed."""
@@ -196,7 +196,7 @@ class Av1an:
         try:
             res = float(result[-1])
             return res
-        except:
+        except ValueError:
             return 'Nan'
 
     def reduce_scenes(self, scenes):
@@ -221,7 +221,7 @@ class Av1an:
             base_timecode = video_manager.get_base_timecode()
 
             # If stats file exists, load it.
-            if (scenes:= self.d.get('scenes')):
+            if scenes:= self.d.get('scenes'):
                 if (scenes:= Path(scenes)).exists():
                     # Read stats from CSV file opened in read mode:
                     with scenes.open() as stats_file:

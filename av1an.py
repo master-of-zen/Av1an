@@ -249,7 +249,7 @@ class Av1an:
 
             self.log(f'Found scenes: {len(scene_list)}\n')
 
-            scenes = [scene[0].get_timecode() for scene in scene_list]
+            scenes = [str(scene[0].get_frames()) for scene in scene_list]
 
             # Fix for windows character limit
             if sys.platform != 'linux':
@@ -267,15 +267,15 @@ class Av1an:
             print(f'Error in PySceneDetect{e}\n')
             sys.exit()
 
-    def split(self, video, timecodes):
-        """Spliting video by timecodes, or just copying video."""
-        if len(timecodes) == 0:
+    def split(self, video, frames):
+        """Spliting video by frame numbers, or just copying video."""
+        if len(frames) == 0:
             self.log('Copying video for encode\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy ' \
                   f'-avoid_negative_ts 1 {self.d.get("temp") / "split" / "0.mkv"}'
         else:
             self.log('Splitting video\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_times {timecodes} ' \
+            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_frames {frames} ' \
                   f'-c copy -avoid_negative_ts 1 {self.d.get("temp") / "split" / "%04d.mkv"}'
 
         self.call_cmd(cmd)
@@ -697,8 +697,8 @@ class Av1an:
             self.set_logging()
 
             # Splitting video and sorting big-first
-            timestamps = self.scene_detect(self.d.get('input_file'))
-            self.split(self.d.get('input_file'), timestamps)
+            framenums = self.scene_detect(self.d.get('input_file'))
+            self.split(self.d.get('input_file'), framenums)
 
             # Extracting audio
             self.extract_audio(self.d.get('input_file'))

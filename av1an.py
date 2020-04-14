@@ -209,7 +209,7 @@ class Av1an:
     def scene_detect(self, video: Path):
         """Running PySceneDetect detection on source video for segmenting.
         Optimal threshold settings 15-50"""
-        # Skip scene detection if the user choosed to
+        # Skip scene detection if the user choose to
         if self.d.get('scenes') == '0':
             self.log('Skipping scene detection\n')
             return ''
@@ -244,8 +244,6 @@ class Av1an:
 
             # Obtain list of detected scenes.
             scene_list = scene_manager.get_scene_list(base_timecode)
-            # Like FrameTimecodes, each scene in the scene_list can be sorted if the
-            # list of scenes becomes unsorted.
 
             self.log(f'Found scenes: {len(scene_list)}\n')
 
@@ -288,7 +286,7 @@ class Av1an:
         return frames
 
     def frame_check(self, source: Path, encoded: Path):
-        """Checking is source and encoded video framecounts match."""
+        """Checking is source and encoded video frame count match."""
         status_file = Path(self.d.get("temp") / 'done.txt')
 
         if self.d.get("no_check"):
@@ -412,7 +410,7 @@ class Av1an:
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
-        """Composing encoding queue with splitted videos."""
+        """Composing encoding queue with splited videos."""
         input_files = [(self.d.get('temp') / "split" / file.name,
                        self.d.get('temp') / "encode" / file.name,
                        file) for file in files]
@@ -471,7 +469,7 @@ class Av1an:
             return cmd
 
     def boost(self, command: str, br_geom, new_cq=0):
-        """Based on average brightness of video decrease(boost) Quantizer value for encoding."""
+        """Based on average brightness of video decrease(boost) Quantize value for encoding."""
         cq = self.man_cq(command, -1)
         if not new_cq:
             if br_geom < 128:
@@ -486,30 +484,31 @@ class Av1an:
 
         return cmd, new_cq
 
-    def target_vmaf(self,source, command):
+    def target_vmaf(self, source, command):
         tg = self.d.get('tg_vmaf')
 
         # Making 3fps probing file
-        cq = self.man_cq(command,-1)
+        cq = self.man_cq(command, -1)
         probe = source.with_suffix(".mp4")
-        cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} -r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
+        cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
+              f'-r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
         self.call_cmd(cmd)
 
         # Make encoding fork
-        q = (max(20,cq - 10),max(10,cq - 5), min(cq + 5, 63), min(cq + 10, 63))
+        q = (max(20, cq - 10), max(10, cq - 5), min(cq + 5, 63), min(cq + 10, 63))
 
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '
         cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
-               f'--threads=4 --end-usage=q --cpu-used=5 --cq-level={x} '
-               f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
-            probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
+                f'--threads=4 --end-usage=q --cpu-used=5 --cq-level={x} '
+                f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+                probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
         # Encoding probe and getting vmaf
         ls = []
         for i in cmd:
             self.call_cmd(i[0])
-            v = self.get_vmaf(i[1],i[2])
+            v = self.get_vmaf(i[1], i[2])
             if type(v) == str:
                 return int(cq), 'Error in vmaf calculation\n'
 
@@ -528,13 +527,13 @@ class Av1an:
 
         # Saving plot of got data
         plt.plot(xnew, f(xnew))
-        plt.plot(tg_cq[0], tg_cq[1],'o')
+        plt.plot(tg_cq[0], tg_cq[1], 'o')
         [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(x[1] for x in tl)), 100, 1)]
         [plt.axvline(i, color='grey', linewidth=0.3) for i in range(int(min(xnew)), int(max(xnew)) + 1, 1)]
         plt.savefig(probe.stem)
         plt.close()
 
-        return int(tg_cq[0]), (f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n')
+        return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'
 
     def encode(self, commands):
         """Single encoder command queue and logging output."""
@@ -550,7 +549,7 @@ class Av1an:
                 # Make sure that vmaf calculated after encoding
                 self.d['vmaf'] = True
 
-                tg_cq, tg_vf = self.target_vmaf(source,commands[0])
+                tg_cq, tg_vf = self.target_vmaf(source, commands[0])
 
                 cm1 = self.man_cq(commands[0], tg_cq)
 
@@ -596,10 +595,11 @@ class Av1an:
                     vmaf = f'Vmaf: {v}\n'
                 else:
                     vmaf = f'Vmaf: {round(v, 2)}\n'
-            else: vmaf = ''
+            else:
+                vmaf = ''
 
             self.log(f'Done: {source.name} Fr: {frame_probe}\n'
-                    f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
+                     f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
             return self.frame_probe(source)
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -633,7 +633,7 @@ class Av1an:
                 shutil.rmtree(self.d.get('temp'))
 
         except Exception as e:
-            print(f'Concatenation failed, error: {e}')
+            print(f'Concatenation failed, FFmpeg error')
             self.log(f'Concatenation failed, aborting, error: {e}\n')
             sys.exit()
 
@@ -735,22 +735,22 @@ class Av1an:
             sc, address = sock.accept()
             with open(file.name, 'wb') as f:
                 while True:
-                    l = sc.recv(1024)
-                    while l:
-                        f.write(l)
-                        l = sc.recv(1024)
+                    data = sc.recv(1024)
+                    while data:
+                        f.write(data)
+                        data = sc.recv(1024)
         except Exception as i:
             _, _, exc_tb = sys.exc_info()
             print(f'Error: Receiving file failed\n{i} at line: {exc_tb.tb_lineno}')
 
     def send_file(self, sock:socket, file:Path):
         try:
-            self.log(f"Sending {file.name} of size {file.st_size // 1024}\n")
-            with open(file.absolute.as_posix, 'rb') as f:
-                l = f.read(1024)
-                while l:
-                    sock.send(l)
-                    l = f.read(1024)
+            self.log(f"Sending {file.name}\n")
+            with open(file.absolute().as_posix(), 'rb') as f:
+                data = f.read(1024)
+                while data:
+                    sock.send(data)
+                    data = f.read(1024)
             return True
 
         except Exception as e:
@@ -765,21 +765,21 @@ class Av1an:
 
         files = self.get_video_queue(self.d.get('temp') / 'split')
 
-        HOST = '127.0.0.1'                  # Symbolic name meaning all available interfaces
-        PORT = 40995          # Arbitrary non-privileged port
+        host = '127.0.0.1'                  # Symbolic name meaning all available interfaces
+        port = 40995          # Arbitrary non-privileged port
 
-        #data to send
+        # data to send
         args_dict = str(self.d).encode()
 
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, PORT))
-                print('Connected to: ',HOST,PORT )
+                s.connect((host, port))
+                print('Connected to: ', host, port)
                 s.sendall(args_dict)
                 print('Encoding data send')
         except ConnectionRefusedError:
-            print(f'Connection refused: {HOST}:{PORT}')
+            print(f'Connection refused: {host}:{port}')
         # Creating Queue
         # Sending Chunks to server
 
@@ -787,14 +787,14 @@ class Av1an:
         """Encoder mode: Connecting, Receiving, Encoding."""
         print('Working in server mode')
 
-        HOST = '127.0.0.1'                 # Symbolic name meaning all available interfaces
-        PORT = 40995      # Arbitrary non-privileged port
+        host = '127.0.0.1'                 # Symbolic name meaning all available interfaces
+        port = 40995      # Arbitrary non-privileged port
 
-        print(f'Bind at {HOST} {PORT}')
+        print(f'Bind at {host} {port}')
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
-            s.bind((HOST, PORT))
+            s.bind((host, port))
             while True:
                 s.listen()
                 print('Stand by..')

@@ -192,7 +192,7 @@ class Av1an:
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
         if 'monotonically' in result:
-            return 'Nan. Non monotonically increasing dts to muxer. Check your source'
+            return 'Nan. Source have bad dts'
         try:
             res = float(result[-1])
             return res
@@ -627,6 +627,7 @@ class Av1an:
                 v = self.get_vmaf(source, target)
                 if type(v) == str:
                     vmaf = f'Vmaf: {v}\n'
+                    v = None
                 else:
                     vmaf = f'Vmaf: {round(v, 2)}\n'
                     v = round(v, 2)

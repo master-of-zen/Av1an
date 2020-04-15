@@ -484,6 +484,39 @@ class Av1an:
 
         return cmd, new_cq
 
+    def plot_vmaf(self):
+        with open(self.d.get('temp') / 'vmaf.txt', 'r') as f:
+            data = literal_eval(f.read())
+            d = sorted(data, key=lambda x: x[0])
+
+        try:
+            plot_data = []
+            for point in d:
+                vmaf = point[2]
+                if type(vmaf) == str:
+                    vmaf = None
+                frames = point[1]
+                for i in range(frames):
+                    plot_data.append(vmaf)
+
+            x1 = range(len(plot_data))
+            y1 = plot_data
+
+            # Plot,
+            plt.plot(x1, y1)
+            real_y = [i for i in y1 if i]
+            [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(real_y)), 100, 1)]
+            plt.ylim((int(min(real_y)), 100))
+            if vm:= self.d.get('tg_vmaf'):
+                plt.hlines(vm, 0, len(x1), colors='red')
+
+            # Save/close
+            plt.savefig(self.d.get('input_file').stem)
+            plt.close()
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'\nError in vmaf plot: {e}\nAt line: {exc_tb.tb_lineno}\n')
+
     def target_vmaf(self, source, command):
         tg = self.d.get('tg_vmaf')
 
@@ -591,10 +624,16 @@ class Av1an:
             enc_time = round(time.time() - st_time, 2)
 
             if self.d.get('vmaf'):
-                if type(v:= self.get_vmaf(source, target)) == str:
+                v = self.get_vmaf(source, target)
+                if type(v) == str:
                     vmaf = f'Vmaf: {v}\n'
                 else:
                     vmaf = f'Vmaf: {round(v, 2)}\n'
+                    v = round(v, 2)
+
+                with open(self.d.get('temp') / 'vmaf.txt', 'a') as f:
+                    f.write(f'({str(int(source.stem))},{frame_probe_source},{v}),')
+
             else:
                 vmaf = ''
 
@@ -727,6 +766,9 @@ class Av1an:
             self.determine_resources()
 
         self.encoding_loop(commands)
+
+        if self.d.get('vmaf'):
+            self.plot_vmaf()
 
         self.concatenate_video()
 

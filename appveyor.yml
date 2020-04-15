@@ -4,7 +4,7 @@ environment:
   PYTHON: C:\Python38-x64
 install:
 - cmd: '"%PYTHON%\python.exe" -m pip install numpy opencv-python tqdm scenedetect[opencv,progress_bar] psutil pypiwin32 '
-- cmd: '"%PYTHON%\python.exe" -m pip install pyinstaller'
+- cmd: '"%PYTHON%\python.exe" -m pip install pyinstaller scipy matplotlib'
 build_script:
 - cmd: '"%PYTHON%\Scripts\pyinstaller" --onefile av1an.py'
 test: off

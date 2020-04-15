@@ -192,7 +192,7 @@ class Av1an:
 
         result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
         if 'monotonically' in result:
-            return 'Nan. Source have bad dts'
+            return 'Nan. Bad dts'
         try:
             res = float(result[-1])
             return res

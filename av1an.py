@@ -528,7 +528,7 @@ class Av1an:
         self.call_cmd(cmd)
 
         # Make encoding fork
-        q = (max(20, cq - 10), max(10, cq - 5), min(cq + 5, 63), min(cq + 10, 63))
+        q = (max(20, cq - 15), max(10, cq - 5), min(cq + 5, 63), min(cq + 15, 63))
 
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '

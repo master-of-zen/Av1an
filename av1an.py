@@ -190,7 +190,8 @@ class Av1an:
               f'-filter_complex "[0:v][1:v]libvmaf{model}" ' \
               f'-max_muxing_queue_size 1024 -f null - '
 
-        result = (self.call_cmd(cmd, capture_output=True)).decode().strip().split()
+        call = self.call_cmd(cmd, capture_output=True)
+        result = call.decode().strip().split()
         if 'monotonically' in result:
             return 'Nan. Bad dts'
         try:
@@ -502,7 +503,7 @@ class Av1an:
             x1 = range(len(plot_data))
             y1 = plot_data
 
-            # Plot,
+            # Plot
             plt.plot(x1, y1)
             real_y = [i for i in y1 if i]
             [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(real_y)), 100, 1)]

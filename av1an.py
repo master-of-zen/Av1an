@@ -32,7 +32,7 @@ if sys.version_info < (3, 8):
 class Av1an:
 
     def __init__(self):
-        """Av1an - Python wrapper for AV1 encode"""
+        """Av1an - Python wrapper for AV1 encode."""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.d = dict()
 
@@ -50,7 +50,7 @@ class Av1an:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
 
     def arg_parsing(self):
-        """Command line parse and sanity checking"""
+        """Command line parse and sanity checking."""
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=0, help='Mode 0 - video, Mode 1 - image')
         parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
@@ -208,8 +208,10 @@ class Av1an:
         return scenes
 
     def scene_detect(self, video: Path):
-        """Running PySceneDetect detection on source video for segmenting.
-        Optimal threshold settings 15-50"""
+        """
+        Running PySceneDetect detection on source video for segmenting.
+        Optimal threshold settings 15-50
+        """
         # Skip scene detection if the user choose to
         if self.d.get('scenes') == '0':
             self.log('Skipping scene detection\n')
@@ -460,8 +462,10 @@ class Av1an:
         return brig_geom
 
     def man_cq(self, command: str, cq: int):
-        """If cq == -1 returns current value of cq in command
-        Else return command with new cq value"""
+        """
+        If cq == -1 returns current value of cq in command
+        Else return command with new cq value
+        """
         mt = '--cq-level='
         if cq == -1:
             mt = '--cq-level='
@@ -496,7 +500,7 @@ class Av1an:
             plot_data = []
             for point in d:
                 vmaf = point[2]
-                if type(vmaf) == str:
+                if isinstance(vmaf, str):
                     vmaf = None
                 frames = point[1]
                 for i in range(frames):
@@ -508,8 +512,10 @@ class Av1an:
             # Plot
             plt.plot(x1, y1)
             real_y = [i for i in y1 if i]
-            [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(real_y)), 100, 1)]
+
             plt.ylim((int(min(real_y)), 100))
+            for i in range(int(min(real_y)), 100, 1):
+                plt.axhline(i, color='grey', linewidth=0.5)
             vm = self.d.get('tg_vmaf')
             if vm:
                 plt.hlines(vm, 0, len(x1), colors='red')
@@ -565,8 +571,13 @@ class Av1an:
         # Saving plot of got data
         plt.plot(xnew, f(xnew))
         plt.plot(tg_cq[0], tg_cq[1], 'o')
-        [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(x[1] for x in tl)), 100, 1)]
-        [plt.axvline(i, color='grey', linewidth=0.3) for i in range(int(min(xnew)), int(max(xnew)) + 1, 1)]
+
+        for i in range(int(min(x[1] for x in tl)), 100, 1):
+            plt.axhline(i, color='grey', linewidth=0.5)]
+
+        for i in range(int(min(xnew)), int(max(xnew)) + 1, 1):
+            plt.axhline(i, color='grey', linewidth=0.5)
+
         plt.savefig(probe.stem)
         plt.close()
 
@@ -732,8 +743,10 @@ class Av1an:
                 sys.exit()
 
     def setup_routine(self):
-        """All pre encoding routine.
-        Scene detection, splitting, audio extraction"""
+        """
+        All pre encoding routine.
+        Scene detection, splitting, audio extraction
+        """
         if not (self.d.get('resume') and self.d.get('temp').exists()):
             # Check validity of request and create temp folders/files
             self.setup(self.d.get('input_file'))
@@ -751,7 +764,6 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
-
         self.setup_routine()
 
         files = self.get_video_queue(self.d.get('temp') / 'split')
@@ -779,7 +791,7 @@ class Av1an:
 
     def receive_file(self, sock:socket, file:Path):
         try:
-            sc, address = sock.accept()
+            sc, _ = sock.accept()
             with open(file.name, 'wb') as f:
                 while True:
                     data = sc.recv(1024)
@@ -810,7 +822,7 @@ class Av1an:
         # Setup
         self.setup_routine()
 
-        files = self.get_video_queue(self.d.get('temp') / 'split')
+        # files = self.get_video_queue(self.d.get('temp') / 'split')
 
         host = '127.0.0.1'                  # Symbolic name meaning all available interfaces
         port = 40995          # Arbitrary non-privileged port
@@ -835,7 +847,7 @@ class Av1an:
         print('Working in server mode')
 
         host = '127.0.0.1'                 # Symbolic name meaning all available interfaces
-        port = 40995      # Arbitrary non-privileged port
+        port = self.d.get('host')      # Arbitrary non-privileged port
 
         print(f'Bind at {host} {port}')
 
@@ -845,7 +857,7 @@ class Av1an:
             while True:
                 s.listen()
                 print('Stand by..')
-                conn, addr = s.accept()
+                conn, _ = s.accept()
                 print('Accepted connection: ', addr)
                 with conn:
                     temp = b''

@@ -908,9 +908,4 @@ if __name__ == '__main__':
         Av1an().main()
     except KeyboardInterrupt:
         print('Encoding stopped')
-        if sys.platform == 'linux':
-            os.system('stty sane')
         sys.exit()
-    # Prevent linux terminal from hanging
-    if sys.platform == 'linux':
-        os.system('stty sane')

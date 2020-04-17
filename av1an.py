@@ -222,8 +222,10 @@ class Av1an:
             base_timecode = video_manager.get_base_timecode()
 
             # If stats file exists, load it.
-            if scenes:= self.d.get('scenes'):
-                if (scenes:= Path(scenes)).exists():
+            scenes = self.d.get('scenes')
+            if scenes:
+                scenes = Path(scenes)
+                if scenes.exists():
                     # Read stats from CSV file opened in read mode:
                     with scenes.open() as stats_file:
                         stats = stats_file.read()
@@ -508,7 +510,8 @@ class Av1an:
             real_y = [i for i in y1 if i]
             [plt.axhline(i, color='grey', linewidth=0.5) for i in range(int(min(real_y)), 100, 1)]
             plt.ylim((int(min(real_y)), 100))
-            if vm:= self.d.get('tg_vmaf'):
+            vm = self.d.get('tg_vmaf')
+            if vm:
                 plt.hlines(vm, 0, len(x1), colors='red')
 
             # Save/close

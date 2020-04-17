@@ -552,7 +552,7 @@ class Av1an:
         for i in cmd:
             self.call_cmd(i[0])
             v = self.get_vmaf(i[1], i[2])
-            if type(v) == str:
+            if isinstance(v,str):
                 return int(cq), 'Error in vmaf calculation\n'
 
             ls.append((v, i[3]))
@@ -640,7 +640,7 @@ class Av1an:
 
             if self.d.get('vmaf'):
                 v = self.get_vmaf(source, target)
-                if type(v) == str:
+                if isinstance(v,str):
                     vmaf = f'Vmaf: {v}\n'
                     v = None
                 else:
@@ -857,7 +857,7 @@ class Av1an:
             while True:
                 s.listen()
                 print('Stand by..')
-                conn, _ = s.accept()
+                conn, addr = s.accept()
                 print('Accepted connection: ', addr)
                 with conn:
                     temp = b''

@@ -573,7 +573,7 @@ class Av1an:
         plt.plot(tg_cq[0], tg_cq[1], 'o')
 
         for i in range(int(min(x[1] for x in tl)), 100, 1):
-            plt.axhline(i, color='grey', linewidth=0.5)]
+            plt.axhline(i, color='grey', linewidth=0.5)
 
         for i in range(int(min(xnew)), int(max(xnew)) + 1, 1):
             plt.axhline(i, color='grey', linewidth=0.5)

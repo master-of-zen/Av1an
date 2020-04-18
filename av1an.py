@@ -181,7 +181,7 @@ class Av1an:
             self.call_cmd(cmd)
 
     def get_vmaf(self, source: Path, encoded: Path):
-        if not self.d.get("vmaf_path"):
+        if self.d.get("vmaf_path"):
             model = f'=model_path={self.d.get("vmaf_path")}'
         else:
             model = ''

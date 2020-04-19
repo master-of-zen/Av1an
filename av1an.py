@@ -324,7 +324,7 @@ class Av1an:
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
         if len(queue) == 0:
-            print('Error: No files found in {}/split, probably splitting not working'.format(self.d.get('temp')))
+            print(f'Error: No files found in {self.d.get("temp")}/split, probably splitting not working')
             deletefolder = strtobool(input("Would you like to delete the existing temp folder?\n"))
             if deletefolder:
                 shutil.rmtree(self.d.get('temp'))

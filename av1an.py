@@ -7,6 +7,7 @@ import sys
 import os
 import shutil
 from distutils.spawn import find_executable
+from distutils.util import strtobool
 from ast import literal_eval
 from psutil import virtual_memory
 import argparse
@@ -323,7 +324,12 @@ class Av1an:
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
         if len(queue) == 0:
-            print('Error: No files found in .temp/split, probably splitting not working')
+            print('Error: No files found in {}/split, probably splitting not working'.format(self.d.get('temp')))
+            if deletefolder := strtobool(input("Would you like to delete the existing temp folder?\n")):
+                shutil.rmtree(self.d.get('temp'))
+                Av1an().main()
+            else:
+                sys.exit()
             sys.exit()
 
         return queue

@@ -34,7 +34,6 @@ class Av1an:
     def __init__(self):
         """Av1an - Python wrapper for AV1 encode."""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
-        #self.FFMPEG = 'ffmpeg -y -hide_banner'
         self.d = dict()
 
     def log(self, info):
@@ -79,6 +78,8 @@ class Av1an:
         parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
         parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
         parser.add_argument('--vmaf_steps', type=int, default=0.0, help='Amount of steps between min and max qp for target vmaf')
+        parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
+        parser.add_argument('--max_cq', type=int, default=63, help='Max cq for target vmaf')
 
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
@@ -531,6 +532,8 @@ class Av1an:
 
     def target_vmaf(self, source, command):
         tg = self.d.get('tg_vmaf')
+        mincq = self.d.get('min_cq')
+        maxcq = self.d.get('max_cq')
         steps = self.d.get('vmaf_steps')
 
         # Making 3fps probing file
@@ -539,9 +542,6 @@ class Av1an:
         cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
               f'-r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
         self.call_cmd(cmd)
-
-        mincq = 20
-        maxcq = 63
 
         # Make encoding fork
         q = np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True))

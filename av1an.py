@@ -548,7 +548,7 @@ class Av1an:
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '
         cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
-                f'--threads=4 --end-usage=q --cpu-used=5 --cq-level={x} '
+                f'--threads=4 --end-usage=q --cpu-used=6 --cq-level={x} '
                 f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
                 probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 

@@ -25,8 +25,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
 
-if sys.version_info < (3, 8):
-    print('Python 3.8+ required')
+if sys.version_info < (3, 7):
+    print('Python 3.7+ required')
     sys.exit()
 
 
@@ -325,7 +325,8 @@ class Av1an:
 
         if len(queue) == 0:
             print('Error: No files found in {}/split, probably splitting not working'.format(self.d.get('temp')))
-            if deletefolder := strtobool(input("Would you like to delete the existing temp folder?\n")):
+            deletefolder = strtobool(input("Would you like to delete the existing temp folder?\n"))
+            if deletefolder:
                 shutil.rmtree(self.d.get('temp'))
                 Av1an().main()
             else:

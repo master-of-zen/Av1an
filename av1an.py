@@ -25,8 +25,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
 
-if sys.version_info < (3, 7):
-    print('Python 3.7+ required')
+if sys.version_info < (3, 8):
+    print('Python 3.8+ required')
     sys.exit()
 
 

@@ -513,6 +513,11 @@ class Av1an:
             plt.plot(x1, y1)
             real_y = [i for i in y1 if i]
 
+            if len(real_y) == 0:
+                print('No valid vmaf values')
+                plt.close()
+                return
+
             plt.ylim((int(min(real_y)), 100))
             for i in range(int(min(real_y)), 100, 1):
                 plt.axhline(i, color='grey', linewidth=0.5)

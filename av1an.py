@@ -361,7 +361,7 @@ class Av1an:
     def aom_encode(self, input_files):
         """AOM encoding command composition."""
         if not self.d.get("video_params"):
-            self.d["video_params"] = '--threads=4 --cpu-used=5 --end-usage=q --cq-level=40'
+            self.d["video_params"] = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
 
         single_p = 'aomenc  -q --passes=1 '
         two_p_1_aom = 'aomenc -q --passes=2 --pass=1'

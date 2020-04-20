@@ -24,8 +24,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
 
-if sys.version_info < (3, 8):
-    print('Av1an requires at least Python 3.8+ to run.')
+if sys.version_info < (3, 7):
+    print('Python 3.7+ required')
     sys.exit()
 
 
@@ -75,8 +75,11 @@ class Av1an:
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
         parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
         parser.add_argument('--host', type=str, help='ip of host')
-        parser.add_argument('-tg_vmaf', type=float, help='Value of Vmaf to target')
-        parser.add_argument('-vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
+        parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
+        parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
+        parser.add_argument('--vmaf_steps', type=int, default=0.0, help='Amount of steps between min and max qp for target vmaf')
+        parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
+        parser.add_argument('--max_cq', type=int, default=63, help='Max cq for target vmaf')
 
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
@@ -181,7 +184,7 @@ class Av1an:
             self.call_cmd(cmd)
 
     def get_vmaf(self, source: Path, encoded: Path):
-        if not self.d.get("vmaf_path"):
+        if self.d.get("vmaf_path"):
             model = f'=model_path={self.d.get("vmaf_path")}'
         else:
             model = ''
@@ -534,6 +537,9 @@ class Av1an:
 
     def target_vmaf(self, source, command):
         tg = self.d.get('tg_vmaf')
+        mincq = self.d.get('min_cq')
+        maxcq = self.d.get('max_cq')
+        steps = self.d.get('vmaf_steps')
 
         # Making 3fps probing file
         cq = self.man_cq(command, -1)
@@ -543,7 +549,7 @@ class Av1an:
         self.call_cmd(cmd)
 
         # Make encoding fork
-        q = (max(20, cq - 15), max(10, cq - 5), min(cq + 5, 63), min(cq + 15, 63))
+        q = np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True))
 
         # Encoding probes
         single_p = 'aomenc  -q --passes=1 '

@@ -74,12 +74,12 @@ class Av1an:
         parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
         parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
-        parser.add_argument('--host', type=str, help='ip of host')
         parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
         parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
-        parser.add_argument('--vmaf_steps', type=int, default=0.0, help='Amount of steps between min and max qp for target vmaf')
+        parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
         parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
         parser.add_argument('--max_cq', type=int, default=63, help='Max cq for target vmaf')
+        parser.add_argument('--host', type=str, help='ip of host')
 
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
@@ -127,6 +127,10 @@ class Av1an:
         self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
 
         self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
+
+        if self.d.get('vmaf_steps') < 4:
+            print('Target vmaf require more than 3 probes/steps')
+            sys.exit()
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""

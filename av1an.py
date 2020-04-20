@@ -302,8 +302,9 @@ class Av1an:
         status_file = Path(self.d.get("temp") / 'done.txt')
 
         if self.d.get("no_check"):
+            s1 = self.frame_probe(source)
             with status_file.open('a') as done:
-                done.write('"' + source.name + '", ')
+                done.write(f'({s1}, "{source.name}"), ')
                 return
 
         s1, s2 = [self.frame_probe(i) for i in (source, encoded)]

@@ -139,7 +139,7 @@ class Av1an:
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 
-        if self.d.get('encoder') == ('aom', 'rav1e', 'vpx'):
+        if self.d.get('encoder') == 'aom' or self.d.get('encoder') == 'rav1e' or self.d.get('encoder') == 'vpx':
             self.d['workers'] = round(min(cpu / 2, ram / 1.5))
 
         elif self.d.get('encoder') == 'svt_av1':

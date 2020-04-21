@@ -32,7 +32,7 @@ if sys.version_info < (3, 7):
 class Av1an:
 
     def __init__(self):
-        """Av1an - Python all-in-one toolkit for AV1,VP9 encode."""
+        """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.d = dict()
 
@@ -89,13 +89,15 @@ class Av1an:
             sys.exit()
 
         # Check if encoder executable is reachable
-        if self.d.get('encoder') in ('svt_av1', 'rav1e', 'aom'):
+        if self.d.get('encoder') in ('svt_av1', 'rav1e', 'aom', 'vpx'):
             if self.d.get('encoder') == 'rav1e':
                 enc = 'rav1e'
             elif self.d.get('encoder') == 'aom':
                 enc = 'aomenc'
             elif self.d.get('encoder') == 'svt_av1':
                 enc = 'SvtAv1EncApp'
+            elif self.d.get('encoder') == 'vpx':
+                enc = 'vpxenc'
 
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
@@ -137,7 +139,7 @@ class Av1an:
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 
-        if self.d.get('encoder') == 'aom' or self.d.get('encoder') == 'rav1e':
+        if self.d.get('encoder') == 'aom' or self.d.get('encoder') == 'rav1e' or self.d.get('encoder') == 'vpx':
             self.d['workers'] = round(min(cpu / 2, ram / 1.5))
 
         elif self.d.get('encoder') == 'svt_av1':
@@ -407,9 +409,9 @@ class Av1an:
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
             return pass_1_commands
+        
+        # 2 encode pass not working with FFmpeg pipes :(
         if self.d.get('passes') == 2:
-
-            # 2 encode pass not working with FFmpeg pipes :(
             pass_2_commands = [
                 (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} '
                  f' rav1e - --first-pass {file[0].with_suffix(".stat")} {self.d.get("video_params")} '
@@ -419,9 +421,36 @@ class Av1an:
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
-
             return pass_2_commands
 
+    def vpx_encode(self, input_files):
+        """VPX encoding command composition."""
+        if not self.d.get("video_params"):
+            self.d["video_params"] = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
+
+        single_p = 'vpxenc  -q --passes=1 '
+        two_p_1_vpx = 'vpxenc -q --passes=2 --pass=1'
+        two_p_2_vpx = 'vpxenc  -q --passes=2 --pass=2'
+
+        if self.d.get('passes') == 1:
+            pass_1_commands = [
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
+                 f'  {single_p} {self.d.get("video_params")} -o {file[1].with_suffix(".ivf")} - ',
+                 (file[0], file[1].with_suffix('.ivf')))
+                for file in input_files]
+            return pass_1_commands
+
+        if self.d.get('passes') == 2:
+            pass_2_commands = [
+                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
+                 f' {two_p_1_vpx} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
+                 f' {two_p_2_vpx} {self.d.get("video_params")} '
+                 f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+                 (file[0], file[1].with_suffix('.ivf')))
+                for file in input_files]
+            return pass_2_commands
+                     
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splited videos."""
         input_files = [(self.d.get('temp') / "split" / file.name,
@@ -436,6 +465,9 @@ class Av1an:
 
         elif self.d.get('encoder') == 'svt_av1':
             queue = self.svt_av1_encode(input_files)
+                     
+        elif self.d.get('encoder') == 'vpx':
+            queue = self.vpx_encode(input_files)
 
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'

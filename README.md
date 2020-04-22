@@ -80,7 +80,7 @@ With your own parameters:
 
     -log --logging          Path to .log file(Default: no logging)
 
-    --temp                  Set path for temporally forlders. Default: .temp
+    --temp                  Set path for temporally folders. Default: .temp
 
     --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
 

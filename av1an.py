@@ -409,7 +409,7 @@ class Av1an:
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
             return pass_1_commands
-        
+
         # 2 encode pass not working with FFmpeg pipes :(
         if self.d.get('passes') == 2:
             pass_2_commands = [
@@ -450,7 +450,7 @@ class Av1an:
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
             return pass_2_commands
-                     
+
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splited videos."""
         input_files = [(self.d.get('temp') / "split" / file.name,
@@ -465,7 +465,7 @@ class Av1an:
 
         elif self.d.get('encoder') == 'svt_av1':
             queue = self.svt_av1_encode(input_files)
-                     
+
         elif self.d.get('encoder') == 'vpx':
             queue = self.vpx_encode(input_files)
 
@@ -921,8 +921,9 @@ class Av1an:
         # encode
         # send back
 
-    def main(self):
+    def main_thread(self):
         """Main."""
+
         # Start time
         tm = time.time()
 

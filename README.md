@@ -84,7 +84,7 @@ With your own parameters:
 
     --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
 
-    -bl                     CQ limit for boosting.
+    -bl                     CQ limit for boosting. Cq can't get lower than this value.
 
     -br                     CQ range for boosting.
     

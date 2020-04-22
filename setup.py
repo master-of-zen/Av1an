@@ -1,5 +1,15 @@
 import setuptools
 
+REQUIRES = [
+    'numpy',
+    'scenedetect[opencv,progress_bar]',
+    'opencv-python',
+    'tqdm',
+    'psutil',
+    'scipy',
+    'matplotlib',
+]
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -12,7 +22,8 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/master-of-zen/Av1an",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages('.', exclude='tests'),
+    install_requires=REQUIRES,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -49,7 +49,7 @@ With your own parameters:
                             Example: -a '-c:a libopus -b:a  64k'
 
     -w   --workers          Overrides automatically set number of workers.
-                            Example: Rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -t 3
+                            Example: Rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -w 3
 
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored

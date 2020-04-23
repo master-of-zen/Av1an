@@ -58,7 +58,7 @@ class Av1an:
         parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=float, default=30, help='PySceneDetect Threshold')
+        parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')

@@ -24,7 +24,8 @@ setuptools.setup(
     url="https://github.com/master-of-zen/Av1an",
     packages=setuptools.find_packages('.', exclude='tests'),
     install_requires=REQUIRES,
-    entry_points={"console_scripts": ["Av1an=av1an:main"]}
+    py_modules=['av1an'],
+    entry_points={"console_scripts": ["av1an=av1an:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

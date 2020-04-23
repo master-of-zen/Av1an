@@ -946,15 +946,17 @@ class Av1an:
             print('No valid work mode')
             exit()
 
+def main():
+    # Windows fix for multiprocessing
+        multiprocessing.freeze_support()
+
+        # Main thread
+        try:
+            Av1an().main_thread()
+        except KeyboardInterrupt:
+            print('Encoding stopped')
+            sys.exit()
+
 
 if __name__ == '__main__':
-
-    # Windows fix for multiprocessing
-    multiprocessing.freeze_support()
-
-    # Main thread
-    try:
-        Av1an().main()
-    except KeyboardInterrupt:
-        print('Encoding stopped')
-        sys.exit()
+    main()

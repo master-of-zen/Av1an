@@ -32,7 +32,7 @@ With your own parameters:
     -i   --file_path         Input file (relative or absolute path)
 
     -o   --output_file       Name/Path for output file (Default: (input file name)_av1.mkv)
-                            Output file ending is always `.mkv`
+                            Output file ending is always `.mkv` unless otherwise specified
 
     -enc --encoder          Encoder to use (aom or rav1e or svt_av1. Default: aom)
                             Example: -enc rav1e

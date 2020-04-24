@@ -564,9 +564,13 @@ class Av1an:
             vm = self.d.get('tg_vmaf')
             if vm:
                 plt.hlines(vm, 0, len(x1), colors='red')
+            plt.hlines(sum(real_y)/len(real_y),0, len(x1), colors='blue')
 
             # Save/close
-            plt.savefig(self.d.get('input_file').stem)
+            plt.ylabel('VMAF')
+            plt.xlabel('Frames')
+            plt.tight_layout()
+            plt.savefig(self.d.get('input_file').stem, dpi=600)
             plt.close()
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -577,6 +581,7 @@ class Av1an:
         mincq = self.d.get('min_cq')
         maxcq = self.d.get('max_cq')
         steps = self.d.get('vmaf_steps')
+        frames = self.frame_probe(source)
 
         # Making 3fps probing file
         cq = self.man_cq(command, -1)
@@ -625,8 +630,11 @@ class Av1an:
 
         for i in range(int(min(xnew)), int(max(xnew)) + 1, 1):
             plt.axvline(i, color='grey', linewidth=0.5)
-
-        plt.savefig(probe.stem)
+        plt.ylabel('vmaf')
+        plt.xlabel('cq')
+        plt.title(f'Chunk: {probe.stem}, Frames: {frames}') # Add frame count
+        plt.tight_layout()
+        plt.savefig(probe.stem, dpi=300)
         plt.close()
 
         return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'

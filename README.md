@@ -34,7 +34,7 @@ With your own parameters:
     -o   --output_file       Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use (aom or rav1e or svt_av1. Default: aom)
+    -enc --encoder          Encoder to use (aom,rav1e,svt_av1,vpx. Default: aom)
                             Example: -enc rav1e
 
     -v   --video_params     Encoder settings flags (If not set, will be used default parameters.
@@ -73,7 +73,7 @@ With your own parameters:
                             /.temp folder must be presented for resume.
 
     --no_check              Skip checking numbers of frames for source and encoded chunks.
-                            Needed if framerate changes.
+                            Needed if framerate changes to avoid console spam.
                             By default any differences in frames of encoded files will be reported.
 
     --keep                  Not deleting temprally folders after encode finished.
@@ -89,9 +89,22 @@ With your own parameters:
     -br                     CQ range for boosting. Delta for which CQ can be changed
     
     --vmaf                  Calculate vmaf for each encoded clip.
+                            Saves plot after encode, showing vmaf values for all video segments.
                             Requires: Installed FFMPEG with libvmaf and installed libvmaf.
                             
     --vmaf_path             Custom path to libvmaf models, by default used system one.
+    
+    --tg_vmaf               Vmaf value to target. Best works with 90-95 on 720/1080.
+
+    --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
+                            Must be bigger than 3. Optimal is 4-6 probes. Default: 4
+    
+    --vmaf_error            Decrease initial Vmaf values for interpolation.Increasing number will result 
+                            in lower CQ and bigger final vmaf score, use to correct whole vmaf plot. 
+                            For start If target vmaf undershoot increase value by undershoot amount.
+   
+    --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation.
+                            Use to limit CQ values range. Default: 20, 63.
 
 <h2 align="center">Main Features</h2>
 

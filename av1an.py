@@ -6,6 +6,7 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
+import atexit
 from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
@@ -27,6 +28,12 @@ from scenedetect.detectors import ContentDetector
 if sys.version_info < (3, 7):
     print('Python 3.7+ required')
     sys.exit()
+
+if sys.platform == 'linux':
+    def restore_term():
+        os.system("stty sane")
+
+    atexit.register(restore_term)
 
 
 class Av1an:

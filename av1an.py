@@ -6,6 +6,7 @@ from tqdm import tqdm
 import sys
 import os
 import shutil
+import atexit
 from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
@@ -27,6 +28,12 @@ from scenedetect.detectors import ContentDetector
 if sys.version_info < (3, 7):
     print('Python 3.7+ required')
     sys.exit()
+
+if sys.platform == 'linux':
+    def restore_term():
+        os.system("stty sane")
+
+    atexit.register(restore_term)
 
 
 class Av1an:
@@ -58,7 +65,7 @@ class Av1an:
         parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=float, default=30, help='PySceneDetect Threshold')
+        parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')

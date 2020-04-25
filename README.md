@@ -57,7 +57,7 @@ With your own parameters:
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
 
-    -tr  --threshold        PySceneDetect threshold for scene detection Default: 30
+    -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
 
     -ff  --ffmpeg             FFmpeg options. Applied to each segment individually 
                             Example:

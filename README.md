@@ -20,11 +20,11 @@ Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SV
 
 Example with default parameters:
 
-    ./av1an.py -i input
+    av1an -i input
 
 With your own parameters:
 
-    ./av1an.py -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 " -ff " -vf scale=-1:720 "
+    av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 " -ff " -vf scale=-1:720 "
     -w 10 -p 2 -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output_file
 
 <h2 align="center">Usage</h2>
@@ -120,48 +120,15 @@ With your own parameters:
 *   Logging of progress of all encoders.
 *   "Boosting" quality of scenes based on their brightness.
 
-## Install on Windows
-
-### 1. Use ready [Release](https://github.com/master-of-zen/Av1an/releases)
-   With every release included archive that have all needed executables.
-   No extra installation of dependencies is needed. 
-   Just unpack it to desired folder and use cmd or powershell
-   to execute ` av1an.exe all_params`
-
-   Autobuilding .exe from current git available at [AppVeyor](https://ci.appveyor.com/project/master-of-zen/av1an).
-
-   To ensure correct work all .exe for ffmpeg, and encoders should be in same folder.
-
-### 2. Install with dependancies
-*   [Python3](https://www.python.org/downloads/)
+## Install 
+*   [Python3](https://www.python.org/downloads/) 
+For Windows in installer set check option to `add Python to PATH` 
+*   [Av1an on PIP](https://pypi.org/project/Av1an/)
+Installation: `pip install Av1an`
 *   [FFmpeg](https://ffmpeg.org/download.html)
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
-
-All .exe for ffmpeg and encoders should be in same folder or 
-be accesable through `PATH`
-
-Install all python requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
-
-If installed programs don't added to enviroment variable,
-executables can be put in same folder with av1an
-
-Run with command: `python -i ./av1an.py params..`
-
-## Install on Linux
-
-*   [Python3](https://www.python.org/downloads/)
-*   [FFmpeg](https://ffmpeg.org/download.html)
-*   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
-*   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
-*   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
-
-Install all python requirements listed in `requirements.txt` file with `pip install -r requirements.txt`
-
-Optionally add Av1an to your PATH
-
-Run with command: `av1an.py params...`
 
 ### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

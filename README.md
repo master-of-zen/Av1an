@@ -135,6 +135,5 @@ Installation: `pip install Av1an`
 
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
-
 ### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

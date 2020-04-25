@@ -122,13 +122,19 @@ With your own parameters:
 
 ## Install 
 *   [Python3](https://www.python.org/downloads/) 
-For Windows in installer set check option to `add Python to PATH` 
+For Windows in installer set check option to `add Python to PATH`
+
 *   [Av1an on PIP](https://pypi.org/project/Av1an/)
 Installation: `pip install Av1an`
+
 *   [FFmpeg](https://ffmpeg.org/download.html)
+
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
+
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
+
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+
 
 ### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

@@ -554,6 +554,7 @@ class Av1an:
             # Save/close
             plt.ylabel('VMAF')
             plt.xlabel('Frames')
+            plt.title(f'{self.d.get("input_file").stem}, {frames} ')
             plt.tight_layout()
             plt.savefig(self.d.get('input_file').stem, dpi=600)
             plt.close()
@@ -596,7 +597,6 @@ class Av1an:
             ls.append((v, i[3]))
         x = [x[1] for x in ls]
         y = [(float(x[0]) - self.d.get('vmaf_error')) for x in ls]
-
         # Interpolate data
         f = interpolate.interp1d(x, y, kind='cubic')
 
@@ -610,10 +610,13 @@ class Av1an:
         plt.plot(xnew, f(xnew))
         plt.plot(tg_cq[0], tg_cq[1], 'o')
 
+        # Plot data points
+        plt.plot(x,y,'x',color='red')
+
         for i in range(int(min(x[1] for x in tl)), 100, 1):
             plt.axhline(i, color='grey', linewidth=0.5)
 
-        for i in range(int(min(xnew)), int(max(xnew)) + 1, 1):
+        for i in range(int(min(xnew)), int(max(xnew)) + 1, 5):
             plt.axvline(i, color='grey', linewidth=0.5)
         plt.ylabel('vmaf')
         plt.xlabel('cq')

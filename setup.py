@@ -15,7 +15,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Av1an", # Replace with your own username
-    version="1.7.0",
+    version="1.8.0",
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
     description="All-in-one encode toolkit",

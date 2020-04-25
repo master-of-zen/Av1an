@@ -375,14 +375,23 @@ class Av1an:
                 for file in input_files]
             return pass_2_commands
 
-    def aom_encode(self, input_files):
+    def aom_vpx_encode(self, input_files):
         """AOM encoding command composition."""
-        if not self.d.get("video_params"):
-            self.d["video_params"] = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+        encoder = self.d.get('encoder')
 
-        single_p = 'aomenc  -q --passes=1 '
-        two_p_1_aom = 'aomenc -q --passes=2 --pass=1'
-        two_p_2_aom = 'aomenc  -q --passes=2 --pass=2'
+        if encoder == 'vpx':
+            enc = 'vpxenc'
+            if not self.d.get("video_params"):
+                self.d["video_params"] = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
+
+        if encoder == 'aom':
+            enc = 'aomenc'
+            if not self.d.get("video_params"):
+                self.d["video_params"] = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+
+        single_p = f'{enc}  -q --passes=1 '
+        two_p_1 = f'{enc} -q --passes=2 --pass=1'
+        two_p_2 = f'{enc}  -q --passes=2 --pass=2'
 
         if self.d.get('passes') == 1:
             pass_1_commands = [
@@ -395,9 +404,9 @@ class Av1an:
         if self.d.get('passes') == 2:
             pass_2_commands = [
                 (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_1_aom} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f' {two_p_1} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_2_aom} {self.d.get("video_params")} '
+                 f' {two_p_2} {self.d.get("video_params")} '
                  f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in input_files]
@@ -430,51 +439,20 @@ class Av1an:
                 for file in input_files]
             return pass_2_commands
 
-    def vpx_encode(self, input_files):
-        """VPX encoding command composition."""
-        if not self.d.get("video_params"):
-            self.d["video_params"] = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
-
-        single_p = 'vpxenc  -q --passes=1 '
-        two_p_1_vpx = 'vpxenc -q --passes=2 --pass=1'
-        two_p_2_vpx = 'vpxenc  -q --passes=2 --pass=2'
-
-        if self.d.get('passes') == 1:
-            pass_1_commands = [
-                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
-                 f'  {single_p} {self.d.get("video_params")} -o {file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
-            return pass_1_commands
-
-        if self.d.get('passes') == 2:
-            pass_2_commands = [
-                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_1_vpx} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
-                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_2_vpx} {self.d.get("video_params")} '
-                 f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
-            return pass_2_commands
-
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splited videos."""
         input_files = [(self.d.get('temp') / "split" / file.name,
                        self.d.get('temp') / "encode" / file.name,
                        file) for file in files]
 
-        if self.d.get('encoder') == 'aom':
-            queue = self.aom_encode(input_files)
+        if self.d.get('encoder') in ('aom','vpx'):
+            queue = self.aom_vpx_encode(input_files)
 
         elif self.d.get('encoder') == 'rav1e':
             queue = self.rav1e_encode(input_files)
 
         elif self.d.get('encoder') == 'svt_av1':
             queue = self.svt_av1_encode(input_files)
-
-        elif self.d.get('encoder') == 'vpx':
-            queue = self.vpx_encode(input_files)
 
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'

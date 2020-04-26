@@ -458,6 +458,11 @@ class Av1an:
                  f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'
                  f'Params: {self.d.get("video_params")}\n')
 
+        # Catch Error
+        if len(queue) == 0:
+            print('Error in making command queue')
+            sys.exit()
+
         return queue
 
     def get_brightness(self, video):
@@ -814,11 +819,6 @@ class Av1an:
 
         # Make encode queue
         commands = self.compose_encoding_queue(files)
-
-        # Catch Error
-        if len(commands) == 0:
-            print('Error in making command queue')
-            sys.exit()
 
         # Determine resources if workers don't set
         if self.d.get('workers') != 0:

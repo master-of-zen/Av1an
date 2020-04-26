@@ -833,58 +833,12 @@ class Av1an:
 
         self.concatenate_video()
 
-    def receive_file(self, sock:socket, file:Path):
-        try:
-            sc, _ = sock.accept()
-            with open(file.name, 'wb') as f:
-                while True:
-                    data = sc.recv(1024)
-                    while data:
-                        f.write(data)
-                        data = sc.recv(1024)
-        except Exception as i:
-            _, _, exc_tb = sys.exc_info()
-            print(f'Error: Receiving file failed\n{i} at line: {exc_tb.tb_lineno}')
-
-    def send_file(self, sock:socket, file:Path):
-        try:
-            self.log(f"Sending {file.name}\n")
-            with open(file.absolute().as_posix(), 'rb') as f:
-                data = f.read(1024)
-                while data:
-                    sock.send(data)
-                    data = f.read(1024)
-            return True
-
-        except Exception as e:
-            print(f"Error: Failed to send file\n{e}")
-
     def master_mode(self):
         """Master mode. Splitting, managing queue, sending chunks, receiving chunks, concat videos."""
         print('Working in master mode')
 
         # Setup
         self.setup_routine()
-
-        # files = self.get_video_queue(self.d.get('temp') / 'split')
-
-        host = '127.0.0.1'                  # Symbolic name meaning all available interfaces
-        port = 40995          # Arbitrary non-privileged port
-
-        # data to send
-        args_dict = str(self.d).encode()
-
-
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((host, port))
-                print('Connected to: ', host, port)
-                s.sendall(args_dict)
-                print('Encoding data send')
-        except ConnectionRefusedError:
-            print(f'Connection refused: {host}:{port}')
-        # Creating Queue
-        # Sending Chunks to server
 
     def server(self):
         """Encoder mode: Connecting, Receiving, Encoding."""
@@ -895,27 +849,6 @@ class Av1an:
 
         print(f'Bind at {host} {port}')
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-
-            s.bind((host, port))
-            while True:
-                s.listen()
-                print('Stand by..')
-                conn, addr = s.accept()
-                print('Accepted connection: ', addr)
-                with conn:
-                    temp = b''
-                    while True:
-                        data = conn.recv(1024)
-                        if not data:
-                            break
-                        temp += data
-                    print('Received Settings from master:\n', temp)
-                    conn.sendall(temp)
-        # while chunks
-        # receive chunks
-        # encode
-        # send back
 
     def main_thread(self):
         """Main."""

@@ -796,8 +796,10 @@ class Av1an:
         All pre encoding routine.
         Scene detection, splitting, audio extraction
         """
-        if not (self.d.get('resume') and self.d.get('temp').exists()):
-            # Check validity of request and create temp folders/files
+        if self.d.get('resume') and (self.d.get('temp') / 'done.txt').exists():
+            self.set_logging()
+
+        else:
             self.setup(self.d.get('input_file'))
 
             self.set_logging()
@@ -808,8 +810,6 @@ class Av1an:
 
             # Extracting audio
             self.extract_audio(self.d.get('input_file'))
-        else:
-            self.set_logging()
 
     def video_encoding(self):
         """Encoding video on local machine."""

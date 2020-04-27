@@ -128,11 +128,8 @@ For Windows in installer set check option to `add Python to PATH`
 Installation: `pip install Av1an`
 
 *   [FFmpeg](https://ffmpeg.org/download.html)
-
 *   [AOMENC](https://aomedia.googlesource.com/aom/) For Aomenc encoder
-
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
-
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
 ### Donations for Threadripper 3990x dream

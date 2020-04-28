@@ -16,7 +16,7 @@
 </h4>
 <h2 align="center">Easy, Fast, and Efficient </h2>
 
-Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SVT-AV1).
+Start using AV1 encoding. All open-source encoders are supported (Aom, Rav1e, SVT-AV1) also VP9, VP8.
 
 Example with default parameters:
 

@@ -103,7 +103,7 @@ With your own parameters:
                             in lower CQ and bigger final vmaf score, use to correct whole vmaf plot. 
                             For start If target vmaf undershoot increase value by undershoot amount.
    
-    --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation.
+    --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation in target Vmaf mode
                             Use to limit CQ values range. Default: 20, 63.
 
 <h2 align="center">Main Features</h2>

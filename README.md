@@ -132,5 +132,7 @@ Installation: `pip install Av1an`
 *   [Rav1e](https://github.com/xiph/rav1e) For Rav1e encoder
 *   [SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
 
+For update run `pip install av1an -U`
+
 ### Donations for Threadripper 3990x dream
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

@@ -163,7 +163,7 @@ class Av1an:
         else:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
-    def setup(self, input_file: Path):
+    def setup(self):
         """Creating temporally folders when needed."""
         # Make temporal directories, and remove them if already presented
         if self.d.get('temp').exists() and self.d.get('resume'):
@@ -445,7 +445,7 @@ class Av1an:
                        self.d.get('temp') / "encode" / file.name,
                        file) for file in files]
 
-        if self.d.get('encoder') in ('aom','vpx'):
+        if self.d.get('encoder') in ('aom', 'vpx'):
             queue = self.aom_vpx_encode(input_files)
 
         elif self.d.get('encoder') == 'rav1e':
@@ -465,7 +465,8 @@ class Av1an:
 
         return queue
 
-    def get_brightness(self, video):
+    @staticmethod
+    def get_brightness(video):
         """Getting average brightness value for single video."""
         brightness = []
         cap = cv2.VideoCapture(video)
@@ -491,7 +492,8 @@ class Av1an:
 
         return brig_geom
 
-    def man_cq(self, command: str, cq: int):
+    @staticmethod
+    def man_cq(command: str, cq: int):
         """
         If cq == -1 returns current value of cq in command
         Else return command with new cq value
@@ -554,7 +556,7 @@ class Av1an:
             vm = self.d.get('tg_vmaf')
             if vm:
                 plt.hlines(vm, 0, len(x1), colors='red')
-            plt.hlines(sum(real_y)/len(real_y),0, len(x1), colors='blue')
+            plt.hlines(sum(real_y) / len(real_y), 0, len(x1), colors='blue')
 
             # Save/close
             plt.ylabel('VMAF')
@@ -596,7 +598,7 @@ class Av1an:
         for i in cmd:
             self.call_cmd(i[0])
             v = self.get_vmaf(i[1], i[2])
-            if isinstance(v,str):
+            if isinstance(v, str):
                 return int(cq), 'Error in vmaf calculation\n'
 
             ls.append((v, i[3]))
@@ -616,7 +618,7 @@ class Av1an:
         plt.plot(tg_cq[0], tg_cq[1], 'o')
 
         # Plot data points
-        plt.plot(x,y,'x',color='red')
+        plt.plot(x, y, 'x', color='red')
 
         for i in range(int(min(x[1] for x in tl)), 100, 1):
             plt.axhline(i, color='grey', linewidth=0.5)
@@ -625,7 +627,7 @@ class Av1an:
             plt.axvline(i, color='grey', linewidth=0.5)
         plt.ylabel('vmaf')
         plt.xlabel('cq')
-        plt.title(f'Chunk: {probe.stem}, Frames: {frames}') # Add frame count
+        plt.title(f'Chunk: {probe.stem}, Frames: {frames}')  # Add frame count
         plt.tight_layout()
         plt.savefig(probe.stem, dpi=300)
         plt.close()
@@ -689,7 +691,7 @@ class Av1an:
 
             if self.d.get('vmaf'):
                 v = self.get_vmaf(source, target)
-                if isinstance(v,str):
+                if isinstance(v, str):
                     vmaf = f'Vmaf: {v}\n'
                     v = None
                 else:
@@ -800,8 +802,7 @@ class Av1an:
             self.set_logging()
 
         else:
-            self.setup(self.d.get('input_file'))
-
+            self.setup()
             self.set_logging()
 
             # Splitting video and sorting big-first
@@ -849,10 +850,8 @@ class Av1an:
 
         print(f'Bind at {host} {port}')
 
-
     def main_thread(self):
         """Main."""
-
         # Start time
         tm = time.time()
 
@@ -862,7 +861,6 @@ class Av1an:
         # Video Mode. Encoding on local machine
         if self.d.get('mode') == 0:
             self.video_encoding()
-            print(f'Finished: {round(time.time() - tm, 1)}s')
         # Master mode
         elif self.d.get('mode') == 1:
             self.master_mode()
@@ -877,14 +875,14 @@ class Av1an:
 
 def main():
     # Windows fix for multiprocessing
-        multiprocessing.freeze_support()
+    multiprocessing.freeze_support()
 
-        # Main thread
-        try:
-            Av1an().main_thread()
-        except KeyboardInterrupt:
-            print('Encoding stopped')
-            sys.exit()
+    # Main thread
+    try:
+        Av1an().main_thread()
+    except KeyboardInterrupt:
+        print('Encoding stopped')
+        sys.exit()
 
 
 if __name__ == '__main__':

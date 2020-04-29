@@ -861,6 +861,7 @@ class Av1an:
         # Video Mode. Encoding on local machine
         if self.d.get('mode') == 0:
             self.video_encoding()
+            print(f'Finished: {round(time.time() - tm, 1)}s')
         # Master mode
         elif self.d.get('mode') == 1:
             self.master_mode()
@@ -872,6 +873,7 @@ class Av1an:
         else:
             print('No valid work mode')
             exit()
+
 
 def main():
     # Windows fix for multiprocessing

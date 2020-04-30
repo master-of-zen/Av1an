@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 import time
 import socket
 from tqdm import tqdm
@@ -86,6 +87,7 @@ class Av1an:
         parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
         parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
         parser.add_argument('--max_cq', type=int, default=63, help='Max cq for target vmaf')
+        parser.add_argument('--min_splits', help='Only split up to n times where n is number of workers', action='store_true')
         parser.add_argument('--host', type=str, help='ip of host')
 
         # Store all vars in dictionary
@@ -270,6 +272,21 @@ class Av1an:
             self.log(f'Found scenes: {len(scene_list)}\n')
 
             scenes = [str(scene[0].get_frames()) for scene in scene_list]
+
+            if (self.d.get('min_splits')):
+                # Reduce scenes intelligently to match number of workers
+                workers = self.d.get('workers')
+                ideal_split_pts = [math.floor(x * video_manager.get_duration()[0].get_frames()/(workers)) for x in range(workers)]
+                print("Reducing scenes to " + str(workers) + " splits")
+                intscenes = [int(x) for x in scenes]
+                scenes = list()
+                for i in ideal_split_pts:
+                    # This will find the closest split points to the ideal ones
+                    # for perfectly segmenting the video into n pieces
+                    scenes.append(min(intscenes, key=lambda x:abs(x-i)))
+                scenes = list(set(scenes))
+                scenes.sort()
+                scenes = [str(x) for x in scenes]
 
             # Fix for windows character limit
             if sys.platform != 'linux':

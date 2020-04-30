@@ -202,9 +202,10 @@ class Av1an:
         else:
             model = ''
 
-        cmd = f'{self.FFMPEG} -i {source.as_posix()} -i {encoded.as_posix()}  ' \
-              f'-filter_complex "[0:v][1:v]libvmaf{model}" ' \
-              f'-max_muxing_queue_size 1024 -f null - '
+        cmd = f'ffmpeg -hide_banner -i {source.as_posix()} -i {encoded.as_posix()}  ' \
+              f'-filter_complex "[0:v]scale=1920x1080:flags=spline[scaled1];' \
+              f'[1:v]scale=1920x1080:flags=spline[scaled2];' \
+              f'[scaled2][scaled1]libvmaf{model}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)
         result = call.decode().strip().split()

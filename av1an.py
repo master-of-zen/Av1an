@@ -203,8 +203,8 @@ class Av1an:
             model = ''
 
         cmd = f'ffmpeg -hide_banner -i {source.as_posix()} -i {encoded.as_posix()}  ' \
-              f'-filter_complex "[0:v]scale=1920x1080:flags=spline[scaled1];' \
-              f'[1:v]scale=1920x1080:flags=spline[scaled2];' \
+              f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
+              f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
               f'[scaled2][scaled1]libvmaf{model}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)

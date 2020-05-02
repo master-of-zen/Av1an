@@ -821,7 +821,8 @@ class Av1an:
                 shutil.rmtree(self.d.get('temp'))
 
         except Exception as e:
-            print(f'Concatenation failed, FFmpeg error')
+            _, _, exc_tb = sys.exc_info()
+            print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
             self.log(f'Concatenation failed, aborting, error: {e}\n')
             sys.exit()
 

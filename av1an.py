@@ -56,41 +56,7 @@ class Av1an:
         with open(self.d.get('logging'), 'a') as log:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
 
-    def arg_parsing(self):
-        """Command line parse and sanity checking."""
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--mode', '-m', type=int, default=0, help='Mode 0 - video, Mode 1 - image')
-        parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
-        parser.add_argument('--input_file', '-i', type=Path, help='Input File')
-        parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
-        parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
-        parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
-        parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
-        parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
-        parser.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
-        parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
-        parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
-        parser.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
-        parser.add_argument('--pix_format', '-fmt', type=str, default='yuv420p', help='FFmpeg pixel format')
-        parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
-        parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
-        parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
-        parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
-        parser.add_argument('--boost', help='Experimental feature', action='store_true')
-        parser.add_argument('-br', default=15, type=int, help='Range/strenght of CQ change')
-        parser.add_argument('-bl', default=10, type=int, help='CQ limit for boosting')
-        parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
-        parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
-        parser.add_argument('--tg_vmaf', type=float, help='Value of Vmaf to target')
-        parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
-        parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
-        parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
-        parser.add_argument('--max_cq', type=int, default=63, help='Max cq for target vmaf')
-        parser.add_argument('--host', type=str, help='ip of host')
-
-        # Store all vars in dictionary
-        self.d = vars(parser.parse_args())
-
+    def check_executables(self):
         if not find_executable('ffmpeg'):
             print('No ffmpeg')
             sys.exit()
@@ -113,7 +79,8 @@ class Av1an:
             print(f'Not valid encoder {self.d.get("encoder")} ')
             sys.exit()
 
-        # Check input file
+    def process_input_files(self):
+        # Check input file for being valid
         if self.d.get('mode') == 2 and self.d.get('input_file'):
             print("Server mode, input file ignored")
         elif self.d.get('mode') == 2:
@@ -121,9 +88,72 @@ class Av1an:
         elif self.d.get('mode') != 2 and not self.d.get('input_file'):
             print('No input file')
             sys.exit()
-        elif not self.d.get('input_file').exists():
-            print(f'No file: {self.d.get("input_file")}')
-            sys.exit()
+        else:
+            if not self.d.get('input_file').exists():
+                print(f'No file: {self.d.get("input_file")}')
+                sys.exit()
+            """
+            for file in self.d.get('input_file'):
+                if not file.exists():
+                    print(f'No file: {self.d.get("input_file")}')
+                    sys.exit()
+            """
+
+    def arg_parsing(self):
+        """Command line parse and sanity checking."""
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
+
+        # Input/Output/Temp
+        parser.add_argument('--input_file', '-i', type=Path, help='Input File')  # nargs = '+'
+        parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
+        parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
+
+        # PySceneDetect
+        parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
+        parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
+
+        # Encoding
+        parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
+        parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
+        parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
+        parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
+
+        # FFmpeg params
+        parser.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
+        parser.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
+        parser.add_argument('--pix_format', '-fmt', type=str, default='yuv420p', help='FFmpeg pixel format')
+
+        # Misc
+        parser.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
+        parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
+        parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
+        parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
+
+        # Boost
+        parser.add_argument('--boost', help='Experimental feature', action='store_true')
+        parser.add_argument('--boost_range', default=15, type=int, help='Range/strenght of CQ change')
+        parser.add_argument('--boost_limit', default=10, type=int, help='CQ limit for boosting')
+
+        # Vmaf
+        parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
+        parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
+
+        # Target Vmaf
+        parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
+        parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
+        parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
+        parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
+        parser.add_argument('--max_cq', type=int, default=60, help='Max cq for target vmaf')
+
+        # Server parts
+        parser.add_argument('--host', nargs='+', type=str, help='ips of encoders')
+
+        # Store all vars in dictionary
+        self.d = vars(parser.parse_args())
+
+        self.check_executables()
+        self.process_input_files()
 
         # Set output file
         if self.d.get('mode') != 2:

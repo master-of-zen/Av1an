@@ -79,23 +79,23 @@ class Av1an:
             print(f'Not valid encoder {self.d.get("encoder")} ')
             sys.exit()
 
-    def process_input_files(self):
+    def process_inputs(self):
         # Check input file for being valid
-        if self.d.get('mode') == 2 and self.d.get('input_file'):
+        if self.d.get('mode') == 2 and self.d.get('input'):
             print("Server mode, input file ignored")
         elif self.d.get('mode') == 2:
             pass
-        elif self.d.get('mode') != 2 and not self.d.get('input_file'):
+        elif self.d.get('mode') != 2 and not self.d.get('input'):
             print('No input file')
             sys.exit()
         else:
-            if not self.d.get('input_file').exists():
-                print(f'No file: {self.d.get("input_file")}')
+            if not self.d.get('input').exists():
+                print(f'No file: {self.d.get("input")}')
                 sys.exit()
             """
-            for file in self.d.get('input_file'):
+            for file in self.d.get('input'):
                 if not file.exists():
-                    print(f'No file: {self.d.get("input_file")}')
+                    print(f'No file: {self.d.get("input")}')
                     sys.exit()
             """
 
@@ -105,7 +105,7 @@ class Av1an:
         parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
 
         # Input/Output/Temp
-        parser.add_argument('--input_file', '-i', type=Path, help='Input File')  # nargs = '+'
+        parser.add_argument('--input', '-i', type=Path, help='Input File')  # nargs = '+'
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
@@ -153,14 +153,14 @@ class Av1an:
         self.d = vars(parser.parse_args())
 
         self.check_executables()
-        self.process_input_files()
+        self.process_inputs()
 
         # Set output file
         if self.d.get('mode') != 2:
             if self.d.get('output_file'):
                 self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
             else:
-                self.d['output_file'] = Path(f'{self.d.get("input_file").stem}_av1.mkv')
+                self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
 
         # Changing pixel format, bit format
         self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
@@ -379,7 +379,7 @@ class Av1an:
 
         return queue
 
-    def svt_av1_encode(self, input_files):
+    def svt_av1_encode(self, inputs):
         """SVT-AV1 encoding command composition."""
         if not self.d.get("video_params"):
             print('-w -h -fps is required parameters for svt_av1 encoder')
@@ -391,7 +391,7 @@ class Av1an:
                 (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
                  f'  {encoder} -i stdin {self.d.get("video_params")} -b {file[1].with_suffix(".ivf")} -',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_1_commands
 
         if self.d.get('passes') == 2:
@@ -406,10 +406,10 @@ class Av1an:
                  f'{encoder} -i stdin {self.d.get("video_params")} {p2i} '
                  f'{file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_2_commands
 
-    def aom_vpx_encode(self, input_files):
+    def aom_vpx_encode(self, inputs):
         """AOM encoding command composition."""
         encoder = self.d.get('encoder')
 
@@ -432,7 +432,7 @@ class Av1an:
                 (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
                  f'  {single_p} {self.d.get("video_params")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_1_commands
 
         if self.d.get('passes') == 2:
@@ -443,10 +443,10 @@ class Av1an:
                  f' {two_p_2} {self.d.get("video_params")} '
                  f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_2_commands
 
-    def rav1e_encode(self, input_files):
+    def rav1e_encode(self, inputs):
         """Rav1e encoding command composition."""
         if not self.d.get("video_params"):
             self.d["video_params"] = ' --tiles=4 --speed=10'
@@ -457,7 +457,7 @@ class Av1an:
                  f' rav1e -  {self.d.get("video_params")}  '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_1_commands
 
         # 2 encode pass not working with FFmpeg pipes :(
@@ -470,23 +470,23 @@ class Av1an:
                  f' rav1e - --second-pass {file[0].with_suffix(".stat")} {self.d.get("video_params")} '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
-                for file in input_files]
+                for file in inputs]
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splited videos."""
-        input_files = [(self.d.get('temp') / "split" / file.name,
+        inputs = [(self.d.get('temp') / "split" / file.name,
                        self.d.get('temp') / "encode" / file.name,
                        file) for file in files]
 
         if self.d.get('encoder') in ('aom', 'vpx'):
-            queue = self.aom_vpx_encode(input_files)
+            queue = self.aom_vpx_encode(inputs)
 
         elif self.d.get('encoder') == 'rav1e':
-            queue = self.rav1e_encode(input_files)
+            queue = self.rav1e_encode(inputs)
 
         elif self.d.get('encoder') == 'svt_av1':
-            queue = self.svt_av1_encode(input_files)
+            queue = self.svt_av1_encode(inputs)
 
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'
@@ -595,9 +595,9 @@ class Av1an:
             # Save/close
             plt.ylabel('VMAF')
             plt.xlabel('Frames')
-            plt.title(f'{self.d.get("input_file").stem}, {frames} ')
+            plt.title(f'{self.d.get("input").stem}, {frames} ')
             plt.tight_layout()
-            plt.savefig(self.d.get('input_file').stem, dpi=600)
+            plt.savefig(self.d.get('input').stem, dpi=600)
             plt.close()
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -849,13 +849,13 @@ class Av1an:
                     else:
                         done = 0
                         initial = 0
-                        total = self.frame_probe(self.d.get('input_file'))
+                        total = self.frame_probe(self.d.get('input'))
                 self.log(f'Resumed with {done} encoded clips done\n\n')
 
             else:
                 initial = 0
                 with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
-                    total = self.frame_probe(self.d.get('input_file'))
+                    total = self.frame_probe(self.d.get('input'))
                     f.write(f'{total}\n')
 
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
@@ -889,11 +889,11 @@ class Av1an:
             self.set_logging()
 
             # Splitting video and sorting big-first
-            framenums = self.scene_detect(self.d.get('input_file'))
-            self.split(self.d.get('input_file'), framenums)
+            framenums = self.scene_detect(self.d.get('input'))
+            self.split(self.d.get('input'), framenums)
 
             # Extracting audio
-            self.extract_audio(self.d.get('input_file'))
+            self.extract_audio(self.d.get('input'))
 
     def video_encoding(self):
         """Encoding video on local machine."""

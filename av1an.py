@@ -214,11 +214,11 @@ class Av1an:
             self.log('Reusing Audio File\n')
             return
 
-        # Capture output to check if audio is present
-
+        # Checking is source have audio track
         check = fr'{self.FFMPEG} -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
         is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
+        # If source have audio track - process it
         if is_audio_here:
             self.log(f'Audio processing\n'
                      f'Params: {self.d.get("audio_params")}\n')
@@ -228,18 +228,21 @@ class Av1an:
 
     def get_vmaf(self, source: Path, encoded: Path):
         if self.d.get("vmaf_path"):
-            model = f'=model_path={self.d.get("vmaf_path")}'
+            model = f'model_path={self.d.get("vmaf_path")}'
         else:
             model = ''
 
+        # For vmaf calculation both source and encoded segment scaled to 1080
+        # for proper vmaf calculation
         cmd = f'ffmpeg -hide_banner -i {source.as_posix()} -i {encoded.as_posix()}  ' \
               f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
               f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
-              f'[scaled2][scaled1]libvmaf{model}" -f null - '
+              f'[scaled2][scaled1]libvmaf=log_path={source.with_name(encoded.stem).as_posix()}.xml:{model}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)
         result = call.decode().strip().split()
         if 'monotonically' in result:
+            self.log(''.join(result))
             return 'Nan. Bad dts'
         try:
             res = float(result[-1])
@@ -318,7 +321,7 @@ class Av1an:
             sys.exit()
 
     def split(self, video, frames):
-        """Spliting video by frame numbers, or just copying video."""
+        """Split video by frame numbers, or just copying video."""
         if len(frames) == 0:
             self.log('Copying video for encode\n')
             cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy ' \
@@ -584,7 +587,7 @@ class Av1an:
             plt.ylim((int(min(real_y)), 100))
             for i in range(int(min(real_y)), 100, 1):
                 plt.axhline(i, color='grey', linewidth=0.5)
-            vm = self.d.get('tg_vmaf')
+            vm = self.d.get('vmaf_target')
             if vm:
                 plt.hlines(vm, 0, len(x1), colors='red')
             plt.hlines(sum(real_y) / len(real_y), 0, len(x1), colors='blue')
@@ -601,69 +604,117 @@ class Av1an:
             print(f'\nError in vmaf plot: {e}\nAt line: {exc_tb.tb_lineno}\n')
 
     def target_vmaf(self, source, command):
-        tg = self.d.get('tg_vmaf')
-        mincq = self.d.get('min_cq')
-        maxcq = self.d.get('max_cq')
-        steps = self.d.get('vmaf_steps')
-        frames = self.frame_probe(source)
+        try:
+            tg = self.d.get('vmaf_target')
+            mincq = self.d.get('min_cq')
+            maxcq = self.d.get('max_cq')
+            steps = self.d.get('vmaf_steps')
+            frames = self.frame_probe(source)
 
-        # Making 3fps probing file
-        cq = self.man_cq(command, -1)
-        probe = source.with_suffix(".mp4")
-        cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
-              f'-r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
-        self.call_cmd(cmd)
+            # Making 3fps probing file
+            cq = self.man_cq(command, -1)
+            probe = source.with_suffix(".mp4")
+            cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
+                  f'-r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
+            self.call_cmd(cmd)
 
-        # Make encoding fork
-        q = np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True))
+            # Make encoding fork
+            q = np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True))
 
-        # Encoding probes
-        single_p = 'aomenc  -q --passes=1 '
-        cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
-                f'--threads=4 --end-usage=q --cpu-used=6 --cq-level={x} '
-                f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
-                probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
+            # Encoding probes
+            single_p = 'aomenc  -q --passes=1 '
+            params = "--threads=4 --end-usage=q --cpu-used=6 --cq-level="
+            cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
+                    f'{params}{x} '
+                    f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+                    probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
-        # Encoding probe and getting vmaf
-        ls = []
-        for i in cmd:
-            self.call_cmd(i[0])
-            v = self.get_vmaf(i[1], i[2])
-            if isinstance(v, str):
-                return int(cq), 'Error in vmaf calculation\n'
+            # Encoding probe and getting vmaf
+            ls = []
+            pr = []
+            for i in cmd:
+                self.call_cmd(i[0])
+                v = self.get_vmaf(i[1], i[2])
+                if isinstance(v, str):
+                    return int(cq), 'Error in vmaf calculation\n'
+                pr.append(round(v, 1))
+                ls.append((v, i[3]))
+            x = [x[1] for x in ls]
+            y = [float(x[0]) for x in ls]
 
-            ls.append((v, i[3]))
-        x = [x[1] for x in ls]
-        y = [(float(x[0]) - self.d.get('vmaf_error')) for x in ls]
-        # Interpolate data
-        f = interpolate.interp1d(x, y, kind='cubic')
+            # Interpolate data
+            f = interpolate.interp1d(x, y, kind='cubic')
 
-        xnew = np.linspace(min(x), max(x), max(x)-min(x))
+            xnew = np.linspace(min(x), max(x), max(x) - min(x))
 
-        # Getting value closest to target
-        tl = list(zip(xnew, f(xnew)))
-        tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
+            # Getting value closest to target
+            tl = list(zip(xnew, f(xnew)))
+            tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
 
-        # Saving plot of got data
-        plt.plot(xnew, f(xnew))
-        plt.plot(tg_cq[0], tg_cq[1], 'o')
+            # Try control encode
+            # Get full fps fast encode to get error, and when adjust graph
+            # Based on error and return adjusted value
 
-        # Plot data points
-        plt.plot(x, y, 'x', color='red')
+            probe_name = Path(f"{source.with_name(f'x_{source.stem}')}.ivf")
+            run_cmd = f" {self.FFMPEG} -i {source.absolute().as_posix()} {self.d.get('ffmpeg_pipe')} {single_p} " \
+                      f"{params}{int(tg_cq[0])} -o {probe_name} -"
+            self.call_cmd(run_cmd)
 
-        for i in range(int(min(x[1] for x in tl)), 100, 1):
-            plt.axhline(i, color='grey', linewidth=0.5)
+            new_vmaf = self.get_vmaf(source, probe_name)
 
-        for i in range(int(min(xnew)), int(max(xnew)) + 1, 5):
-            plt.axvline(i, color='grey', linewidth=0.5)
-        plt.ylabel('vmaf')
-        plt.xlabel('cq')
-        plt.title(f'Chunk: {probe.stem}, Frames: {frames}')  # Add frame count
-        plt.tight_layout()
-        plt.savefig(probe.stem, dpi=300)
-        plt.close()
+            if isinstance(new_vmaf, str):
+                return int(cq), 'Error in vmaf calculation'
+            # If real is lower - number negative
+            difference = -(new_vmaf - float(tg_cq[1]))
 
-        return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'
+            """
+            if difference > 10:
+                print('Invalidate difference: ', round(difference, 2), 'Reset to 0')
+                difference = 0
+            else:
+                print('Difference: ', round(difference, 2))
+            """
+
+            y2 = [v - difference for v in y]
+            new_interpolate = interpolate.interp1d(x, y2, kind='cubic')
+            new_line = list(zip(xnew, new_interpolate(xnew)))
+            # New target cq for vmaf
+            new_tg_cq = min(new_line, key=lambda x: abs(x[1] - tg))
+
+            # Saving plot of got data
+            # Plot first
+            plt.plot(x, y, 'x', color='blue')
+            plt.plot(xnew, f(xnew), color='blue')
+            plt.plot(tg_cq[0], tg_cq[1], 'o', color='blue')
+
+            # Plot corrected
+            plt.plot(xnew, new_interpolate(xnew), color='green')
+            plt.plot(new_tg_cq[0], new_tg_cq[1], 'o', color='green')
+            plt.plot(x, y2, 'x', color='green')
+
+            mn = [x[1] for x in tl] + [x[1] for x in new_line]
+            mn = [int(x) for x in mn]
+            mn = min(mn)
+            for i in range(mn, 100, 1):
+                plt.axhline(i, color='grey', linewidth=0.5)
+
+            for i in range(int(min(xnew)), int(max(xnew)) + 1, 5):
+                plt.axvline(i, color='grey', linewidth=0.5)
+            plt.ylabel('vmaf')
+            plt.xlabel('cq')
+            plt.title(f'Chunk: {probe.stem}, Frames: {frames}')  # Add frame count
+            plt.tight_layout()
+            plt.savefig(probe.stem, dpi=300)
+            plt.close()
+            self.log(f"File: {source.stem}, {frames}\n"
+                     f"New vmaf: {new_vmaf}\n"
+                     f"Probes: {pr}"
+                     f"Target CQ: {tg_cq[0]}, Dif: {round(difference, 2)}\n")
+            return int(tg_cq[0]), f'Target: CQ {int(new_tg_cq[0])} Vmaf: {round(float(new_tg_cq[1]), 2)}\n'
+
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
 
     def encode(self, commands):
         """Single encoder command queue and logging output."""
@@ -674,7 +725,7 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = self.frame_probe(source)
 
-            if self.d.get('tg_vmaf'):
+            if self.d.get('vmaf_target'):
 
                 # Make sure that vmaf calculated after encoding
                 self.d['vmaf'] = True

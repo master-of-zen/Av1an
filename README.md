@@ -124,7 +124,7 @@ With your own parameters:
 *   [Python3](https://www.python.org/downloads/) 
 For Windows in installer set check option to `add Python to PATH`
 
-*   [Av1an on PIP](https://pypi.org/project/Av1an/)
+*   [Av1an on PIP3](https://pypi.org/project/Av1an/)
 Installation: `pip install Av1an`
 
 *   [FFmpeg](https://ffmpeg.org/download.html)

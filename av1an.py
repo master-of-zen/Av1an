@@ -709,7 +709,7 @@ class Av1an:
             self.log(f"File: {source.stem}, {frames}\n"
                      f"New vmaf: {new_vmaf}\n"
                      f"Probes: {pr}"
-                     f"Target CQ: {tg_cq[0]}, Dif: {round(difference, 2)}\n")
+                     f"Target CQ: {round(tg_cq[0])}, Dif: {round(difference, 2)}\n")
             return int(tg_cq[0]), f'Target: CQ {int(new_tg_cq[0])} Vmaf: {round(float(new_tg_cq[1]), 2)}\n'
 
         except Exception as e:

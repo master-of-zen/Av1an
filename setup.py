@@ -10,12 +10,12 @@ REQUIRES = [
     'matplotlib',
 ]
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+with open("README.md", "r") as f:
+    long_description = f.read()
 
 setuptools.setup(
-    name="Av1an", # Replace with your own username
-    version="1.8.0",
+    name="Av1an",
+    version="1.8.0-1",
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
     description="All-in-one encode toolkit",

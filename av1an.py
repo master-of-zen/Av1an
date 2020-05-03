@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import time
-import socket
+import json
+import pickle
 from tqdm import tqdm
 import sys
 import os
@@ -118,6 +119,8 @@ class Av1an:
         parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
         parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
+        parser.add_argument('-cfg', '--config', type=Path, help='Parameters file. Save/Read: '
+                                                                'Video, Audio, Encoder, FFmpeg parameteres')
 
         # FFmpeg params
         parser.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
@@ -152,9 +155,20 @@ class Av1an:
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
 
+        self.read_config()
         self.check_executables()
         self.process_inputs()
 
+        # Changing pixel format, bit format
+        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
+
+        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
+
+        if self.d.get('vmaf_steps') < 5:
+            print('Target vmaf require more than 4 probes/steps')
+            sys.exit()
+
+    def outputs_filenames(self):
         # Set output file
         if self.d.get('mode') != 2:
             if self.d.get('output_file'):

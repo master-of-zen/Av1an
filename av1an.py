@@ -191,12 +191,10 @@ class Av1an:
             sys.exit()
 
     def outputs_filenames(self):
-        # Set output file
-        if self.d.get('mode') != 2:
-            if self.d.get('output_file'):
-                self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
-            else:
-                self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
+        if self.d.get('output_file'):
+            self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
+        else:
+            self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""
@@ -981,6 +979,7 @@ class Av1an:
                 for file in self.d.get('queue'):
                     tm = time.time()
                     self.d['input'] = file
+                    self.d['output_file'] = None
                     self.video_encoding()
                     print(f'\rFinished: {round(time.time() - tm, 1)}s\n\n')
             else:

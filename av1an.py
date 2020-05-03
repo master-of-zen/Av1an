@@ -90,15 +90,38 @@ class Av1an:
             print('No input file')
             sys.exit()
         else:
-            if not self.d.get('input').exists():
-                print(f'No file: {self.d.get("input")}')
-                sys.exit()
-            """
-            for file in self.d.get('input'):
-                if not file.exists():
-                    print(f'No file: {self.d.get("input")}')
+            inputs = self.d.get('input')
+
+            for i in inputs:
+                if not i.exists():
+                    print(f'No file: {i}')
                     sys.exit()
-            """
+            if len(inputs) > 1:
+                self.d['queue'] = inputs
+                for file in self.d.get('input'):
+                    if not file.exists():
+                        print(f'No file: {self.d.get("input")}')
+                        sys.exit()
+            else:
+                self.d['input'] = inputs[0]
+
+    def read_config(self):
+        """Creation and reading of config files with saved settings"""
+        cfg = self.d.get('config')
+        if cfg:
+            if cfg.exists():
+                with open(cfg, 'rb') as f:
+                    c: dict = dict(pickle.load(f))
+                    self.d.update(c)
+
+            else:
+                with open(cfg, 'wb') as f:
+                    c = dict()
+                    c['video_params'] = self.d.get('video_params')
+                    c['encoder'] = self.d.get('encoder')
+                    c['ffmpeg'] = self.d.get('ffmpeg')
+                    c['audio_params'] = self.d.get('audio_params')
+                    pickle.dump(c, f)
 
     def arg_parsing(self):
         """Command line parse and sanity checking."""
@@ -106,7 +129,7 @@ class Av1an:
         parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
 
         # Input/Output/Temp
-        parser.add_argument('--input', '-i', type=Path, help='Input File')  # nargs = '+'
+        parser.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')  # nargs = '+'
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
@@ -175,15 +198,6 @@ class Av1an:
                 self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
             else:
                 self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
-
-        # Changing pixel format, bit format
-        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
-
-        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
-
-        if self.d.get('vmaf_steps') < 5:
-            print('Target vmaf require more than 4 probes/steps')
-            sys.exit()
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""
@@ -309,7 +323,13 @@ class Av1an:
 
             # Perform scene detection on video_manager.
             self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
-            scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
+
+            # Fix for cli batch encoding
+            if self.d.get('queue'):
+                progress = False
+            else:
+                progress = True
+            scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
 
             # Obtain list of detected scenes.
             scene_list = scene_manager.get_scene_list(base_timecode)
@@ -490,8 +510,8 @@ class Av1an:
     def compose_encoding_queue(self, files):
         """Composing encoding queue with splited videos."""
         inputs = [(self.d.get('temp') / "split" / file.name,
-                       self.d.get('temp') / "encode" / file.name,
-                       file) for file in files]
+                   self.d.get('temp') / "encode" / file.name,
+                   file) for file in files]
 
         if self.d.get('encoder') in ('aom', 'vpx'):
             queue = self.aom_vpx_encode(inputs)
@@ -876,8 +896,7 @@ class Av1an:
             print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\n'
                   f'Params: {self.d.get("video_params")}')
 
-            bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr",
-                       leave=False)
+            bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
 
             loop = pool.imap_unordered(self.encode, commands)
             self.log(f'Started encoding queue with {self.d.get("workers")} workers\n\n')
@@ -911,6 +930,7 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
+        self.outputs_filenames()
         self.setup_routine()
 
         files = self.get_video_queue(self.d.get('temp') / 'split')
@@ -957,8 +977,16 @@ class Av1an:
 
         # Video Mode. Encoding on local machine
         if self.d.get('mode') == 0:
-            self.video_encoding()
-            print(f'Finished: {round(time.time() - tm, 1)}s')
+            # Batch processing
+            if self.d.get('queue'):
+                for file in self.d.get('queue'):
+                    tm = time.time()
+                    self.d['input'] = file
+                    self.video_encoding()
+                    print(f'\rFinished: {round(time.time() - tm, 1)}s\n\n')
+            else:
+                self.video_encoding()
+                print(f'Finished: {round(time.time() - tm, 1)}s')
         # Master mode
         elif self.d.get('mode') == 1:
             self.master_mode()

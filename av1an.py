@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import time
-import json
 import pickle
 from tqdm import tqdm
 import sys

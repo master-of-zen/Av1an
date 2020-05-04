@@ -859,11 +859,10 @@ class Av1an:
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
+        # Reduce if more workers than clips
+        self.d['workers'] = min(len(commands), self.d.get('workers'))
+
         with Pool(self.d.get('workers')) as pool:
-
-            # Reduce if more workers than clips
-            self.d['workers'] = min(len(commands), self.d.get('workers'))
-
             enc_path = self.d.get('temp') / 'split'
             done_path = self.d.get('temp') / 'done.txt'
 

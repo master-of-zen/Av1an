@@ -373,21 +373,25 @@ class Av1an:
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""
-        status_file = Path(self.d.get("temp") / 'done.txt')
+        try:
+            status_file = Path(self.d.get("temp") / 'done.txt')
 
-        if self.d.get("no_check"):
-            s1 = self.frame_probe(source)
-            with status_file.open('a') as done:
-                done.write(f'({s1}, "{source.name}"), ')
-                return
+            if self.d.get("no_check"):
+                s1 = self.frame_probe(source)
+                with status_file.open('a') as done:
+                    done.write(f'({s1}, "{source.name}"), ')
+                    return
 
-        s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
+            s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
 
-        if s1 == s2:
-            with status_file.open('a') as done:
-                done.write(f'({s1}, "{source.name}"), ')
-        else:
-            print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+            if s1 == s2:
+                with status_file.open('a') as done:
+                    done.write(f'({s1}, "{source.name}"), ')
+            else:
+                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
 
     def get_video_queue(self, source_path: Path):
         """Returns sorted list of all videos that need to be encoded. Big first."""

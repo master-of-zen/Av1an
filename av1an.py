@@ -295,10 +295,8 @@ class Av1an:
             self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
 
             # Fix for cli batch encoding
-            if self.d.get('queue'):
-                progress = False
-            else:
-                progress = True
+            progress = False if self.d.get('queue') else True
+
             scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
 
             # Obtain list of detected scenes.

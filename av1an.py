@@ -79,24 +79,21 @@ class Av1an:
             if self.d.get('input'):
                 print("Server mode, input file ignored")
             pass
-        elif not self.d.get('input'):
-            print('No input file')
-            sys.exit()
-        else:
+        elif self.d.get('input'):
             inputs = self.d.get('input')
-
-            for i in inputs:
-                if not i.exists():
-                    print(f'No file: {i}')
-                    sys.exit()
+            valid = np.array([i.exists() for i in inputs])
+            
+            if not all(valid):
+                print(f'Files do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
+                sys.exit()
+            
             if len(inputs) > 1:
                 self.d['queue'] = inputs
-                for file in self.d.get('input'):
-                    if not file.exists():
-                        print(f'No file: {self.d.get("input")}')
-                        sys.exit()
             else:
                 self.d['input'] = inputs[0]
+        else:
+            print('No input file')
+            sys.exit()
 
     def read_config(self):
         """Creation and reading of config files with saved settings"""

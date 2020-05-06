@@ -198,10 +198,9 @@ class Av1an:
         if not self.d.get('resume'):
             if self.d.get('temp').is_dir():
                 shutil.rmtree(self.d.get('temp'))
-            (self.d.get('temp') / 'split').mkdir(parents=True)
-            (self.d.get('temp') / 'encode').mkdir()
-        elif self.d.get('temp').exists():
-            pass
+
+        (self.d.get('temp') / 'split').mkdir(parents=True, exist_ok=True)
+        (self.d.get('temp') / 'encode').mkdir(exist_ok=True)
 
         if self.d.get('logging') is os.devnull:
             self.d['logging'] = self.d.get('temp') / 'log.log'

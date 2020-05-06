@@ -75,11 +75,11 @@ class Av1an:
 
     def process_inputs(self):
         # Check input file for being valid
-        if self.d.get('mode') == 2 and self.d.get('input'):
-            print("Server mode, input file ignored")
-        elif self.d.get('mode') == 2:
+        if self.d.get('mode') == 2:
+            if self.d.get('input'):
+                print("Server mode, input file ignored")
             pass
-        elif self.d.get('mode') != 2 and not self.d.get('input'):
+        elif not self.d.get('input'):
             print('No input file')
             sys.exit()
         else:
@@ -220,7 +220,7 @@ class Av1an:
                 shutil.rmtree(self.d.get('temp'))
             (self.d.get('temp') / 'split').mkdir(parents=True)
             (self.d.get('temp') / 'encode').mkdir()
-        elif self.d.get('temp').exists()
+        elif self.d.get('temp').exists():
             pass
 
         if self.d.get('logging') is os.devnull:

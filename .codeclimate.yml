@@ -1,0 +1,9 @@
+version: "2"
+plugins:
+  fixme:
+    enabled: true
+checks:
+  file-lines:
+    enabled: false
+  method-lines:
+    enabled: false

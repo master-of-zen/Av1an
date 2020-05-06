@@ -42,6 +42,7 @@ class Av1an:
         """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.d = dict()
+        self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -62,15 +63,8 @@ class Av1an:
             sys.exit()
 
         # Check if encoder executable is reachable
-        if self.d.get('encoder') in ('svt_av1', 'rav1e', 'aom', 'vpx'):
-            if self.d.get('encoder') == 'rav1e':
-                enc = 'rav1e'
-            elif self.d.get('encoder') == 'aom':
-                enc = 'aomenc'
-            elif self.d.get('encoder') == 'svt_av1':
-                enc = 'SvtAv1EncApp'
-            elif self.d.get('encoder') == 'vpx':
-                enc = 'vpxenc'
+        if self.d.get('encoder') in self.encoders:
+            enc = self.encoders.get(self.d.get('encoder'))
 
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')

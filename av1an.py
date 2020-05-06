@@ -373,12 +373,13 @@ class Av1an:
 
         if self.d.get('resume'):
             done_file = self.d.get('temp') / 'done.txt'
-            if done_file.exists():
+            try:
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
-                    if len(data) > 1:
-                        data = literal_eval(data[1])
-                        queue = [x for x in queue if x.name not in [x[1] for x in data]]
+                    data = literal_eval(data[1])
+                    queue = [x for x in queue if x.name not in [x[1] for x in data]]
+            except:
+                pass
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 

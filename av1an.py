@@ -78,13 +78,12 @@ class Av1an:
         if self.d.get('mode') == 2:
             if self.d.get('input'):
                 print("Server mode, input file ignored")
-            pass
         elif self.d.get('input'):
             inputs = self.d.get('input')
             valid = np.array([i.exists() for i in inputs])
             
             if not all(valid):
-                print(f'Files do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
+                print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
                 sys.exit()
             
             if len(inputs) > 1:

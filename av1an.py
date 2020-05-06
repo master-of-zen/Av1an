@@ -75,24 +75,21 @@ class Av1an:
 
     def process_inputs(self):
         # Check input file for being valid
-        if self.d.get('mode') == 2:
-            if self.d.get('input'):
-                print("Server mode, input file ignored")
-        elif self.d.get('input'):
-            inputs = self.d.get('input')
-            valid = np.array([i.exists() for i in inputs])
-            
-            if not all(valid):
-                print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
-                sys.exit()
-            
-            if len(inputs) > 1:
-                self.d['queue'] = inputs
-            else:
-                self.d['input'] = inputs[0]
-        else:
+        if not self.d.get('input'):
             print('No input file')
             sys.exit()
+
+        inputs = self.d.get('input')
+        valid = np.array([i.exists() for i in inputs])
+        
+        if not all(valid):
+            print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
+            sys.exit()
+        
+        if len(inputs) > 1:
+            self.d['queue'] = inputs
+        else:
+            self.d['input'] = inputs[0]
 
     def read_config(self):
         """Creation and reading of config files with saved settings"""
@@ -166,19 +163,6 @@ class Av1an:
 
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
-
-        self.read_config()
-        self.check_executables()
-        self.process_inputs()
-
-        # Changing pixel format, bit format
-        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
-
-        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
-
-        if self.d.get('vmaf_steps') < 5:
-            print('Target vmaf require more than 4 probes/steps')
-            sys.exit()
 
     def outputs_filenames(self):
         if self.d.get('output_file'):
@@ -964,6 +948,24 @@ class Av1an:
 
         # Parse initial arguments
         self.arg_parsing()
+
+        self.read_config()
+        self.check_executables()
+        
+        if self.d.get('mode') == 2:
+            if self.d.get('input'):
+                print("Server mode, input file ignored")
+        else:
+            self.process_inputs()
+
+        # Changing pixel format, bit format
+        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
+
+        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
+
+        if self.d.get('vmaf_steps') < 5:
+            print('Target vmaf require more than 4 probes/steps')
+            sys.exit()
 
         # Video Mode. Encoding on local machine
         if self.d.get('mode') == 0:

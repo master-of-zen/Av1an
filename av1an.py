@@ -81,11 +81,11 @@ class Av1an:
 
         inputs = self.d.get('input')
         valid = np.array([i.exists() for i in inputs])
-        
+
         if not all(valid):
             print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
             sys.exit()
-        
+
         if len(inputs) > 1:
             self.d['queue'] = inputs
         else:
@@ -550,19 +550,24 @@ class Av1an:
 
     def boost(self, command: str, br_geom, new_cq=0):
         """Based on average brightness of video decrease(boost) Quantize value for encoding."""
-        cq = self.man_cq(command, -1)
-        if not new_cq:
-            if br_geom < 128:
-                new_cq = cq - round((128 - br_geom) / 128 * self.d.get('br'))
+        try:
+            cq = self.man_cq(command, -1)
+            if not new_cq:
+                if br_geom < 128:
+                    new_cq = cq - round((128 - br_geom) / 128 * self.d.get('boost_range'))
 
-                # Cap on boosting
-                if new_cq < self.d.get('bl'):
-                    new_cq = self.d.get('bl')
-            else:
-                new_cq = cq
-        cmd = self.man_cq(command, new_cq)
+                    # Cap on boosting
+                    if new_cq < self.d.get('boost_limit'):
+                        new_cq = self.d.get('boost_limit')
+                else:
+                    new_cq = cq
+            cmd = self.man_cq(command, new_cq)
 
-        return cmd, new_cq
+            return cmd, new_cq
+
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
     def plot_vmaf(self):
         with open(self.d.get('temp') / 'vmaf.txt', 'r') as f:
@@ -949,7 +954,7 @@ class Av1an:
 
         self.read_config()
         self.check_executables()
-        
+
         if self.d.get('mode') == 2:
             if self.d.get('input'):
                 print("Server mode, input file ignored")

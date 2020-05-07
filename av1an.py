@@ -42,6 +42,7 @@ class Av1an:
         """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
         self.d = dict()
+        self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -62,15 +63,8 @@ class Av1an:
             sys.exit()
 
         # Check if encoder executable is reachable
-        if self.d.get('encoder') in ('svt_av1', 'rav1e', 'aom', 'vpx'):
-            if self.d.get('encoder') == 'rav1e':
-                enc = 'rav1e'
-            elif self.d.get('encoder') == 'aom':
-                enc = 'aomenc'
-            elif self.d.get('encoder') == 'svt_av1':
-                enc = 'SvtAv1EncApp'
-            elif self.d.get('encoder') == 'vpx':
-                enc = 'vpxenc'
+        if self.d.get('encoder') in self.encoders:
+            enc = self.encoders.get(self.d.get('encoder'))
 
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
@@ -81,28 +75,21 @@ class Av1an:
 
     def process_inputs(self):
         # Check input file for being valid
-        if self.d.get('mode') == 2 and self.d.get('input'):
-            print("Server mode, input file ignored")
-        elif self.d.get('mode') == 2:
-            pass
-        elif self.d.get('mode') != 2 and not self.d.get('input'):
+        if not self.d.get('input'):
             print('No input file')
             sys.exit()
-        else:
-            inputs = self.d.get('input')
 
-            for i in inputs:
-                if not i.exists():
-                    print(f'No file: {i}')
-                    sys.exit()
-            if len(inputs) > 1:
-                self.d['queue'] = inputs
-                for file in self.d.get('input'):
-                    if not file.exists():
-                        print(f'No file: {self.d.get("input")}')
-                        sys.exit()
-            else:
-                self.d['input'] = inputs[0]
+        inputs = self.d.get('input')
+        valid = np.array([i.exists() for i in inputs])
+        
+        if not all(valid):
+            print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
+            sys.exit()
+        
+        if len(inputs) > 1:
+            self.d['queue'] = inputs
+        else:
+            self.d['input'] = inputs[0]
 
     def read_config(self):
         """Creation and reading of config files with saved settings"""
@@ -177,19 +164,6 @@ class Av1an:
         # Store all vars in dictionary
         self.d = vars(parser.parse_args())
 
-        self.read_config()
-        self.check_executables()
-        self.process_inputs()
-
-        # Changing pixel format, bit format
-        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
-
-        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
-
-        if self.d.get('vmaf_steps') < 5:
-            print('Target vmaf require more than 4 probes/steps')
-            sys.exit()
-
     def outputs_filenames(self):
         if self.d.get('output_file'):
             self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
@@ -221,13 +195,12 @@ class Av1an:
     def setup(self):
         """Creating temporally folders when needed."""
         # Make temporal directories, and remove them if already presented
-        if self.d.get('temp').exists() and self.d.get('resume'):
-            pass
-        else:
+        if not self.d.get('resume'):
             if self.d.get('temp').is_dir():
                 shutil.rmtree(self.d.get('temp'))
-            (self.d.get('temp') / 'split').mkdir(parents=True)
-            (self.d.get('temp') / 'encode').mkdir()
+
+        (self.d.get('temp') / 'split').mkdir(parents=True, exist_ok=True)
+        (self.d.get('temp') / 'encode').mkdir(exist_ok=True)
 
         if self.d.get('logging') is os.devnull:
             self.d['logging'] = self.d.get('temp') / 'log.log'
@@ -322,10 +295,8 @@ class Av1an:
             self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
 
             # Fix for cli batch encoding
-            if self.d.get('queue'):
-                progress = False
-            else:
-                progress = True
+            progress = False if self.d.get('queue') else True
+
             scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
 
             # Obtain list of detected scenes.
@@ -399,12 +370,13 @@ class Av1an:
 
         if self.d.get('resume'):
             done_file = self.d.get('temp') / 'done.txt'
-            if done_file.exists():
+            try:
                 with open(done_file, 'r') as f:
                     data = [line for line in f]
-                    if len(data) > 1:
-                        data = literal_eval(data[1])
-                        queue = [x for x in queue if x.name not in [x[1] for x in data]]
+                    data = literal_eval(data[1])
+                    queue = [x for x in queue if x.name not in [x[1] for x in data]]
+            except:
+                pass
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
@@ -974,6 +946,24 @@ class Av1an:
 
         # Parse initial arguments
         self.arg_parsing()
+
+        self.read_config()
+        self.check_executables()
+        
+        if self.d.get('mode') == 2:
+            if self.d.get('input'):
+                print("Server mode, input file ignored")
+        else:
+            self.process_inputs()
+
+        # Changing pixel format, bit format
+        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
+
+        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
+
+        if self.d.get('vmaf_steps') < 5:
+            print('Target vmaf require more than 4 probes/steps')
+            sys.exit()
 
         # Video Mode. Encoding on local machine
         if self.d.get('mode') == 0:

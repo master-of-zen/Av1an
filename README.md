@@ -2,7 +2,7 @@
     <br>
     Av1an
     </br>
-</h1>x
+</h1>
 
 <h2 align="center">A cross-platform all-in-one tool for streamlining AV1 and vpx encoding</h2>
 
@@ -16,7 +16,9 @@
 </h4>
 <h2 align="center">Easy, Fast, and Efficient </h2>
 
-Start using AV1 encoding. All open-source AV1 encoders are supported (AOM, rav1e, SVT-AV1) also VP9, VP8.
+An easy way to start using AV1 / VP9 / VP8 encoding. All open-source AV1 encoders are supported (AOM, rav1e, SVT-AV1).
+
+vpx is now also supported.
 
 Example with default parameters:
 
@@ -126,9 +128,10 @@ With your own parameters:
   * [Install Python3](https://www.python.org/downloads/) <br>
 For Windows in installer set check option to `add Python to PATH`
   * [Install FFmpeg](https://ffmpeg.org/download.html)
-  * [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder
-  * [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder
-  * [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder
+  * [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder support
+  * [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder support
+  * [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder support
+  * [Install vpx](https://chromium.googlesource.com/webm/libvpx/) For vpx encoder support
 
 * With a package manager:
   * [PyPI](https://pypi.org/project/Av1an/)

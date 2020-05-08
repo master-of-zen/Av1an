@@ -126,7 +126,7 @@ With your own parameters:
 
 * Prerequisites:
   * [Install Python3](https://www.python.org/downloads/) <br>
-For Windows in installer set check option to `add Python to PATH`
+For Windows in the installer check the option to `add Python to PATH`
   * [Install FFmpeg](https://ffmpeg.org/download.html)
   * [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder support
   * [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder support

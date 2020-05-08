@@ -113,7 +113,7 @@ With your own parameters:
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 * [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-* Fastest way to encode AV1 without lossing quality, as fast as many cores cpu have :).
+* Fastest way to encode AV1 without losing quality, as fast as many cores cpu have :).
 * Resuming encoding without loss of encoded progress.
 * Simple and clean console look.
 * Automatic determination of how many workers the host can handle.

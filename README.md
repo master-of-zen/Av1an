@@ -4,7 +4,7 @@
     </br>
 </h1>
 
-<h2 align="center">A cross-platform all-in-one tool for streamlining AV1 and vpx encoding</h2>
+<h2 align="center">A cross-platform all-in-one tool for streamlining AV1 encoding</h2>
 
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/685103807952060447/143740_05_03_20.png)
 
@@ -16,9 +16,8 @@
 </h4>
 <h2 align="center">Easy, Fast, and Efficient </h2>
 
-An easy way to start using AV1 / VP9 / VP8 encoding. All open-source AV1 encoders are supported (AOM, rav1e, SVT-AV1).
+An easy way to start using AV1 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX are supported.
 
-vpx is now also supported.
 
 Example with default parameters:
 
@@ -120,7 +119,7 @@ With your own parameters:
 * Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
 * Both video and audio transcoding with FFmpeg.
 * Logging of progress of all encoders.
-* "Boosting" quality of scenes based on their brightness.
+* "Boosting" quality of dark scenes based on their brightness.
 
 ## Install
 

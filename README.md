@@ -8,7 +8,7 @@
 
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/685103807952060447/143740_05_03_20.png)
 
-<h4 align="center"> 
+<h4 align="center">
 <a href="https://discord.gg/TssVH86"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
 <img src="https://ci.appveyor.com/api/projects/status/cvweipdgphbjkkar?svg=true" alt="Project Badge"> <a href="https://codeclimate.com/github/master-of-zen/Av1an/maintainability"><img src="https://api.codeclimate.com/v1/badges/41ea7ad221dcdad3fe8d/maintainability" />
 <img= src="https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard"></a>
@@ -17,7 +17,6 @@
 <h2 align="center">Easy, Fast, and Efficient </h2>
 
 An easy way to start using AV1 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX are supported.
-
 
 Example with default parameters:
 
@@ -60,7 +59,7 @@ With your own parameters:
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
 
-    -ff  --ffmpeg             FFmpeg options. Applied to each segment individually 
+    -ff  --ffmpeg             FFmpeg options. Applied to each segment individually
                             Example:
                             --ff " -r 24 -vf scale=320:240 "
 
@@ -88,22 +87,22 @@ With your own parameters:
     -bl                     CQ limit for boosting. CQ can't get lower than this value.
 
     -br                     CQ range for boosting. Delta for which CQ can be changed
-    
+
     --vmaf                  Calculate vmaf for each encoded clip.
                             Saves plot after encode, showing vmaf values for all video segments.
                             Requires: Installed FFMPEG with libvmaf and installed libvmaf.
-                            
+
     --vmaf_path             Custom path to libvmaf models, by default used system one.
-    
+
     --tg_vmaf               Vmaf value to target. Best works with 90-95 on 720/1080.
 
     --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
-    
-    --vmaf_error            Decrease initial Vmaf values for interpolation.Increasing number will result 
-                            in lower CQ and bigger final vmaf score, use to correct whole vmaf plot. 
+
+    --vmaf_error            Decrease initial Vmaf values for interpolation.Increasing number will result
+                            in lower CQ and bigger final vmaf score, use to correct whole vmaf plot.
                             For start If target vmaf undershoot increase value by undershoot amount.
-   
+
     --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation in target Vmaf mode
                             Use to limit CQ values range. Default: 20, 63.
 
@@ -111,35 +110,35 @@ With your own parameters:
 
 **Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
-* [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-* Fastest way to encode AV1 without losing quality, as fast as many cores cpu have :).
-* Resuming encoding without loss of encoded progress.
-* Simple and clean console look.
-* Automatic determination of how many workers the host can handle.
-* Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
-* Both video and audio transcoding with FFmpeg.
-* Logging of progress of all encoders.
-* "Boosting" quality of dark scenes based on their brightness.
+*  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+*  Fastest way to encode AV1 without losing quality, as fast as many cores cpu have :).
+*  Resuming encoding without loss of encoded progress.
+*  Simple and clean console look.
+*  Automatic determination of how many workers the host can handle.
+*  Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
+*  Both video and audio transcoding with FFmpeg.
+*  Logging of progress of all encoders.
+*  "Boosting" quality of dark scenes based on their brightness.
 
 ## Install
 
 * Prerequisites:
-  * [Install Python3](https://www.python.org/downloads/) <br>
+  *  [Install Python3](https://www.python.org/downloads/) <br>
 For Windows in the installer check the option to `add Python to PATH`
-  * [Install FFmpeg](https://ffmpeg.org/download.html)
-  * [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder support
-  * [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder support
-  * [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder support
-  * [Install vpx](https://chromium.googlesource.com/webm/libvpx/) For vpx encoder support
+  *  [Install FFmpeg](https://ffmpeg.org/download.html)
+  *  [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder support
+  *  [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder support
+  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder support
+  *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) For vpx encoder support
 
 * With a package manager:
-  * [PyPI](https://pypi.org/project/Av1an/)
-  * [AUR](https://aur.archlinux.org/packages/python-av1an/)
+  *  [PyPI](https://pypi.org/project/Av1an/)
+  *  [AUR](https://aur.archlinux.org/packages/python-av1an/)
 
 * Manually:
 
-  * Clone Repo or Download from Releases
-  * `python setup.py install`
+  *  Clone Repo or Download from Releases
+  *  `python setup.py install`
 
 ### Donations for Threadripper 3990x dream
 

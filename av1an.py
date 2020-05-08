@@ -375,8 +375,9 @@ class Av1an:
                     data = [line for line in f]
                     data = literal_eval(data[1])
                     queue = [x for x in queue if x.name not in [x[1] for x in data]]
-            except:
-                pass
+            except Exception as e:
+                _, _, exc_tb = sys.exc_info()
+                print(f'Error at resuming {e}\nAt line {exc_tb.tb_lineno}')
 
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 

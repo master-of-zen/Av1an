@@ -439,31 +439,31 @@ class Av1an:
 
     def svt_av1_encode(self, inputs):
         """SVT-AV1 encoding command composition."""
-        if not self.d.get("video_params"):
+        encoder = 'SvtAv1EncApp'
+        pipe = self.d.get("ffmpeg_pipe")
+        params = self.d.get("video_params")
+        passes = self.d.get('passes')
+
+        if not params:
             print('-w -h -fps is required parameters for svt_av1 encoder')
             sys.exit()
 
-        encoder = 'SvtAv1EncApp '
-        pipe = self.d.get("ffmpeg_pipe")
-        if self.d.get('passes') == 1:
+        if passes == 1:
             pass_1_commands = [
                 (f'-i {file[0]} {pipe} ' +
-                 f'  {encoder} -i stdin {self.d.get("video_params")} -b {file[1].with_suffix(".ivf")} -',
+                 f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
             return pass_1_commands
 
-        if self.d.get('passes') == 2:
+        if passes == 2:
             p2i = '-input-stat-file '
             p2o = '-output-stat-file '
             pass_2_commands = [
-                (f'-i {file[0]} {pipe} ' +
-                 f'  {encoder} -i stdin {self.d.get("video_params")} {p2o} '
+                (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
                  f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {pipe} '
-                 +
-                 f'{encoder} -i stdin {self.d.get("video_params")} {p2i} '
-                 f'{file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
+                 f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
             return pass_2_commands
@@ -531,7 +531,7 @@ class Av1an:
             return pass_2_commands
 
     def compose_encoding_queue(self, files):
-        """Composing encoding queue with splited videos."""
+        """Composing encoding queue with split videos."""
         inputs = [(self.d.get('temp') / "split" / file.name,
                    self.d.get('temp') / "encode" / file.name,
                    file) for file in files]

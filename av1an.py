@@ -359,18 +359,28 @@ class Av1an:
             print(f'Error in PySceneDetect{e}\n')
             sys.exit()
 
-    def split(self, video, frames):
+    def split(self, video: Path, frames):
         """Split video by frame numbers, or just copying video."""
-        if len(frames) == 0:
-            self.log('Copying video for encode\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -c copy ' \
-                  f'-avoid_negative_ts 1 {self.d.get("temp") / "split" / "0.mkv"}'
-        else:
-            self.log('Splitting video\n')
-            cmd = f'{self.FFMPEG} -i "{video}" -map_metadata -1 -an -f segment -segment_frames {frames} ' \
-                  f'-c copy -avoid_negative_ts 1 {self.d.get("temp") / "split" / "%04d.mkv"}'
 
-        self.call_cmd(cmd)
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video.absolute().as_posix(),
+            "-map", "0:v:0",
+            "-an",
+            "-c", "copy",
+            "-avoid_negative_ts", "1"
+        ]
+
+        if len(frames) > 0:
+            cmd.extend([
+                "-f", "segment",
+                "-segment_frames", frames
+            ])
+        cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
+
+        subprocess.Popen(cmd,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
 
     @staticmethod
     def frame_probe(source: Path):

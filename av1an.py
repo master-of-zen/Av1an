@@ -2,6 +2,7 @@
 
 import time
 import pickle
+import re
 from tqdm import tqdm
 import sys
 import os
@@ -371,12 +372,14 @@ class Av1an:
 
         self.call_cmd(cmd)
 
-    def frame_probe(self, source: Path):
+    @staticmethod
+    def frame_probe(source: Path):
         """Get frame count."""
-        cmd = f'ffmpeg -hide_banner  -i "{source.absolute()}" -an  -map 0:v:0 -c:v copy -f null - '
-        frames = (self.call_cmd(cmd, capture_output=True)).decode("utf-8")
-        frames = int(frames[frames.rfind('frame=') + 6:frames.rfind('fps=')])
-        return frames
+        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0"]
+        cmd.extend(["-f", "null", "-"])
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        matches = re.findall(r"frame= *([^ ]+?) ", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
+        return int(matches[-1])
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""

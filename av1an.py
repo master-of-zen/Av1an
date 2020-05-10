@@ -385,8 +385,7 @@ class Av1an:
     @staticmethod
     def frame_probe(source: Path):
         """Get frame count."""
-        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0"]
-        cmd.extend(["-f", "null", "-"])
+        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
         r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         matches = re.findall(r"frame= *([^ ]+?) ", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
         return int(matches[-1])
@@ -409,6 +408,7 @@ class Av1an:
                     done.write(f'({s1}, "{source.name}"), ')
             else:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
@@ -469,36 +469,33 @@ class Av1an:
 
     def aom_vpx_encode(self, inputs):
         """AOM encoding command composition."""
-        encoder = self.d.get('encoder')
+        enc = self.encoders.get(self.d.get('encoder'))
 
-        if encoder == 'vpx':
-            enc = 'vpxenc'
-            if not self.d.get("video_params"):
+        if not self.d.get("video_params"):
+            if enc == 'vpxenc':
                 self.d["video_params"] = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
-
-        if encoder == 'aom':
-            enc = 'aomenc'
-            if not self.d.get("video_params"):
+            if enc == 'aomenc':
                 self.d["video_params"] = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
 
         single_p = f'{enc}  -q --passes=1 '
         two_p_1 = f'{enc} -q --passes=2 --pass=1'
         two_p_2 = f'{enc}  -q --passes=2 --pass=2'
-
+        ffmpeg_pipe = self.d.get("ffmpeg_pipe")
+        params = self.d.get("video_params")
         if self.d.get('passes') == 1:
             pass_1_commands = [
-                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")} ' +
-                 f'  {single_p} {self.d.get("video_params")} -o {file[1].with_suffix(".ivf")} - ',
+                (f'-i {file[0]} {ffmpeg_pipe} ' +
+                 f'  {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
             return pass_1_commands
 
         if self.d.get('passes') == 2:
             pass_2_commands = [
-                (f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_1} {self.d.get("video_params")} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
-                 f'-i {file[0]} {self.d.get("ffmpeg_pipe")}' +
-                 f' {two_p_2} {self.d.get("video_params")} '
+                (f'-i {file[0]} {ffmpeg_pipe}' +
+                 f' {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+                 f'-i {file[0]} {ffmpeg_pipe}' +
+                 f' {two_p_2} {params} '
                  f'--fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]

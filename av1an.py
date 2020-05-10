@@ -371,10 +371,11 @@ class Av1an:
         if self.d.get('resume'):
             done_file = self.d.get('temp') / 'done.txt'
             try:
-                with open(done_file, 'r') as f:
-                    data = [line for line in f]
-                    data = literal_eval(data[1])
-                    queue = [x for x in queue if x.name not in [x[1] for x in data]]
+                if done_file.exists():
+                    with open(done_file, 'r') as f:
+                        data = [line for line in f]
+                        data = literal_eval(data[1])
+                        queue = [x for x in queue if x.name not in [x[1] for x in data]]
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()
                 print(f'Error at resuming {e}\nAt line {exc_tb.tb_lineno}')

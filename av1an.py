@@ -805,6 +805,7 @@ class Av1an:
         counter = commands[1]
         commands = commands[0]
         """Single encoder command queue and logging output."""
+        encoder = self.d.get('encoder')
         # Passing encoding params to ffmpeg for encoding.
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.
         try:
@@ -852,21 +853,32 @@ class Av1an:
                 f, e = i.split('|')
                 f = self.FFMPEG + f
                 f, e = f.split(), e.split()
+
                 try:
                     frame = 0
-                    ffmpeg_pipe = subprocess.Popen(f,
-                                                   stdout=subprocess.PIPE,
-                                                   stderr=subprocess.STDOUT)
-                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout,
-                                            stdout=subprocess.PIPE,
+
+                    ffmpeg_pipe = subprocess.Popen(f, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=subprocess.PIPE,
                                             stderr=subprocess.STDOUT,
                                             universal_newlines=True)
-                    while True:
-                        line = pipe.stdout.readline().strip()
-                        if len(line) == 0 and pipe.poll() is not None:
-                            break
-                        if 'Pass 2/2' in line or 'Pass 1/1' in line:
-                            match = re.search(r"frame.*?\/([^ ]+?) ", line)
+                    if encoder == 'aom' or encoder == 'vpx':
+                        while True:
+                            line = pipe.stdout.readline().strip()
+                            if len(line) == 0 and pipe.poll() is not None:
+                                break
+                            if 'Pass 2/2' in line or 'Pass 1/1' in line:
+                                match = re.search(r"frame.*?\/([^ ]+?) ", line)
+                                if match:
+                                    new = int(match.group(1))
+                                    if new > frame:
+                                        counter.update(new - frame)
+                                        frame = new
+                    if encoder == 'rav1e':
+                        while True:
+                            line = pipe.stdout.readline().strip()
+                            if len(line) == 0 and pipe.poll() is not None:
+                                break
+                            match = re.search(r"encoded.*? ([^ ]+?) ", line)
                             if match:
                                 new = int(match.group(1))
                                 if new > frame:

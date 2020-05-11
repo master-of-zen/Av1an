@@ -45,6 +45,54 @@ class Av1an:
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
+    @staticmethod
+    def get_cq(self, command):
+        """Return cq values from command"""
+        matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
+        return int(matches[-1])
+
+    @staticmethod
+    def man_cq(command: str, cq: int):
+        """Return command with new cq value"""
+        mt = '--cq-level='
+        cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
+        return cmd
+
+    @staticmethod
+    def frame_probe(source: Path):
+        """Get frame count."""
+        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        matches = re.findall(r"frame= *([^ ]+?) ", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
+        return int(matches[-1])
+
+    @staticmethod
+    def get_brightness(video):
+        """Getting average brightness value for single video."""
+        brightness = []
+        cap = cv2.VideoCapture(video)
+        try:
+            while True:
+                # Capture frame-by-frame
+                _, frame = cap.read()
+
+                # Our operations on the frame come here
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                # Display the resulting frame
+                mean = cv2.mean(gray)
+                brightness.append(mean[0])
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+        except cv2.error:
+            pass
+
+        # When everything done, release the capture
+        cap.release()
+        brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
+
+        return brig_geom
+
     def log(self, info):
         """Default logging function, write to file."""
         with open(self.d.get('logging'), 'a') as log:
@@ -557,45 +605,6 @@ class Av1an:
             sys.exit()
 
         return queue
-
-    @staticmethod
-    def get_brightness(video):
-        """Getting average brightness value for single video."""
-        brightness = []
-        cap = cv2.VideoCapture(video)
-        try:
-            while True:
-                # Capture frame-by-frame
-                _, frame = cap.read()
-
-                # Our operations on the frame come here
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-                # Display the resulting frame
-                mean = cv2.mean(gray)
-                brightness.append(mean[0])
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-        except cv2.error:
-            pass
-
-        # When everything done, release the capture
-        cap.release()
-        brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
-
-        return brig_geom
-
-    def get_cq(self, command):
-        """Return cq values from command"""
-        matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
-        return int(matches[-1])
-
-    @staticmethod
-    def man_cq(command: str, cq: int):
-        """Return command with new cq value"""
-        mt = '--cq-level='
-        cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
-        return cmd
 
     def boost(self, command: str, br_geom, new_cq=0):
         """Based on average brightness of video decrease(boost) Quantize value for encoding."""

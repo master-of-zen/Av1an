@@ -36,6 +36,29 @@ if sys.platform == 'linux':
 
     atexit.register(restore_term)
 
+from multiprocessing.managers import BaseManager
+
+
+class MyManager(BaseManager):
+    pass
+
+
+def Manager():
+    m = MyManager()
+    m.start()
+    return m
+
+
+class Counter(object):
+    def __init__(self, total, initial):
+        self.bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
+
+    def update(self, value):
+        self.bar.update(value)
+
+
+MyManager.register('Counter', Counter)
+
 
 class Av1an:
 
@@ -837,8 +860,32 @@ class Av1an:
 
             # Queue execution
             for i in commands[:-1]:
-                cmd = rf'{self.FFMPEG} {i}'
-                self.call_cmd(cmd)
+                f, e = i.split('|')
+                f = self.FFMPEG + f
+                f, e = f.split(), e.split()
+                try:
+                    frame = 0
+                    ffmpeg_pipe = subprocess.Popen(f,
+                                                   stdout=subprocess.PIPE,
+                                                   stderr=subprocess.STDOUT)
+                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            universal_newlines=True)
+                    while True:
+                        line = pipe.stdout.readline().strip()
+                        if len(line) == 0 and pipe.poll() is not None:
+                            break
+                        if 'Pass 2/2' in line or 'Pass 1/1' in line:
+                            match = re.search(r"frame.*?\/([^ ]+?) ", line)
+                            if match:
+                                new = int(match.group(1))
+                                if new > frame:
+                                    counter.update(new - frame)
+                                    frame = new
+                except Exception as e:
+                    _, _, exc_tb = sys.exc_info()
+                    print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')
 
             self.frame_check(source, target)
 
@@ -935,14 +982,17 @@ class Av1an:
             print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\n'
                   f'Params: {self.d.get("video_params")}')
 
-            bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
-
+            manager = Manager()
+            counter = manager.Counter(total, initial)
+            # bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
+            commands = [(x, counter) for x in commands]
             loop = pool.imap_unordered(self.encode, commands)
             self.log(f'Started encoding queue with {self.d.get("workers")} workers\n\n')
 
             try:
                 for enc_frames in loop:
-                    bar.update(n=enc_frames)
+                    pass
+                    # bar.update(n=enc_frames)
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()
                 print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
@@ -999,12 +1049,10 @@ class Av1an:
         self.arg_parsing()
         self.read_config()
         self.check_executables()
-
         self.process_inputs()
 
         # Changing pixel format, bit format
         self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
-
         self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
 
         # Video Mode. Encoding on local machine

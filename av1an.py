@@ -667,6 +667,10 @@ class Av1an:
 
     def target_vmaf(self, source, command):
         try:
+            if self.d.get('vmaf_steps') < 5:
+                print('Target vmaf require more than 4 probes/steps')
+                sys.exit()
+
             tg = self.d.get('vmaf_target')
             mincq = self.d.get('min_cq')
             maxcq = self.d.get('max_cq')
@@ -891,9 +895,8 @@ class Av1an:
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
         # Reduce if more workers than clips
-        self.d['workers'] = min(len(commands), self.d.get('workers'))
-
-        with Pool(self.d.get('workers')) as pool:
+        w = min(self.d.get('workers'), len(commands))
+        with Pool(w) as pool:
             enc_path = self.d.get('temp') / 'split'
             done_path = self.d.get('temp') / 'done.txt'
 
@@ -978,22 +981,6 @@ class Av1an:
 
         self.concatenate_video()
 
-    def master_mode(self):
-        """Master mode. Splitting, managing queue, sending chunks, receiving chunks, concat videos."""
-        print('Working in master mode')
-
-        # Setup
-        self.setup_routine()
-
-    def server(self):
-        """Encoder mode: Connecting, Receiving, Encoding."""
-        print('Working in server mode')
-
-        host = '127.0.0.1'                 # Symbolic name meaning all available interfaces
-        port = self.d.get('host')      # Arbitrary non-privileged port
-
-        print(f'Bind at {host} {port}')
-
     def main_thread(self):
         """Main."""
         # Start time
@@ -1004,45 +991,24 @@ class Av1an:
         self.read_config()
         self.check_executables()
 
-        if self.d.get('mode') == 2:
-            if self.d.get('input'):
-                print("Server mode, input file ignored")
-        else:
-            self.process_inputs()
+        self.process_inputs()
 
         # Changing pixel format, bit format
         self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
 
         self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
 
-        if self.d.get('vmaf_steps') < 5:
-            print('Target vmaf require more than 4 probes/steps')
-            sys.exit()
-
         # Video Mode. Encoding on local machine
-        if self.d.get('mode') == 0:
-            # Batch processing
-            if self.d.get('queue'):
-                for file in self.d.get('queue'):
-                    tm = time.time()
-                    self.d['input'] = file
-                    self.d['output_file'] = None
-                    self.video_encoding()
-                    print(f'\rFinished: {round(time.time() - tm, 1)}s\n\n')
-            else:
+        if self.d.get('queue'):
+            for file in self.d.get('queue'):
+                tm = time.time()
+                self.d['input'] = file
+                self.d['output_file'] = None
                 self.video_encoding()
-                print(f'Finished: {round(time.time() - tm, 1)}s')
-        # Master mode
-        elif self.d.get('mode') == 1:
-            self.master_mode()
-
-        # Encoder mode. Accepting files over network and encode them
-        elif self.d.get('mode') == 2:
-            self.server()
-
+                print(f'\rFinished: {round(time.time() - tm, 1)}s\n\n')
         else:
-            print('No valid work mode')
-            exit()
+            self.video_encoding()
+            print(f'Finished: {round(time.time() - tm, 1)}s')
 
 
 def main():

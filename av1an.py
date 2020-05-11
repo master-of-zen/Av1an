@@ -25,7 +25,6 @@ from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
-
 if sys.version_info < (3, 7):
     print('Python 3.7+ required')
     sys.exit()
@@ -33,7 +32,6 @@ if sys.version_info < (3, 7):
 if sys.platform == 'linux':
     def restore_term():
         os.system("stty sane")
-
     atexit.register(restore_term)
 
 from multiprocessing.managers import BaseManager
@@ -64,7 +62,7 @@ class Av1an:
 
     def __init__(self):
         """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
-        self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error'
+        self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error '
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
@@ -448,18 +446,7 @@ class Av1an:
                 "-segment_frames", frames
             ])
         cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
-
-        subprocess.Popen(cmd,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
-
-    @staticmethod
-    def frame_probe(source: Path):
-        """Get frame count."""
-        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        matches = re.findall(r"frame= *([^ ]+?) ", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
-        return int(matches[-1])
+        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""
@@ -542,9 +529,9 @@ class Av1an:
     def aom_vpx_encode(self, inputs):
         """AOM encoding command composition."""
         enc = self.encoders.get(self.d.get('encoder'))
-        single_p = f'{enc}  -q --passes=1 '
-        two_p_1 = f'{enc} -q --passes=2 --pass=1'
-        two_p_2 = f'{enc}  -q --passes=2 --pass=2'
+        single_p = f'{enc} --passes=1 '
+        two_p_1 = f'{enc} --passes=2 --pass=1'
+        two_p_2 = f'{enc} --passes=2 --pass=2'
         passes = self.d.get('passes')
         pipe = self.d.get("ffmpeg_pipe")
         params = self.d.get("video_params")
@@ -815,6 +802,8 @@ class Av1an:
             print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
 
     def encode(self, commands):
+        counter = commands[1]
+        commands = commands[0]
         """Single encoder command queue and logging output."""
         # Passing encoding params to ffmpeg for encoding.
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.

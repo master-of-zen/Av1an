@@ -968,20 +968,18 @@ class Av1an:
                     f.write(f'{total}\n')
 
             clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
-            print(f'\rQueue: {clips} Workers: {self.d.get("workers")} Passes: {self.d.get("passes")}\n'
+            print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
                   f'Params: {self.d.get("video_params")}')
 
             manager = Manager()
             counter = manager.Counter(total, initial)
-            # bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
             commands = [(x, counter) for x in commands]
             loop = pool.imap_unordered(self.encode, commands)
             self.log(f'Started encoding queue with {self.d.get("workers")} workers\n\n')
 
             try:
-                for enc_frames in loop:
+                for _ in loop:
                     pass
-                    # bar.update(n=enc_frames)
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()
                 print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')

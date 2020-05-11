@@ -478,11 +478,13 @@ class Av1an:
         pipe = self.d.get("ffmpeg_pipe")
         params = self.d.get("video_params")
 
-        if not self.d.get("video_params"):
+        if not params:
             if enc == 'vpxenc':
-                self.d["video_params"] = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
+                p = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
+                self.d["video_params"], params = p, p
             if enc == 'aomenc':
-                self.d["video_params"] = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+                p = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+                self.d["video_params"], params = p, p
 
         if passes == 1:
             pass_1_commands = [
@@ -579,36 +581,33 @@ class Av1an:
 
         # When everything done, release the capture
         cap.release()
-        brig_geom = round(statistics.geometric_mean([x+1 for x in brightness]), 1)
+        brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
 
         return brig_geom
 
+    def get_cq(self, command):
+        """Return cq values from command"""
+        matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
+        return int(matches[-1])
+
     @staticmethod
     def man_cq(command: str, cq: int):
-        """
-        If cq == -1 returns current value of cq in command
-        Else return command with new cq value
-        """
+        """Return command with new cq value"""
         mt = '--cq-level='
-        if cq == -1:
-            mt = '--cq-level='
-            cq = int(command[command.find(mt) + 11:command.find(mt) + 13])
-            return cq
-        else:
-            cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
-            return cmd
+        cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
+        return cmd
 
     def boost(self, command: str, br_geom, new_cq=0):
         """Based on average brightness of video decrease(boost) Quantize value for encoding."""
+        b_limit = self.d.get('boost_limit')
+        b_range = self.d.get('boost_range')
         try:
-            cq = self.man_cq(command, -1)
+            cq = self.get_cq(command)
             if not new_cq:
                 if br_geom < 128:
-                    new_cq = cq - round((128 - br_geom) / 128 * self.d.get('boost_range'))
+                    new_cq = cq - round((128 - br_geom) / 128 * b_range)
+                    new_cq = max(b_limit, new_cq)
 
-                    # Cap on boosting
-                    if new_cq < self.d.get('boost_limit'):
-                        new_cq = self.d.get('boost_limit')
                 else:
                     new_cq = cq
             cmd = self.man_cq(command, new_cq)
@@ -1012,7 +1011,7 @@ class Av1an:
             self.process_inputs()
 
         # Changing pixel format, bit format
-        self.d['pix_format'] = f' -strict -1 -pix_fmt {self.d.get("pix_format")}'
+        self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
 
         self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
 

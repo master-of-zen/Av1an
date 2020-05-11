@@ -884,6 +884,13 @@ class Av1an:
                                 if new > frame:
                                     counter.update(new - frame)
                                     frame = new
+                    if encoder == 'svt_av1':
+                        while True:
+                            line = pipe.stdout.readline().strip()
+                            if len(line) == 0 and pipe.poll() is not None:
+                                break
+                        counter.update(frame_probe_source)
+
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')

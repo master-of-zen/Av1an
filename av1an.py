@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
+from multiprocessing.managers import BaseManager
 
 if sys.version_info < (3, 7):
     print('Python 3.7+ required')
@@ -34,9 +35,8 @@ if sys.platform == 'linux':
         os.system("stty sane")
     atexit.register(restore_term)
 
-from multiprocessing.managers import BaseManager
 
-
+# Stuff for updating encoded progress in real-time
 class MyManager(BaseManager):
     pass
 
@@ -293,36 +293,6 @@ class Av1an:
             cmd = f'{self.FFMPEG} -i "{input_vid}" -vn ' \
                   f'{self.d.get("audio_params")} {audio_file}'
             self.call_cmd(cmd)
-
-    def plot_encode_vmaf(self):
-        input = self.d.get('input')
-        output = self.d.get('output_file')
-        pass
-        """
-        with open(filename, 'r') as f:
-            file = f.readlines()
-            file = [x.strip() for x in file if 'vmaf="' in x]
-            vmafs = []
-            for i in file:
-                vmf = i[i.rfind('="') + 2: i.rfind('"')]
-                vmafs.append(float(vmf))
-
-            vmafs = [round(float(x), 3) for x in vmafs if type(x) == float]
-            plt.ylim((int(min(vmafs)), 100))
-            d = min(vmafs)
-            for i in range(int(d), 100, 1):
-                plt.axhline(i, color='grey', linewidth=0.5)
-
-        x = [x for x in range(len(vmafs))]
-        plt.plot(x, vmafs)
-
-        # Save/close
-        plt.ylabel('VMAF')
-        plt.xlabel('Frames')
-        plt.title(f'{sys.argv[1]}, {len(vmafs)} ')
-        plt.tight_layout()
-        plt.savefig('fig', dpi=1000)
-        """
 
     def call_vmaf(self, source: Path, encoded: Path):
         if self.d.get("vmaf_path"):

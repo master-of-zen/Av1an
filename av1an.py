@@ -416,7 +416,7 @@ class Av1an:
                 "-segment_frames", frames
             ])
         cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
-        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""

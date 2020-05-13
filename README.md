@@ -29,9 +29,9 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --file_path         Input file (relative or absolute path)
+    -i   --file_path        Input file(s) (relative or absolute path)
 
-    -o   --output_file       Name/Path for output file (Default: (input file name)_av1.mkv)
+    -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
 
     -enc --encoder          Encoder to use (aom,rav1e,svt_av1,vpx. Default: aom)
@@ -56,6 +56,9 @@ With your own parameters:
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
+    
+    -cfg                    Save/Read config file with encoder, encoder parameters,
+                            FFmpeg and audio settings.
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
 

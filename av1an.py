@@ -928,38 +928,38 @@ class Av1an:
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
-        # Reduce if more workers than clips
-        w = min(self.d.get('workers'), len(commands))
-        with Pool(w) as pool:
-            enc_path = self.d.get('temp') / 'split'
-            done_path = self.d.get('temp') / 'done.txt'
+        enc_path = self.d.get('temp') / 'split'
+        done_path = self.d.get('temp') / 'done.txt'
 
-            if self.d.get('resume') and done_path.exists():
+        if self.d.get('resume') and done_path.exists():
 
-                self.log('Resuming...\n')
-                with open(done_path, 'r') as f:
-                    lines = [line for line in f]
-                    if len(lines) > 1:
-                        data = literal_eval(lines[-1])
-                        total = int(lines[0])
-                        done = len([x[1] for x in data])
-                        initial = sum([int(x[0]) for x in data])
-                    else:
-                        done = 0
-                        initial = 0
-                        total = self.frame_probe(self.d.get('input'))
-                self.log(f'Resumed with {done} encoded clips done\n\n')
-
-            else:
-                initial = 0
-                with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
+            self.log('Resuming...\n')
+            with open(done_path, 'r') as f:
+                lines = [line for line in f]
+                if len(lines) > 1:
+                    data = literal_eval(lines[-1])
+                    total = int(lines[0])
+                    done = len([x[1] for x in data])
+                    initial = sum([int(x[0]) for x in data])
+                else:
+                    done = 0
+                    initial = 0
                     total = self.frame_probe(self.d.get('input'))
-                    f.write(f'{total}\n')
+            self.log(f'Resumed with {done} encoded clips done\n\n')
 
-            clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
-            print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
-                  f'Params: {self.d.get("video_params")}')
+        else:
+            initial = 0
+            with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
+                total = self.frame_probe(self.d.get('input'))
+                f.write(f'{total}\n')
 
+        clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
+        w = min(self.d.get('workers'), clips)
+
+        print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
+              f'Params: {self.d.get("video_params")}')
+
+        with Pool(w) as pool:
             manager = Manager()
             counter = manager.Counter(total, initial)
             commands = [(x, counter) for x in commands]
@@ -1036,9 +1036,10 @@ class Av1an:
             for file in self.d.get('queue'):
                 tm = time.time()
                 self.d['input'] = file
+                print(f'Encoding: {file}')
                 self.d['output_file'] = None
                 self.video_encoding()
-                print(f'\rFinished: {round(time.time() - tm, 1)}s\n\n')
+                print(f'Finished: {round(time.time() - tm, 1)}s\n')
         else:
             self.video_encoding()
             print(f'Finished: {round(time.time() - tm, 1)}s')

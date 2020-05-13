@@ -26,8 +26,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 
-if sys.version_info < (3, 7):
-    print('Python 3.7+ required')
+if sys.version_info < (3, 6):
+    print('Python 3.6+ required')
     sys.exit()
 
 if sys.platform == 'linux':

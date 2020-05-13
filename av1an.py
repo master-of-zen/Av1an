@@ -67,7 +67,7 @@ class Av1an:
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     @staticmethod
-    def get_cq(self, command):
+    def get_cq(command):
         """Return cq values from command"""
         matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
         return int(matches[-1])
@@ -591,7 +591,7 @@ class Av1an:
         b_limit = self.d.get('boost_limit')
         b_range = self.d.get('boost_range')
         try:
-            cq = self.get_cq(command)
+            cq = Av1an.get_cq(command)
             if not new_cq:
                 if br_geom < 128:
                     new_cq = cq - round((128 - br_geom) / 128 * b_range)

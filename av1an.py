@@ -402,7 +402,7 @@ class Av1an:
         """Split video by frame numbers, or just copying video."""
 
         cmd = [
-            "ffmpeg", "-y",
+            "ffmpeg", "-hide_banner", "-y",
             "-i", video.absolute().as_posix(),
             "-map", "0:v:0",
             "-an",
@@ -416,7 +416,11 @@ class Av1an:
                 "-segment_frames", frames
             ])
         cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
-        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
+        pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while True:
+            line = pipe.stdout.readline().strip()
+            if len(line) == 0 and pipe.poll() is not None:
+                break
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""

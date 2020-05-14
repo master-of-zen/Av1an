@@ -455,7 +455,7 @@ class Av1an:
                 if done_file.exists():
                     with open(done_file, 'r') as f:
                         data = [line for line in f]
-                        data = literal_eval(data[1])
+                        data = literal_eval(data[-1])
                         queue = [x for x in queue if x.name not in [x[1] for x in data]]
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()

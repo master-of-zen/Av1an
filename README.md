@@ -142,6 +142,8 @@ For Windows in the installer check the option to `add Python to PATH`
 
   *  Clone Repo or Download from Releases
   *  `python setup.py install`
+* Also:
+    On ubuntu systems packages `python3-opencv` and `libsm6` are required
 
 ### Donations for Threadripper 3990x dream
 

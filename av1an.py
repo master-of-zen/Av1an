@@ -49,7 +49,7 @@ def Manager():
 
 class Counter(object):
     def __init__(self, total, initial):
-        self.bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=False)
+        self.bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True)
 
     def update(self, value):
         self.bar.update(value)
@@ -213,9 +213,15 @@ class Av1an:
         parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
 
         # Boost
-        parser.add_argument('--boost', help='Experimental feature', action='store_true')
-        parser.add_argument('--boost_range', default=15, type=int, help='Range/strenght of CQ change')
+        parser.add_argument('--boost', help='Experimental feature, decrease CQ of clip based on brightness.'
+                                            'Darker = lower CQ', action='store_true')
+        parser.add_argument('--boost_range', default=15, type=int, help='Range/strength of CQ change')
         parser.add_argument('--boost_limit', default=10, type=int, help='CQ limit for boosting')
+
+        # Grain
+        parser.add_argument('--grain', help='Exprimental feature, adds generated grain based on video brightness',
+                            action='store_true')
+        parser.add_argument('--grain_range')
 
         # Vmaf
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
@@ -454,8 +460,8 @@ class Av1an:
             try:
                 if done_file.exists():
                     with open(done_file, 'r') as f:
-                        data = [line for line in f]
-                        data = literal_eval(data[-1])
+                        data = literal_eval(f.read())
+                        data = data[1:]
                         queue = [x for x in queue if x.name not in [x[1] for x in data]]
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()
@@ -939,10 +945,10 @@ class Av1an:
 
             self.log('Resuming...\n')
             with open(done_path, 'r') as f:
-                lines = [line for line in f]
-                if len(lines) > 1:
-                    data = literal_eval(lines[-1])
+                lines = literal_eval(f.read().strip())
+                if len(lines[1:]) > 1:
                     total = int(lines[0])
+                    data = lines[1:]
                     done = len([x[1] for x in data])
                     initial = sum([int(x[0]) for x in data])
                 else:
@@ -955,7 +961,7 @@ class Av1an:
             initial = 0
             with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
                 total = self.frame_probe(self.d.get('input'))
-                f.write(f'{total}\n')
+                f.write(f'({total}), ')
 
         clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
         w = min(self.d.get('workers'), clips)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import time
-import pickle
+import json
 import re
 from tqdm import tqdm
 import sys
@@ -166,18 +166,18 @@ class Av1an:
         cfg = self.d.get('config')
         if cfg:
             if cfg.exists():
-                with open(cfg, 'rb') as f:
-                    c: dict = dict(pickle.load(f))
+                with open(cfg) as f:
+                    c: dict = dict(json.load(f))
                     self.d.update(c)
 
             else:
-                with open(cfg, 'wb') as f:
+                with open(cfg, 'w') as f:
                     c = dict()
                     c['video_params'] = self.d.get('video_params')
                     c['encoder'] = self.d.get('encoder')
                     c['ffmpeg'] = self.d.get('ffmpeg')
                     c['audio_params'] = self.d.get('audio_params')
-                    pickle.dump(c, f)
+                    json.dump(c, f)
 
     def arg_parsing(self):
         """Command line parse and sanity checking."""

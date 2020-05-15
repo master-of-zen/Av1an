@@ -15,6 +15,7 @@ import argparse
 from multiprocessing import Pool
 import multiprocessing
 import subprocess
+from subprocess import PIPE, STDOUT
 from pathlib import Path
 import cv2
 import numpy as np
@@ -83,8 +84,8 @@ class Av1an:
     def frame_probe(source: Path):
         """Get frame count."""
         cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        matches = re.findall(r"frame= *([^ ]+?) ", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
+        r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
+        matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
         return int(matches[-1])
 
     @staticmethod
@@ -122,7 +123,7 @@ class Av1an:
     def call_cmd(self, cmd, capture_output=False):
         """Calling system shell, if capture_output=True output string will be returned."""
         if capture_output:
-            return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            return subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 
         with open(self.d.get('logging'), 'a') as log:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
@@ -422,7 +423,7 @@ class Av1an:
                 "-segment_frames", frames
             ])
         cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
-        pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
         while True:
             line = pipe.stdout.readline().strip()
             if len(line) == 0 and pipe.poll() is not None:
@@ -837,9 +838,9 @@ class Av1an:
                 try:
                     frame = 0
 
-                    ffmpeg_pipe = subprocess.Popen(f, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
+                    ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                                            stderr=STDOUT,
                                             universal_newlines=True)
                     if encoder == 'aom' or encoder == 'vpx':
                         while True:
@@ -853,7 +854,7 @@ class Av1an:
                                     if new > frame:
                                         counter.update(new - frame)
                                         frame = new
-                    if encoder == 'rav1e':
+                    elif encoder == 'rav1e':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
@@ -864,7 +865,7 @@ class Av1an:
                                 if new > frame:
                                     counter.update(new - frame)
                                     frame = new
-                    if encoder == 'svt_av1':
+                    elif encoder == 'svt_av1':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:

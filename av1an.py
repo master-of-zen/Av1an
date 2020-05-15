@@ -83,32 +83,7 @@ class Av1an:
     @staticmethod
     def frame_probe(source: Path):
         """Get frame count."""
-
-        # First try using ffprobe (faster). See:
-        # https://stackoverflow.com/questions/2017843/fetch-frame-count-with-ffmpeg
-        cmd = ["ffprobe",
-               "-v", "error",
-               "-select_streams", "v:0",
-               "-show_entries", "stream=nb_frames",
-               "-of", "default=nokey=1:noprint_wrappers=1",
-               source.absolute()]
-        try:
-            r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
-            match = re.match(r"[0-9]+", r.stdout.decode("utf-8"))
-        except FileNotFoundError:
-            # ffprobe command most likely not found
-            match = None
-
-        if match is not None:
-            return int(match[0])
-
-        # Otherwise, use ffmpeg and read the whole file (slower)
-        cmd = ["ffmpeg",
-               "-hide_banner",
-               "-i", source.absolute(),
-               "-map", "0:v:0",
-               "-f", "null",
-               "-"]
+        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
         r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
         matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
         return int(matches[-1])
@@ -879,7 +854,7 @@ class Av1an:
                                     if new > frame:
                                         counter.update(new - frame)
                                         frame = new
-                    if encoder == 'rav1e':
+                    elif encoder == 'rav1e':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
@@ -890,7 +865,7 @@ class Av1an:
                                 if new > frame:
                                     counter.update(new - frame)
                                     frame = new
-                    if encoder == 'svt_av1':
+                    elif encoder == 'svt_av1':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:

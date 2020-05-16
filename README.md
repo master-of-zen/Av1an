@@ -51,18 +51,24 @@ With your own parameters:
     -w   --workers          Overrides automatically set number of workers.
                             Example: rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -w 3
 
+    -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
+    
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
     
+    -xs  --extra_split      Adding extra splits if frame distance beetween splits bigger than
+                            given value. Split only on keyframes. Works with/without PySceneDetect
+                            Example: 1000 frames video with single scene, 
+                            -xs 200 will try to add splits at keyframes 
+                            that closest to 200,400,600,800.
+    
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
-    -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
-
-    -ff  --ffmpeg             FFmpeg options. Applied to each segment individually
+    -ff  --ffmpeg           FFmpeg options. Applied to each segment individually
                             Example:
                             --ff " -r 24 -vf scale=320:240 "
 

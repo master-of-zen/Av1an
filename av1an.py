@@ -361,7 +361,7 @@ class Av1an:
                 if scenes.exists():
                     # Read stats from CSV file opened in read mode:
                     with scenes.open() as stats_file:
-                        stats = stats_file.read()
+                        stats = stats_file.read().strip()
                         self.log('Using Saved Scenes\n')
                         return stats
 
@@ -943,26 +943,21 @@ class Av1an:
         done_path = self.d.get('temp') / 'done.txt'
 
         if self.d.get('resume') and done_path.exists():
-
             self.log('Resuming...\n')
-            with open(done_path, 'r') as f:
-                lines = literal_eval(f.read().strip())
-                if len(lines[1:]) > 1:
-                    total = int(lines[0])
-                    data = lines[1:]
-                    done = len([x[1] for x in data])
-                    initial = sum([int(x[0]) for x in data])
-                else:
-                    done = 0
-                    initial = 0
-                    total = self.frame_probe(self.d.get('input'))
+
+            with open(done_path) as f:
+                data = literal_eval(f.read().strip())
+                total = int(data[0])
+                done = len(data) - 1
+                initial = sum([int(x[0]) for x in data[1:]])
+
             self.log(f'Resumed with {done} encoded clips done\n\n')
 
         else:
             initial = 0
-            with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
-                total = self.frame_probe(self.d.get('input'))
-                f.write(f'({total}), ')
+            total = self.frame_probe(self.d.get('input'))
+            with open(done_path, 'w') as f:
+                print(total, end=', ', file=f)
 
         clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
         w = min(self.d.get('workers'), clips)

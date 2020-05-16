@@ -129,10 +129,10 @@ With your own parameters:
   *  [Install Python3](https://www.python.org/downloads/) <br>
 For Windows in the installer check the option to `add Python to PATH`
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
-  *  [Install AOMENC](https://aomedia.googlesource.com/aom/) For AOMENC encoder support
-  *  [Install rav1e](https://github.com/xiph/rav1e) For rav1e encoder support
-  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) For SVT-AV1 encoder support
-  *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) For vpx encoder support
+  *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
+  *  [Install rav1e](https://github.com/xiph/rav1e) 
+  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) 
+  *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
 * With a package manager:
   *  [PyPI](https://pypi.org/project/Av1an/)

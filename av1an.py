@@ -211,6 +211,7 @@ class Av1an:
         # PySceneDetect split
         parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
+        parser.add_argument('--extra_split', type=int, default=0, help='Number of frames after which make force split')
 
         # Encoding
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
@@ -1002,6 +1003,42 @@ class Av1an:
                 print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
                 sys.exit()
 
+    def extra_split(self, frames):
+        if len(frames) > 0:
+            f = list(literal_eval(frames))
+        else:
+            f = []
+        f.append(Av1an.frame_probe(self.d.get('input')))
+        split_distance = self.d.get('extra_split')
+
+        # Get all keyframes of original video
+        keyframes = Av1an.get_keyframes(self.d.get('input'))
+
+        t = f[:]
+        t.insert(0, 0)
+        splits = list(zip(t, f))
+        for i in splits:
+            # Getting distance between splits
+            distance = (i[1] - i[0])
+
+            if distance > split_distance:
+                # Keyframes that between 2 split points
+                candidates = [k for k in keyframes if i[1] > k > i[0]]
+
+                if len(candidates) > 0:
+                    # Getting number of splits that need to be inserted
+                    to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
+                    for k in range(0, to_insert):
+                        # Approximation of splits position
+                        aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
+
+                        # Getting keyframe closest to approximated
+                        key = min(candidates, key=lambda x: abs(x - aprox_to_place))
+                        f.append(key)
+        result = [str(x) for x in sorted(f)]
+        result = ','.join(result)
+        return result
+
     def setup_routine(self):
         """
         All pre encoding routine.
@@ -1016,6 +1053,10 @@ class Av1an:
 
             # Splitting video and sorting big-first
             framenums = self.scene_detect(self.d.get('input'))
+
+            if self.d.get('extra_split'):
+                framenums = self.extra_split(framenums)
+
             self.split(self.d.get('input'), framenums)
 
             # Extracting audio

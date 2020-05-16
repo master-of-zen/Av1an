@@ -205,14 +205,14 @@ class Av1an:
         parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
 
         # Input/Output/Temp
-        parser.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')  # nargs = '+'
+        parser.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
         # PySceneDetect split
         parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
-        parser.add_argument('--extra_split', type=int, default=0, help='Number of frames after which make force split')
+        parser.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
 
         # Encoding
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
@@ -802,6 +802,12 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
 
+    @staticmethod
+    def print_error():
+        print('Encoding failed, check validity of your encoding settings/commands '
+              'and start again')
+        sys.exit()
+
     def encode(self, commands):
         counter = commands[1]
         commands = commands[0]
@@ -874,6 +880,8 @@ class Av1an:
                                     if new > frame:
                                         counter.update(new - frame)
                                         frame = new
+                            if pipe.returncode != 0:
+                                Av1an.print_error()
                     elif encoder == 'rav1e':
                         while True:
                             line = pipe.stdout.readline().strip()
@@ -885,12 +893,18 @@ class Av1an:
                                 if new > frame:
                                     counter.update(new - frame)
                                     frame = new
+
+                            if pipe.returncode != 0:
+                                Av1an.print_error()
+
                     elif encoder == 'svt_av1':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
                                 break
                         counter.update(frame_probe_source)
+                        if pipe.returncode != 0:
+                            Av1an.print_error()
 
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
@@ -1036,6 +1050,7 @@ class Av1an:
                         # Getting keyframe closest to approximated
                         key = min(candidates, key=lambda x: abs(x - aprox_to_place))
                         f.append(key)
+        self.log(f'Applying extra splits\nSplit distance: {split_distance}\nNew splits:{len(f)}\n')
         result = [str(x) for x in sorted(f)]
         result = ','.join(result)
         return result

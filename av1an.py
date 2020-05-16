@@ -68,6 +68,21 @@ class Av1an:
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     @staticmethod
+    def get_keyframes(file):
+        """ Read file info and return list of all keyframes """
+        cmd = ["ffmpeg", "-hide_banner", "-i", file.absolute(), "-vf", "showinfo", "-f", "null", "-"]
+        pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        keyframes = []
+        while True:
+            line = pipe.stdout.readline().strip()
+            if len(line) == 0 and pipe.poll() is not None:
+                break
+            if "iskey:1" in line:
+                r = re.findall(r"n: *([^ ]+?) ", line)
+                keyframes.append(int(r[0]))
+        return keyframes
+
+    @staticmethod
     def get_cq(command):
         """Return cq values from command"""
         matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
@@ -162,7 +177,7 @@ class Av1an:
         else:
             self.d['input'] = inputs[0]
 
-    def read_config(self):
+    def config(self):
         """Creation and reading of config files with saved settings"""
         cfg = self.d.get('config')
         if cfg:
@@ -180,6 +195,10 @@ class Av1an:
                     c['audio_params'] = self.d.get('audio_params')
                     json.dump(c, f)
 
+        # Changing pixel format, bit format
+        self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
+        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
+
     def arg_parsing(self):
         """Command line parse and sanity checking."""
         parser = argparse.ArgumentParser()
@@ -190,9 +209,10 @@ class Av1an:
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
-        # PySceneDetect
+        # PySceneDetect split
         parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
+        parser.add_argument('--extra_split', type=int, default=0, help='Number of frames after which make force split')
 
         # Encoding
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
@@ -435,12 +455,12 @@ class Av1an:
             status_file = Path(self.d.get("temp") / 'done.txt')
 
             if self.d.get("no_check"):
-                s1 = self.frame_probe(source)
+                s1 = Av1an.frame_probe(source)
                 with status_file.open('a') as done:
                     done.write(f'({s1}, "{source.name}"), ')
                     return
 
-            s1, s2 = [self.frame_probe(i) for i in (source, encoded)]
+            s1, s2 = [Av1an.frame_probe(i) for i in (source, encoded)]
 
             if s1 == s2:
                 with status_file.open('a') as done:
@@ -610,7 +630,7 @@ class Av1an:
 
                 else:
                     new_cq = cq
-            cmd = self.man_cq(command, new_cq)
+            cmd = Av1an.man_cq(command, new_cq)
 
             return cmd, new_cq
 
@@ -675,7 +695,7 @@ class Av1an:
             mincq = self.d.get('min_cq')
             maxcq = self.d.get('max_cq')
             steps = self.d.get('vmaf_steps')
-            frames = self.frame_probe(source)
+            frames = Av1an.frame_probe(source)
 
             # Making 3fps probing file
             cq = self.man_cq(command, -1)
@@ -792,7 +812,7 @@ class Av1an:
         try:
             st_time = time.time()
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
-            frame_probe_source = self.frame_probe(source)
+            frame_probe_source = Av1an.frame_probe(source)
 
             if self.d.get('vmaf_target'):
 
@@ -878,7 +898,7 @@ class Av1an:
 
             self.frame_check(source, target)
 
-            frame_probe = self.frame_probe(target)
+            frame_probe = Av1an.frame_probe(target)
 
             enc_time = round(time.time() - st_time, 2)
 
@@ -899,7 +919,6 @@ class Av1an:
 
             self.log(f'Done: {source.name} Fr: {frame_probe}\n'
                      f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
-            return self.frame_probe(source)
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
@@ -952,7 +971,6 @@ class Av1an:
                 initial = sum([int(x[0]) for x in data[1:]])
 
             self.log(f'Resumed with {done} encoded clips done\n\n')
-
         else:
             initial = 0
             total = self.frame_probe(self.d.get('input'))
@@ -980,6 +998,42 @@ class Av1an:
                 print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
                 sys.exit()
 
+    def extra_split(self, frames):
+        if len(frames) > 0:
+            f = list(literal_eval(frames))
+        else:
+            f = []
+        f.append(Av1an.frame_probe(self.d.get('input')))
+        split_distance = self.d.get('extra_split')
+
+        # Get all keyframes of original video
+        keyframes = Av1an.get_keyframes(self.d.get('input'))
+
+        t = f[:]
+        t.insert(0, 0)
+        splits = list(zip(t, f))
+        for i in splits:
+            # Getting distance between splits
+            distance = (i[1] - i[0])
+
+            if distance > split_distance:
+                # Keyframes that between 2 split points
+                candidates = [k for k in keyframes if i[1] > k > i[0]]
+
+                if len(candidates) > 0:
+                    # Getting number of splits that need to be inserted
+                    to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
+                    for k in range(0, to_insert):
+                        # Approximation of splits position
+                        aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
+
+                        # Getting keyframe closest to approximated
+                        key = min(candidates, key=lambda x: abs(x - aprox_to_place))
+                        f.append(key)
+        result = [str(x) for x in sorted(f)]
+        result = ','.join(result)
+        return result
+
     def setup_routine(self):
         """
         All pre encoding routine.
@@ -994,6 +1048,10 @@ class Av1an:
 
             # Splitting video and sorting big-first
             framenums = self.scene_detect(self.d.get('input'))
+
+            if self.d.get('extra_split'):
+                framenums = self.extra_split(framenums)
+
             self.split(self.d.get('input'), framenums)
 
             # Extracting audio
@@ -1022,22 +1080,9 @@ class Av1an:
 
         self.concatenate_video()
 
-    def main_thread(self):
-        """Main."""
-        # Start time
-        tm = time.time()
-
-        # Parse initial arguments
-        self.arg_parsing()
-        self.read_config()
-        self.check_executables()
-        self.process_inputs()
-
-        # Changing pixel format, bit format
-        self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
-        self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
-
+    def main_queue(self):
         # Video Mode. Encoding on local machine
+        tm = time.time()
         if self.d.get('queue'):
             for file in self.d.get('queue'):
                 tm = time.time()
@@ -1049,6 +1094,19 @@ class Av1an:
         else:
             self.video_encoding()
             print(f'Finished: {round(time.time() - tm, 1)}s')
+
+    def main_thread(self):
+        """Main."""
+        self.arg_parsing()
+
+        # Read/Set parameters
+        self.config()
+
+        # Check all executables
+        self.check_executables()
+
+        self.process_inputs()
+        self.main_queue()
 
 
 def main():

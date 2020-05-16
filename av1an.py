@@ -381,7 +381,7 @@ class Av1an:
                 if scenes.exists():
                     # Read stats from CSV file opened in read mode:
                     with scenes.open() as stats_file:
-                        stats = stats_file.read()
+                        stats = stats_file.read().strip()
                         self.log('Using Saved Scenes\n')
                         return stats
 
@@ -452,19 +452,23 @@ class Av1an:
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""
         try:
-            status_file = Path(self.d.get("temp") / 'done.txt')
+            status_file = Path(self.d.get("temp") / 'done.json')
+            with status_file.open() as f:
+                d = json.load(f)
 
             if self.d.get("no_check"):
                 s1 = Av1an.frame_probe(source)
-                with status_file.open('a') as done:
-                    done.write(f'({s1}, "{source.name}"), ')
+                d['done'][source.name] = s1
+                with status_file.open('w') as f:
+                    json.dump(d, f)
                     return
 
             s1, s2 = [Av1an.frame_probe(i) for i in (source, encoded)]
 
             if s1 == s2:
-                with status_file.open('a') as done:
-                    done.write(f'({s1}, "{source.name}"), ')
+                d['done'][source.name] = s1
+                with status_file.open('w') as f:
+                    json.dump(d, f)
             else:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
         except Exception as e:
@@ -475,14 +479,13 @@ class Av1an:
         """Returns sorted list of all videos that need to be encoded. Big first."""
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
-        if self.d.get('resume'):
-            done_file = self.d.get('temp') / 'done.txt'
+        done_file = self.d.get('temp') / 'done.json'
+        if self.d.get('resume') and done_file.exists():
             try:
-                if done_file.exists():
-                    with open(done_file, 'r') as f:
-                        data = literal_eval(f.read())
-                        data = data[1:]
-                        queue = [x for x in queue if x.name not in [x[1] for x in data]]
+                with open(done_file) as f:
+                    data = json.load(f)
+                data = data['done'].keys()
+                queue = [x for x in queue if x.name not in data]
             except Exception as e:
                 _, _, exc_tb = sys.exc_info()
                 print(f'Error at resuming {e}\nAt line {exc_tb.tb_lineno}')
@@ -490,6 +493,8 @@ class Av1an:
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
         if len(queue) == 0:
+            # TODO: this could also be because we're resuming but everything
+            # is done.
             print('Error: No files found in .temp/split, probably splitting not working')
             sys.exit()
 
@@ -959,29 +964,25 @@ class Av1an:
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
         enc_path = self.d.get('temp') / 'split'
-        done_path = self.d.get('temp') / 'done.txt'
+        done_path = self.d.get('temp') / 'done.json'
 
         if self.d.get('resume') and done_path.exists():
-
             self.log('Resuming...\n')
-            with open(done_path, 'r') as f:
-                lines = literal_eval(f.read().strip())
-                if len(lines[1:]) > 1:
-                    total = int(lines[0])
-                    data = lines[1:]
-                    done = len([x[1] for x in data])
-                    initial = sum([int(x[0]) for x in data])
-                else:
-                    done = 0
-                    initial = 0
-                    total = Av1an.frame_probe(self.d.get('input'))
-            self.log(f'Resumed with {done} encoded clips done\n\n')
 
+            with open(done_path) as f:
+                data = json.load(f)
+
+            total = data['total']
+            done = len(data['done'])
+            initial = sum(data['done'].values())
+
+            self.log(f'Resumed with {done} encoded clips done\n\n')
         else:
             initial = 0
-            with open(Path(self.d.get('temp') / 'done.txt'), 'w') as f:
-                total = Av1an.frame_probe(self.d.get('input'))
-                f.write(f'({total}), ')
+            total = self.frame_probe(self.d.get('input'))
+            d = {'total': total, 'done': {}}
+            with open(done_path, 'w') as f:
+                json.dump(d, f)
 
         clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
         w = min(self.d.get('workers'), clips)
@@ -1046,7 +1047,7 @@ class Av1an:
         All pre encoding routine.
         Scene detection, splitting, audio extraction
         """
-        if self.d.get('resume') and (self.d.get('temp') / 'done.txt').exists():
+        if self.d.get('resume') and (self.d.get('temp') / 'done.json').exists():
             self.set_logging()
 
         else:

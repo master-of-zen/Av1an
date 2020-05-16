@@ -67,6 +67,21 @@ class Av1an:
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     @staticmethod
+    def get_keyframes(file):
+        """ Read file info and return list of all keyframes """
+        cmd = ["ffmpeg", "-hide_banner", "-i", file.absolute(), "-vf", "showinfo", "-f", "null", "-"]
+        pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        keyframes = []
+        while True:
+            line = pipe.stdout.readline().strip()
+            if len(line) == 0 and pipe.poll() is not None:
+                break
+            if "iskey:1" in line:
+                r = re.findall(r"n: *([^ ]+?) ", line)
+                keyframes.append(int(r[0]))
+        return keyframes
+
+    @staticmethod
     def get_cq(command):
         """Return cq values from command"""
         matches = re.findall(r"--cq-level= *([^ ]+?) ", command)

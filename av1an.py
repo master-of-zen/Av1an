@@ -467,7 +467,6 @@ class Av1an:
                     done.write(f'({s1}, "{source.name}"), ')
             else:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
-
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
@@ -802,12 +801,6 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
 
-    @staticmethod
-    def print_error():
-        print('Encoding failed, check validity of your encoding settings/commands '
-              'and start again')
-        sys.exit()
-
     def encode(self, commands):
         counter = commands[1]
         commands = commands[0]
@@ -880,8 +873,6 @@ class Av1an:
                                     if new > frame:
                                         counter.update(new - frame)
                                         frame = new
-                            if pipe.returncode != 0:
-                                Av1an.print_error()
                     elif encoder == 'rav1e':
                         while True:
                             line = pipe.stdout.readline().strip()
@@ -894,17 +885,12 @@ class Av1an:
                                     counter.update(new - frame)
                                     frame = new
 
-                            if pipe.returncode != 0:
-                                Av1an.print_error()
-
                     elif encoder == 'svt_av1':
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
                                 break
                         counter.update(frame_probe_source)
-                        if pipe.returncode != 0:
-                            Av1an.print_error()
 
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()

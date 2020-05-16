@@ -14,7 +14,7 @@
 <img= src="https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard"></a>
 <a href="https://www.codacy.com/manual/Grenight/Av1an?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=master-of-zen/Av1an&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/4632dbb2f6f34ad199142c01a3eb2aaf"/></a>
 </h4>
-<h2 align="center">Easy, Fast, and Efficient </h2>
+<h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
 An easy way to start using AV1 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX are supported.
 

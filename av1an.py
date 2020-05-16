@@ -471,6 +471,9 @@ class Av1an:
                     json.dump(d, f)
             else:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+        except IndexError as ie:
+            print('Encoding failed, check validity of your encoding settings/commands and start again')
+            sys.exit()
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')

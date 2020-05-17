@@ -89,20 +89,7 @@ class Av1an:
         perc_25 = round(np.percentile(vmafs, 25), 3)
         perc_75 = round(np.percentile(vmafs, 75), 3)
 
-        # Plot
-        plt.figure(figsize=(15, 4))
-        [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
-        [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean} \nHarm: {harmonic}\nGeom: {geometric}'
-                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
-        plt.ylabel('VMAF')
-        plt.legend(loc="lower right")
-        plt.ylim(int(perc_1), 100)
-        plt.tight_layout()
-        plt.margins(0)
-
-        # Save
-        plt.savefig('fig', dpi=500)
+        return x, vmafs, mean, perc_1, perc_25, perc_75
 
     @staticmethod
     def get_keyframes(file):
@@ -695,7 +682,24 @@ class Av1an:
               f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
               f'[scaled2][scaled1]libvmaf=log_path={xml}:{model}" -f null - '
         self.call_cmd(cmd, capture_output=True)
-        Av1an.read_vmaf_xml(xml)
+
+        x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
+
+        # Plot
+        plt.figure(figsize=(15, 4))
+        [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
+        [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
+        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean}'
+                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+        plt.ylabel('VMAF')
+        plt.legend(loc="lower right")
+        plt.ylim(int(perc_1), 100)
+        plt.tight_layout()
+        plt.margins(0)
+
+        # Save
+        file_name = str(self.d.get('output_file').stem) + '_plot.png'
+        plt.savefig(file_name, dpi=500)
 
     def target_vmaf(self, source, command):
         try:

@@ -68,6 +68,40 @@ class Av1an:
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     @staticmethod
+    def read_vmaf_xml(file):
+        with open(file, 'r') as f:
+            file = f.readlines()
+            file = [x.strip() for x in file if 'vmaf="' in x]
+            vmafs = []
+            for i in file:
+                vmf = i[i.rfind('="') + 2: i.rfind('"')]
+                vmafs.append(float(vmf))
+
+            vmafs = [round(float(x), 3) for x in vmafs if type(x) == float]
+
+        # Data
+        x = [x for x in range(len(vmafs))]
+        mean = round(sum(vmafs) / len(vmafs), 3)
+        perc_1 = np.percentile(vmafs, 1)
+        perc_25 = np.percentile(vmafs, 25)
+        perc_75 = np.percentile(vmafs, 75)
+
+        # Plot
+        plt.figure(figsize=(15, 4))
+        [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
+        [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
+        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean} \n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}',
+                 linewidth=0.7)
+        plt.ylabel('VMAF')
+        plt.legend(loc="lower right")
+        plt.ylim(int(perc_1), 100)
+        plt.tight_layout()
+        plt.margins(0)
+
+        # Save
+        plt.savefig('fig', dpi=500)
+
+    @staticmethod
     def get_keyframes(file):
         """ Read file info and return list of all keyframes """
         cmd = ["ffmpeg", "-hide_banner", "-i", file.absolute(), "-vf", "showinfo", "-f", "null", "-"]
@@ -321,7 +355,7 @@ class Av1an:
                   f'{self.d.get("audio_params")} {audio_file}'
             self.call_cmd(cmd)
 
-    def call_vmaf(self, source: Path, encoded: Path):
+    def call_vmaf(self, source: Path, encoded: Path, give_file=False):
         if self.d.get("vmaf_path"):
             model = f'model_path={self.d.get("vmaf_path")}'
         else:
@@ -329,27 +363,19 @@ class Av1an:
 
         # For vmaf calculation both source and encoded segment scaled to 1080
         # for proper vmaf calculation
-        cmd = f'ffmpeg -hide_banner -i {source.as_posix()} -i {encoded.as_posix()}  ' \
+        cmd = f'ffmpeg -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
               f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
               f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
               f'[scaled2][scaled1]libvmaf=log_path={source.with_name(encoded.stem).as_posix()}.xml:{model}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)
-        result = call.decode().strip().split()
-        return result
-
-    def get_vmaf(self, source: Path, encoded: Path):
-
-        result = self.call_vmaf(source, encoded)
-
-        if 'monotonically' in result:
-            self.log(''.join(result))
-            return 'Nan. Bad dts'
+        call = call.decode().strip()
+        vmf = call.split()[-1]
         try:
-            res = float(result[-1])
-            return res
-        except ValueError:
-            return 'Nan'
+            vmf = float(vmf)
+        except:
+            vmf = 0
+        return vmf
 
     def reduce_scenes(self, scenes):
         """Windows terminal can't handle more than ~600 scenes in length."""
@@ -646,51 +672,27 @@ class Av1an:
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
     def plot_vmaf(self):
-        with open(self.d.get('temp') / 'vmaf.txt', 'r') as f:
-            data = literal_eval(f.read())
-            d = sorted(data, key=lambda x: x[0])
 
-        try:
-            plot_data = []
-            for point in d:
-                vmaf = point[2]
-                if isinstance(vmaf, str):
-                    vmaf = None
-                frames = point[1]
-                for i in range(frames):
-                    plot_data.append(vmaf)
+        if not self.d.get("vmaf"):
+            return
 
-            x1 = range(len(plot_data))
-            y1 = plot_data
+        if self.d.get("vmaf_path"):
+            model = f'model_path={self.d.get("vmaf_path")}'
+        else:
+            model = ''
 
-            # Plot
-            plt.plot(x1, y1)
-            real_y = [i for i in y1 if i]
+        inp: Path = self.d.get('input')
+        out: Path = self.d.get('output_file')
+        xml: str = "vmaf.xml"
 
-            if len(real_y) == 0:
-                print('No valid vmaf values')
-                plt.close()
-                return
-
-            plt.ylim((int(min(real_y)), 100))
-            for i in range(int(min(real_y)), 100, 1):
-                plt.axhline(i, color='grey', linewidth=0.5)
-            vm = self.d.get('vmaf_target')
-            if vm:
-                plt.hlines(vm, 0, len(x1), colors='red')
-            plt.hlines(sum(real_y) / len(real_y), 0, len(x1), colors='blue')
-
-            # Save/close
-            plt.ylabel('VMAF')
-            plt.xlabel('Frames')
-            plt.title(f'{self.d.get("input").stem}, {frames} ')
-            plt.tight_layout()
-            plt.savefig(self.d.get('input').stem, dpi=600)
-            plt.close()
-
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'\nError in vmaf plot: {e}\nAt line: {exc_tb.tb_lineno}\n')
+        # For vmaf calculation both source and encoded segment scaled to 1080
+        # for proper vmaf calculation
+        cmd = f'ffmpeg -hide_banner -r 60 -i {inp.as_posix()} -r 60 -i {out.as_posix()}  ' \
+              f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
+              f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
+              f'[scaled2][scaled1]libvmaf=log_path={xml}:{model}" -f null - '
+        self.call_cmd(cmd, capture_output=True)
+        Av1an.read_vmaf_xml(xml)
 
     def target_vmaf(self, source, command):
         try:
@@ -727,14 +729,11 @@ class Av1an:
             pr = []
             for i in cmd:
                 self.call_cmd(i[0])
-                v = self.get_vmaf(i[1], i[2])
-                if isinstance(v, str):
-                    return int(cq), 'Error in vmaf calculation\n'
+                v = self.call_vmaf(i[1], i[2])
                 pr.append(round(v, 1))
                 ls.append((v, i[3]))
             x = [x[1] for x in ls]
             y = [float(x[0]) for x in ls]
-
             # Interpolate data
             f = interpolate.interp1d(x, y, kind='cubic')
 
@@ -753,42 +752,13 @@ class Av1an:
                       f"{params}{int(tg_cq[0])} -o {probe_name} -"
             self.call_cmd(run_cmd)
 
-            new_vmaf = self.get_vmaf(source, probe_name)
-
-            if isinstance(new_vmaf, str):
-                return int(cq), 'Error in vmaf calculation'
-            # If real is lower - number negative
-            difference = -(new_vmaf - float(tg_cq[1]))
-
-            """
-            if difference > 10:
-                print('Invalidate difference: ', round(difference, 2), 'Reset to 0')
-                difference = 0
-            else:
-                print('Difference: ', round(difference, 2))
-            """
-
-            y2 = [v - difference for v in y]
-            new_interpolate = interpolate.interp1d(x, y2, kind='cubic')
-            new_line = list(zip(xnew, new_interpolate(xnew)))
-            # New target cq for vmaf
-            new_tg_cq = min(new_line, key=lambda x: abs(x[1] - tg))
-
             # Saving plot of got data
             # Plot first
             plt.plot(x, y, 'x', color='blue')
             plt.plot(xnew, f(xnew), color='blue')
             plt.plot(tg_cq[0], tg_cq[1], 'o', color='blue')
 
-            # Plot corrected
-            plt.plot(xnew, new_interpolate(xnew), color='green')
-            plt.plot(new_tg_cq[0], new_tg_cq[1], 'o', color='green')
-            plt.plot(x, y2, 'x', color='green')
-
-            mn = [x[1] for x in tl] + [x[1] for x in new_line]
-            mn = [int(x) for x in mn]
-            mn = min(mn)
-            for i in range(mn, 100, 1):
+            for i in range(0, 100, 1):
                 plt.axhline(i, color='grey', linewidth=0.5)
 
             for i in range(int(min(xnew)), int(max(xnew)) + 1, 5):
@@ -800,10 +770,9 @@ class Av1an:
             plt.savefig(probe.stem, dpi=300)
             plt.close()
             self.log(f"File: {source.stem}, {frames}\n"
-                     f"New vmaf: {new_vmaf}\n"
                      f"Probes: {pr}"
-                     f"Target CQ: {round(tg_cq[0])}, Dif: {round(difference, 2)}\n")
-            return int(tg_cq[0]), f'Target: CQ {int(new_tg_cq[0])} Vmaf: {round(float(new_tg_cq[1]), 2)}\n'
+                     f"Target CQ: {round(tg_cq[0])}\n")
+            return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -821,6 +790,7 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = Av1an.frame_probe(source)
 
+            # Target Vmaf Mode
             if self.d.get('vmaf_target'):
 
                 # Make sure that vmaf calculated after encoding
@@ -839,6 +809,7 @@ class Av1an:
             else:
                 tg_vf = ''
 
+            # Boost
             if self.d.get('boost'):
                 br = self.get_brightness(source.absolute().as_posix())
 
@@ -911,17 +882,8 @@ class Av1an:
             enc_time = round(time.time() - st_time, 2)
 
             if self.d.get('vmaf'):
-                v = self.get_vmaf(source, target)
-                if isinstance(v, str):
-                    vmaf = f'Vmaf: {v}\n'
-                    v = None
-                else:
-                    vmaf = f'Vmaf: {round(v, 2)}\n'
-                    v = round(v, 2)
-
-                with open(self.d.get('temp') / 'vmaf.txt', 'a') as f:
-                    f.write(f'({str(int(source.stem))},{frame_probe_source},{v}),')
-
+                v = self.call_vmaf(source, target)
+                vmaf = f'Vmaf: {round(v, 2)}\n'
             else:
                 vmaf = ''
 
@@ -1079,17 +1041,13 @@ class Av1an:
         commands = self.compose_encoding_queue(files)
 
         # Determine resources if workers don't set
-        if self.d.get('workers') != 0:
-            self.d['workers'] = self.d.get('workers')
-        else:
-            self.determine_resources()
+        self.determine_resources()
 
         self.encoding_loop(commands)
 
-        if self.d.get('vmaf'):
-            self.plot_vmaf()
-
         self.concatenate_video()
+
+        self.plot_vmaf()
 
     def main_queue(self):
         # Video Mode. Encoding on local machine

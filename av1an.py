@@ -83,8 +83,6 @@ class Av1an:
         # Data
         x = [x for x in range(len(vmafs))]
         mean = round(sum(vmafs) / len(vmafs), 3)
-        harmonic = round(stats.hmean(vmafs), 3)
-        geometric = round(stats.gmean(vmafs), 3)
         perc_1 = round(np.percentile(vmafs, 1), 3)
         perc_25 = round(np.percentile(vmafs, 25), 3)
         perc_75 = round(np.percentile(vmafs, 75), 3)
@@ -725,7 +723,7 @@ class Av1an:
 
             # Encoding probes
             single_p = 'aomenc  -q --passes=1 '
-            params = "--threads=4 --end-usage=q --cpu-used=6 --cq-level="
+            params = "--threads=12 --end-usage=q --cpu-used=6 --cq-level="
             cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
                     f'{params}{x} '
                     f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
@@ -768,7 +766,7 @@ class Av1an:
             plt.savefig(temp, dpi=300)
             plt.close()
 
-            self.log(f"File: {source.stem}, {frames}\n"
+            self.log(f"File: {source.stem}, Fr: {frames}\n"
                      f"Probes: {pr}"
                      f"Target CQ: {round(tg_cq[0])}\n")
             return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'

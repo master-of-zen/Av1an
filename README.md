@@ -103,7 +103,7 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models, by default used system one.
 
-    --tg_vmaf               Vmaf value to target. Best works with 90-95 on 720/1080.
+    --vmaf_target           Vmaf value to target. Best works with 85-97.
 
     --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
@@ -113,7 +113,7 @@ With your own parameters:
                             For start If target vmaf undershoot increase value by undershoot amount.
 
     --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation in target Vmaf mode
-                            Use to limit CQ values range. Default: 20, 63.
+                            Use to limit CQ values range. Default: 25, 50.
 
 <h2 align="center">Main Features</h2>
 

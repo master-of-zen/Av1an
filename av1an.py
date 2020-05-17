@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 import statistics
 from scipy import interpolate
+from scipy import stats
 import matplotlib.pyplot as plt
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
@@ -82,16 +83,18 @@ class Av1an:
         # Data
         x = [x for x in range(len(vmafs))]
         mean = round(sum(vmafs) / len(vmafs), 3)
-        perc_1 = np.percentile(vmafs, 1)
-        perc_25 = np.percentile(vmafs, 25)
-        perc_75 = np.percentile(vmafs, 75)
+        harmonic = round(stats.hmean(vmafs), 3)
+        geometric = round(stats.gmean(vmafs), 3)
+        perc_1 = round(np.percentile(vmafs, 1), 3)
+        perc_25 = round(np.percentile(vmafs, 25), 3)
+        perc_75 = round(np.percentile(vmafs, 75), 3)
 
         # Plot
         plt.figure(figsize=(15, 4))
         [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
         [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean} \n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}',
-                 linewidth=0.7)
+        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean} \nHarm: {harmonic}\nGeom: {geometric}'
+                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
         plt.ylabel('VMAF')
         plt.legend(loc="lower right")
         plt.ylim(int(perc_1), 100)
@@ -285,9 +288,9 @@ class Av1an:
         # Target Vmaf
         parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
         parser.add_argument('--vmaf_error', type=float, default=0.0, help='Error to compensate to wrong target vmaf')
-        parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
-        parser.add_argument('--min_cq', type=int, default=20, help='Min cq for target vmaf')
-        parser.add_argument('--max_cq', type=int, default=60, help='Max cq for target vmaf')
+        parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
+        parser.add_argument('--min_cq', type=int, default=25, help='Min cq for target vmaf')
+        parser.add_argument('--max_cq', type=int, default=50, help='Max cq for target vmaf')
 
         # Server parts
         parser.add_argument('--host', nargs='+', type=str, help='ips of encoders')
@@ -675,7 +678,7 @@ class Av1an:
 
         if not self.d.get("vmaf"):
             return
-
+        print('Calculating Vmaf...\r', end='')
         if self.d.get("vmaf_path"):
             model = f'model_path={self.d.get("vmaf_path")}'
         else:
@@ -696,8 +699,8 @@ class Av1an:
 
     def target_vmaf(self, source, command):
         try:
-            if self.d.get('vmaf_steps') < 5:
-                print('Target vmaf require more than 4 probes/steps')
+            if self.d.get('vmaf_steps') < 4:
+                print('Target vmaf require more than 3 probes/steps')
                 sys.exit()
 
             tg = self.d.get('vmaf_target')
@@ -706,11 +709,11 @@ class Av1an:
             steps = self.d.get('vmaf_steps')
             frames = Av1an.frame_probe(source)
 
-            # Making 3fps probing file
+            # Making 6 fps probing file
             cq = self.man_cq(command, -1)
             probe = source.with_suffix(".mp4")
             cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
-                  f'-r 3 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
+                  f'-r 6 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
             self.call_cmd(cmd)
 
             # Make encoding fork
@@ -734,41 +737,33 @@ class Av1an:
                 ls.append((v, i[3]))
             x = [x[1] for x in ls]
             y = [float(x[0]) for x in ls]
+
             # Interpolate data
             f = interpolate.interp1d(x, y, kind='cubic')
-
             xnew = np.linspace(min(x), max(x), max(x) - min(x))
 
             # Getting value closest to target
             tl = list(zip(xnew, f(xnew)))
             tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
 
-            # Try control encode
-            # Get full fps fast encode to get error, and when adjust graph
-            # Based on error and return adjusted value
-
-            probe_name = Path(f"{source.with_name(f'x_{source.stem}')}.ivf")
-            run_cmd = f" {self.FFMPEG} -i {source.absolute().as_posix()} {self.d.get('ffmpeg_pipe')} {single_p} " \
-                      f"{params}{int(tg_cq[0])} -o {probe_name} -"
-            self.call_cmd(run_cmd)
-
             # Saving plot of got data
             # Plot first
-            plt.plot(x, y, 'x', color='blue')
-            plt.plot(xnew, f(xnew), color='blue')
-            plt.plot(tg_cq[0], tg_cq[1], 'o', color='blue')
-
-            for i in range(0, 100, 1):
-                plt.axhline(i, color='grey', linewidth=0.5)
-
-            for i in range(int(min(xnew)), int(max(xnew)) + 1, 5):
-                plt.axvline(i, color='grey', linewidth=0.5)
-            plt.ylabel('vmaf')
-            plt.xlabel('cq')
-            plt.title(f'Chunk: {probe.stem}, Frames: {frames}')  # Add frame count
+            plt.plot(x, y, 'x', color='tab:blue')
+            plt.plot(xnew, f(xnew), color='tab:blue')
+            plt.plot(tg_cq[0], tg_cq[1], 'o', color='red')
+            [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
+            [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
+            [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
+            plt.xlim(mincq, maxcq)
+            plt.ylim(min([int(x[1]) for x in tl]), 100)
+            plt.ylabel('VMAF')
+            plt.xlabel('CQ')
+            plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
             plt.tight_layout()
-            plt.savefig(probe.stem, dpi=300)
+            temp = self.d.get('temp') / probe.stem
+            plt.savefig(temp, dpi=300)
             plt.close()
+
             self.log(f"File: {source.stem}, {frames}\n"
                      f"Probes: {pr}"
                      f"Target CQ: {round(tg_cq[0])}\n")
@@ -881,14 +876,8 @@ class Av1an:
 
             enc_time = round(time.time() - st_time, 2)
 
-            if self.d.get('vmaf'):
-                v = self.call_vmaf(source, target)
-                vmaf = f'Vmaf: {round(v, 2)}\n'
-            else:
-                vmaf = ''
-
             self.log(f'Done: {source.name} Fr: {frame_probe}\n'
-                     f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n{vmaf}\n')
+                     f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n\n')
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
@@ -972,7 +961,7 @@ class Av1an:
 
     def extra_split(self, frames):
         if len(frames) > 0:
-            f = list(literal_eval(frames))
+            f = [literal_eval(frames)]
         else:
             f = []
         f.append(Av1an.frame_probe(self.d.get('input')))

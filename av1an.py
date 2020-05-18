@@ -227,6 +227,9 @@ class Av1an:
                 self.d['vmaf'] = True
 
         if self.d.get("vmaf_path"):
+            if not Path(self.d.get("vmaf_path")).exists():
+                print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
+                sys.exit()
             self.d["vmaf_model"] = f'model_path={self.d.get("vmaf_path")}'
         else:
             self.d["vmaf_model"] = ''

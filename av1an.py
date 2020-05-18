@@ -963,7 +963,9 @@ class Av1an:
 
     def extra_split(self, frames):
         if len(frames) > 0:
-            f = [literal_eval(frames)]
+            f = literal_eval(frames)
+            if len(f) > 1:
+                f = list(f)
         else:
             f = []
         f.append(Av1an.frame_probe(self.d.get('input')))

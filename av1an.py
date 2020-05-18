@@ -83,7 +83,7 @@ class Av1an:
         # Data
         x = [x for x in range(len(vmafs))]
         mean = round(sum(vmafs) / len(vmafs), 3)
-        calc = [x for x in vmafs if isinstance(x, float)]
+        calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
         perc_1 = round(np.percentile(calc, 1), 3)
         perc_25 = round(np.percentile(calc, 25), 3)
         perc_75 = round(np.percentile(calc, 75), 3)

@@ -83,9 +83,10 @@ class Av1an:
         # Data
         x = [x for x in range(len(vmafs))]
         mean = round(sum(vmafs) / len(vmafs), 3)
-        perc_1 = round(np.percentile(vmafs, 1), 3)
-        perc_25 = round(np.percentile(vmafs, 25), 3)
-        perc_75 = round(np.percentile(vmafs, 75), 3)
+        calc = [x for x in vmafs if isinstance(x, float)]
+        perc_1 = round(np.percentile(calc, 1), 3)
+        perc_25 = round(np.percentile(calc, 25), 3)
+        perc_75 = round(np.percentile(calc, 75), 3)
 
         return x, vmafs, mean, perc_1, perc_25, perc_75
 
@@ -225,6 +226,11 @@ class Av1an:
         if self.d.get('vmaf_target'):
                 self.d['vmaf'] = True
 
+        if self.d.get("vmaf_path"):
+            self.d["vmaf_model"] = f'model_path={self.d.get("vmaf_path")}'
+        else:
+            self.d["vmaf_model"] = ''
+
 
     def arg_parsing(self):
         """Command line parse and sanity checking."""
@@ -353,20 +359,22 @@ class Av1an:
                   f'{self.d.get("audio_params")} {audio_file}'
             self.call_cmd(cmd)
 
-    def call_vmaf(self, source: Path, encoded: Path, give_file=False):
-        if self.d.get("vmaf_path"):
-            model = f'model_path={self.d.get("vmaf_path")}'
-        else:
-            model = ''
+    def call_vmaf(self, source: Path, encoded: Path, file=False):
+        model = self.d.get("vmaf_model")
+
 
         # For vmaf calculation both source and encoded segment scaled to 1080
         # for proper vmaf calculation
+        fl  = Path(f"{source.with_name(encoded.stem).as_posix()}.xml")
         cmd = f'ffmpeg -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
               f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
               f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
-              f'[scaled2][scaled1]libvmaf=log_path={source.with_name(encoded.stem).as_posix()}.xml:{model}" -f null - '
+              f'[scaled2][scaled1]libvmaf=log_path={fl}:{model}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)
+        if file:
+            return fl
+
         call = call.decode().strip()
         vmf = call.split()[-1]
         try:
@@ -715,6 +723,8 @@ class Av1an:
                 print('Target vmaf require more than 3 probes/steps')
                 sys.exit()
 
+
+
             tg = self.d.get('vmaf_target')
             mincq = self.d.get('min_cq')
             maxcq = self.d.get('max_cq')
@@ -733,10 +743,9 @@ class Av1an:
 
             # Encoding probes
             single_p = 'aomenc  -q --passes=1 '
-            params = "--threads=12 --end-usage=q --cpu-used=6 --cq-level="
+            params = "--threads=8 --end-usage=q --cpu-used=6 --cq-level="
             cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
-                    f'{params}{x} '
-                    f'-o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+                    f'{params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
                     probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
             # Encoding probe and getting vmaf
@@ -744,9 +753,13 @@ class Av1an:
             pr = []
             for i in cmd:
                 self.call_cmd(i[0])
-                v = self.call_vmaf(i[1], i[2])
-                pr.append(round(v, 1))
-                ls.append((v, i[3]))
+
+                v = self.call_vmaf(i[1], i[2], file=True)
+                x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(v)
+
+                pr.append(round(mean, 1))
+                ls.append((round(mean, 3), i[3]))
+
             x = [x[1] for x in ls]
             y = [float(x[0]) for x in ls]
 

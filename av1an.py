@@ -713,7 +713,7 @@ class Av1an:
         [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
         [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
         plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean}'
-                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7, linestyle="None")
         plt.ylabel('VMAF')
         plt.legend(loc="lower right")
         plt.ylim(int(perc_1), 100)

@@ -221,6 +221,11 @@ class Av1an:
         self.d['pix_format'] = f'-strict -1 -pix_fmt {self.d.get("pix_format")}'
         self.d['ffmpeg_pipe'] = f' {self.d.get("ffmpeg")} {self.d.get("pix_format")} -f yuv4mpegpipe - |'
 
+        # Make sure that vmaf calculated after encoding
+        if self.d.get('vmaf_target'):
+                self.d['vmaf'] = True
+
+
     def arg_parsing(self):
         """Command line parse and sanity checking."""
         parser = argparse.ArgumentParser()
@@ -714,7 +719,7 @@ class Av1an:
             # Making 6 fps probing file
             cq = self.man_cq(command, -1)
             probe = source.with_suffix(".mp4")
-            cmd = f'{self.FFMPEG} -i {source.absolute().as_posix()} ' \
+            cmd = f'{self.FFMPEG} -i {source.as_posix()} ' \
                   f'-r 6 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
             self.call_cmd(cmd)
 
@@ -789,10 +794,6 @@ class Av1an:
 
             # Target Vmaf Mode
             if self.d.get('vmaf_target'):
-
-                # Make sure that vmaf calculated after encoding
-                self.d['vmaf'] = True
-
                 tg_cq, tg_vf = self.target_vmaf(source, commands[0])
 
                 cm1 = self.man_cq(commands[0], tg_cq)
@@ -944,7 +945,7 @@ class Av1an:
         w = min(self.d.get('workers'), clips)
 
         print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
-              f'Params: {self.d.get("video_params")}')
+              f'Params: {self.d.get("video_params").strip()}')
 
         with Pool(w) as pool:
             manager = Manager()

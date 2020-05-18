@@ -702,6 +702,10 @@ class Av1an:
               f'[scaled2][scaled1]libvmaf=log_path={xml}:{model}" -f null - '
         self.call_cmd(cmd, capture_output=True)
 
+        if not Path(xml).exists():
+            print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
+            sys.exit()
+
         x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
 
         # Plot

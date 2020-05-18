@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 import statistics
 from scipy import interpolate
-from scipy import stats
+from math import isnan
 import matplotlib.pyplot as plt
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
@@ -783,7 +783,7 @@ class Av1an:
             [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
             [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
             plt.xlim(mincq, maxcq)
-            plt.ylim(min([int(x[1]) for x in tl]), 100)
+            plt.ylim(min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]), 100)
             plt.ylabel('VMAF')
             plt.xlabel('CQ')
             plt.title(f'Chunk: {probe.stem}, Frames: {frames}')

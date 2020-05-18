@@ -296,6 +296,11 @@ class Av1an:
 
     def determine_resources(self):
         """Returns number of workers that machine can handle with selected encoder."""
+
+        # If set by user, skip
+        if self.d.get('workers') != 0:
+            return
+
         cpu = os.cpu_count()
         ram = round(virtual_memory().total / 2 ** 30)
 

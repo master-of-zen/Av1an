@@ -231,10 +231,6 @@ class Av1an:
             if not Path(self.d.get("vmaf_path")).exists():
                 print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
                 sys.exit()
-            self.d["vmaf_model"] = f'model_path={self.d.get("vmaf_path")}'
-        else:
-            self.d["vmaf_model"] = ''
-
 
     def arg_parsing(self):
         """Command line parse and sanity checking."""
@@ -283,7 +279,7 @@ class Av1an:
 
         # Vmaf
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
-        parser.add_argument('--vmaf_path', type=str, default=None, help='Path to vmaf models')
+        parser.add_argument('--vmaf_path', type=Path, default=None, help='Path to vmaf models')
 
         # Target Vmaf
         parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
@@ -364,16 +360,20 @@ class Av1an:
             self.call_cmd(cmd)
 
     def call_vmaf(self, source: Path, encoded: Path, file=False):
-        model = self.d.get("vmaf_model")
 
+        model: Path = self.d.get("vmaf_path")
+        if model:
+            mod = f":model_path={model}"
+        else:
+            mod = ''
 
         # For vmaf calculation both source and encoded segment scaled to 1080
         # for proper vmaf calculation
-        fl  = Path(f"{source.with_name(encoded.stem).as_posix()}.xml")
+        fl = source.with_name(encoded.stem).with_suffix('.xml').as_posix()
         cmd = f'ffmpeg -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
               f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
               f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
-              f'[scaled2][scaled1]libvmaf=log_path={fl}:{model}" -f null - '
+              f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)
         if file:

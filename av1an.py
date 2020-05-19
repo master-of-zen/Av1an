@@ -78,15 +78,16 @@ class Av1an:
                 vmf = i[i.rfind('="') + 2: i.rfind('"')]
                 vmafs.append(float(vmf))
 
-            vmafs = [round(float(x), 3) for x in vmafs if type(x) == float]
+            vmafs = [round(float(x), 5) for x in vmafs if type(x) == float]
 
         # Data
         x = [x for x in range(len(vmafs))]
-        mean = round(sum(vmafs) / len(vmafs), 3)
+
         calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
-        perc_1 = round(np.percentile(calc, 1), 3)
-        perc_25 = round(np.percentile(calc, 25), 3)
-        perc_75 = round(np.percentile(calc, 75), 3)
+        mean = round(sum(calc) / len(calc), 2)
+        perc_1 = round(np.percentile(calc, 1), 2)
+        perc_25 = round(np.percentile(calc, 25), 2)
+        perc_75 = round(np.percentile(calc, 75), 2)
 
         return x, vmafs, mean, perc_1, perc_25, perc_75
 
@@ -715,7 +716,7 @@ class Av1an:
         plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean}'
                                  f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
         plt.ylabel('VMAF')
-        plt.legend(loc="lower right")
+        plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
         plt.ylim(int(perc_1), 100)
         plt.tight_layout()
         plt.margins(0)
@@ -729,8 +730,6 @@ class Av1an:
             if self.d.get('vmaf_steps') < 4:
                 print('Target vmaf require more than 3 probes/steps')
                 sys.exit()
-
-
 
             tg = self.d.get('vmaf_target')
             mincq = self.d.get('min_cq')

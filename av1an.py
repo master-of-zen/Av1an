@@ -225,7 +225,7 @@ class Av1an:
 
         # Make sure that vmaf calculated after encoding
         if self.d.get('vmaf_target'):
-                self.d['vmaf'] = True
+            self.d['vmaf'] = True
 
         if self.d.get("vmaf_path"):
             if not Path(self.d.get("vmaf_path")).exists():
@@ -507,7 +507,7 @@ class Av1an:
                     json.dump(d, f)
             else:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
-        except IndexError as ie:
+        except IndexError:
             print('Encoding failed, check validity of your encoding settings/commands and start again')
             sys.exit()
         except Exception as e:
@@ -786,7 +786,9 @@ class Av1an:
             [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
             [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
             plt.xlim(mincq, maxcq)
-            plt.ylim(min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]), 100)
+            lim = [min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]),
+                   max([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]) + 1]
+            plt.ylim(lim[0], lim[1])
             plt.ylabel('VMAF')
             plt.xlabel('CQ')
             plt.title(f'Chunk: {probe.stem}, Frames: {frames}')

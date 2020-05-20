@@ -726,6 +726,7 @@ class Av1an:
         plt.savefig(file_name, dpi=500)
 
     def target_vmaf(self, source, command):
+        # TODO speed up for vmaf stuff
         try:
             if self.d.get('vmaf_steps') < 4:
                 print('Target vmaf require more than 3 probes/steps')

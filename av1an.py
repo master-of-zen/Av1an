@@ -51,13 +51,9 @@ def Manager():
 
 class Counter(object):
     def __init__(self, total, initial):
-        self.first_update = True
         self.bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
 
     def update(self, value):
-        if self.first_update:
-            self.bar.reset()
-            self.first_update = False
         self.bar.update(value)
 
 

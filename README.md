@@ -109,10 +109,6 @@ With your own parameters:
     --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
 
-    --vmaf_error            Decrease initial Vmaf values for interpolation.Increasing number will result
-                            in lower CQ and bigger final vmaf score, use to correct whole vmaf plot.
-                            For start If target vmaf undershoot increase value by undershoot amount.
-
     --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation in target Vmaf mode
                             Use to limit CQ values range. Default: 25, 50.
 

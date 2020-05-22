@@ -759,7 +759,7 @@ class Av1an:
             # Encoding probe and getting vmaf
             ls = []
             pr = []
-            for i in cmd:
+            for count, i in enumerate(cmd):
                 self.call_cmd(i[0])
 
                 v = self.call_vmaf(i[1], i[2], file=True)
@@ -767,6 +767,13 @@ class Av1an:
 
                 pr.append(round(mean, 1))
                 ls.append((round(mean, 3), i[3]))
+
+                # Early Skip
+                if count == 0 and round(mean) < tg:
+                    self.log(f"File: {source.stem}, Fr: {frames}\n"
+                             f"Probes: {pr}, Early Skip"
+                             f"Target CQ: {mincq}\n")
+                    return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
 
             x = [x[1] for x in ls]
             y = [float(x[0]) for x in ls]

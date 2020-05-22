@@ -565,7 +565,8 @@ class Av1an:
                 (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
                  f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {pipe} '
-                 f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b {file[1].with_suffix(".ivf")} - ',
+                 f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b '
+                 f'{file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
             return pass_2_commands
@@ -771,7 +772,7 @@ class Av1an:
                 # Early Skip
                 if count == 0 and round(mean) < tg:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {pr}, Early Skip"
+                             f"Probes: {pr}, Early Skip\n"
                              f"Target CQ: {mincq}\n")
                     return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
 

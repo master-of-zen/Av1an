@@ -286,6 +286,7 @@ class Av1an:
         parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
         parser.add_argument('--min_cq', type=int, default=25, help='Min cq for target vmaf')
         parser.add_argument('--max_cq', type=int, default=50, help='Max cq for target vmaf')
+        parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
 
         # Server parts
         parser.add_argument('--host', nargs='+', type=str, help='ips of encoders')
@@ -736,10 +737,11 @@ class Av1an:
             maxcq = self.d.get('max_cq')
             steps = self.d.get('vmaf_steps')
             frames = Av1an.frame_probe(source)
-
-            # Making 6 fps probing file
             cq = self.man_cq(command, -1)
             probe = source.with_suffix(".mp4")
+            plot_probes = self.d.get('vmaf_plots')
+
+            # Making 6 fps probing file
             cmd = f'{self.FFMPEG} -i {source.as_posix()} ' \
                   f'-r 6 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
             self.call_cmd(cmd)
@@ -777,25 +779,25 @@ class Av1an:
             tl = list(zip(xnew, f(xnew)))
             tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
 
-            # Saving plot of got data
-            # Plot first
-            plt.plot(x, y, 'x', color='tab:blue')
-            plt.plot(xnew, f(xnew), color='tab:blue')
-            plt.plot(tg_cq[0], tg_cq[1], 'o', color='red')
-            [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
-            [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-            [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
-            plt.xlim(mincq, maxcq)
-            lim = [min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]),
-                   max([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]) + 1]
-            plt.ylim(lim[0], lim[1])
-            plt.ylabel('VMAF')
-            plt.xlabel('CQ')
-            plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
-            plt.tight_layout()
-            temp = self.d.get('temp') / probe.stem
-            plt.savefig(temp, dpi=300)
-            plt.close()
+            if plot_probes:
+                # Saving plot of got data
+                plt.plot(x, y, 'x', color='tab:blue')
+                plt.plot(xnew, f(xnew), color='tab:blue')
+                plt.plot(tg_cq[0], tg_cq[1], 'o', color='red')
+                [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
+                [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
+                [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
+                plt.xlim(mincq, maxcq)
+                lim = [min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]),
+                       max([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]) + 1]
+                plt.ylim(lim[0], lim[1])
+                plt.ylabel('VMAF')
+                plt.xlabel('CQ')
+                plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
+                plt.tight_layout()
+                temp = self.d.get('temp') / probe.stem
+                plt.savefig(temp, dpi=300)
+                plt.close()
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
                      f"Probes: {pr}"

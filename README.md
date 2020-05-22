@@ -98,7 +98,8 @@ With your own parameters:
     -br                     CQ range for boosting. Delta for which CQ can be changed
 
     --vmaf                  Calculate vmaf for each encoded clip.
-                            Saves plot after encode, showing vmaf values for all video segments.
+                            Saves plot after encode, showing vmaf values for all frames,
+                            mean, 1,25,75 percentile.
                             Requires: Installed FFMPEG with libvmaf and installed libvmaf.
 
     --vmaf_path             Custom path to libvmaf models, by default used system one.

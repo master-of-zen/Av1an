@@ -100,7 +100,7 @@ With your own parameters:
     --vmaf                  Calculate vmaf for each encoded clip.
                             Saves plot after encode, showing vmaf values for all frames,
                             mean, 1,25,75 percentile.
-                            Requires: Installed FFMPEG with libvmaf and installed libvmaf.
+                            Requires: Installed FFMPEG and installed libvmaf.
 
     --vmaf_path             Custom path to libvmaf models, by default used system one.
 

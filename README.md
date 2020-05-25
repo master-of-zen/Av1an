@@ -42,7 +42,7 @@ With your own parameters:
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 2)
+                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 2, VPX: 2)
                             At current moment 2nd pass rav1e not working
 
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)

@@ -29,7 +29,8 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --file_path        Input file(s) (relative or absolute path)
+    -i   --file_path        Input file(s) (relative or absolute path). Will be processed with same
+                            settings.
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
@@ -68,7 +69,7 @@ With your own parameters:
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
-    -ff  --ffmpeg           FFmpeg options. Applied to each segment individually
+    -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
                             Example:
                             --ff " -r 24 -vf scale=320:240 "
 

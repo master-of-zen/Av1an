@@ -738,13 +738,13 @@ class Av1an:
             maxcq = self.d.get('max_cq')
             steps = self.d.get('vmaf_steps')
             frames = Av1an.frame_probe(source)
-            cq = self.man_cq(command, -1)
             probe = source.with_suffix(".mp4")
             plot_probes = self.d.get('vmaf_plots')
+            ffmpeg = self.d.get('ffmpeg')
 
-            # Making 6 fps probing file
+            # Making 4 fps probing file
             cmd = f'{self.FFMPEG} -i {source.as_posix()} ' \
-                  f'-r 6 -an -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
+                  f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
             self.call_cmd(cmd)
 
             # Make encoding fork

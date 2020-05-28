@@ -12,8 +12,6 @@ from distutils.spawn import find_executable
 from ast import literal_eval
 from psutil import virtual_memory
 import argparse
-from multiprocessing import Pool
-import multiprocessing
 import subprocess
 from subprocess import PIPE, STDOUT
 from pathlib import Path
@@ -27,6 +25,8 @@ from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
+import concurrent
+from concurrent import futures
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -986,20 +986,19 @@ class Av1an:
         print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
               f'Params: {self.d.get("video_params").strip()}')
 
-        with Pool(w) as pool:
-            manager = Manager()
-            counter = manager.Counter(total, initial)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.d.get('workers')) as executor:
+            counter = Manager().Counter(total, initial)
             commands = [(x, counter) for x in commands]
-            loop = pool.imap_unordered(self.encode, commands)
-            self.log(f'Started encoding queue with {self.d.get("workers")} workers\n\n')
 
-            try:
-                for _ in loop:
-                    pass
-            except Exception as e:
-                _, _, exc_tb = sys.exc_info()
-                print(f'Encoding error: {e}\nAt line {exc_tb.tb_lineno}')
-                sys.exit()
+            # Start the load operations and mark each future with its URL
+            future_cmd = {executor.submit(self.encode, cmd): cmd for cmd in commands}
+            for future in concurrent.futures.as_completed(future_cmd):
+                data = future_cmd[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f'Encoding error: {exc}')
+                    sys.exit()
 
     def extra_split(self, frames):
         if len(frames) > 0:
@@ -1112,9 +1111,6 @@ class Av1an:
 
 
 def main():
-    # Windows fix for multiprocessing
-    multiprocessing.freeze_support()
-
     # Main thread
     try:
         Av1an().main_thread()

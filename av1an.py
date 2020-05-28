@@ -32,7 +32,7 @@ from concurrent import futures
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
-    sys.exit()
+    self.terminate()
 
 if sys.platform == 'linux':
     def restore_term():
@@ -69,6 +69,9 @@ class Av1an:
         self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error '
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+
+    def terminate(self):
+        os.kill(os.getpid(), 9)
 
     @staticmethod
     def read_vmaf_xml(file):
@@ -172,7 +175,7 @@ class Av1an:
     def check_executables(self):
         if not find_executable('ffmpeg'):
             print('No ffmpeg')
-            sys.exit()
+            self.terminate()
 
         # Check if encoder executable is reachable
         if self.d.get('encoder') in self.encoders:
@@ -180,23 +183,23 @@ class Av1an:
 
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
-                sys.exit()
+                self.terminate()
         else:
             print(f'Not valid encoder {self.d.get("encoder")} ')
-            sys.exit()
+            self.terminate()
 
     def process_inputs(self):
         # Check input file for being valid
         if not self.d.get('input'):
             print('No input file')
-            sys.exit()
+            self.terminate()
 
         inputs = self.d.get('input')
         valid = np.array([i.exists() for i in inputs])
 
         if not all(valid):
             print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
-            sys.exit()
+            self.terminate()
 
         if len(inputs) > 1:
             self.d['queue'] = inputs
@@ -232,7 +235,7 @@ class Av1an:
         if self.d.get("vmaf_path"):
             if not Path(self.d.get("vmaf_path")).exists():
                 print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
-                sys.exit()
+                self.terminate()
 
     def arg_parsing(self):
         """Command line parse and sanity checking."""
@@ -462,7 +465,7 @@ class Av1an:
         except Exception as e:
             self.log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')
-            sys.exit()
+            self.terminate()
 
     def split(self, video: Path, frames):
         """Split video by frame numbers, or just copying video."""
@@ -512,7 +515,7 @@ class Av1an:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
         except IndexError:
             print('Encoding failed, check validity of your encoding settings/commands and start again')
-            sys.exit()
+            self.terminate()
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
@@ -538,7 +541,7 @@ class Av1an:
             # TODO: this could also be because we're resuming but everything
             # is done.
             print('Error: No files found in .temp/split, probably splitting not working')
-            sys.exit()
+            self.terminate()
 
         return queue
 
@@ -551,7 +554,7 @@ class Av1an:
 
         if not params:
             print('-w -h -fps is required parameters for svt_av1 encoder')
-            sys.exit()
+            self.terminate()
 
         if passes == 1:
             pass_1_commands = [
@@ -660,7 +663,7 @@ class Av1an:
         # Catch Error
         if len(queue) == 0:
             print('Error in making command queue')
-            sys.exit()
+            self.terminate()
 
         return queue
 
@@ -709,7 +712,7 @@ class Av1an:
 
         if not Path(xml).exists():
             print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
-            sys.exit()
+            self.terminate()
 
         x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
 
@@ -734,7 +737,7 @@ class Av1an:
         try:
             if self.d.get('vmaf_steps') < 4:
                 print('Target vmaf require more than 3 probes/steps')
-                sys.exit()
+                self.terminate()
 
             tg = self.d.get('vmaf_target')
             mincq = self.d.get('min_cq')
@@ -955,50 +958,50 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
             self.log(f'Concatenation failed, aborting, error: {e}\n')
-            sys.exit()
+            self.terminate()
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
-        enc_path = self.d.get('temp') / 'split'
-        done_path = self.d.get('temp') / 'done.json'
+        try:
+            enc_path = self.d.get('temp') / 'split'
+            done_path = self.d.get('temp') / 'done.json'
 
-        if self.d.get('resume') and done_path.exists():
-            self.log('Resuming...\n')
+            if self.d.get('resume') and done_path.exists():
+                self.log('Resuming...\n')
 
-            with open(done_path) as f:
-                data = json.load(f)
+                with open(done_path) as f:
+                    data = json.load(f)
 
-            total = data['total']
-            done = len(data['done'])
-            initial = sum(data['done'].values())
+                total = data['total']
+                done = len(data['done'])
+                initial = sum(data['done'].values())
 
-            self.log(f'Resumed with {done} encoded clips done\n\n')
-        else:
-            initial = 0
-            total = self.frame_probe(self.d.get('input'))
-            d = {'total': total, 'done': {}}
-            with open(done_path, 'w') as f:
-                json.dump(d, f)
+                self.log(f'Resumed with {done} encoded clips done\n\n')
+            else:
+                initial = 0
+                total = self.frame_probe(self.d.get('input'))
+                d = {'total': total, 'done': {}}
+                with open(done_path, 'w') as f:
+                    json.dump(d, f)
 
-        clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
-        w = min(self.d.get('workers'), clips)
+            clips = len([x for x in enc_path.iterdir() if x.suffix == ".mkv"])
+            w = min(self.d.get('workers'), clips)
 
-        print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
-              f'Params: {self.d.get("video_params").strip()}')
+            print(f'\rQueue: {clips} Workers: {w} Passes: {self.d.get("passes")}\n'
+                  f'Params: {self.d.get("video_params").strip()}')
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.d.get('workers')) as executor:
-            counter = Manager().Counter(total, initial)
-            commands = [(x, counter) for x in commands]
-
-            # Start the load operations and mark each future with its URL
-            future_cmd = {executor.submit(self.encode, cmd): cmd for cmd in commands}
-            for future in concurrent.futures.as_completed(future_cmd):
-                data = future_cmd[future]
-                try:
-                    future.result()
-                except Exception as exc:
-                    print(f'Encoding error: {exc}')
-                    sys.exit()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.d.get('workers')) as executor:
+                counter = Manager().Counter(total, initial)
+                future_cmd = {executor.submit(self.encode, (cmd, counter)): cmd for cmd in commands}
+                for future in concurrent.futures.as_completed(future_cmd):
+                    future_cmd[future]
+                    try:
+                        future.result()
+                    except Exception as exc:
+                        print(f'Encoding error: {exc}')
+                        self.terminate()
+        except KeyboardInterrupt:
+            self.terminate()
 
     def extra_split(self, frames):
         if len(frames) > 0:
@@ -1116,7 +1119,7 @@ def main():
         Av1an().main_thread()
     except KeyboardInterrupt:
         print('Encoding stopped')
-        sys.exit()
+        self.terminate()
 
 
 if __name__ == '__main__':

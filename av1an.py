@@ -28,6 +28,8 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 
+# Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
+
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
     sys.exit()
@@ -273,6 +275,7 @@ class Av1an:
         parser.add_argument('--boost_limit', default=10, type=int, help='CQ limit for boosting')
 
         # Grain
+        # Todo: grain stuf
         parser.add_argument('--grain', help='Exprimental feature, adds generated grain based on video brightness',
                             action='store_true')
         parser.add_argument('--grain_range')

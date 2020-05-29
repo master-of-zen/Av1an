@@ -32,7 +32,7 @@ from concurrent import futures
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
-    self.terminate()
+    sys.exit()
 
 if sys.platform == 'linux':
     def restore_term():

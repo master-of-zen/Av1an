@@ -825,13 +825,14 @@ class Av1an:
                 plt.close()
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
-                     f"Probes: {pr}"
+                     f"Probes: {sorted(pr)}"
                      f"Target CQ: {round(tg_cq[0])}\n")
             return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
+            self.terminate()
 
     def encode(self, commands):
         counter = commands[1]

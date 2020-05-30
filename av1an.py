@@ -754,9 +754,13 @@ class Av1an:
             self.call_cmd(cmd)
 
             # Make encoding fork
-            q = np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True))
+            q = list(np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True)))
 
-            # Encoding probes
+            # Moving highest cq to first check, for early skips
+            # checking highest first, lowers second, for early skips
+            q.insert(0, q.pop(-1))
+
+            # Encoding probes, 1 pass, highest speed
             single_p = 'aomenc  -q --passes=1 '
             params = "--threads=8 --end-usage=q --cpu-used=6 --cq-level="
             cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
@@ -775,15 +779,22 @@ class Av1an:
                 pr.append(round(mean, 1))
                 ls.append((round(mean, 3), i[3]))
 
-                # Early Skip
-                if count == 0 and round(mean) < tg:
+                # Early Skip on big CQ
+                if count == 0 and round(mean) > tg:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {pr}, Early Skip\n"
+                             f"Probes: {pr}, Early Skip High CQ\n"
                              f"Target CQ: {mincq}\n")
                     return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
 
-            x = [x[1] for x in ls]
-            y = [float(x[0]) for x in ls]
+                # Early Skip on small CQ
+                if count == 1 and round(mean) < tg:
+                    self.log(f"File: {source.stem}, Fr: {frames}\n"
+                             f"Probes: {pr}, Early Skip Low CQ\n"
+                             f"Target CQ: {mincq}\n")
+                    return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
+
+            x = [x[1] for x in sorted(ls)]
+            y = [float(x[0]) for x in sorted(ls)]
 
             # Interpolate data
             f = interpolate.interp1d(x, y, kind='cubic')

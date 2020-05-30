@@ -739,7 +739,7 @@ class Av1an:
                 print('Target vmaf require more than 3 probes/steps')
                 self.terminate()
 
-            tg = self.d.get('vmaf_target')
+            vmaf_target = self.d.get('vmaf_target')
             mincq = self.d.get('min_cq')
             maxcq = self.d.get('max_cq')
             steps = self.d.get('vmaf_steps')
@@ -759,7 +759,6 @@ class Av1an:
             # Moving highest cq to first check, for early skips
             # checking highest first, lowers second, for early skips
             q.insert(0, q.pop(-1))
-
             # Encoding probes, 1 pass, highest speed
             single_p = 'aomenc  -q --passes=1 '
             params = "--threads=8 --end-usage=q --cpu-used=6 --cq-level="
@@ -780,14 +779,14 @@ class Av1an:
                 ls.append((round(mean, 3), i[3]))
 
                 # Early Skip on big CQ
-                if count == 0 and round(mean) > tg:
+                if count == 0 and round(mean) > vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {pr}, Early Skip High CQ\n"
-                             f"Target CQ: {mincq}\n")
-                    return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
+                             f"Target CQ: {maxcq}\n")
+                    return maxcq, f'Target: CQ {maxcq} Vmaf: {round(mean, 2)}\n'
 
                 # Early Skip on small CQ
-                if count == 1 and round(mean) < tg:
+                if count == 1 and round(mean) < vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {pr}, Early Skip Low CQ\n"
                              f"Target CQ: {mincq}\n")
@@ -802,13 +801,13 @@ class Av1an:
 
             # Getting value closest to target
             tl = list(zip(xnew, f(xnew)))
-            tg_cq = min(tl, key=lambda x: abs(x[1] - tg))
+            vmaf_target_cq = min(tl, key=lambda x: abs(x[1] - vmaf_target))
 
             if plot_probes:
                 # Saving plot of got data
                 plt.plot(x, y, 'x', color='tab:blue')
                 plt.plot(xnew, f(xnew), color='tab:blue')
-                plt.plot(tg_cq[0], tg_cq[1], 'o', color='red')
+                plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red')
                 [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
                 [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
                 [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
@@ -826,8 +825,8 @@ class Av1an:
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
                      f"Probes: {sorted(pr)}"
-                     f"Target CQ: {round(tg_cq[0])}\n")
-            return int(tg_cq[0]), f'Target: CQ {int(tg_cq[0])} Vmaf: {round(float(tg_cq[1]), 2)}\n'
+                     f"Target CQ: {round(vmaf_target_cq[0])}\n")
+            return int(vmaf_target_cq[0]), f'Target: CQ {int(vmaf_target_cq[0])} Vmaf: {round(float(vmaf_target_cq[1]), 2)}\n'
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()

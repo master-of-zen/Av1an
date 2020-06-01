@@ -26,7 +26,6 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 import concurrent
-from concurrent import futures
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -51,12 +50,12 @@ def Manager():
     return m
 
 
-class Counter(object):
+class Counter():
     def __init__(self, total, initial):
-        self.bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
+        self.tqdm_bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
 
     def update(self, value):
-        self.bar.update(value)
+        self.tqdm_bar.update(value)
 
 
 MyManager.register('Counter', Counter)
@@ -83,18 +82,14 @@ class Av1an:
                 vmf = i[i.rfind('="') + 2: i.rfind('"')]
                 vmafs.append(float(vmf))
 
-            vmafs = [round(float(x), 5) for x in vmafs if type(x) == float]
-
-        # Data
-        x = [x for x in range(len(vmafs))]
-
+        vmafs = [round(float(x), 5) for x in vmafs if isinstance(x, float)]
         calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
         mean = round(sum(calc) / len(calc), 2)
         perc_1 = round(np.percentile(calc, 1), 2)
         perc_25 = round(np.percentile(calc, 25), 2)
         perc_75 = round(np.percentile(calc, 75), 2)
 
-        return x, vmafs, mean, perc_1, perc_25, perc_75
+        return vmafs, mean, perc_1, perc_25, perc_75
 
     @staticmethod
     def get_keyframes(file):
@@ -619,7 +614,7 @@ class Av1an:
         if not self.d.get("video_params"):
             self.d["video_params"] = ' --tiles=4 --speed=10 --quantizer 100'
 
-        if passes == 1 or passes == 2:
+        if passes in (1, 2):
             pass_1_commands = [
                 (f'-i {file[0]} {pipe} '
                  f' rav1e -  {params}  '
@@ -714,14 +709,16 @@ class Av1an:
             print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
             self.terminate()
 
-        x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
+        vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
 
         # Plot
         plt.figure(figsize=(15, 4))
         [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
         [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-        plt.plot(x, vmafs, label=f'Frames: {len(vmafs)}\nMean:{mean}'
-                                 f'\n1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+        plt.plot([x for x in range(len(vmafs))],
+                 vmafs,
+                 label=f'Frames: {len(vmafs)}\nMean:{mean}\n'
+                       f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
         plt.ylabel('VMAF')
         plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
         plt.ylim(int(perc_1), 100)
@@ -773,7 +770,7 @@ class Av1an:
                 self.call_cmd(i[0])
 
                 v = self.call_vmaf(i[1], i[2], file=True)
-                x, vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(v)
+                _, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(v)
 
                 pr.append(round(mean, 1))
                 ls.append((round(mean, 3), i[3]))
@@ -834,9 +831,9 @@ class Av1an:
             self.terminate()
 
     def encode(self, commands):
+        """Single encoder command queue and logging output."""
         counter = commands[1]
         commands = commands[0]
-        """Single encoder command queue and logging output."""
         encoder = self.d.get('encoder')
         # Passing encoding params to ffmpeg for encoding.
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.
@@ -891,7 +888,7 @@ class Av1an:
                     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                                             stderr=STDOUT,
                                             universal_newlines=True)
-                    if encoder == 'aom' or encoder == 'vpx':
+                    if encoder in ('aom', 'vpx'):
                         while True:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
@@ -1130,7 +1127,7 @@ def main():
         Av1an().main_thread()
     except KeyboardInterrupt:
         print('Encoding stopped')
-        self.terminate()
+        sys.exit()
 
 
 if __name__ == '__main__':

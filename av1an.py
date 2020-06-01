@@ -193,7 +193,7 @@ class Av1an:
         valid = np.array([i.exists() for i in inputs])
 
         if not all(valid):
-            print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(valid == False)[0]])}')
+            print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
             self.terminate()
 
         if len(inputs) > 1:
@@ -350,7 +350,7 @@ class Av1an:
 
         # Checking is source have audio track
         check = fr'{self.FFMPEG} -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
-        is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
+        is_audio_here = subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout == 0
 
         # If source have audio track - process it
         if is_audio_here:
@@ -384,7 +384,7 @@ class Av1an:
         vmf = call.split()[-1]
         try:
             vmf = float(vmf)
-        except:
+        except ValueError:
             vmf = 0
         return vmf
 
@@ -546,23 +546,22 @@ class Av1an:
         pipe = self.d.get("ffmpeg_pipe")
         params = self.d.get("video_params")
         passes = self.d.get('passes')
-
+        commands = []
         if not params:
             print('-w -h -fps is required parameters for svt_av1 encoder')
             self.terminate()
 
         if passes == 1:
-            pass_1_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} ' +
                  f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_1_commands
 
         if passes == 2:
             p2i = '-input-stat-file '
             p2o = '-output-stat-file '
-            pass_2_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
                  f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
                  f'-i {file[0]} {pipe} '
@@ -570,7 +569,8 @@ class Av1an:
                  f'{file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_2_commands
+
+        return commands
 
     def aom_vpx_encode(self, inputs):
         """AOM encoding command composition."""
@@ -581,7 +581,7 @@ class Av1an:
         passes = self.d.get('passes')
         pipe = self.d.get("ffmpeg_pipe")
         params = self.d.get("video_params")
-
+        commands = []
         if not params:
             if enc == 'vpxenc':
                 p = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
@@ -591,41 +591,41 @@ class Av1an:
                 self.d["video_params"], params = p, p
 
         if passes == 1:
-            pass_1_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_1_commands
 
         if passes == 2:
-            pass_2_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
                  f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_2_commands
+
+        return commands
 
     def rav1e_encode(self, inputs):
         """Rav1e encoding command composition."""
         passes = self.d.get('passes')
         pipe = self.d.get("ffmpeg_pipe")
         params = self.d.get("video_params")
+        commands = []
 
         if not self.d.get("video_params"):
             self.d["video_params"] = ' --tiles=4 --speed=10 --quantizer 100'
 
         if passes in (1, 2):
-            pass_1_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} '
                  f' rav1e -  {params}  '
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_1_commands
 
         # 2 encode pass not working with FFmpeg pipes :(
         if passes == 2:
-            pass_2_commands = [
+            commands = [
                 (f'-i {file[0]} {pipe} '
                  f' rav1e - --first-pass {file[0].with_suffix(".stat")} {params} '
                  f'--output {file[1].with_suffix(".ivf")}',
@@ -634,7 +634,8 @@ class Av1an:
                  f'--output {file[1].with_suffix(".ivf")}',
                  (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs]
-            return pass_2_commands
+
+        return commands
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with split videos."""
@@ -713,10 +714,14 @@ class Av1an:
 
         # Plot
         plt.figure(figsize=(15, 4))
-        [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
-        [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-        plt.plot([x for x in range(len(vmafs))],
-                 vmafs,
+
+        for i in range(0, 100):
+            plt.axhline(i, color='grey', linewidth=0.4)
+
+            if i % 5 == 0:
+                plt.axhline(i, color='black', linewidth=0.6)
+
+        plt.plot(range(len(vmafs)), vmafs,
                  label=f'Frames: {len(vmafs)}\nMean:{mean}\n'
                        f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
         plt.ylabel('VMAF')
@@ -729,22 +734,24 @@ class Av1an:
         file_name = str(self.d.get('output_file').stem) + '_plot.png'
         plt.savefig(file_name, dpi=500)
 
-    def target_vmaf(self, source, command):
+    def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
+        # TODO reduce complexity
+
+        if self.d.get('vmaf_steps') < 4:
+            print('Target vmaf require more than 3 probes/steps')
+            self.terminate()
+
+        vmaf_target = self.d.get('vmaf_target')
+        mincq = self.d.get('min_cq')
+        maxcq = self.d.get('max_cq')
+        steps = self.d.get('vmaf_steps')
+        frames = Av1an.frame_probe(source)
+        probe = source.with_suffix(".mp4")
+        plot_probes = self.d.get('vmaf_plots')
+        ffmpeg = self.d.get('ffmpeg')
+
         try:
-            if self.d.get('vmaf_steps') < 4:
-                print('Target vmaf require more than 3 probes/steps')
-                self.terminate()
-
-            vmaf_target = self.d.get('vmaf_target')
-            mincq = self.d.get('min_cq')
-            maxcq = self.d.get('max_cq')
-            steps = self.d.get('vmaf_steps')
-            frames = Av1an.frame_probe(source)
-            probe = source.with_suffix(".mp4")
-            plot_probes = self.d.get('vmaf_plots')
-            ffmpeg = self.d.get('ffmpeg')
-
             # Making 4 fps probing file
             cmd = f'{self.FFMPEG} -i {source.as_posix()} ' \
                   f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
@@ -805,13 +812,17 @@ class Av1an:
                 plt.plot(x, y, 'x', color='tab:blue')
                 plt.plot(xnew, f(xnew), color='tab:blue')
                 plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red')
-                [plt.axhline(i, color='grey', linewidth=0.4) for i in range(0, 100)]
-                [plt.axhline(i, color='black', linewidth=0.6) for i in range(0, 100, 5)]
-                [plt.axvline(i, color='grey', linewidth=0.3) for i in range(0, 100)]
+
+                for x in range(0, 100):
+                    plt.axhline(x, color='grey', linewidth=0.4)
+                    plt.axvline(x, color='grey', linewidth=0.3)
+
+                    if x % 5 == 0:
+                        plt.axhline(x, color='black', linewidth=0.6)
+
                 plt.xlim(mincq, maxcq)
-                lim = [min([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]),
-                       max([int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]) + 1]
-                plt.ylim(lim[0], lim[1])
+                vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
+                plt.ylim(min(vmafs), max(vmafs) + 1)
                 plt.ylabel('VMAF')
                 plt.xlabel('CQ')
                 plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
@@ -823,6 +834,7 @@ class Av1an:
             self.log(f"File: {source.stem}, Fr: {frames}\n"
                      f"Probes: {sorted(pr)}"
                      f"Target CQ: {round(vmaf_target_cq[0])}\n")
+
             return int(vmaf_target_cq[0]), f'Target: CQ {int(vmaf_target_cq[0])} Vmaf: {round(float(vmaf_target_cq[1]), 2)}\n'
 
         except Exception as e:
@@ -844,7 +856,7 @@ class Av1an:
 
             # Target Vmaf Mode
             if self.d.get('vmaf_target'):
-                tg_cq, tg_vf = self.target_vmaf(source, commands[0])
+                tg_cq, tg_vf = self.target_vmaf(source)
 
                 cm1 = self.man_cq(commands[0], tg_cq)
 

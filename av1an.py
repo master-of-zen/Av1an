@@ -615,7 +615,7 @@ class Av1an:
         commands = []
 
         if not self.d.get("video_params"):
-            self.d["video_params"] = ' --tiles=4 --speed=10 --quantizer 100'
+            self.d["video_params"] = ' --tiles 8 --speed 10 --quantizer 100'
 
         if passes in (1, 2):
             commands = [

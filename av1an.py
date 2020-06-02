@@ -834,7 +834,7 @@ class Av1an:
                 plt.close()
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
-                     f"Probes: {sorted(pr)}"
+                     f"Probes: {sorted(pr)}\n"
                      f"Target CQ: {round(vmaf_target_cq[0])}\n")
 
             return int(vmaf_target_cq[0]), f'Target: CQ {int(vmaf_target_cq[0])} Vmaf: {round(float(vmaf_target_cq[1]), 2)}\n'
@@ -887,7 +887,7 @@ class Av1an:
             else:
                 boost = ''
 
-            self.log(f'Enc:  {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
+            self.log(f'Enc: {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
 
             # Queue execution
             for i in commands[:-1]:
@@ -914,6 +914,7 @@ class Av1an:
                                     if new > frame:
                                         counter.update(new - frame)
                                         frame = new
+
                     elif encoder == 'rav1e':
                         while True:
                             line = pipe.stdout.readline().strip()

@@ -328,6 +328,8 @@ class Av1an:
         else:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
+        self.log(f"Av1an Started\nCommand:\n{' '.join(sys.argv)}\n")
+
     def setup(self):
         """Creating temporally folders when needed."""
         # Make temporal directories, and remove them if already presented

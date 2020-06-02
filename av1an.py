@@ -896,6 +896,7 @@ class Av1an:
                 try:
                     frame = 0
 
+                    self.log(f'Encode command: {" ".join(f)} | {" ".join(e)}\n')
                     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
                     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                                             stderr=STDOUT,

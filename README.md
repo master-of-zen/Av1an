@@ -149,6 +149,6 @@ For Windows in the installer check the option to `add Python to PATH`
 * Also:
     On ubuntu systems packages `python3-opencv` and `libsm6` are required
 
-### Donations for Threadripper 3990x dream
+### I have no money
 
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

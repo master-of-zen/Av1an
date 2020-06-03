@@ -18,7 +18,7 @@ deploy:
   - provider: GitHub
     artifact: dist/av1an.exe
     auth_token:
-      secure: 'hY5Mk6KOwgQ97TzEBsM7Woqr1ZIm5QTvHg8EvxMV1x8j3wk/3mNBMqWFFbEIBK0i'
+      secure: 'Z3AF4OhJWJhLBAa22hYvCh68N6QpgbSSGdWvmzmIWiYHZ4vidt3HhfFxln2yy1IB'
     prerelease: true
     on:
       appveyor_repo_tag: true

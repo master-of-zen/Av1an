@@ -357,7 +357,7 @@ class Av1an:
 
         # Checking is source have audio track
         check = fr'{self.FFMPEG} -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
-        is_audio_here = subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout == 0
+        is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
         # If source have audio track - process it
         if is_audio_here:

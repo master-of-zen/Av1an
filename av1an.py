@@ -190,6 +190,10 @@ class Av1an:
             self.terminate()
 
         inputs = self.d.get('input')
+
+        if inputs[0].is_dir():
+            inputs = [x for x in inputs[0].iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
+
         valid = np.array([i.exists() for i in inputs])
 
         if not all(valid):

@@ -26,6 +26,7 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 import concurrent
+import concurrent.futures
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 

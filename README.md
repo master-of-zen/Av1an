@@ -103,7 +103,9 @@ With your own parameters:
                             mean, 1,25,75 percentile.
                             Requires: Installed FFMPEG and installed libvmaf.
 
-    --vmaf_path             Custom path to libvmaf models, by default used system one.
+    --vmaf_path             Custom path to libvmaf models, by default used system one. 
+                            Models must exist in the current working directory.
+                            You need to pass file with .pkl extension, not .pkl.model (but they both needed)
 
     --vmaf_target           Vmaf value to target. Best works with 85-97.
 

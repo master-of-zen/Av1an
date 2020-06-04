@@ -94,16 +94,25 @@ class Av1an:
     @staticmethod
     def get_keyframes(file):
         """ Read file info and return list of all keyframes """
-        cmd = ["ffmpeg", "-hide_banner", "-i", file.absolute(), "-vf", "showinfo", "-f", "null", "-"]
-        pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         keyframes = []
+
+        ff = ["ffmpeg", "-hide_banner", "-i", file,
+              "-vf", "select=eq(pict_type\,PICT_TYPE_I)",
+              "-f", "null", "-loglevel", "debug", "-"]
+
+        pipe = subprocess.Popen(ff, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
         while True:
-            line = pipe.stdout.readline().strip()
+            line = pipe.stdout.readline().strip().decode("utf-8")
+
             if len(line) == 0 and pipe.poll() is not None:
                 break
-            if "iskey:1" in line:
-                r = re.findall(r"n: *([^ ]+?) ", line)
-                keyframes.append(int(r[0]))
+
+            match = re.search(r"n:([0-9]+)\.[0-9]+ pts:.+key:1", line)
+            if match:
+                keyframe = int(match.group(1))
+                keyframes.append(keyframe)
+
         return keyframes
 
     @staticmethod

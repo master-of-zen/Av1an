@@ -66,7 +66,6 @@ class Av1an:
 
     def __init__(self):
         """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
-        self.FFMPEG = 'ffmpeg -y -hide_banner -loglevel error '
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
@@ -350,21 +349,22 @@ class Av1an:
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
+        audio_params = self.d.get("audio_params")
         audio_file = self.d.get('temp') / 'audio.mkv'
         if audio_file.exists():
             self.log('Reusing Audio File\n')
             return
 
         # Checking is source have audio track
-        check = fr'{self.FFMPEG} -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
+        check = fr' ffmpeg -y -hide_banner -loglevel error -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
         is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
 
         # If source have audio track - process it
         if is_audio_here:
             self.log(f'Audio processing\n'
                      f'Params: {self.d.get("audio_params")}\n')
-            cmd = f'{self.FFMPEG} -i "{input_vid}" -vn ' \
-                  f'{self.d.get("audio_params")} {audio_file}'
+            cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
+                  f'{audio_params} {audio_file}'
             self.call_cmd(cmd)
 
     def call_vmaf(self, source: Path, encoded: Path, file=False):
@@ -760,7 +760,7 @@ class Av1an:
 
         try:
             # Making 4 fps probing file
-            cmd = f'{self.FFMPEG} -i {source.as_posix()} ' \
+            cmd = f' ffmpeg -y -hide_banner -loglevel error -i {source.as_posix()} ' \
                   f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
             self.call_cmd(cmd)
 
@@ -773,7 +773,7 @@ class Av1an:
             # Encoding probes, 1 pass, highest speed
             single_p = 'aomenc  -q --passes=1 '
             params = "--threads=8 --end-usage=q --cpu-used=6 --cq-level="
-            cmd = [[f'{self.FFMPEG} -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
+            cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
                     f'{params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
                     probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
@@ -897,7 +897,7 @@ class Av1an:
             # Queue execution
             for i in commands[:-1]:
                 f, e = i.split('|')
-                f = self.FFMPEG + f
+                f = " ffmpeg -y -hide_banner -loglevel error " + f
                 f, e = f.split(), e.split()
 
                 try:
@@ -970,7 +970,7 @@ class Av1an:
             audio = ''
 
         try:
-            cmd = f'{self.FFMPEG} -f concat -safe 0 -i {self.d.get("temp") / "concat"} ' \
+            cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {self.d.get("temp") / "concat"} ' \
                   f'{audio} -c copy -y "{self.d.get("output_file")}"'
             concat = self.call_cmd(cmd, capture_output=True)
             if len(concat) > 0:

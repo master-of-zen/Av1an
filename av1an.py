@@ -53,7 +53,7 @@ def Manager():
 
 class Counter():
     def __init__(self, total, initial):
-        self.tqdm_bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
+        self.tqdm_bar = tqdm(total=total, initial=initial, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 
     def update(self, value):
         self.tqdm_bar.update(value)

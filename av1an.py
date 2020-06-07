@@ -65,7 +65,7 @@ MyManager.register('Counter', Counter)
 class Av1an:
 
     def __init__(self):
-        """Av1an - Python all-in-one toolkit for AV1, VP9, VP8 encodes."""
+        """Av1an - Python framework for AV1, VP9, VP8 encodes."""
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
@@ -246,7 +246,7 @@ class Av1an:
                 self.terminate()
 
     def arg_parsing(self):
-        """Command line parse and sanity checking."""
+        """Command line parsing"""
         parser = argparse.ArgumentParser()
         parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
 
@@ -287,9 +287,9 @@ class Av1an:
 
         # Grain
         # Todo: grain stuf
-        parser.add_argument('--grain', help='Exprimental feature, adds generated grain based on video brightness',
-                            action='store_true')
-        parser.add_argument('--grain_range')
+        # parser.add_argument('--grain', help='Exprimental feature, adds generated grain based on video brightness',
+        #                    action='store_true')
+        # parser.add_argument('--grain_range')
 
         # Vmaf
         parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
@@ -335,7 +335,7 @@ class Av1an:
             self.d['workers'] = 1
 
     def set_logging(self):
-        """Setting logging file."""
+        """Setting logging file location"""
         if self.d.get('logging'):
             self.d['logging'] = f"{self.d.get('logging')}.log"
         else:

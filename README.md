@@ -105,7 +105,10 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models, by default used system one.
 
-    --vmaf_target           Vmaf value to target. Best works with 85-97.
+    --vmaf_target           Vmaf value to target. Currently aomenc only. Best works with 85-97.
+                            When using this mode specify full encoding options.
+                            ` --end-usage=q ` or ` --end-usage=cq ` 
+                            with ` --cq-level=N ` must be specified.
 
     --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
@@ -119,6 +122,7 @@ With your own parameters:
 
 *  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 *  Fastest way to encode AV1 without losing quality, as fast as many cores cpu have :).
+*  Target VMAF mode. Targeting end result visual quality.
 *  Resuming encoding without loss of encoded progress.
 *  Simple and clean console look.
 *  Automatic determination of how many workers the host can handle.

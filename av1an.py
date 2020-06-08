@@ -255,10 +255,14 @@ class Av1an:
         parser.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
+        # Splitting
+        parser.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method')
+        parser.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
+
+
         # PySceneDetect split
         parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
-        parser.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
 
         # Encoding
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')

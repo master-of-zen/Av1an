@@ -28,6 +28,7 @@ from multiprocessing.managers import BaseManager
 import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes
+from utils.pyscenedetect import pyscene
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -980,56 +981,6 @@ class Av1an:
         except KeyboardInterrupt:
             self.terminate()
 
-    def pyscene(self):
-        """
-        Running PySceneDetect detection on source video for segmenting.
-        Optimal threshold settings 15-50
-        """
-
-        video = self.d.get('input')
-
-        try:
-            video_manager = VideoManager([str(video)])
-            scene_manager = SceneManager()
-            scene_manager.add_detector(ContentDetector(threshold=self.d.get('threshold')))
-            base_timecode = video_manager.get_base_timecode()
-
-            # Work on whole video
-            video_manager.set_duration()
-
-            # Set downscale factor to improve processing speed.
-            video_manager.set_downscale_factor()
-
-            # Start video_manager.
-            video_manager.start()
-
-            # Perform scene detection on video_manager.
-            self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
-
-            # Fix for cli batch encoding
-            progress = False if self.d.get('queue') else True
-
-            scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
-
-            # Obtain list of detected scenes.
-            scene_list = scene_manager.get_scene_list(base_timecode)
-
-            self.log(f'Found scenes: {len(scene_list)}\n')
-
-            scenes = [str(scene[0].get_frames()) for scene in scene_list]
-
-            # Fix for windows character limit
-            if sys.platform != 'linux':
-                scenes = self.reduce_scenes(scenes)
-
-            scenes = ','.join(scenes[1:])
-
-            return scenes
-
-        except Exception as e:
-            self.log(f'Error in PySceneDetect: {e}\n')
-            print(f'Error in PySceneDetect{e}\n')
-            self.terminate()
 
     def aom_keyframes(self):
         """[Get frame numbers for splits from aomenc 1 pass stat file]
@@ -1112,9 +1063,14 @@ class Av1an:
             self.log('Skipping scene detection\n')
             return ''
 
-        scenes = Path(self.d.get('scenes'))
-        
+        split_method = self.d.get('split_method')
+        sc = ''
+
+        scenes = self.d.get('scenes')
+        video = self.d.get('input')
+
         if scenes:
+            scenes = Path(scenes)
             if scenes.exists():
                 # Read stats from CSV file opened in read mode:
                 with scenes.open() as stats_file:
@@ -1122,16 +1078,39 @@ class Av1an:
                     self.log('Using Saved Scenes\n')
                     return stats
 
-        split_method = self.d.get('split_method')
-        sc = ''
+        # Splitting using PySceneDetect
         if split_method == 'pyscene':
-            sc = self.pyscene()
+            queue_fix = not self.d.get('queue')
+            threshold = self.d.get("threshold")
+            self.log(f'Starting scene detection Threshold: {threshold}\n')
+            try:
+                sc = pyscene(video, threshold, progress_show=queue_fix )
+            except Exception as e:
+                self.log(f'Error in PySceneDetect: {e}\n')
+                print(f'Error in PySceneDetect{e}\n')
+                self.terminate()
+        
+        # Splitting based on aom keyframe placement
         elif split_method == 'aom_keyframes':
-            sc = self.aom_keyframes()
+            try:
+                sc = self.aom_keyframes()
+            except:
+                self.log('Error in aom_keyframes')
+                print('Error in aom_keyframes')
+                self.terminate()
         else:
             print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+            self.terminate()
 
+
+
+        self.log(f'Found scenes: {len(sc)}\n')
+        
+        # Fix for windows character limit
+        if sys.platform != 'linux':
+            scenes = self.reduce_scenes(scenes)
         # Write scenes to file
+        
         if scenes:
             Path(scenes).write_text(sc)
 

@@ -26,6 +26,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes
 from utils.pyscenedetect import pyscene
+from utils.utils import read_vmaf_xml, get_brightness, frame_probe
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -72,25 +73,6 @@ class Av1an:
         os.kill(os.getpid(), 9)
 
     @staticmethod
-    def read_vmaf_xml(file):
-        with open(file, 'r') as f:
-            file = f.readlines()
-            file = [x.strip() for x in file if 'vmaf="' in x]
-            vmafs = []
-            for i in file:
-                vmf = i[i.rfind('="') + 2: i.rfind('"')]
-                vmafs.append(float(vmf))
-
-        vmafs = [round(float(x), 5) for x in vmafs if isinstance(x, float)]
-        calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
-        mean = round(sum(calc) / len(calc), 2)
-        perc_1 = round(np.percentile(calc, 1), 2)
-        perc_25 = round(np.percentile(calc, 25), 2)
-        perc_75 = round(np.percentile(calc, 75), 2)
-
-        return vmafs, mean, perc_1, perc_25, perc_75
-
-    @staticmethod
     def get_keyframes(file):
         """ Read file info and return list of all keyframes """
         keyframes = []
@@ -126,41 +108,6 @@ class Av1an:
         mt = '--cq-level='
         cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
         return cmd
-
-    @staticmethod
-    def frame_probe(source: Path):
-        """Get frame count."""
-        cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
-        r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
-        matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
-        return int(matches[-1])
-
-    @staticmethod
-    def get_brightness(video):
-        """Getting average brightness value for single video."""
-        brightness = []
-        cap = cv2.VideoCapture(video)
-        try:
-            while True:
-                # Capture frame-by-frame
-                _, frame = cap.read()
-
-                # Our operations on the frame come here
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-                # Display the resulting frame
-                mean = cv2.mean(gray)
-                brightness.append(mean[0])
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-        except cv2.error:
-            pass
-
-        # When everything done, release the capture
-        cap.release()
-        brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
-
-        return brig_geom
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -449,13 +396,13 @@ class Av1an:
                 d = json.load(f)
 
             if self.d.get("no_check"):
-                s1 = Av1an.frame_probe(source)
+                s1 = frame_probe(source)
                 d['done'][source.name] = s1
                 with status_file.open('w') as f:
                     json.dump(d, f)
                     return
 
-            s1, s2 = [Av1an.frame_probe(i) for i in (source, encoded)]
+            s1, s2 = [frame_probe(i) for i in (source, encoded)]
 
             if s1 == s2:
                 d['done'][source.name] = s1
@@ -665,7 +612,7 @@ class Av1an:
             print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
             self.terminate()
 
-        vmafs, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(xml)
+        vmafs, mean, perc_1, perc_25, perc_75 = read_vmaf_xml(xml)
 
         # Plot
         plt.figure(figsize=(15, 4))
@@ -701,7 +648,7 @@ class Av1an:
         mincq = self.d.get('min_cq')
         maxcq = self.d.get('max_cq')
         steps = self.d.get('vmaf_steps')
-        frames = Av1an.frame_probe(source)
+        frames = frame_probe(source)
         probe = source.with_suffix(".mp4")
         plot_probes = self.d.get('vmaf_plots')
         ffmpeg = self.d.get('ffmpeg')
@@ -732,7 +679,7 @@ class Av1an:
                 self.call_cmd(i[0])
 
                 v = self.call_vmaf(i[1], i[2], file=True)
-                _, mean, perc_1, perc_25, perc_75 = Av1an.read_vmaf_xml(v)
+                _, mean, perc_1, perc_25, perc_75 = read_vmaf_xml(v)
 
                 pr.append(round(mean, 1))
                 ls.append((round(mean, 3), i[3]))
@@ -807,7 +754,7 @@ class Av1an:
         try:
             st_time = time.time()
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
-            frame_probe_source = Av1an.frame_probe(source)
+            frame_probe_source = frame_probe(source)
 
             # Target Vmaf Mode
             if self.d.get('vmaf_target'):
@@ -826,7 +773,7 @@ class Av1an:
 
             # Boost
             if self.d.get('boost'):
-                br = self.get_brightness(source.absolute().as_posix())
+                br = get_brightness(source.absolute().as_posix())
 
                 com0, cq = self.boost(commands[0], br)
 
@@ -892,12 +839,12 @@ class Av1an:
 
             self.frame_check(source, target)
 
-            frame_probe = Av1an.frame_probe(target)
+            frame_probe_fr = frame_probe(target)
 
             enc_time = round(time.time() - st_time, 2)
 
-            self.log(f'Done: {source.name} Fr: {frame_probe}\n'
-                     f'Fps: {round(frame_probe / enc_time, 4)} Time: {enc_time} sec.\n\n')
+            self.log(f'Done: {source.name} Fr: {frame_probe_fr}\n'
+                     f'Fps: {round(frame_probe_fr / enc_time, 4)} Time: {enc_time} sec.\n\n')
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
@@ -954,7 +901,7 @@ class Av1an:
                 self.log(f'Resumed with {done} encoded clips done\n\n')
             else:
                 initial = 0
-                total = self.frame_probe(self.d.get('input'))
+                total = frame_probe(self.d.get('input'))
                 d = {'total': total, 'done': {}}
                 with open(done_path, 'w') as f:
                     json.dump(d, f)
@@ -985,9 +932,9 @@ class Av1an:
         video: Path = self.d.get("input")
         stat_file = self.d.get('temp') / 'keyframes.log'
 
-        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=4 --cpu-used=6 --end-usage=q --cq-level=40 --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
+        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
         f, e = f.split(), e.split()
-        
+
         # Getting Frame Count from Metadata
         video = cv2.VideoCapture(video.as_posix())
         total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -1009,7 +956,7 @@ class Av1an:
                 if new > frame:
                     tqdm_bar.update(new - frame)
                 frame = new
-        
+
         keyframes = find_aom_keyframes(stat_file)
         keyframes = ','.join(keyframes[1:])
 
@@ -1022,7 +969,7 @@ class Av1an:
                 f = list(f)
         else:
             f = []
-        f.append(Av1an.frame_probe(self.d.get('input')))
+        f.append(frame_probe(self.d.get('input')))
         split_distance = self.d.get('extra_split')
 
         # Get all keyframes of original video
@@ -1055,7 +1002,7 @@ class Av1an:
         return result
 
     def split_routine(self):
-        
+
         if self.d.get('scenes') == '0':
             self.log('Skipping scene detection\n')
             return ''
@@ -1086,7 +1033,7 @@ class Av1an:
                 self.log(f'Error in PySceneDetect: {e}\n')
                 print(f'Error in PySceneDetect{e}\n')
                 self.terminate()
-        
+
         # Splitting based on aom keyframe placement
         elif split_method == 'aom_keyframes':
             try:
@@ -1102,12 +1049,12 @@ class Av1an:
 
 
         self.log(f'Found scenes: {len(sc)}\n')
-        
+
         # Fix for windows character limit
         if sys.platform != 'linux':
             scenes = self.reduce_scenes(scenes)
         # Write scenes to file
-        
+
         if scenes:
             Path(scenes).write_text(sc)
 

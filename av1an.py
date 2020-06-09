@@ -27,6 +27,7 @@ from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 import concurrent
 import concurrent.futures
+from utils.aom_keyframes import find_aom_keyframes
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -362,6 +363,7 @@ class Av1an:
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
+        input_vid = self.d.get('input')
         audio_params = self.d.get("audio_params")
         audio_file = self.d.get('temp') / 'audio.mkv'
         if audio_file.exists():
@@ -415,75 +417,10 @@ class Av1an:
             self.reduce_scenes(scenes)
         return scenes
 
-    def scene_detect(self, video: Path):
-        """
-        Running PySceneDetect detection on source video for segmenting.
-        Optimal threshold settings 15-50
-        """
-        # Skip scene detection if the user choose to
-        if self.d.get('scenes') == '0':
-            self.log('Skipping scene detection\n')
-            return ''
-
-        try:
-            video_manager = VideoManager([str(video)])
-            scene_manager = SceneManager()
-            scene_manager.add_detector(ContentDetector(threshold=self.d.get('threshold')))
-            base_timecode = video_manager.get_base_timecode()
-
-            # If stats file exists, load it.
-            scenes = self.d.get('scenes')
-            if scenes:
-                scenes = Path(scenes)
-                if scenes.exists():
-                    # Read stats from CSV file opened in read mode:
-                    with scenes.open() as stats_file:
-                        stats = stats_file.read().strip()
-                        self.log('Using Saved Scenes\n')
-                        return stats
-
-            # Work on whole video
-            video_manager.set_duration()
-
-            # Set downscale factor to improve processing speed.
-            video_manager.set_downscale_factor()
-
-            # Start video_manager.
-            video_manager.start()
-
-            # Perform scene detection on video_manager.
-            self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
-
-            # Fix for cli batch encoding
-            progress = False if self.d.get('queue') else True
-
-            scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
-
-            # Obtain list of detected scenes.
-            scene_list = scene_manager.get_scene_list(base_timecode)
-
-            self.log(f'Found scenes: {len(scene_list)}\n')
-
-            scenes = [str(scene[0].get_frames()) for scene in scene_list]
-
-            # Fix for windows character limit
-            if sys.platform != 'linux':
-                scenes = self.reduce_scenes(scenes)
-
-            scenes = ','.join(scenes[1:])
-
-            # We only write to the stats file if a save is required:
-            if self.d.get('scenes'):
-                Path(self.d.get('scenes')).write_text(scenes)
-            return scenes
-
-        except Exception as e:
-            self.log(f'Error in PySceneDetect: {e}\n')
-            print(f'Error in PySceneDetect{e}\n')
-            self.terminate()
-
-    def split(self, video: Path, frames):
+    def split(self, frames):
         """Split video by frame numbers, or just copying video."""
+
+        video = self.d.get('input')
 
         cmd = [
             "ffmpeg", "-hide_banner", "-y",
@@ -912,7 +849,6 @@ class Av1an:
                 f, e = i.split('|')
                 f = " ffmpeg -y -hide_banner -loglevel error " + f
                 f, e = f.split(), e.split()
-
                 try:
                     frame = 0
 
@@ -1044,6 +980,111 @@ class Av1an:
         except KeyboardInterrupt:
             self.terminate()
 
+    def pyscene(self):
+        """
+        Running PySceneDetect detection on source video for segmenting.
+        Optimal threshold settings 15-50
+        """
+        # Skip scene detection if the user choose to
+        if self.d.get('scenes') == '0':
+            self.log('Skipping scene detection\n')
+            return ''
+
+        video = self.d.get('input')
+
+        try:
+            video_manager = VideoManager([str(video)])
+            scene_manager = SceneManager()
+            scene_manager.add_detector(ContentDetector(threshold=self.d.get('threshold')))
+            base_timecode = video_manager.get_base_timecode()
+
+            # If stats file exists, load it.
+            scenes = self.d.get('scenes')
+            if scenes:
+                scenes = Path(scenes)
+                if scenes.exists():
+                    # Read stats from CSV file opened in read mode:
+                    with scenes.open() as stats_file:
+                        stats = stats_file.read().strip()
+                        self.log('Using Saved Scenes\n')
+                        return stats
+
+            # Work on whole video
+            video_manager.set_duration()
+
+            # Set downscale factor to improve processing speed.
+            video_manager.set_downscale_factor()
+
+            # Start video_manager.
+            video_manager.start()
+
+            # Perform scene detection on video_manager.
+            self.log(f'Starting scene detection Threshold: {self.d.get("threshold")}\n')
+
+            # Fix for cli batch encoding
+            progress = False if self.d.get('queue') else True
+
+            scene_manager.detect_scenes(frame_source=video_manager, show_progress=progress)
+
+            # Obtain list of detected scenes.
+            scene_list = scene_manager.get_scene_list(base_timecode)
+
+            self.log(f'Found scenes: {len(scene_list)}\n')
+
+            scenes = [str(scene[0].get_frames()) for scene in scene_list]
+
+            # Fix for windows character limit
+            if sys.platform != 'linux':
+                scenes = self.reduce_scenes(scenes)
+
+            scenes = ','.join(scenes[1:])
+
+            # We only write to the stats file if a save is required:
+            if self.d.get('scenes'):
+                Path(self.d.get('scenes')).write_text(scenes)
+            return scenes
+
+        except Exception as e:
+            self.log(f'Error in PySceneDetect: {e}\n')
+            print(f'Error in PySceneDetect{e}\n')
+            self.terminate()
+
+    def aom_keyframes(self):
+        """[Get frame numbers for splits from aomenc 1 pass stat file]
+        """
+        video: Path = self.d.get("input")
+        stat_file = self.d.get('temp') / 'keyframes.log'
+
+        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=4 --cpu-used=6 --end-usage=q --cq-level=40 --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
+        f, e = f.split(), e.split()
+        
+        # Getting Frame Count from Metadata
+        video = cv2.VideoCapture(video.as_posix())
+        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        video.release()
+
+        tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
+
+        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                                stderr=STDOUT, universal_newlines=True)
+        frame = 0
+        while True:
+            line = pipe.stdout.readline().strip()
+            if len(line) == 0 and pipe.poll() is not None:
+                break
+            match = re.search(r"frame.*?\/([^ ]+?) ", line)
+            if match:
+                new = int(match.group(1))
+                if new > frame:
+                    tqdm_bar.update(new - frame)
+                frame = new
+        
+        keyframes = find_aom_keyframes(stat_file)
+        keyframes = ','.join(keyframes[1:])
+
+        return keyframes
+
     def extra_split(self, frames):
         if len(frames) > 0:
             f = literal_eval(frames)
@@ -1083,6 +1124,17 @@ class Av1an:
         result = ','.join(result)
         return result
 
+    def split_method(self):
+
+        split_method = self.d.get('split_method')
+
+        if split_method == 'pyscene':
+            return self.pyscene
+        elif split_method == 'aom_keyframes':
+            return self.aom_keyframes()
+        else:
+            print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+
     def setup_routine(self):
         """
         All pre encoding routine.
@@ -1096,12 +1148,12 @@ class Av1an:
             self.set_logging()
 
             # Splitting video and sorting big-first
-            framenums = self.scene_detect(self.d.get('input'))
+            framenums = self.split_method()
 
             if self.d.get('extra_split'):
                 framenums = self.extra_split(framenums)
 
-            self.split(self.d.get('input'), framenums)
+            self.split(framenums)
 
             # Extracting audio
             self.extract_audio(self.d.get('input'))

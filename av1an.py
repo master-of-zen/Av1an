@@ -339,8 +339,8 @@ class Av1an:
         # for proper vmaf calculation
         fl = source.with_name(encoded.stem).with_suffix('.xml').as_posix()
         cmd = f'ffmpeg -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
-              f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
-              f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
+              f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled1];' \
+              f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
               f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
 
         call = self.call_cmd(cmd, capture_output=True)

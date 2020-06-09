@@ -20,6 +20,7 @@ def pyscene(video, threshold, progress_show):
 
     # Set downscale factor to improve processing speed.
     video_manager.set_downscale_factor()
+    
     # Start video_manager.
     video_manager.start()
 

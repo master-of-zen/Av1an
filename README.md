@@ -52,6 +52,13 @@ With your own parameters:
     -w   --workers          Overrides automatically set number of workers.
                             Example: rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -w 3
 
+    --split_method          Method used for generating splits.(Default: PySceneDetect)
+                            Options: `pyscene`, `aom_keyframes`
+                            `pyscene` - PyScenedetect, content based scenedetection 
+                            with threshold.
+                            `aom_keyframes` - using stat file of 1 pass of aomenc encode
+                            to get exact place where encoder will place new keyframes.
+
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
     
     -s   --scenes           Path to file with scenes timestamps.

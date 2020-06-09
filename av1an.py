@@ -1024,9 +1024,6 @@ class Av1an:
 
             scenes = ','.join(scenes[1:])
 
-            # We only write to the stats file if a save is required:
-            if self.d.get('scenes'):
-                Path(self.d.get('scenes')).write_text(scenes)
             return scenes
 
         except Exception as e:
@@ -1115,9 +1112,9 @@ class Av1an:
             self.log('Skipping scene detection\n')
             return ''
 
-        scenes = self.d.get('scenes')
+        scenes = Path(self.d.get('scenes'))
+        
         if scenes:
-            scenes = Path(scenes)
             if scenes.exists():
                 # Read stats from CSV file opened in read mode:
                 with scenes.open() as stats_file:
@@ -1126,15 +1123,19 @@ class Av1an:
                     return stats
 
         split_method = self.d.get('split_method')
-
+        sc = ''
         if split_method == 'pyscene':
-            return self.pyscene()
+            sc = self.pyscene()
         elif split_method == 'aom_keyframes':
-            return self.aom_keyframes()
+            sc = self.aom_keyframes()
         else:
             print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
 
+        # Write scenes to file
+        if scenes:
+            Path(scenes).write_text(sc)
 
+        return sc
 
     def setup_routine(self):
         """

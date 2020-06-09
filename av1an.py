@@ -985,10 +985,6 @@ class Av1an:
         Running PySceneDetect detection on source video for segmenting.
         Optimal threshold settings 15-50
         """
-        # Skip scene detection if the user choose to
-        if self.d.get('scenes') == '0':
-            self.log('Skipping scene detection\n')
-            return ''
 
         video = self.d.get('input')
 
@@ -997,17 +993,6 @@ class Av1an:
             scene_manager = SceneManager()
             scene_manager.add_detector(ContentDetector(threshold=self.d.get('threshold')))
             base_timecode = video_manager.get_base_timecode()
-
-            # If stats file exists, load it.
-            scenes = self.d.get('scenes')
-            if scenes:
-                scenes = Path(scenes)
-                if scenes.exists():
-                    # Read stats from CSV file opened in read mode:
-                    with scenes.open() as stats_file:
-                        stats = stats_file.read().strip()
-                        self.log('Using Saved Scenes\n')
-                        return stats
 
             # Work on whole video
             video_manager.set_duration()
@@ -1124,16 +1109,32 @@ class Av1an:
         result = ','.join(result)
         return result
 
-    def split_method(self):
+    def split_routine(self):
+        
+        if self.d.get('scenes') == '0':
+            self.log('Skipping scene detection\n')
+            return ''
+
+        scenes = self.d.get('scenes')
+        if scenes:
+            scenes = Path(scenes)
+            if scenes.exists():
+                # Read stats from CSV file opened in read mode:
+                with scenes.open() as stats_file:
+                    stats = stats_file.read().strip()
+                    self.log('Using Saved Scenes\n')
+                    return stats
 
         split_method = self.d.get('split_method')
 
         if split_method == 'pyscene':
-            return self.pyscene
+            return self.pyscene()
         elif split_method == 'aom_keyframes':
             return self.aom_keyframes()
         else:
             print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+
+
 
     def setup_routine(self):
         """
@@ -1148,7 +1149,8 @@ class Av1an:
             self.set_logging()
 
             # Splitting video and sorting big-first
-            framenums = self.split_method()
+
+            framenums = self.split_routine()
 
             if self.d.get('extra_split'):
                 framenums = self.extra_split(framenums)

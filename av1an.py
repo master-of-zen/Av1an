@@ -21,9 +21,6 @@ import statistics
 from scipy import interpolate
 from math import isnan
 import matplotlib.pyplot as plt
-from scenedetect.video_manager import VideoManager
-from scenedetect.scene_manager import SceneManager
-from scenedetect.detectors import ContentDetector
 from multiprocessing.managers import BaseManager
 import concurrent
 import concurrent.futures

@@ -1,8 +1,6 @@
 #!/bin/env python
-import sys
 import struct
 import os
-import csv
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.
@@ -37,13 +35,13 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     previous_frame_dict = dict_list[current_frame_index - 1]
     current_frame_dict = dict_list[current_frame_index]
     future_frame_dict = dict_list[current_frame_index + 1]
-    
+
     p = previous_frame_dict
     c = current_frame_dict
     f = future_frame_dict
-    
+
     BOOST_FACTOR = 12.5
-    
+
     # For more documentation on the below, see https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/encoder/pass2_strategy.c#1897
     MIN_INTRA_LEVEL = 0.25
     INTRA_VS_INTER_THRESH = 2.0
@@ -52,17 +50,17 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     ERR_CHANGE_THRESHOLD = 0.4
     II_IMPROVEMENT_THRESHOLD = 3.5
     KF_II_MAX = 128.0
-    
+
     qmode = True
     #todo: allow user to set whether we're testing for constant-q mode keyframe placement or not. it's not a big difference.
-    
+
     is_keyframe = 0
-    
+
     pcnt_intra = 1.0 - c['pcnt_inter']
     modified_pcnt_inter = c['pcnt_inter'] - c['pcnt_neutral']
-    
+
     second_ref_usage_thresh = get_second_ref_usage_thresh(frame_count_so_far)
-    
+
     if ((qmode == False) or (frame_count_so_far > 2)) and (c['pcnt_second_ref'] < second_ref_usage_thresh) and (f['pcnt_second_ref'] < second_ref_usage_thresh) and ((c['pcnt_inter'] < VERY_LOW_INTER_THRESH) or ((pcnt_intra > MIN_INTRA_LEVEL) and (pcnt_intra > (INTRA_VS_INTER_THRESH * modified_pcnt_inter)) and ((c['intra_error'] / DOUBLE_DIVIDE_CHECK(c['coded_error'])) < KF_II_ERR_THRESHOLD) and ((abs(p['coded_error'] - c['coded_error']) / DOUBLE_DIVIDE_CHECK(c['coded_error']) > ERR_CHANGE_THRESHOLD) or (abs(p['intra_error'] - c['intra_error']) / DOUBLE_DIVIDE_CHECK(c['intra_error']) > ERR_CHANGE_THRESHOLD) or ((f['intra_error'] / DOUBLE_DIVIDE_CHECK(f['coded_error'])) > II_IMPROVEMENT_THRESHOLD)))):
         boost_score = 0.0
         old_boost_score = 0.0
@@ -72,21 +70,21 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
             next_iiratio = (BOOST_FACTOR * lnf['intra_error'] / DOUBLE_DIVIDE_CHECK(lnf['coded_error']))
             if (next_iiratio > KF_II_MAX):
                 next_iiratio = KF_II_MAX
-                
+
             #Cumulative effect of decay in prediction quality.
             if (lnf['pcnt_inter'] > 0.85):
                 decay_accumulator = decay_accumulator * lnf['pcnt_inter']
             else:
                 decay_accumulator = decay_accumulator * ((0.85 + lnf['pcnt_inter']) / 2.0)
-                
+
             #Keep a running total.
             boost_score += (decay_accumulator * next_iiratio)
-            
+
             #Test various breakout clauses.
             if ((lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20) and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200)):
                 break
             old_boost_score = boost_score
-            
+
         #If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
         if (boost_score > 30.0 and (i > 3)):
             is_keyframe = 1

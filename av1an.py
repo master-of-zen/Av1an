@@ -26,7 +26,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import read_vmaf_xml, get_brightness, frame_probe
+from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -71,43 +71,6 @@ class Av1an:
 
     def terminate(self):
         os.kill(os.getpid(), 9)
-
-    @staticmethod
-    def get_keyframes(file):
-        """ Read file info and return list of all keyframes """
-        keyframes = []
-
-        ff = ["ffmpeg", "-hide_banner", "-i", file,
-              "-vf", "select=eq(pict_type\,PICT_TYPE_I)",
-              "-f", "null", "-loglevel", "debug", "-"]
-
-        pipe = subprocess.Popen(ff, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-        while True:
-            line = pipe.stdout.readline().strip().decode("utf-8")
-
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-
-            match = re.search(r"n:([0-9]+)\.[0-9]+ pts:.+key:1", line)
-            if match:
-                keyframe = int(match.group(1))
-                keyframes.append(keyframe)
-
-        return keyframes
-
-    @staticmethod
-    def get_cq(command):
-        """Return cq values from command"""
-        matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
-        return int(matches[-1])
-
-    @staticmethod
-    def man_cq(command: str, cq: int):
-        """Return command with new cq value"""
-        mt = '--cq-level='
-        cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
-        return cmd
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -570,7 +533,7 @@ class Av1an:
         b_limit = self.d.get('boost_limit')
         b_range = self.d.get('boost_range')
         try:
-            cq = Av1an.get_cq(command)
+            cq = get_cq(command)
             if not new_cq:
                 if br_geom < 128:
                     new_cq = cq - round((128 - br_geom) / 128 * b_range)
@@ -578,7 +541,7 @@ class Av1an:
 
                 else:
                     new_cq = cq
-            cmd = Av1an.man_cq(command, new_cq)
+            cmd = man_cq(command, new_cq)
 
             return cmd, new_cq
 
@@ -760,10 +723,10 @@ class Av1an:
             if self.d.get('vmaf_target'):
                 tg_cq, tg_vf = self.target_vmaf(source)
 
-                cm1 = self.man_cq(commands[0], tg_cq)
+                cm1 = man_cq(commands[0], tg_cq)
 
                 if self.d.get('passes') == 2:
-                    cm2 = self.man_cq(commands[1], tg_cq)
+                    cm2 = man_cq(commands[1], tg_cq)
                     commands = (cm1, cm2) + commands[2:]
                 else:
                     commands = cm1 + commands[1:]
@@ -973,7 +936,7 @@ class Av1an:
         split_distance = self.d.get('extra_split')
 
         # Get all keyframes of original video
-        keyframes = Av1an.get_keyframes(self.d.get('input'))
+        keyframes = get_keyframes(self.d.get('input'))
 
         t = f[:]
         t.insert(0, 0)

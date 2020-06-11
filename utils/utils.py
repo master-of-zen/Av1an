@@ -95,3 +95,11 @@ def get_brightness(video):
     brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
 
     return brig_geom
+
+
+def reduce_scenes(scenes):
+    """Windows terminal can't handle more than ~600 scenes in length."""
+    count = len(scenes)
+    interval = int(count / 600 + (count % 600 > 0))
+    scenes = scenes[::interval]
+    return scenes

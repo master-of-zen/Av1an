@@ -26,7 +26,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq
+from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -317,13 +317,6 @@ class Av1an:
         except ValueError:
             vmf = 0
         return vmf
-
-    def reduce_scenes(self, scenes):
-        """Windows terminal can't handle more than ~600 scenes in length."""
-        if len(scenes) > 600:
-            scenes = scenes[::2]
-            self.reduce_scenes(scenes)
-        return scenes
 
     def split(self, frames):
         """Split video by frame numbers, or just copying video."""
@@ -888,7 +881,6 @@ class Av1an:
         except KeyboardInterrupt:
             self.terminate()
 
-
     def aom_keyframes(self):
         """[Get frame numbers for splits from aomenc 1 pass stat file]
         """
@@ -1015,7 +1007,9 @@ class Av1an:
 
         # Fix for windows character limit
         if sys.platform != 'linux':
-            scenes = self.reduce_scenes(scenes)
+            if len(sc) > 600:
+                sc = reduce_scenes(sc)
+
         # Write scenes to file
 
         if scenes:

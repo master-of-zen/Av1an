@@ -6,6 +6,7 @@ from pathlib import Path
 from math import isnan
 from subprocess import PIPE, STDOUT
 import statistics
+from ast import literal_eval
 
 def read_vmaf_xml(file):
     with open(file, 'r') as f:
@@ -99,7 +100,9 @@ def get_brightness(video):
 
 def reduce_scenes(scenes):
     """Windows terminal can't handle more than ~600 scenes in length."""
+    scenes = literal_eval(scenes)
     count = len(scenes)
-    interval = int(count / 600 + (count % 600 > 0))
+    interval = int(count / 500 + (count % 500 > 0))
     scenes = scenes[::interval]
+    scenes = ','.join(scenes)
     return scenes

@@ -17,7 +17,6 @@ from subprocess import PIPE, STDOUT
 from pathlib import Path
 import cv2
 import numpy as np
-import statistics
 from scipy import interpolate
 from math import isnan
 import matplotlib.pyplot as plt

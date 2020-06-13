@@ -621,9 +621,8 @@ class Av1an:
             # checking highest first, lowers second, for early skips
             q.insert(0, q.pop(-1))
             # Encoding probes, 1 pass, highest speed
-            single_p = 'aomenc  -q --passes=1 '
-            params = "--threads=8 --end-usage=q --cpu-used=6 --cq-level="
-            cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {self.d.get("ffmpeg_pipe")} {single_p} '
+            params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
+            cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {self.d.get("ffmpeg_pipe")}'
                     f'{params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
                     probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
 
@@ -634,7 +633,7 @@ class Av1an:
                 self.call_cmd(i[0])
 
                 v = self.call_vmaf(i[1], i[2], file=True)
-                _, mean, perc_1, perc_25, perc_75 = read_vmaf_xml(v)
+                _, mean, _, _, _ = read_vmaf_xml(v)
 
                 pr.append(round(mean, 1))
                 ls.append((round(mean, 3), i[3]))

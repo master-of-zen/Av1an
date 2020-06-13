@@ -10,7 +10,6 @@ import shutil
 import atexit
 from distutils.spawn import find_executable
 from ast import literal_eval
-from psutil import virtual_memory
 import argparse
 import subprocess
 from subprocess import PIPE, STDOUT
@@ -25,7 +24,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes
+from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -226,25 +225,7 @@ class Av1an:
         else:
             self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
 
-    def determine_resources(self):
-        """Returns number of workers that machine can handle with selected encoder."""
 
-        # If set by user, skip
-        if self.d.get('workers') != 0:
-            return
-
-        cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2 ** 30)
-
-        if self.d.get('encoder') == 'aom' or self.d.get('encoder') == 'rav1e' or self.d.get('encoder') == 'vpx':
-            self.d['workers'] = round(min(cpu / 2, ram / 1.5))
-
-        elif self.d.get('encoder') == 'svt_av1':
-            self.d['workers'] = round(min(cpu, ram)) // 5
-
-        # fix if workers round up to 0
-        if self.d.get('workers') == 0:
-            self.d['workers'] = 1
 
     def set_logging(self):
         """Setting logging file location"""
@@ -305,7 +286,8 @@ class Av1an:
               f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
               f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
 
-        call = self.call_cmd(cmd, capture_output=True)
+        call = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
         if file:
             return fl
 
@@ -1015,8 +997,7 @@ class Av1an:
         # Make encode queue
         commands = self.compose_encoding_queue(files)
 
-        # Determine resources if workers don't set
-        self.determine_resources()
+        self.d['workers'] = determine_resources(self.d.get('encoder'), self.d.get('workers'))
 
         self.encoding_loop(commands)
 

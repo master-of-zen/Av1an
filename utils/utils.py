@@ -2,11 +2,35 @@ import numpy as np
 import subprocess
 import cv2
 import re
+import os
 from pathlib import Path
 from math import isnan
 from subprocess import PIPE, STDOUT
 import statistics
 from ast import literal_eval
+from psutil import virtual_memory
+
+
+def determine_resources(encoder, workers):
+    """Returns number of workers that machine can handle with selected encoder."""
+
+    # If set by user, skip
+    if workers != 0:
+        return workers
+
+    cpu = os.cpu_count()
+    ram = round(virtual_memory().total / 2 ** 30)
+
+    if encoder in ('aom', 'rav1e', 'vpx'):
+        return round(min(cpu / 2, ram / 1.5))
+
+    elif encoder == 'svt_av1':
+        return round(min(cpu, ram)) // 5
+
+    # fix if workers round up to 0
+    if workers == 0:
+        return 1
+
 
 def read_vmaf_xml(file):
     with open(file, 'r') as f:

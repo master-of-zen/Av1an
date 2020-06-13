@@ -29,8 +29,12 @@ def pyscene(video, threshold, progress_show):
     # Obtain list of detected scenes.
     scene_list = scene_manager.get_scene_list(base_timecode)
 
-    scenes = [str(scene[0].get_frames()) for scene in scene_list]
+    scenes = [int(scene[0].get_frames()) for scene in scene_list]
 
-    scenes = ','.join(scenes[1:])
+    # Remove 0 from list
+    try:
+        scenes.remove(0)
+    except:
+        pass
 
     return scenes

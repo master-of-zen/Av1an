@@ -99,8 +99,7 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
 
 def find_aom_keyframes(stat_file):
     #I don't know what data format you want as output
-    keyframes_list = ['0']
-    is_keyframe_list = ['1']
+    keyframes_list = []
 
     number_of_frames = round(os.stat(stat_file).st_size / 208) - 1
     dict_list = []
@@ -118,8 +117,7 @@ def find_aom_keyframes(stat_file):
     for i in range(1, number_of_frames - 16):
         is_keyframe = test_candidate_kf(dict_list, i, frame_count_so_far)
         if is_keyframe == 1:
-            keyframes_list.append(str(i))
-            is_keyframe_list.append(str('1'))
+            keyframes_list.append(i)
             frame_count_so_far = 0
         frame_count_so_far += 1
 

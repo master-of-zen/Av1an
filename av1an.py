@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from multiprocessing.managers import BaseManager
 import concurrent
 import concurrent.futures
-from utils.aom_keyframes import find_aom_keyframes
+from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
 from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes
 
@@ -334,7 +334,7 @@ class Av1an:
         if len(frames) > 0:
             cmd.extend([
                 "-f", "segment",
-                "-segment_frames", frames
+                "-segment_frames", ','.join([str(x) for x in frames])
             ])
         cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
         pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
@@ -925,7 +925,7 @@ class Av1an:
             return ''
 
         split_method = self.d.get('split_method')
-        sc = ''
+        sc = []
 
         scenes = self.d.get('scenes')
         video = self.d.get('input')
@@ -935,7 +935,7 @@ class Av1an:
             if scenes.exists():
                 # Read stats from CSV file opened in read mode:
                 with scenes.open() as stats_file:
-                    stats = stats_file.read().strip()
+                    stats = literal_eval(stats_file.read().strip())
                     self.log('Using Saved Scenes\n')
                     return stats
 
@@ -977,7 +977,7 @@ class Av1an:
         # Write scenes to file
 
         if scenes:
-            Path(scenes).write_text(sc)
+            Path(scenes).write_text(','.join([str(x) for x in sc]))
 
         return sc
 

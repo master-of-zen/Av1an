@@ -1,6 +1,12 @@
 #!/bin/env python
 import struct
 import os
+import subprocess
+from subprocess import PIPE, STDOUT
+from tqdm import tqdm
+import re
+from pathlib import Path
+import cv2
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.
@@ -115,8 +121,40 @@ def find_aom_keyframes(stat_file):
             keyframes_list.append(str(i))
             is_keyframe_list.append(str('1'))
             frame_count_so_far = 0
-        else:
-            is_keyframe_list.append(str('0'))
         frame_count_so_far += 1
 
     return keyframes_list
+
+
+def aom_keyframes(video: Path, stat_file ):
+        """[Get frame numbers for splits from aomenc 1 pass stat file]
+        """
+
+        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
+        f, e = f.split(), e.split()
+
+        # Getting Frame Count from Metadata
+        video = cv2.VideoCapture(video.as_posix())
+        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        video.release()
+
+        tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
+
+        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                                stderr=STDOUT, universal_newlines=True)
+        frame = 0
+        while True:
+            line = pipe.stdout.readline().strip()
+            if len(line) == 0 and pipe.poll() is not None:
+                break
+            match = re.search(r"frame.*?\/([^ ]+?) ", line)
+            if match:
+                new = int(match.group(1))
+                if new > frame:
+                    tqdm_bar.update(new - frame)
+                frame = new
+
+        keyframes = find_aom_keyframes(stat_file)
+
+        return keyframes

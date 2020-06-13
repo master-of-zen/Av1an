@@ -879,42 +879,6 @@ class Av1an:
         except KeyboardInterrupt:
             self.terminate()
 
-    def aom_keyframes(self):
-        """[Get frame numbers for splits from aomenc 1 pass stat file]
-        """
-        video: Path = self.d.get("input")
-        stat_file = self.d.get('temp') / 'keyframes.log'
-
-        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
-        f, e = f.split(), e.split()
-
-        # Getting Frame Count from Metadata
-        video = cv2.VideoCapture(video.as_posix())
-        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        video.release()
-
-        tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
-
-        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                                stderr=STDOUT, universal_newlines=True)
-        frame = 0
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-            match = re.search(r"frame.*?\/([^ ]+?) ", line)
-            if match:
-                new = int(match.group(1))
-                if new > frame:
-                    tqdm_bar.update(new - frame)
-                frame = new
-
-        keyframes = find_aom_keyframes(stat_file)
-        keyframes = ','.join(keyframes[1:])
-
-        return keyframes
-
     def extra_split(self, frames):
         if len(frames) > 0:
             f = literal_eval(frames)
@@ -990,7 +954,9 @@ class Av1an:
         # Splitting based on aom keyframe placement
         elif split_method == 'aom_keyframes':
             try:
-                sc = self.aom_keyframes()
+                video: Path = self.d.get("input")
+                stat_file = self.d.get('temp') / 'keyframes.log'
+                sc = aom_keyframes(video, stat_file)
             except:
                 self.log('Error in aom_keyframes')
                 print('Error in aom_keyframes')

@@ -26,6 +26,7 @@ def read_vmaf_xml(file):
 
         return vmafs, mean, perc_1, perc_25, perc_75
 
+
 def get_keyframes(file):
     """ Read file info and return list of all keyframes """
     keyframes = []
@@ -100,9 +101,7 @@ def get_brightness(video):
 
 def reduce_scenes(scenes):
     """Windows terminal can't handle more than ~600 scenes in length."""
-    scenes = literal_eval(scenes)
     count = len(scenes)
     interval = int(count / 500 + (count % 500 > 0))
     scenes = scenes[::interval]
-    scenes = ','.join(scenes)
     return scenes

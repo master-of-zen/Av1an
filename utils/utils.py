@@ -10,6 +10,8 @@ import statistics
 from ast import literal_eval
 from psutil import virtual_memory
 
+def terminate():
+        os.kill(os.getpid(), 9)
 
 def determine_resources(encoder, workers):
     """Returns number of workers that machine can handle with selected encoder."""
@@ -109,7 +111,7 @@ def get_brightness(video):
 
 
 def reduce_scenes(scenes):
-    """Windows terminal can't handle more than ~600 scenes in length."""
+    """Windows terminal can't handle more than ~500 scenes in length."""
     count = len(scenes)
     interval = int(count / 500 + (count % 500 > 0))
     scenes = scenes[::interval]

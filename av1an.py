@@ -24,7 +24,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
+from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources, terminate
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.ffmpeg import split, concatenate_video
 
@@ -67,8 +67,7 @@ class Av1an:
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
-    def terminate(self):
-        os.kill(os.getpid(), 9)
+    
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -86,7 +85,7 @@ class Av1an:
     def check_executables(self):
         if not find_executable('ffmpeg'):
             print('No ffmpeg')
-            self.terminate()
+            terminate()
 
         # Check if encoder executable is reachable
         if self.d.get('encoder') in self.encoders:
@@ -94,16 +93,16 @@ class Av1an:
 
             if not find_executable(enc):
                 print(f'Encoder {enc} not found')
-                self.terminate()
+                terminate()
         else:
             print(f'Not valid encoder {self.d.get("encoder")} ')
-            self.terminate()
+            terminate()
 
     def process_inputs(self):
         # Check input file for being valid
         if not self.d.get('input'):
             print('No input file')
-            self.terminate()
+            terminate()
 
         inputs = self.d.get('input')
 
@@ -114,7 +113,7 @@ class Av1an:
 
         if not all(valid):
             print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
-            self.terminate()
+            terminate()
 
         if len(inputs) > 1:
             self.d['queue'] = inputs
@@ -150,7 +149,7 @@ class Av1an:
         if self.d.get("vmaf_path"):
             if not Path(self.d.get("vmaf_path")).exists():
                 print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
-                self.terminate()
+                terminate()
 
     def arg_parsing(self):
         """Command line parsing"""
@@ -291,7 +290,7 @@ class Av1an:
                 print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
         except IndexError:
             print('Encoding failed, check validity of your encoding settings/commands and start again')
-            self.terminate()
+            terminate()
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
@@ -317,7 +316,7 @@ class Av1an:
             # TODO: this could also be because we're resuming but everything
             # is done.
             print('Error: No files found in .temp/split, probably splitting not working')
-            self.terminate()
+            terminate()
 
         return queue
 
@@ -330,7 +329,7 @@ class Av1an:
         commands = []
         if not params:
             print('-w -h -fps is required parameters for svt_av1 encoder')
-            self.terminate()
+            terminate()
 
         if passes == 1:
             commands = [
@@ -441,7 +440,7 @@ class Av1an:
         # Catch Error
         if len(queue) == 0:
             print('Error in making command queue')
-            self.terminate()
+            terminate()
 
         return queue
 
@@ -472,7 +471,7 @@ class Av1an:
 
         if self.d.get('vmaf_steps') < 4:
             print('Target vmaf require more than 3 probes/steps')
-            self.terminate()
+            terminate()
 
         vmaf_target = self.d.get('vmaf_target')
         mincq = self.d.get('min_cq')
@@ -572,7 +571,7 @@ class Av1an:
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
-            self.terminate()
+            terminate()
 
     def encode(self, commands):
         """Single encoder command queue and logging output."""
@@ -720,9 +719,9 @@ class Av1an:
                         future.result()
                     except Exception as exc:
                         print(f'Encoding error: {exc}')
-                        self.terminate()
+                        terminate()
         except KeyboardInterrupt:
-            self.terminate()
+            terminate()
 
     def extra_split(self, frames):
         frames.append(frame_probe(self.d.get('input')))
@@ -787,7 +786,7 @@ class Av1an:
             except Exception as e:
                 self.log(f'Error in PySceneDetect: {e}\n')
                 print(f'Error in PySceneDetect{e}\n')
-                self.terminate()
+                terminate()
 
         # Splitting based on aom keyframe placement
         elif split_method == 'aom_keyframes':
@@ -798,10 +797,10 @@ class Av1an:
             except:
                 self.log('Error in aom_keyframes')
                 print('Error in aom_keyframes')
-                self.terminate()
+                terminate()
         else:
             print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
-            self.terminate()
+            terminate()
 
 
 
@@ -865,7 +864,7 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
             self.log(f'Concatenation failed, aborting, error: {e}\n')
-            self.terminate()
+            terminate()
 
         if self.d.get("vmaf"):
             plot_vmaf(self.d.get('input'), self.d.get('output_file'), model=self.d.get('vmaf_path'))

@@ -27,6 +27,7 @@ from utils.pyscenedetect import pyscene
 from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources, terminate
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.ffmpeg import split, concatenate_video
+from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')

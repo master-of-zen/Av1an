@@ -660,7 +660,7 @@ class Av1an:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
                                 break
-                        counter.update(frame_probe_source)
+                        counter.update(frame_probe_source // 2)
 
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()

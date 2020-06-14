@@ -24,7 +24,8 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources, terminate
+from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_cq, man_cq
+from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.ffmpeg import split, concatenate_video
 from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
@@ -69,7 +70,7 @@ class Av1an:
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
-    
+
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -510,14 +511,18 @@ class Av1an:
                 bl = self.d.get('boost_limit')
                 br = self.d.get('boost_range')
                 brightness = get_brightness(source.absolute().as_posix())
+                try:
+                    com0, cq = boosting(commands[0], brightness, bl, br )
 
-                com0, cq = boosting(commands[0], brightness, bl, br )
+                    if passes == 2:
+                        com1, _ = boosting(commands[1], brightness, bl, br, new_cq=cq)
+                        commands = (com0, com1) + commands[2:]
+                    else:
+                        commands = com0 + commands[1:]
 
-                if passes == 2:
-                    com1, _ = boosting(commands[1], brightness, bl, br, new_cq=cq)
-                    commands = (com0, com1) + commands[2:]
-                else:
-                    commands = com0 + commands[1:]
+                except Exception as e:
+                    _, _, exc_tb = sys.exc_info()
+                    print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
                 boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
             else:
@@ -628,43 +633,11 @@ class Av1an:
         except KeyboardInterrupt:
             terminate()
 
-    def extra_split(self, frames):
-        frames.append(frame_probe(self.d.get('input')))
-        split_distance = self.d.get('extra_split')
-
-        # Get all keyframes of original video
-        keyframes = get_keyframes(self.d.get('input'))
-
-        t = frames[:]
-        t.insert(0, 0)
-        splits = list(zip(t, frames))
-        for i in splits:
-            # Getting distance between splits
-            distance = (i[1] - i[0])
-
-            if distance > split_distance:
-                # Keyframes that between 2 split points
-                candidates = [k for k in keyframes if i[1] > k > i[0]]
-
-                if len(candidates) > 0:
-                    # Getting number of splits that need to be inserted
-                    to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
-                    for k in range(0, to_insert):
-                        # Approximation of splits position
-                        aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
-
-                        # Getting keyframe closest to approximated
-                        key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                        frames.append(key)
-        self.log(f'Applying extra splits\nSplit distance: {split_distance}\nNew splits:{len(frames)}\n')
-        result = [int(x) for x in sorted(frames)]
-        return result
-
     def split_routine(self):
 
         if self.d.get('scenes') == '0':
             self.log('Skipping scene detection\n')
-            return ''
+            return []
 
         split_method = self.d.get('split_method')
         sc = []
@@ -738,9 +711,10 @@ class Av1an:
             # Splitting video and sorting big-first
 
             framenums = self.split_routine()
-
-            if self.d.get('extra_split'):
-                framenums = self.extra_split(framenums)
+            xs = self.d.get('extra_split')
+            if xs:
+                framenums = extra_splits(self.d.get('input'), framenums, xs )
+                self.log(f'Applying extra splits\nSplit distance: {xs}\nNew splits:{len(framenums)}\n')
 
             split( self.d.get('input'),self.d.get('temp'),framenums)
 

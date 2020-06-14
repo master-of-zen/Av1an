@@ -13,6 +13,7 @@ from psutil import virtual_memory
 def terminate():
         os.kill(os.getpid(), 9)
 
+
 def determine_resources(encoder, workers):
     """Returns number of workers that machine can handle with selected encoder."""
 
@@ -70,10 +71,12 @@ def man_cq(command: str, cq: int):
     cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
     return cmd
 
+
 def frame_probe_fast(source: Path):
     video = cv2.VideoCapture(source.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     return total
+
 
 def frame_probe(source: Path):
     """Get frame count."""
@@ -116,3 +119,33 @@ def reduce_scenes(scenes):
     interval = int(count / 500 + (count % 500 > 0))
     scenes = scenes[::interval]
     return scenes
+
+
+def extra_splits(video, frames: list, split_distance):
+    frames.append(frame_probe(video))
+    # Get all keyframes of original video
+    keyframes = get_keyframes(video)
+
+    t = frames[:]
+    t.insert(0, 0)
+    splits = list(zip(t, frames))
+    for i in splits:
+        # Getting distance between splits
+        distance = (i[1] - i[0])
+
+        if distance > split_distance:
+            # Keyframes that between 2 split points
+            candidates = [k for k in keyframes if i[1] > k > i[0]]
+
+            if len(candidates) > 0:
+                # Getting number of splits that need to be inserted
+                to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
+                for k in range(0, to_insert):
+                    # Approximation of splits position
+                    aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
+
+                    # Getting keyframe closest to approximated
+                    key = min(candidates, key=lambda x: abs(x - aprox_to_place))
+                    frames.append(key)
+    result = [int(x) for x in sorted(frames)]
+    return result

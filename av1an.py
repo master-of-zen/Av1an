@@ -26,8 +26,7 @@ from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
 from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
-
-# Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
+from utils.ffmpeg import split, concatenate_video
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -226,8 +225,6 @@ class Av1an:
         else:
             self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
 
-
-
     def set_logging(self):
         """Setting logging file location"""
         if self.d.get('logging'):
@@ -269,32 +266,6 @@ class Av1an:
             cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
                   f'{audio_params} {audio_file}'
             self.call_cmd(cmd)
-
-    def split(self, frames):
-        """Split video by frame numbers, or just copying video."""
-
-        video = self.d.get('input')
-
-        cmd = [
-            "ffmpeg", "-hide_banner", "-y",
-            "-i", video.absolute().as_posix(),
-            "-map", "0:v:0",
-            "-an",
-            "-c", "copy",
-            "-avoid_negative_ts", "1"
-        ]
-
-        if len(frames) > 0:
-            cmd.extend([
-                "-f", "segment",
-                "-segment_frames", ','.join([str(x) for x in frames])
-            ])
-        cmd.append(os.path.join(self.d.get("temp"), "split", "%05d.mkv"))
-        pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
 
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""
@@ -707,38 +678,7 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
-    def concatenate_video(self):
-        """With FFMPEG concatenate encoded segments into final file."""
-        with open(f'{self.d.get("temp") / "concat" }', 'w') as f:
 
-            encode_files = sorted((self.d.get('temp') / 'encode').iterdir())
-            f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
-
-        # Add the audio file if one was extracted from the input
-        audio_file = self.d.get('temp') / "audio.mkv"
-        if audio_file.exists():
-            audio = f'-i {audio_file} -c:a copy'
-        else:
-            audio = ''
-
-        try:
-            cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {self.d.get("temp") / "concat"} ' \
-                  f'{audio} -c copy -y "{self.d.get("output_file")}"'
-            concat = self.call_cmd(cmd, capture_output=True)
-            if len(concat) > 0:
-                raise Exception
-
-            self.log('Concatenated\n')
-
-            # Delete temp folders
-            if not self.d.get('keep'):
-                shutil.rmtree(self.d.get('temp'))
-
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
-            self.log(f'Concatenation failed, aborting, error: {e}\n')
-            self.terminate()
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""
@@ -897,7 +837,7 @@ class Av1an:
             if self.d.get('extra_split'):
                 framenums = self.extra_split(framenums)
 
-            self.split(framenums)
+            split( self.d.get('input'),self.d.get('temp'),framenums)
 
             # Extracting audio
             self.extract_audio(self.d.get('input'))
@@ -916,7 +856,15 @@ class Av1an:
 
         self.encoding_loop(commands)
 
-        self.concatenate_video()
+        try:
+            self.log('Concatenating\n')
+            concatenate_video(self.d.get("temp"), self.d.get("output_file"), keep=self.d.get('keep'))
+
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
+            self.log(f'Concatenation failed, aborting, error: {e}\n')
+            self.terminate()
 
         if self.d.get("vmaf"):
             plot_vmaf(self.d.get('input'), self.d.get('output_file'), model=self.d.get('vmaf_path'))

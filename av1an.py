@@ -252,7 +252,6 @@ class Av1an:
 
     def extract_audio(self, input_vid: Path):
         """Extracting audio from source, transcoding if needed."""
-        input_vid = self.d.get('input')
         audio_params = self.d.get("audio_params")
         audio_file = self.d.get('temp') / 'audio.mkv'
         if audio_file.exists():
@@ -261,12 +260,12 @@ class Av1an:
 
         # Checking is source have audio track
         check = fr' ffmpeg -y -hide_banner -loglevel error -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
-        is_audio_here = len(self.call_cmd(check, capture_output=True)) == 0
+        is_audio_here = len(subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout) == 0
 
         # If source have audio track - process it
         if is_audio_here:
             self.log(f'Audio processing\n'
-                     f'Params: {self.d.get("audio_params")}\n')
+                     f'Params: {audio_params}\n')
             cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
                   f'{audio_params} {audio_file}'
             self.call_cmd(cmd)

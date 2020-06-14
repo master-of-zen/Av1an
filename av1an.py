@@ -420,17 +420,18 @@ class Av1an:
 
     def compose_encoding_queue(self, files):
         """Composing encoding queue with split videos."""
+        encoder = self.d.get('encoder')
         inputs = [(self.d.get('temp') / "split" / file.name,
                    self.d.get('temp') / "encode" / file.name,
                    file) for file in files]
 
-        if self.d.get('encoder') in ('aom', 'vpx'):
+        if encoder in ('aom', 'vpx'):
             queue = self.aom_vpx_encode(inputs)
 
-        elif self.d.get('encoder') == 'rav1e':
+        elif encoder == 'rav1e':
             queue = self.rav1e_encode(inputs)
 
-        elif self.d.get('encoder') == 'svt_av1':
+        elif encoder == 'svt_av1':
             queue = self.svt_av1_encode(inputs)
 
         self.log(f'Encoding Queue Composed\n'

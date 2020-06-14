@@ -784,21 +784,15 @@ class Av1an:
             self.terminate()
 
     def extra_split(self, frames):
-        if len(frames) > 0:
-            f = literal_eval(frames)
-            if len(f) > 1:
-                f = list(f)
-        else:
-            f = []
-        f.append(frame_probe(self.d.get('input')))
+        frames.append(frame_probe(self.d.get('input')))
         split_distance = self.d.get('extra_split')
 
         # Get all keyframes of original video
         keyframes = get_keyframes(self.d.get('input'))
 
-        t = f[:]
+        t = frames[:]
         t.insert(0, 0)
-        splits = list(zip(t, f))
+        splits = list(zip(t, frames))
         for i in splits:
             # Getting distance between splits
             distance = (i[1] - i[0])
@@ -816,10 +810,9 @@ class Av1an:
 
                         # Getting keyframe closest to approximated
                         key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                        f.append(key)
-        self.log(f'Applying extra splits\nSplit distance: {split_distance}\nNew splits:{len(f)}\n')
-        result = [str(x) for x in sorted(f)]
-        result = ','.join(result)
+                        frames.append(key)
+        self.log(f'Applying extra splits\nSplit distance: {split_distance}\nNew splits:{len(frames)}\n')
+        result = [int(x) for x in sorted(frames)]
         return result
 
     def split_routine(self):

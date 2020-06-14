@@ -68,6 +68,10 @@ def man_cq(command: str, cq: int):
     cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
     return cmd
 
+def frame_probe_fast(source: Path):
+    video = cv2.VideoCapture(source.as_posix())
+    total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    return total
 
 def frame_probe(source: Path):
     """Get frame count."""

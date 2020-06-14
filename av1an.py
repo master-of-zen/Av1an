@@ -24,7 +24,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import  get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
+from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
@@ -759,7 +759,7 @@ class Av1an:
                 self.log(f'Resumed with {done} encoded clips done\n\n')
             else:
                 initial = 0
-                total = frame_probe(self.d.get('input'))
+                total = frame_probe_fast(self.d.get('input'))
                 d = {'total': total, 'done': {}}
                 with open(done_path, 'w') as f:
                     json.dump(d, f)

@@ -320,118 +320,40 @@ class Av1an:
 
         return queue
 
-    def svt_av1_encode(self, inputs):
-        """SVT-AV1 encoding command composition."""
-        encoder = 'SvtAv1EncApp'
-        pipe = self.d.get("ffmpeg_pipe")
-        params = self.d.get("video_params")
-        passes = self.d.get('passes')
-        commands = []
-        if not params:
-            print('-w -h -fps is required parameters for svt_av1 encoder')
-            terminate()
-
-        if passes == 1:
-            commands = [
-                (f'-i {file[0]} {pipe} ' +
-                 f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        if passes == 2:
-            p2i = '-input-stat-file '
-            p2o = '-output-stat-file '
-            commands = [
-                (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
-                 f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
-                 f'-i {file[0]} {pipe} '
-                 f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b '
-                 f'{file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        return commands
-
-    def aom_vpx_encode(self, inputs):
-        """AOM encoding command composition."""
-        enc = self.encoders.get(self.d.get('encoder'))
-        single_p = f'{enc} --passes=1 '
-        two_p_1 = f'{enc} --passes=2 --pass=1'
-        two_p_2 = f'{enc} --passes=2 --pass=2'
-        passes = self.d.get('passes')
-        pipe = self.d.get("ffmpeg_pipe")
-        params = self.d.get("video_params")
-        commands = []
-        if not params:
-            if enc == 'vpxenc':
-                p = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
-                self.d["video_params"], params = p, p
-            if enc == 'aomenc':
-                p = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
-                self.d["video_params"], params = p, p
-
-        if passes == 1:
-            commands = [
-                (f'-i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        if passes == 2:
-            commands = [
-                (f'-i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
-                 f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        return commands
-
-    def rav1e_encode(self, inputs):
-        """Rav1e encoding command composition."""
-        passes = self.d.get('passes')
-        pipe = self.d.get("ffmpeg_pipe")
-        params = self.d.get("video_params")
-        commands = []
-
-        if not self.d.get("video_params"):
-            self.d["video_params"] = ' --tiles 8 --speed 10 --quantizer 100'
-
-        if passes in (1, 2):
-            commands = [
-                (f'-i {file[0]} {pipe} '
-                 f' rav1e -  {params}  '
-                 f'--output {file[1].with_suffix(".ivf")}',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        # 2 encode pass not working with FFmpeg pipes :(
-        if passes == 2:
-            commands = [
-                (f'-i {file[0]} {pipe} '
-                 f' rav1e - --first-pass {file[0].with_suffix(".stat")} {params} '
-                 f'--output {file[1].with_suffix(".ivf")}',
-                 f'-i {file[0]} {pipe} '
-                 f' rav1e - --second-pass {file[0].with_suffix(".stat")} {params} '
-                 f'--output {file[1].with_suffix(".ivf")}',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
-
-        return commands
-
     def compose_encoding_queue(self, files):
         """Composing encoding queue with split videos."""
         encoder = self.d.get('encoder')
+        passes = self.d.get('passes')
+        pipe = self.d.get("ffmpeg_pipe")
+        params = self.d.get("video_params")
+        enc_exe = self.encoders.get(self.d.get('encoder'))
         inputs = [(self.d.get('temp') / "split" / file.name,
                    self.d.get('temp') / "encode" / file.name,
                    file) for file in files]
 
         if encoder in ('aom', 'vpx'):
-            queue = self.aom_vpx_encode(inputs)
+            if not params:
+                if enc_exe == 'vpxenc':
+                    params = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
+                    self.d['video_params'] = params
+
+                if enc_exe == 'aomenc':
+                    params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
+                    self.d['video_params'] = params
+
+            queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
 
         elif encoder == 'rav1e':
-            queue = self.rav1e_encode(inputs)
+            if not params:
+                params = ' --tiles 8 --speed 10 --quantizer 100'
+                self.d['video_params'] = params
+            queue = rav1e_encode(inputs, passes, pipe, params)
 
         elif encoder == 'svt_av1':
-            queue = self.svt_av1_encode(inputs)
+            if not params:
+                print('-w -h -fps is required parameters for svt_av1 encoder')
+                terminate()
+            queue = svt_av1_encode(inputs, passes, pipe, params)
 
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'
@@ -677,8 +599,6 @@ class Av1an:
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
-
-
 
     def encoding_loop(self, commands):
         """Creating process pool for encoders, creating progress bar."""

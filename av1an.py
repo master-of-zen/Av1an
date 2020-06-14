@@ -24,7 +24,8 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import read_vmaf_xml, get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
+from utils.utils import  get_brightness, frame_probe, get_keyframes, get_cq, man_cq, reduce_scenes, determine_resources
+from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 
 # Todo: Separation, Clip encoder objects, Threading instead of multiprocessing.
 
@@ -270,35 +271,6 @@ class Av1an:
                   f'{audio_params} {audio_file}'
             self.call_cmd(cmd)
 
-    def call_vmaf(self, source: Path, encoded: Path, file=False):
-
-        model: Path = self.d.get("vmaf_path")
-        if model:
-            mod = f":model_path={model}"
-        else:
-            mod = ''
-
-        # For vmaf calculation both source and encoded segment scaled to 1080
-        # for proper vmaf calculation
-        fl = source.with_name(encoded.stem).with_suffix('.xml').as_posix()
-        cmd = f'ffmpeg -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
-              f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled1];' \
-              f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
-              f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
-
-        call = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
-
-        if file:
-            return fl
-
-        call = call.decode().strip()
-        vmf = call.split()[-1]
-        try:
-            vmf = float(vmf)
-        except ValueError:
-            vmf = 0
-        return vmf
-
     def split(self, frames):
         """Split video by frame numbers, or just copying video."""
 
@@ -523,56 +495,6 @@ class Av1an:
             _, _, exc_tb = sys.exc_info()
             print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
-    def plot_vmaf(self):
-
-        if not self.d.get("vmaf"):
-            return
-        print('Calculating Vmaf...\r', end='')
-        if self.d.get("vmaf_path"):
-            model = f'model_path={self.d.get("vmaf_path")}'
-        else:
-            model = ''
-
-        inp: Path = self.d.get('input')
-        out: Path = self.d.get('output_file')
-        xml: str = "vmaf.xml"
-
-        # For vmaf calculation both source and encoded segment scaled to 1080
-        # for proper vmaf calculation
-        cmd = f'ffmpeg -hide_banner -r 60 -i {inp.as_posix()} -r 60 -i {out.as_posix()}  ' \
-              f'-filter_complex "[0:v]scale=-1:1080:flags=spline[scaled1];' \
-              f'[1:v]scale=-1:1080:flags=spline[scaled2];' \
-              f'[scaled2][scaled1]libvmaf=log_path={xml}:{model}" -f null - '
-        self.call_cmd(cmd, capture_output=True)
-
-        if not Path(xml).exists():
-            print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
-            self.terminate()
-
-        vmafs, mean, perc_1, perc_25, perc_75 = read_vmaf_xml(xml)
-
-        # Plot
-        plt.figure(figsize=(15, 4))
-
-        for i in range(0, 100):
-            plt.axhline(i, color='grey', linewidth=0.4)
-
-            if i % 5 == 0:
-                plt.axhline(i, color='black', linewidth=0.6)
-
-        plt.plot(range(len(vmafs)), vmafs,
-                 label=f'Frames: {len(vmafs)}\nMean:{mean}\n'
-                       f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
-        plt.ylabel('VMAF')
-        plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
-        plt.ylim(int(perc_1), 100)
-        plt.tight_layout()
-        plt.margins(0)
-
-        # Save
-        file_name = str(self.d.get('output_file').stem) + '_plot.png'
-        plt.savefig(file_name, dpi=500)
-
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
         # TODO reduce complexity
@@ -602,6 +524,7 @@ class Av1an:
             # Moving highest cq to first check, for early skips
             # checking highest first, lowers second, for early skips
             q.insert(0, q.pop(-1))
+
             # Encoding probes, 1 pass, highest speed
             params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
             cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {self.d.get("ffmpeg_pipe")}'
@@ -614,7 +537,7 @@ class Av1an:
             for count, i in enumerate(cmd):
                 self.call_cmd(i[0])
 
-                v = self.call_vmaf(i[1], i[2], file=True)
+                v = call_vmaf(i[1], i[2], model=self.d.get('vmaf_path') ,return_file=True)
                 _, mean, _, _, _ = read_vmaf_xml(v)
 
                 pr.append(round(mean, 1))
@@ -1003,7 +926,8 @@ class Av1an:
 
         self.concatenate_video()
 
-        self.plot_vmaf()
+        if self.d.get("vmaf"):
+            plot_vmaf(self.d.get('input'), self.d.get('output_file'), model=self.d.get('vmaf_path'))
 
     def main_queue(self):
         # Video Mode. Encoding on local machine

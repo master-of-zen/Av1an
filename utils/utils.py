@@ -32,25 +32,6 @@ def determine_resources(encoder, workers):
         return 1
 
 
-def read_vmaf_xml(file):
-    with open(file, 'r') as f:
-        file = f.readlines()
-        file = [x.strip() for x in file if 'vmaf="' in x]
-        vmafs = []
-        for i in file:
-            vmf = i[i.rfind('="') + 2: i.rfind('"')]
-            vmafs.append(float(vmf))
-
-        vmafs = [round(float(x), 5) for x in vmafs if isinstance(x, float)]
-        calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
-        mean = round(sum(calc) / len(calc), 2)
-        perc_1 = round(np.percentile(calc, 1), 2)
-        perc_25 = round(np.percentile(calc, 25), 2)
-        perc_75 = round(np.percentile(calc, 75), 2)
-
-        return vmafs, mean, perc_1, perc_25, perc_75
-
-
 def get_keyframes(file):
     """ Read file info and return list of all keyframes """
     keyframes = []

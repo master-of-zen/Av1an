@@ -28,6 +28,7 @@ from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_keyf
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.ffmpeg import split, concatenate_video
 from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
+from utils.boost import boosting
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -367,27 +368,6 @@ class Av1an:
 
         return queue
 
-    def boost(self, command: str, br_geom, new_cq=0):
-        """Based on average brightness of video decrease(boost) Quantize value for encoding."""
-        b_limit = self.d.get('boost_limit')
-        b_range = self.d.get('boost_range')
-        try:
-            cq = get_cq(command)
-            if not new_cq:
-                if br_geom < 128:
-                    new_cq = cq - round((128 - br_geom) / 128 * b_range)
-                    new_cq = max(b_limit, new_cq)
-
-                else:
-                    new_cq = cq
-            cmd = man_cq(command, new_cq)
-
-            return cmd, new_cq
-
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
-
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
         # TODO reduce complexity
@@ -501,6 +481,8 @@ class Av1an:
         counter = commands[1]
         commands = commands[0]
         encoder = self.d.get('encoder')
+        passes = self.d.get('passes')
+        boost = self.d.get('boost')
         # Passing encoding params to ffmpeg for encoding.
         # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.
         try:
@@ -514,7 +496,7 @@ class Av1an:
 
                 cm1 = man_cq(commands[0], tg_cq)
 
-                if self.d.get('passes') == 2:
+                if passes == 2:
                     cm2 = man_cq(commands[1], tg_cq)
                     commands = (cm1, cm2) + commands[2:]
                 else:
@@ -524,13 +506,15 @@ class Av1an:
                 tg_vf = ''
 
             # Boost
-            if self.d.get('boost'):
-                br = get_brightness(source.absolute().as_posix())
+            if boost:
+                bl = self.d.get('boost_limit')
+                br = self.d.get('boost_range')
+                brightness = get_brightness(source.absolute().as_posix())
 
-                com0, cq = self.boost(commands[0], br)
+                com0, cq = boosting(commands[0], brightness, bl, br )
 
-                if self.d.get('passes') == 2:
-                    com1, _ = self.boost(commands[1], br, cq)
+                if passes == 2:
+                    com1, _ = boosting(commands[1], brightness, bl, br, new_cq=cq)
                     commands = (com0, com1) + commands[2:]
                 else:
                     commands = com0 + commands[1:]
@@ -583,7 +567,7 @@ class Av1an:
                             line = pipe.stdout.readline().strip()
                             if len(line) == 0 and pipe.poll() is not None:
                                 break
-                        counter.update(frame_probe_source // 2)
+                        counter.update(frame_probe_source // passes)
 
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()

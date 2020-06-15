@@ -1,13 +1,10 @@
-import numpy as np
 import subprocess
 import cv2
 import re
 import os
 from pathlib import Path
-from math import isnan
-from subprocess import PIPE, STDOUT
+from subprocess import PIPE
 import statistics
-from ast import literal_eval
 from psutil import virtual_memory
 
 def terminate():

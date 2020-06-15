@@ -23,7 +23,7 @@ import concurrent
 import concurrent.futures
 from utils.aom_keyframes import aom_keyframes
 from utils.pyscenedetect import pyscene
-from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_cq, man_cq
+from utils.utils import  get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.ffmpeg import split, concatenate_video

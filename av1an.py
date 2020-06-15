@@ -14,7 +14,6 @@ import argparse
 import subprocess
 from subprocess import PIPE, STDOUT
 from pathlib import Path
-import cv2
 import numpy as np
 from scipy import interpolate
 from math import isnan
@@ -22,7 +21,7 @@ import matplotlib.pyplot as plt
 from multiprocessing.managers import BaseManager
 import concurrent
 import concurrent.futures
-from utils.aom_keyframes import find_aom_keyframes, aom_keyframes
+from utils.aom_keyframes import aom_keyframes
 from utils.pyscenedetect import pyscene
 from utils.utils import  get_brightness, frame_probe, frame_probe_fast, get_cq, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits

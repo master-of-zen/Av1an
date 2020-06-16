@@ -14,7 +14,6 @@ import sys
 import time
 from ast import literal_eval
 from distutils.spawn import find_executable
-from math import isnan
 from multiprocessing.managers import BaseManager
 from pathlib import Path
 from subprocess import PIPE, STDOUT

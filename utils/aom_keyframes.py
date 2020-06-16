@@ -132,14 +132,14 @@ def aom_keyframes(videoPath: Path, stat_file ):
         video = cv2.VideoCapture(videoPath.as_posix())
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        
+
         # Getting Frame Count from Metadata
         total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         video.release()
 
         f, e = f'ffmpeg -y -hide_banner -loglevel error -i {videoPath.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 -w {width} -h {height} --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
         f, e = f.split(), e.split()
-        
+
         tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 
         ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)

@@ -28,7 +28,7 @@ def split(video, temp, frames):
         line = pipe.stdout.readline().strip()
         if len(line) == 0 and pipe.poll() is not None:
             break
-    
+
 def concatenate_video(temp, output, keep=False):
     """With FFMPEG concatenate encoded segments into final file."""
     with open(f'{temp / "concat" }', 'w') as f:

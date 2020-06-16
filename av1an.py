@@ -30,6 +30,7 @@ from utils.pyscenedetect import pyscene
 from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
+from utils.target_vmaf import make_probes, make_encoding_fork, make_vmaf_probes, interpolate_data
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -374,8 +375,7 @@ class Av1an:
             terminate()
 
         vmaf_target = self.d.get('vmaf_target')
-        mincq = self.d.get('min_cq')
-        maxcq = self.d.get('max_cq')
+        mincq, maxcq  = self.d.get('min_cq'), self.d.get('max_cq')
         steps = self.d.get('vmaf_steps')
         frames = frame_probe(source)
         probe = source.with_suffix(".mp4")
@@ -384,51 +384,43 @@ class Av1an:
 
         try:
             # Making 4 fps probing file
-            cmd = f' ffmpeg -y -hide_banner -loglevel error -i {source.as_posix()} ' \
-                  f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {source.with_suffix(".mp4")}'
-            self.call_cmd(cmd)
+            make_probes(source, ffmpeg)
 
-            # Make encoding fork
-            q = list(np.unique(np.linspace(mincq, maxcq, num=steps, dtype=int, endpoint=True)))
+            # Making encoding fork
+            fork = make_encoding_fork(mincq, maxcq, steps)
 
-            # Moving highest cq to first check, for early skips
-            # checking highest first, lowers second, for early skips
-            q.insert(0, q.pop(-1))
-
-            # Encoding probes, 1 pass, highest speed
-            params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
-            cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {self.d.get("ffmpeg_pipe")}'
-                    f'{params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
-                    probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in q]
+            # Making encoding commands
+            cmd = make_vmaf_probes(probe, fork, self.d.get('ffmpeg_pipe'))
 
             # Encoding probe and getting vmaf
-            ls = []
-            pr = []
+            vmaf_cq = []
+            probes = []
             for count, i in enumerate(cmd):
-                self.call_cmd(i[0])
+                subprocess.run(i[0], shell=True)
 
                 v = call_vmaf(i[1], i[2], model=self.d.get('vmaf_path') ,return_file=True)
                 _, mean, _, _, _ = read_vmaf_xml(v)
 
-                pr.append(round(mean, 1))
-                ls.append((round(mean, 3), i[3]))
+                probes.append(round(mean, 1))
+                vmaf_cq.append((round(mean, 3), i[3]))
 
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {pr}, Early Skip High CQ\n"
+                             f"Probes: {probes}, Early Skip High CQ\n"
                              f"Target CQ: {maxcq}\n\n")
                     return maxcq, f'Target: CQ {maxcq} Vmaf: {round(mean, 2)}\n'
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {pr}, Early Skip Low CQ\n"
+                             f"Probes: {probes}, Early Skip Low CQ\n"
                              f"Target CQ: {mincq}\n\n")
                     return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
-
-            x = [x[1] for x in sorted(ls)]
-            y = [float(x[0]) for x in sorted(ls)]
+            # print('LS', vmaf_cq)
+            # print('PR', probes)
+            x = [x[1] for x in sorted(vmaf_cq)]
+            y = [float(x[0]) for x in sorted(vmaf_cq)]
 
             # Interpolate data
             f = interpolate.interp1d(x, y, kind='cubic')
@@ -463,7 +455,7 @@ class Av1an:
                 plt.close()
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
-                     f"Probes: {sorted(pr)}\n"
+                     f"Probes: {sorted(probes)}\n"
                      f"Target CQ: {round(vmaf_target_cq[0])}\n\n")
 
             return int(vmaf_target_cq[0]), f'Target: CQ {int(vmaf_target_cq[0])} Vmaf: {round(float(vmaf_target_cq[1]), 2)}\n'

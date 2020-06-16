@@ -54,9 +54,8 @@ def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames
     for x in range(0, 100):
         plt.axhline(x, color='grey', linewidth=0.4)
         plt.axvline(x, color='grey', linewidth=0.3)
-
-    if x % 5 == 0:
-        plt.axhline(x, color='black', linewidth=0.6)
+        if x % 5 == 0:
+            plt.axhline(x, color='black', linewidth=0.6)
 
     plt.xlim(min_cq, max_cq)
     vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]

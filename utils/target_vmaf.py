@@ -5,6 +5,7 @@ import numpy as np
 from scipy import interpolate
 from matplotlib import pyplot as plt
 from math import isnan
+import matplotlib
 
 
 def x264_probes(video: Path, ffmpeg: str):
@@ -47,23 +48,20 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
 
 def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames, temp):
     # Saving plot of vmaf calculation
-    plt.plot(x, y, 'x', color='tab:blue')
-    plt.plot(xnew, f(xnew), color='tab:blue')
-    plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red')
-
-    for x in range(0, 100):
-        plt.axhline(x, color='grey', linewidth=0.4)
-        plt.axvline(x, color='grey', linewidth=0.3)
-        if x % 5 == 0:
-            plt.axhline(x, color='black', linewidth=0.6)
-
+    matplotlib.use('agg')
+    plt.ioff()
+    plt.plot(x, y, 'x', color='tab:blue', alpha=1)
+    plt.plot(xnew, f(xnew), color='tab:blue', alpha=1)
+    plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red', alpha=1)
+    plt.grid(True)
     plt.xlim(min_cq, max_cq)
     vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
     plt.ylim(min(vmafs), max(vmafs) + 1)
     plt.ylabel('VMAF')
     plt.xlabel('CQ')
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
-    plt.tight_layout()
+    # plt.tight_layout()
     temp =  temp / probe.stem
-    plt.savefig(temp, dpi=300)
+    plt.tight_layout()
+    plt.savefig(temp, dpi=300, format='png',transparent=True)
     plt.close()

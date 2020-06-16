@@ -5,7 +5,6 @@ import atexit
 import concurrent
 import concurrent.futures
 import json
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import re

@@ -18,10 +18,8 @@ from distutils.spawn import find_executable
 from math import isnan
 from multiprocessing.managers import BaseManager
 from pathlib import Path
-from scipy import interpolate
 from subprocess import PIPE, STDOUT
 from tqdm import tqdm
-
 from utils.aom_keyframes import aom_keyframes
 from utils.boost import boosting
 from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
@@ -30,7 +28,7 @@ from utils.pyscenedetect import pyscene
 from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
-from utils.target_vmaf import make_probes, make_encoding_fork, make_vmaf_probes, interpolate_data
+from utils.target_vmaf import x264_probes, encoding_fork, vmaf_probes, interpolate_data, plot_probes
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -375,22 +373,22 @@ class Av1an:
             terminate()
 
         vmaf_target = self.d.get('vmaf_target')
-        mincq, maxcq  = self.d.get('min_cq'), self.d.get('max_cq')
+        min_cq, max_cq  = self.d.get('min_cq'), self.d.get('max_cq')
         steps = self.d.get('vmaf_steps')
         frames = frame_probe(source)
         probe = source.with_suffix(".mp4")
-        plot_probes = self.d.get('vmaf_plots')
+        vmaf_plots = self.d.get('vmaf_plots')
         ffmpeg = self.d.get('ffmpeg')
 
         try:
             # Making 4 fps probing file
-            make_probes(source, ffmpeg)
+            x264_probes(source, ffmpeg)
 
             # Making encoding fork
-            fork = make_encoding_fork(mincq, maxcq, steps)
+            fork = encoding_fork(min_cq, max_cq, steps)
 
             # Making encoding commands
-            cmd = make_vmaf_probes(probe, fork, self.d.get('ffmpeg_pipe'))
+            cmd = vmaf_probes(probe, fork, self.d.get('ffmpeg_pipe'))
 
             # Encoding probe and getting vmaf
             vmaf_cq = []
@@ -408,51 +406,26 @@ class Av1an:
                 if count == 0 and round(mean) > vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {probes}, Early Skip High CQ\n"
-                             f"Target CQ: {maxcq}\n\n")
-                    return maxcq, f'Target: CQ {maxcq} Vmaf: {round(mean, 2)}\n'
+                             f"Target CQ: {max_cq}\n\n")
+                    return max_cq, f'Target: CQ {max_cq} Vmaf: {round(mean, 2)}\n'
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {probes}, Early Skip Low CQ\n"
-                             f"Target CQ: {mincq}\n\n")
-                    return mincq, f'Target: CQ {mincq} Vmaf: {round(mean, 2)}\n'
+                             f"Target CQ: {min_cq}\n\n")
+                    return min_cq, f'Target: CQ {min_cq} Vmaf: {round(mean, 2)}\n'
             # print('LS', vmaf_cq)
             # print('PR', probes)
+
             x = [x[1] for x in sorted(vmaf_cq)]
             y = [float(x[0]) for x in sorted(vmaf_cq)]
 
             # Interpolate data
-            f = interpolate.interp1d(x, y, kind='cubic')
-            xnew = np.linspace(min(x), max(x), max(x) - min(x))
+            vmaf_target_cq, tl, f, xnew = interpolate_data(vmaf_cq, vmaf_target)
 
-            # Getting value closest to target
-            tl = list(zip(xnew, f(xnew)))
-            vmaf_target_cq = min(tl, key=lambda x: abs(x[1] - vmaf_target))
-
-            if plot_probes:
-                # Saving plot of got data
-                plt.plot(x, y, 'x', color='tab:blue')
-                plt.plot(xnew, f(xnew), color='tab:blue')
-                plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red')
-
-                for x in range(0, 100):
-                    plt.axhline(x, color='grey', linewidth=0.4)
-                    plt.axvline(x, color='grey', linewidth=0.3)
-
-                    if x % 5 == 0:
-                        plt.axhline(x, color='black', linewidth=0.6)
-
-                plt.xlim(mincq, maxcq)
-                vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
-                plt.ylim(min(vmafs), max(vmafs) + 1)
-                plt.ylabel('VMAF')
-                plt.xlabel('CQ')
-                plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
-                plt.tight_layout()
-                temp = self.d.get('temp') / probe.stem
-                plt.savefig(temp, dpi=300)
-                plt.close()
+            if vmaf_plots:
+                plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames, self.d.get('temp'))
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
                      f"Probes: {sorted(probes)}\n"
@@ -729,7 +702,7 @@ class Av1an:
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
-            print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(concat)}')
+            print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
             self.log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
 

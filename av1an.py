@@ -27,7 +27,7 @@ from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.target_vmaf import x264_probes, encoding_fork, vmaf_probes, interpolate_data, plot_probes
-
+from utils.dynamic_progress_bar import tqdm_bar
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
     sys.exit()
@@ -390,27 +390,25 @@ class Av1an:
 
             # Encoding probe and getting vmaf
             vmaf_cq = []
-            probes = []
             for count, i in enumerate(cmd):
                 subprocess.run(i[0], shell=True)
 
                 v = call_vmaf(i[1], i[2], model=self.d.get('vmaf_path') ,return_file=True)
                 _, mean, _, _, _ = read_vmaf_xml(v)
 
-                probes.append(round(mean, 1))
                 vmaf_cq.append((round(mean, 3), i[3]))
 
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {probes}, Early Skip High CQ\n"
+                             f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip High CQ\n"
                              f"Target CQ: {max_cq}\n\n")
                     return max_cq, f'Target: CQ {max_cq} Vmaf: {round(mean, 2)}\n'
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {probes}, Early Skip Low CQ\n"
+                             f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip Low CQ\n"
                              f"Target CQ: {min_cq}\n\n")
                     return min_cq, f'Target: CQ {min_cq} Vmaf: {round(mean, 2)}\n'
             # print('LS', vmaf_cq)
@@ -420,16 +418,16 @@ class Av1an:
             y = [float(x[0]) for x in sorted(vmaf_cq)]
 
             # Interpolate data
-            vmaf_target_cq, tl, f, xnew = interpolate_data(vmaf_cq, vmaf_target)
+            cq, tl, f, xnew = interpolate_data(vmaf_cq, vmaf_target)
 
             if vmaf_plots:
-                plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames, self.d.get('temp'))
+                plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, cq, frames, self.d.get('temp'))
 
             self.log(f"File: {source.stem}, Fr: {frames}\n"
-                     f"Probes: {sorted(probes)}\n"
-                     f"Target CQ: {round(vmaf_target_cq[0])}\n\n")
+                     f"Probes: {sorted([x[1] for x in vmaf_cq])}\n"
+                     f"Target CQ: {round(cq[0])}\n\n")
 
-            return int(vmaf_target_cq[0]), f'Target: CQ {int(vmaf_target_cq[0])} Vmaf: {round(float(vmaf_target_cq[1]), 2)}\n'
+            return int(cq[0]), f'Target: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -495,44 +493,7 @@ class Av1an:
                 f = " ffmpeg -y -hide_banner -loglevel error " + f
                 f, e = f.split(), e.split()
                 try:
-                    frame = 0
-
-                    ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
-                    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                                            stderr=STDOUT,
-                                            universal_newlines=True)
-                    if encoder in ('aom', 'vpx'):
-                        while True:
-                            line = pipe.stdout.readline().strip()
-                            if len(line) == 0 and pipe.poll() is not None:
-                                break
-                            if 'Pass 2/2' in line or 'Pass 1/1' in line:
-                                match = re.search(r"frame.*?\/([^ ]+?) ", line)
-                                if match:
-                                    new = int(match.group(1))
-                                    if new > frame:
-                                        counter.update(new - frame)
-                                        frame = new
-
-                    elif encoder == 'rav1e':
-                        while True:
-                            line = pipe.stdout.readline().strip()
-                            if len(line) == 0 and pipe.poll() is not None:
-                                break
-                            match = re.search(r"encoded.*? ([^ ]+?) ", line)
-                            if match:
-                                new = int(match.group(1))
-                                if new > frame:
-                                    counter.update(new - frame)
-                                    frame = new
-
-                    elif encoder == 'svt_av1':
-                        while True:
-                            line = pipe.stdout.readline().strip()
-                            if len(line) == 0 and pipe.poll() is not None:
-                                break
-                        counter.update(frame_probe_source // passes)
-
+                    tqdm_bar(f,e, encoder, counter, frame_probe_source, passes)
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')

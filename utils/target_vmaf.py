@@ -45,7 +45,7 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     return vmaf_target_cq, tl, f, xnew
 
 
-def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames):
+def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames, temp):
     # Saving plot of vmaf calculation
     plt.plot(x, y, 'x', color='tab:blue')
     plt.plot(xnew, f(xnew), color='tab:blue')

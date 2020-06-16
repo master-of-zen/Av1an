@@ -132,7 +132,6 @@ def aom_keyframes(videoPath: Path, stat_file ):
         video = cv2.VideoCapture(videoPath.as_posix())
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
         
         # Getting Frame Count from Metadata
         total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))

@@ -1,34 +1,35 @@
 #!/usr/bin/env python3
 
-import time
-import json
-import re
-from tqdm import tqdm
-import sys
-import os
-import shutil
-import atexit
-from distutils.spawn import find_executable
-from ast import literal_eval
 import argparse
-import subprocess
-from subprocess import PIPE, STDOUT
-from pathlib import Path
-import numpy as np
-from scipy import interpolate
-from math import isnan
-import matplotlib.pyplot as plt
-from multiprocessing.managers import BaseManager
+import atexit
 import concurrent
 import concurrent.futures
+import json
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from ast import literal_eval
+from distutils.spawn import find_executable
+from math import isnan
+from multiprocessing.managers import BaseManager
+from pathlib import Path
+from scipy import interpolate
+from subprocess import PIPE, STDOUT
+from tqdm import tqdm
+
 from utils.aom_keyframes import aom_keyframes
+from utils.boost import boosting
+from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
+from utils.ffmpeg import split, concatenate_video
 from utils.pyscenedetect import pyscene
-from utils.utils import  get_brightness, frame_probe, frame_probe_fast, man_cq
+from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
-from utils.ffmpeg import split, concatenate_video
-from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
-from utils.boost import boosting
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -68,8 +69,6 @@ class Av1an:
         """Av1an - Python framework for AV1, VP9, VP8 encodes."""
         self.d = dict()
         self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
-
-
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -315,8 +314,6 @@ class Av1an:
         queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
         if len(queue) == 0:
-            # TODO: this could also be because we're resuming but everything
-            # is done.
             print('Error: No files found in .temp/split, probably splitting not working')
             terminate()
 

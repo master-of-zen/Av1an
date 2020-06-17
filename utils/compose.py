@@ -2,6 +2,9 @@
 
 from utils.utils import terminate
 import os
+import sys
+import json
+from pathlib import Path
 
 def svt_av1_encode(inputs, passes, pipe, params):
         """SVT-AV1 encoding command composition."""
@@ -118,3 +121,28 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
             print('Error in making command queue')
             terminate()
         return queue, params
+
+
+def get_video_queue(temp: Path, resume):
+    """Returns sorted list of all videos that need to be encoded. Big first."""
+    source_path = temp / 'split'
+    queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+
+    done_file = temp / 'done.json'
+    if resume and done_file.exists():
+        try:
+            with open(done_file) as f:
+                data = json.load(f)
+            data = data['done'].keys()
+            queue = [x for x in queue if x.name not in data]
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'Error at resuming {e}\nAt line {exc_tb.tb_lineno}')
+
+    queue = sorted(queue, key=lambda x: -x.stat().st_size)
+
+    if len(queue) == 0:
+        print('Error: No files found in .temp/split, probably splitting not working')
+        terminate()
+
+    return queue

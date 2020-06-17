@@ -19,10 +19,10 @@ from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 from utils.aom_keyframes import aom_keyframes
 from utils.boost import boosting
-from utils.compose import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue
+from utils.compose import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue, get_video_queue
 from utils.ffmpeg import split, concatenate_video, extract_audio
 from utils.pyscenedetect import pyscene
-from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
+from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq, frame_check
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.target_vmaf import x264_probes, encoding_fork, vmaf_probes, interpolate_data, plot_probes
@@ -244,29 +244,6 @@ class Av1an:
         if self.d.get('logging') is os.devnull:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
-    def get_video_queue(self, source_path: Path):
-        """Returns sorted list of all videos that need to be encoded. Big first."""
-        queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
-
-        done_file = self.d.get('temp') / 'done.json'
-        if self.d.get('resume') and done_file.exists():
-            try:
-                with open(done_file) as f:
-                    data = json.load(f)
-                data = data['done'].keys()
-                queue = [x for x in queue if x.name not in data]
-            except Exception as e:
-                _, _, exc_tb = sys.exc_info()
-                print(f'Error at resuming {e}\nAt line {exc_tb.tb_lineno}')
-
-        queue = sorted(queue, key=lambda x: -x.stat().st_size)
-
-        if len(queue) == 0:
-            print('Error: No files found in .temp/split, probably splitting not working')
-            terminate()
-
-        return queue
-
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
         # TODO reduce complexity
@@ -391,7 +368,7 @@ class Av1an:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')
 
-            self.frame_check(source, target, self.d.get('temp'), self.d.get('no_check'))
+            frame_check(source, target, self.d.get('temp'), self.d.get('no_check'))
 
             frame_probe_fr = frame_probe(target)
 
@@ -493,8 +470,6 @@ class Av1an:
             print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
             terminate()
 
-
-
         self.log(f'Found scenes: {len(sc)}\n')
 
         # Fix for windows character limit
@@ -542,16 +517,13 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
-        passes = self.d.get('passes')
-        pipe = self.d.get("ffmpeg_pipe")
-        params = self.d.get("video_params")
-        encoder = self.d.get('encoder')
-        temp = self.d.get('temp')
+        passes, pipe, params = self.d.get('passes'), self.d.get("ffmpeg_pipe"), self.d.get("video_params")
+        encoder, temp = self.d.get('encoder'), self.d.get('temp')
 
         self.outputs_filenames()
         self.setup_routine()
 
-        files = self.get_video_queue(temp / 'split')
+        files = get_video_queue(temp, self.d.get('resume'))
 
         # Make encode queue
         commands, params = compose_encoding_queue(files, temp, encoder, params, pipe, passes)

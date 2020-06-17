@@ -19,7 +19,7 @@ from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 from utils.aom_keyframes import aom_keyframes
 from utils.boost import boosting
-from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
+from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue
 from utils.ffmpeg import split, concatenate_video, extract_audio
 from utils.pyscenedetect import pyscene
 from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
@@ -292,52 +292,6 @@ class Av1an:
 
         if len(queue) == 0:
             print('Error: No files found in .temp/split, probably splitting not working')
-            terminate()
-
-        return queue
-
-    def compose_encoding_queue(self, files):
-        """Composing encoding queue with split videos."""
-        encoder = self.d.get('encoder')
-        passes = self.d.get('passes')
-        pipe = self.d.get("ffmpeg_pipe")
-        params = self.d.get("video_params")
-        enc_exe = self.encoders.get(self.d.get('encoder'))
-        inputs = [(self.d.get('temp') / "split" / file.name,
-                   self.d.get('temp') / "encode" / file.name,
-                   file) for file in files]
-
-        if encoder in ('aom', 'vpx'):
-            if not params:
-                if enc_exe == 'vpxenc':
-                    params = '--codec=vp9 --threads=4 --cpu-used=1 --end-usage=q --cq-level=40'
-                    self.d['video_params'] = params
-
-                if enc_exe == 'aomenc':
-                    params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=40'
-                    self.d['video_params'] = params
-
-            queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
-
-        elif encoder == 'rav1e':
-            if not params:
-                params = ' --tiles 8 --speed 10 --quantizer 100'
-                self.d['video_params'] = params
-            queue = rav1e_encode(inputs, passes, pipe, params)
-
-        elif encoder == 'svt_av1':
-            if not params:
-                print('-w -h -fps is required parameters for svt_av1 encoder')
-                terminate()
-            queue = svt_av1_encode(inputs, passes, pipe, params)
-
-        self.log(f'Encoding Queue Composed\n'
-                 f'Encoder: {self.d.get("encoder").upper()} Queue Size: {len(queue)} Passes: {self.d.get("passes")}\n'
-                 f'Params: {self.d.get("video_params")}\n')
-
-        # Catch Error
-        if len(queue) == 0:
-            print('Error in making command queue')
             terminate()
 
         return queue
@@ -617,21 +571,31 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
+        passes = self.d.get('passes')
+        pipe = self.d.get("ffmpeg_pipe")
+        params = self.d.get("video_params")
+        encoder = self.d.get('encoder')
+        temp = self.d.get('temp')
+
         self.outputs_filenames()
         self.setup_routine()
 
-        files = self.get_video_queue(self.d.get('temp') / 'split')
+        files = self.get_video_queue(temp / 'split')
 
         # Make encode queue
-        commands = self.compose_encoding_queue(files)
+        commands, params = compose_encoding_queue(files, temp, encoder, params, pipe, passes)
+        self.d['video_params'] = params
+        self.log(f'Encoding Queue Composed\n'
+                 f'Encoder: {encoder.upper()} Queue Size: {len(commands)} Passes: {passes}\n'
+                 f'Params: {params}\n')
 
-        self.d['workers'] = determine_resources(self.d.get('encoder'), self.d.get('workers'))
+        self.d['workers'] = determine_resources(encoder, self.d.get('workers'))
 
         self.encoding_loop(commands)
 
         try:
             self.log('Concatenating\n')
-            concatenate_video(self.d.get("temp"), self.d.get("output_file"), keep=self.d.get('keep'))
+            concatenate_video(temp, self.d.get("output_file"), keep=self.d.get('keep'))
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()

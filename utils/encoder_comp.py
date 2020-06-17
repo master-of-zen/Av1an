@@ -83,3 +83,38 @@ def rav1e_encode(inputs, passes, pipe, params):
          for file in inputs]
     """
     return commands
+
+def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
+        """Composing encoding queue with split videos."""
+        encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+        enc_exe = encoders.get(encoder)
+        inputs = [(temp / "split" / file.name,
+                   temp / "encode" / file.name,
+                   file) for file in files]
+
+        if encoder in ('aom', 'vpx'):
+            if not params:
+                if enc_exe == 'vpxenc':
+                    params = '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30'
+
+                if enc_exe == 'aomenc':
+                    params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30'
+
+            queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
+
+        elif encoder == 'rav1e':
+            if not params:
+                params = ' --tiles 8 --speed 6 --quantizer 100'
+            queue = rav1e_encode(inputs, passes, pipe, params)
+
+        elif encoder == 'svt_av1':
+            if not params:
+                print('-w -h -fps is required parameters for svt_av1 encoder')
+                terminate()
+            queue = svt_av1_encode(inputs, passes, pipe, params)
+
+        # Catch Error
+        if len(queue) == 0:
+            print('Error in making command queue')
+            terminate()
+        return queue, params

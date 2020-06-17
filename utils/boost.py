@@ -2,8 +2,9 @@
 
 from utils.utils import man_cq, get_cq
 import sys
+from utils.utils import get_brightness
 
-def boosting(command: str, brightness, b_limit, b_range, new_cq=0):
+def boost(command: str, brightness, b_limit, b_range, new_cq=0):
     """Based on average brightness of video decrease(boost) Quantize value for encoding."""
     try:
         cq = get_cq(command)
@@ -21,3 +22,15 @@ def boosting(command: str, brightness, b_limit, b_range, new_cq=0):
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
+
+def boosting(bl, br, source, commands, passes):
+    brightness = get_brightness(source.absolute().as_posix())
+    com0, cq = boost(commands[0], brightness, bl, br )
+
+    if passes == 2:
+        com1, _ = boost(commands[1], brightness, bl, br, new_cq=cq)
+        commands = (com0, com1) + commands[2:]
+    else:
+        commands = com0 + commands[1:]
+
+    return commands, cq

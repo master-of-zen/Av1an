@@ -4,6 +4,7 @@ import os
 import subprocess
 from subprocess import PIPE, STDOUT
 import shutil
+from pathlib import Path
 
 def split(video, temp, frames):
     """Split video by frame numbers, or just copying video."""

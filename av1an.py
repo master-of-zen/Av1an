@@ -20,7 +20,7 @@ from tqdm import tqdm
 from utils.aom_keyframes import aom_keyframes
 from utils.boost import boosting
 from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode
-from utils.ffmpeg import split, concatenate_video
+from utils.ffmpeg import split, concatenate_video, extract_audio
 from utils.pyscenedetect import pyscene
 from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq
 from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
@@ -244,26 +244,6 @@ class Av1an:
         if self.d.get('logging') is os.devnull:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
-    def extract_audio(self, input_vid: Path):
-        """Extracting audio from source, transcoding if needed."""
-        audio_params = self.d.get("audio_params")
-        audio_file = self.d.get('temp') / 'audio.mkv'
-        if audio_file.exists():
-            self.log('Reusing Audio File\n')
-            return
-
-        # Checking is source have audio track
-        check = fr' ffmpeg -y -hide_banner -loglevel error -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
-        is_audio_here = len(subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout) == 0
-
-        # If source have audio track - process it
-        if is_audio_here:
-            self.log(f'Audio processing\n'
-                     f'Params: {audio_params}\n')
-            cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
-                  f'{audio_params} {audio_file}'
-            self.call_cmd(cmd)
-
     def frame_check(self, source: Path, encoded: Path):
         """Checking is source and encoded video frame count match."""
         try:
@@ -438,18 +418,19 @@ class Av1an:
         """Single encoder command queue and logging output."""
         counter = commands[1]
         commands = commands[0]
+        bl, br = self.d.get('boost_limit'), self.d.get('boost_range')
         encoder = self.d.get('encoder')
         passes = self.d.get('passes')
         boost = self.d.get('boost')
-        # Passing encoding params to ffmpeg for encoding.
-        # Replace ffmpeg with aom because ffmpeg aom doesn't work with parameters properly.
+        vmaf_target = self.d.get('vmaf_target')
+
         try:
             st_time = time.time()
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = frame_probe(source)
 
             # Target Vmaf Mode
-            if self.d.get('vmaf_target'):
+            if vmaf_target:
                 tg_cq, tg_vf = self.target_vmaf(source)
 
                 cm1 = man_cq(commands[0], tg_cq)
@@ -465,23 +446,13 @@ class Av1an:
 
             # Boost
             if boost:
-                bl = self.d.get('boost_limit')
-                br = self.d.get('boost_range')
-                brightness = get_brightness(source.absolute().as_posix())
                 try:
-                    com0, cq = boosting(commands[0], brightness, bl, br )
-
-                    if passes == 2:
-                        com1, _ = boosting(commands[1], brightness, bl, br, new_cq=cq)
-                        commands = (com0, com1) + commands[2:]
-                    else:
-                        commands = com0 + commands[1:]
-
+                    commands, cq = boosting(bl, br, source, commands, passes)
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
-                boost = f'Avg brightness: {br}\nAdjusted CQ: {cq}\n'
+                boost = f'Avg brightness: {self.d.get("boost_range")}\nAdjusted CQ: {cq}\n'
             else:
                 boost = ''
 
@@ -642,7 +613,7 @@ class Av1an:
             # Extracting audio
             self.log(f'Audio processing\n'
                      f'Params: {audio_params}\n')
-            self.extract_audio(input, temp, audio_params)
+            extract_audio(input, temp, audio_params)
 
     def video_encoding(self):
         """Encoding video on local machine."""

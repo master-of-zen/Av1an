@@ -22,9 +22,9 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                 match = re.search(r"frame.*?\/([^ ]+?) ", line)
                 if match:
                     new = int(match.group(1))
-                if new > frame:
-                    counter.update(new - frame)
-                    frame = new
+                    if new > frame:
+                        counter.update(new - frame)
+                        frame = new
 
     elif encoder == 'rav1e':
         while True:
@@ -34,13 +34,13 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
             match = re.search(r"encoded.*? ([^ ]+?) ", line)
             if match:
                 new = int(match.group(1))
-            if new > frame:
-                counter.update(new - frame)
-                frame = new
+                if new > frame:
+                    counter.update(new - frame)
+                    frame = new
 
     elif encoder == 'svt_av1':
         while True:
             line = pipe.stdout.readline().strip()
             if len(line) == 0 and pipe.poll() is not None:
                 break
-            counter.update(frame_probe_source // passes)
+        counter.update(frame_probe_source // passes)

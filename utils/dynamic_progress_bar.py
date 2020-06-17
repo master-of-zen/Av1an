@@ -7,6 +7,7 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
     f, e = i.split('|')
     f = " ffmpeg -y -hide_banner -loglevel error " + f
     f, e = f.split(), e.split()
+    new = 0
     frame = 0
     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,

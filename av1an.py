@@ -19,7 +19,7 @@ from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 from utils.aom_keyframes import aom_keyframes
 from utils.boost import boosting
-from utils.encoder_comp import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue
+from utils.compose import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue
 from utils.ffmpeg import split, concatenate_video, extract_audio
 from utils.pyscenedetect import pyscene
 from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq

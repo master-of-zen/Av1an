@@ -52,3 +52,18 @@ def concatenate_video(temp, output, keep=False):
     # Delete temp folders
     if not keep:
         shutil.rmtree(temp)
+
+
+def extract_audio(input_vid: Path, temp, audio_params):
+    """Extracting audio from source, transcoding if needed."""
+    audio_file = temp / 'audio.mkv'
+
+    # Checking is source have audio track
+    check = fr' ffmpeg -y -hide_banner -loglevel error -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
+    is_audio_here = len(subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout) == 0
+
+    # If source have audio track - process it
+    if is_audio_here:
+        cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
+              f'{audio_params} {audio_file}'
+        subprocess.run(cmd, shell=True)

@@ -621,7 +621,11 @@ class Av1an:
         All pre encoding routine.
         Scene detection, splitting, audio extraction
         """
-        if self.d.get('resume') and (self.d.get('temp') / 'done.json').exists():
+        input = self.d.get('input')
+        temp = self.d.get('temp')
+        audio_params = self.d.get("audio_params")
+
+        if self.d.get('resume') and (temp / 'done.json').exists():
             self.set_logging()
 
         else:
@@ -633,13 +637,15 @@ class Av1an:
             framenums = self.split_routine()
             xs = self.d.get('extra_split')
             if xs:
-                framenums = extra_splits(self.d.get('input'), framenums, xs )
+                framenums = extra_splits(input, framenums, xs )
                 self.log(f'Applying extra splits\nSplit distance: {xs}\nNew splits:{len(framenums)}\n')
 
-            split( self.d.get('input'),self.d.get('temp'),framenums)
+            split(input, temp,framenums)
 
             # Extracting audio
-            self.extract_audio(self.d.get('input'))
+            self.log(f'Audio processing\n'
+                     f'Params: {audio_params}\n')
+            self.extract_audio(input, temp, audio_params)
 
     def video_encoding(self):
         """Encoding video on local machine."""

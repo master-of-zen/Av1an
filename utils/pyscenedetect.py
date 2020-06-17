@@ -32,9 +32,7 @@ def pyscene(video, threshold, progress_show):
     scenes = [int(scene[0].get_frames()) for scene in scene_list]
 
     # Remove 0 from list
-    try:
+    if scenes[0] == 0:
         scenes.remove(0)
-    except:
-        pass
 
     return scenes

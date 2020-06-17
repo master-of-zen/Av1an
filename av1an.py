@@ -217,17 +217,17 @@ class Av1an:
 
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
-                    self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip High CQ\n"
-                             f"Target CQ: {max_cq}\n\n")
-                    return max_cq, f'Target: CQ {max_cq} Vmaf: {mean}\n'
+                    log = f"File: {source.stem}, Fr: {frames}\n" \
+                          f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip High CQ\n" \
+                          f"Target CQ: {max_cq} Vmaf: {mean}\n"
+                    return max_cq, log
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
-                    self.log(f"File: {source.stem}, Fr: {frames}\n"
-                             f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip Low CQ\n"
-                             f"Target CQ: {min_cq}\n\n")
-                    return min_cq, f'Target: CQ {min_cq} Vmaf: {mean}\n'
+                    log = f"File: {source.stem}, Fr: {frames}\n" \
+                          f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip Log CQ\n" \
+                          f"Target CQ: {max_cq} Vmaf: {mean}\n"
+                    return min_cq, log
             # print('LS', vmaf_cq)
             # print('PR', probes)
 

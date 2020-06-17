@@ -6,6 +6,8 @@ from pathlib import Path
 from subprocess import PIPE
 import statistics
 from psutil import virtual_memory
+import json
+import sys
 
 def terminate():
         os.kill(os.getpid(), 9)
@@ -82,6 +84,34 @@ def frame_probe(source: Path):
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     return int(matches[-1])
 
+def frame_check(source: Path, encoded: Path, temp, check):
+        """Checking is source and encoded video frame count match."""
+        try:
+            status_file = Path(temp / 'done.json')
+            with status_file.open() as f:
+                d = json.load(f)
+
+            if check:
+                s1 = frame_probe(source)
+                d['done'][source.name] = s1
+                with status_file.open('w') as f:
+                    json.dump(d, f)
+                    return
+
+            s1, s2 = [frame_probe(i) for i in (source, encoded)]
+
+            if s1 == s2:
+                d['done'][source.name] = s1
+                with status_file.open('w') as f:
+                    json.dump(d, f)
+            else:
+                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+        except IndexError:
+            print('Encoding failed, check validity of your encoding settings/commands and start again')
+            terminate()
+        except Exception as e:
+            _, _, exc_tb = sys.exc_info()
+            print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
 
 def get_brightness(video):
     """Getting average brightness value for single video."""

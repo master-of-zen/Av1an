@@ -244,35 +244,6 @@ class Av1an:
         if self.d.get('logging') is os.devnull:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
-    def frame_check(self, source: Path, encoded: Path):
-        """Checking is source and encoded video frame count match."""
-        try:
-            status_file = Path(self.d.get("temp") / 'done.json')
-            with status_file.open() as f:
-                d = json.load(f)
-
-            if self.d.get("no_check"):
-                s1 = frame_probe(source)
-                d['done'][source.name] = s1
-                with status_file.open('w') as f:
-                    json.dump(d, f)
-                    return
-
-            s1, s2 = [frame_probe(i) for i in (source, encoded)]
-
-            if s1 == s2:
-                d['done'][source.name] = s1
-                with status_file.open('w') as f:
-                    json.dump(d, f)
-            else:
-                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
-        except IndexError:
-            print('Encoding failed, check validity of your encoding settings/commands and start again')
-            terminate()
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
-
     def get_video_queue(self, source_path: Path):
         """Returns sorted list of all videos that need to be encoded. Big first."""
         queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
@@ -420,7 +391,7 @@ class Av1an:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')
 
-            self.frame_check(source, target)
+            self.frame_check(source, target, self.d.get('temp'), self.d.get('no_check'))
 
             frame_probe_fr = frame_probe(target)
 

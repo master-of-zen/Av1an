@@ -7,7 +7,6 @@ import concurrent.futures
 import json
 import numpy as np
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -28,6 +27,7 @@ from utils.utils import reduce_scenes, determine_resources, terminate, extra_spl
 from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
 from utils.target_vmaf import x264_probes, encoding_fork, vmaf_probes, interpolate_data, plot_probes
 from utils.dynamic_progress_bar import tqdm_bar
+
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
     sys.exit()
@@ -396,21 +396,21 @@ class Av1an:
                 v = call_vmaf(i[1], i[2], model=self.d.get('vmaf_path') ,return_file=True)
                 _, mean, _, _, _ = read_vmaf_xml(v)
 
-                vmaf_cq.append((round(mean, 3), i[3]))
+                vmaf_cq.append((mean, i[3]))
 
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip High CQ\n"
                              f"Target CQ: {max_cq}\n\n")
-                    return max_cq, f'Target: CQ {max_cq} Vmaf: {round(mean, 2)}\n'
+                    return max_cq, f'Target: CQ {max_cq} Vmaf: {mean}\n'
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     self.log(f"File: {source.stem}, Fr: {frames}\n"
                              f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip Low CQ\n"
                              f"Target CQ: {min_cq}\n\n")
-                    return min_cq, f'Target: CQ {min_cq} Vmaf: {round(mean, 2)}\n'
+                    return min_cq, f'Target: CQ {min_cq} Vmaf: {mean}\n'
             # print('LS', vmaf_cq)
             # print('PR', probes)
 

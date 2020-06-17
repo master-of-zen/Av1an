@@ -240,11 +240,8 @@ class Av1an:
             if vmaf_plots:
                 plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, cq, frames, self.d.get('temp'))
 
-            self.log(f"File: {source.stem}, Fr: {frames}\n"
-                     f"Probes: {sorted([x[1] for x in vmaf_cq])}\n"
-                     f"Target CQ: {round(cq[0])}\n\n")
 
-            return int(cq[0]), f'Target: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
+            return int(cq[0]), f'File: {source.stem}, Fr: {frames}\nProbes: {[x[1] for x in vmaf_cq]}\nTarget: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -358,16 +355,16 @@ class Av1an:
             terminate()
 
     def split_routine(self):
+        scenes = self.d.get('scenes')
+        video = self.d.get('input')
+        split_method = self.d.get('split_method')
 
-        if self.d.get('scenes') == '0':
+        if scenes == '0':
             self.log('Skipping scene detection\n')
             return []
 
-        split_method = self.d.get('split_method')
-        sc = []
 
-        scenes = self.d.get('scenes')
-        video = self.d.get('input')
+        sc = []
 
         if scenes:
             scenes = Path(scenes)
@@ -442,7 +439,7 @@ class Av1an:
                 framenums = extra_splits(input, framenums, xs )
                 self.log(f'Applying extra splits\nSplit distance: {xs}\nNew splits:{len(framenums)}\n')
 
-            split(input, temp,framenums)
+            split(input, temp, framenums)
 
             # Extracting audio
             self.log(f'Audio processing\n'

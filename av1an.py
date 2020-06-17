@@ -255,6 +255,7 @@ class Av1an:
         """Single encoder command queue and logging output."""
         counter = commands[1]
         commands = commands[0]
+
         bl, br = self.d.get('boost_limit'), self.d.get('boost_range')
         encoder = self.d.get('encoder')
         passes = self.d.get('passes')
@@ -266,10 +267,13 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = frame_probe(source)
 
+            log = f'Enc: {source.name}, {frame_probe_source} fr'
+
             # Target Vmaf Mode
             if vmaf_target:
                 tg_cq, tg_vf = self.target_vmaf(source)
 
+                log = log + f'\n[Target VMAF]\n{tg_vf}'
                 cm1 = man_cq(commands[0], tg_cq)
 
                 if passes == 2:
@@ -278,9 +282,6 @@ class Av1an:
                 else:
                     commands = cm1 + commands[1:]
 
-            else:
-                tg_vf = ''
-
             # Boost
             if boost:
                 try:
@@ -288,12 +289,10 @@ class Av1an:
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
+                log = log + f'[Boost]\nAvg brightness: {self.d.get("boost_range")}\nAdjusted CQ: {cq}\n'
 
-                boost = f'Avg brightness: {self.d.get("boost_range")}\nAdjusted CQ: {cq}\n'
-            else:
-                boost = ''
-
-            self.log(f'Enc: {source.name}, {frame_probe_source} fr\n{tg_vf}{boost}\n')
+            # Log additional function
+            self.log(log + '\n')
 
             # Queue execution
             for i in commands[:-1]:
@@ -465,7 +464,7 @@ class Av1an:
         self.d['video_params'] = params
         self.log(f'Encoding Queue Composed\n'
                  f'Encoder: {encoder.upper()} Queue Size: {len(commands)} Passes: {passes}\n'
-                 f'Params: {params}\n')
+                 f'Params: {params}\n\n')
 
         self.d['workers'] = determine_resources(encoder, self.d.get('workers'))
 

@@ -209,7 +209,7 @@ class Av1an:
                 if count == 0 and round(mean) > vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
                           f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
-                           f"Probes: {sorted([x[0] for x in vmaf_cq])}" \
+                          f"Vmaf: {sorted([x[0] for x in vmaf_cq])}\n" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return max_cq, log
 
@@ -217,7 +217,7 @@ class Av1an:
                 if count == 1 and round(mean) < vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
                           f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Log CQ\n" \
-                          f"Probes: {sorted([x[0] for x in vmaf_cq])}" \
+                          f"Vmaf: {sorted([x[0] for x in vmaf_cq])}\n" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return min_cq, log
             # print('LS', vmaf_cq)
@@ -234,8 +234,8 @@ class Av1an:
 
             f = f'File: {source.stem}, Fr: {frames}\n' \
                 f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \
-                f'Vmaf  : {sorted([x[0] for x in vmaf_cq])}' \
-                f'Target: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
+                f'Vmaf: {sorted([x[0] for x in vmaf_cq])}\n' \
+                f'Target CQ: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
 
             return int(cq[0]), f
 

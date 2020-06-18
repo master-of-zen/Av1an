@@ -24,8 +24,8 @@ Example with default parameters:
 
 With your own parameters:
 
-    av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
-    -w 10 -p 2 -ff " -vf scale=-1:720 "  -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output
+    av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10 -p 2
+     -ff " -vf scale=-1:720 "  -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
 

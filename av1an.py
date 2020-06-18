@@ -17,17 +17,7 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from tqdm import tqdm
-from utils.arg_parse import arg_parsing
-from utils.aom_keyframes import aom_keyframes
-from utils.boost import boosting
-from utils.compose import aom_vpx_encode, rav1e_encode, svt_av1_encode, compose_encoding_queue, get_video_queue
-from utils.ffmpeg import split, concatenate_video, extract_audio
-from utils.pyscenedetect import pyscene
-from utils.utils import get_brightness, frame_probe, frame_probe_fast, man_cq, frame_check
-from utils.utils import reduce_scenes, determine_resources, terminate, extra_splits
-from utils.vmaf import read_vmaf_xml, call_vmaf, plot_vmaf
-from utils.target_vmaf import x264_probes, encoding_fork, vmaf_probes, interpolate_data, plot_probes
-from utils.dynamic_progress_bar import tqdm_bar
+from utils import *
 
 if sys.version_info < (3, 6):
     print('Python 3.6+ required')
@@ -218,14 +208,16 @@ class Av1an:
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
-                          f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip High CQ\n" \
+                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
+                           f"Probes: {sorted([x[0] for x in vmaf_cq])}" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return max_cq, log
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
-                          f"Probes: {[x[1] for x in vmaf_cq]}, Early Skip Log CQ\n" \
+                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Log CQ\n" \
+                          f"Probes: {sorted([x[0] for x in vmaf_cq])}" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return min_cq, log
             # print('LS', vmaf_cq)
@@ -240,8 +232,12 @@ class Av1an:
             if vmaf_plots:
                 plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, cq, frames, self.d.get('temp'))
 
+            f = f'File: {source.stem}, Fr: {frames}\n' \
+                f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \
+                f'Vmaf  : {sorted([x[0] for x in vmaf_cq])}' \
+                f'Target: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
 
-            return int(cq[0]), f'File: {source.stem}, Fr: {frames}\nProbes: {[x[1] for x in vmaf_cq]}\nTarget: CQ {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
+            return int(cq[0]), f
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()

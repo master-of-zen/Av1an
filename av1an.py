@@ -373,7 +373,7 @@ class Av1an:
             if scenes.exists():
                 # Read stats from CSV file opened in read mode:
                 with scenes.open() as stats_file:
-                    stats = literal_eval(stats_file.read().strip())
+                    stats = list(literal_eval(stats_file.read().strip()))
                     self.log('Using Saved Scenes\n')
                     return stats
 

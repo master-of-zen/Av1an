@@ -215,19 +215,17 @@ class Av1an:
                 if count == 0 and round(mean) > vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
                           f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
-                          f"Vmaf: {sorted([x[0] for x in vmaf_cq])}\n" \
+                          f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return max_cq, log
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
                     log = f"File: {source.stem}, Fr: {frames}\n" \
-                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Log CQ\n" \
-                          f"Vmaf: {sorted([x[0] for x in vmaf_cq])}\n" \
+                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
+                          f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
                           f"Target CQ: {max_cq} Vmaf: {mean}\n"
                     return min_cq, log
-            # print('LS', vmaf_cq)
-            # print('PR', probes)
 
             x = [x[1] for x in sorted(vmaf_cq)]
             y = [float(x[0]) for x in sorted(vmaf_cq)]

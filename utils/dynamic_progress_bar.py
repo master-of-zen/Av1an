@@ -30,5 +30,6 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                 if new > frame:
                     counter.update(new - frame)
                     frame = new
-        elif encoder == 'svt_av1':
-            counter.update(frame_probe_source // passes)
+    
+    if encoder == 'svt_av1':
+        counter.update(frame_probe_source // passes)

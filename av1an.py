@@ -278,7 +278,7 @@ class Av1an:
                     cm2 = man_cq(commands[1], tg_cq)
                     commands = (cm1, cm2) + commands[2:]
                 else:
-                    commands = cm1 + commands[1:]
+                    commands = (cm1,) + commands[1:]
 
             # Boost
             if boost:

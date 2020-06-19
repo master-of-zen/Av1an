@@ -10,7 +10,7 @@ from scipy import interpolate
 import matplotlib
 
 
-def read_vmaf_xml(file):
+def read_vmaf_xml(file, percentile):
     with open(file, 'r') as f:
         file = f.readlines()
         file = [x.strip() for x in file if 'vmaf="' in x]
@@ -19,14 +19,11 @@ def read_vmaf_xml(file):
             vmf = i[i.rfind('="') + 2: i.rfind('"')]
             vmafs.append(float(vmf))
 
-        vmafs = [round(float(x), 5) for x in vmafs if isinstance(x, float)]
+        vmafs = [float(x) for x in vmafs if isinstance(x, float)]
         calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
-        mean = round(sum(calc) / len(calc), 2)
-        perc_1 = round(np.percentile(calc, 1), 2)
-        perc_25 = round(np.percentile(calc, 25), 2)
-        perc_75 = round(np.percentile(calc, 75), 2)
+        perc = round(np.percentile(calc, percentile), 2)
 
-        return vmafs, mean, perc_1, perc_25, perc_75
+        return perc
 
 
 def call_vmaf( source: Path, encoded: Path, model=None, return_file=False):
@@ -93,7 +90,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
 
 def x264_probes(video: Path, ffmpeg: str):
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
-                  f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
+                  f'-r 2 -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
     subprocess.run(cmd, shell=True)
 
 

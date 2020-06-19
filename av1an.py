@@ -207,7 +207,8 @@ class Av1an:
                 subprocess.run(i[0], shell=True)
 
                 v = call_vmaf(i[1], i[2], model=self.d.get('vmaf_path') ,return_file=True)
-                _, mean, _, _, _ = read_vmaf_xml(v)
+                # Trying 25 percentile
+                mean = read_vmaf_xml(v , 25)
 
                 vmaf_cq.append((mean, i[3]))
 

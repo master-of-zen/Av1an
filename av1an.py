@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import argparse
 import atexit
 import concurrent
 import concurrent.futures
@@ -13,10 +12,8 @@ import sys
 import time
 from ast import literal_eval
 from distutils.spawn import find_executable
-from multiprocessing.managers import BaseManager
 from pathlib import Path
 from subprocess import PIPE, STDOUT
-from tqdm import tqdm
 from utils import *
 
 if sys.version_info < (3, 6):
@@ -27,34 +24,6 @@ if sys.platform == 'linux':
     def restore_term():
         os.system("stty sane")
     atexit.register(restore_term)
-
-
-# Stuff for updating encoded progress in real-time
-class MyManager(BaseManager):
-    pass
-
-
-def Manager():
-    m = MyManager()
-    m.start()
-    return m
-
-
-class Counter():
-    def __init__(self, total, initial):
-        self.first_update = True
-        self.initial = initial
-        self.left = total - initial
-        self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
-
-    def update(self, value):
-        if self.first_update:
-            self.tqdm_bar.reset(self.left)
-            self.first_update = False
-        self.tqdm_bar.update(value)
-
-
-MyManager.register('Counter', Counter)
 
 
 class Av1an:

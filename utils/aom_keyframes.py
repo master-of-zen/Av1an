@@ -60,7 +60,7 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     qmode = True
     #todo: allow user to set whether we're testing for constant-q mode keyframe placement or not. it's not a big difference.
 
-    is_keyframe = 0
+    is_keyframe = False
 
     pcnt_intra = 1.0 - c['pcnt_inter']
     modified_pcnt_inter = c['pcnt_inter'] - c['pcnt_neutral']
@@ -93,11 +93,11 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
 
         #If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
         if (boost_score > 30.0 and (i > 3)):
-            is_keyframe = 1
+            is_keyframe = True
     return is_keyframe
 
 
-def find_aom_keyframes(stat_file):
+def find_aom_keyframes(stat_file, key_freq_min):
     #I don't know what data format you want as output
     keyframes_list = []
 
@@ -115,8 +115,10 @@ def find_aom_keyframes(stat_file):
     #intentionally skipping 0th frame and last 16 frames
     frame_count_so_far = 1
     for i in range(1, number_of_frames - 16):
-        is_keyframe = test_candidate_kf(dict_list, i, frame_count_so_far)
-        if is_keyframe == 1:
+        is_keyframe = False
+        if frame_count_so_far >= key_freq_min:  # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#2065
+            is_keyframe = test_candidate_kf(dict_list, i, frame_count_so_far)
+        if is_keyframe:
             keyframes_list.append(i)
             frame_count_so_far = 0
         frame_count_so_far += 1
@@ -124,7 +126,7 @@ def find_aom_keyframes(stat_file):
     return keyframes_list
 
 
-def aom_keyframes(videoPath: Path, stat_file ):
+def aom_keyframes(videoPath: Path, stat_file, min_scene_len):
         """[Get frame numbers for splits from aomenc 1 pass stat file]
         """
 
@@ -156,7 +158,12 @@ def aom_keyframes(videoPath: Path, stat_file ):
                 if new > frame:
                     tqdm_bar.update(new - frame)
                 frame = new
-
-        keyframes = find_aom_keyframes(stat_file)
+        
+        # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
+        # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816
+        # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#1907
+        min_scene_len = 0 if min_scene_len is None else min_scene_len
+        
+        keyframes = find_aom_keyframes(stat_file, min_scene_len)
 
         return keyframes

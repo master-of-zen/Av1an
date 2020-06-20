@@ -64,7 +64,20 @@ def plot_vmaf(inp: Path, out: Path, model=None):
             print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
             sys.exit()
 
-    vmafs, mean, perc_1, perc_25, perc_75 = read_vmaf_xml(xml)
+    with open(xml, 'r') as fl:
+        f = fl.readlines()
+        f = [x.strip() for x in f if 'vmaf="' in x]
+        vmafs = []
+        for i in f:
+            vmf = i[i.rfind('="') + 2: i.rfind('"')]
+            vmafs.append(float(vmf))
+
+        vmafs = [round(float(x), 3) for x in vmafs if type(x) == float]
+
+    perc_1 = read_vmaf_xml(xml, 1)
+    perc_25 = read_vmaf_xml(xml, 25)
+    perc_75 = read_vmaf_xml(xml, 75)
+    mean = mean = round(sum(vmafs) / len(vmafs), 3)
 
     # Plot
     plt.figure(figsize=(15, 4))

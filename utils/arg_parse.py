@@ -14,6 +14,7 @@ def arg_parsing():
         # Splitting
         parser.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method')
         parser.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
+        parser.add_argument('--min_scene_len', type=int, default=None, help='Minimum number of frames in a split')
 
 
         # PySceneDetect split

@@ -4,15 +4,17 @@ from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 
-def pyscene(video, threshold, progress_show):
+def pyscene(video, threshold, progress_show, min_scene_len):
     """
     Running PySceneDetect detection on source video for segmenting.
     Optimal threshold settings 15-50
     """
-
+    
+    min_scene_len = 15 if (min_scene_len is None) else min_scene_len  # pyscenedetect ContentDetector's default is 15
+    
     video_manager = VideoManager([str(video)])
     scene_manager = SceneManager()
-    scene_manager.add_detector(ContentDetector(threshold=threshold))
+    scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=min_scene_len))
     base_timecode = video_manager.get_base_timecode()
 
     # Work on whole video

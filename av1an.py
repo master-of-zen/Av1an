@@ -380,9 +380,10 @@ class Av1an:
         if split_method == 'pyscene':
             queue_fix = not self.d.get('queue')
             threshold = self.d.get("threshold")
-            self.log(f'Starting scene detection Threshold: {threshold}\n')
+            min_scene_len = self.d.get('min_scene_len')
+            self.log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
             try:
-                sc = pyscene(video, threshold, progress_show=queue_fix )
+                sc = pyscene(video, threshold, queue_fix, min_scene_len)
             except Exception as e:
                 self.log(f'Error in PySceneDetect: {e}\n')
                 print(f'Error in PySceneDetect{e}\n')

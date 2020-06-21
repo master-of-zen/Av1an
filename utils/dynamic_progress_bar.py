@@ -3,7 +3,7 @@ from subprocess import PIPE, STDOUT
 import re
 from multiprocessing.managers import BaseManager
 from tqdm import tqdm
-
+from utils.utils import terminate
 
 # Stuff for updating encoded progress in real-time
 class MyManager(BaseManager):
@@ -46,12 +46,22 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
         line = pipe.stdout.readline().strip()
         if len(line) == 0 and pipe.poll() is not None:
             break
+
+        if len(line) == 0:
+            continue
+
         if encoder in ('aom', 'vpx', 'rav1e'):
             match = None
             if encoder in ('aom', 'vpx'):
+                if 'fatal' in line.lower():
+                    print('\n\nERROR IN ENCODING PROCESS\n\n', line)
+                    terminate()
                 if 'Pass 2/2' in line or 'Pass 1/1' in line:
                     match = re.search(r"frame.*?\/([^ ]+?) ", line)
             elif encoder == 'rav1e':
+                if 'error' in line.lower():
+                    print('\n\nERROR IN ENCODING PROCESS\n\n', line)
+                    terminate()
                 match = re.search(r"encoded.*? ([^ ]+?) ", line)
 
             if match:

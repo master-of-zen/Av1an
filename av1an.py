@@ -115,7 +115,6 @@ class Av1an:
                 print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
                 terminate()
 
-
     def outputs_filenames(self):
         if self.d.get('output_file'):
             self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')

@@ -8,6 +8,31 @@ from pathlib import Path
 from .logger import log, set_log_file
 
 
+DEFAULT_ENC_PARAMS = {
+    'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
+    'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
+    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
+    # SVT-AV1 requires params for -w -h -fps
+}
+
+
+def get_default_params_for_encoder(enc):
+    """
+    Gets the default params for an encoder or terminates the program if the encoder is svt_av1 as
+    svt_av1 needs -w -h -fps args to function.
+
+    :param enc: The encoder choice from arg_parse
+    :return: The default params for the encoder. Terminates if enc is svt_av1
+    """
+
+    # TODO(n9Mtq4): we can get the width, height, and fps of the video and generate default params for svt
+    if enc == 'svt_av1':
+        print('-w -h -fps is required parameters (--video_params) for svt_av1 encoder')
+        terminate()
+
+    return DEFAULT_ENC_PARAMS[enc]
+
+
 def svt_av1_encode(inputs, passes, pipe, params):
     """SVT-AV1 encoding command composition."""
     encoder = 'SvtAv1EncApp'
@@ -94,6 +119,9 @@ def rav1e_encode(inputs, passes, pipe, params):
 
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
     """Composing encoding queue with split videos."""
+
+    assert params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
+
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
     enc_exe = encoders.get(encoder)
     inputs = [(temp / "split" / file.name,
@@ -101,31 +129,19 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
                file) for file in files]
 
     if encoder in ('aom', 'vpx'):
-        if not params:
-            if enc_exe == 'vpxenc':
-                params = '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30'
-
-            if enc_exe == 'aomenc':
-                params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30'
-
         queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
 
     elif encoder == 'rav1e':
-        if not params:
-            params = ' --tiles 8 --speed 6 --quantizer 100'
         queue = rav1e_encode(inputs, passes, pipe, params)
 
     elif encoder == 'svt_av1':
-        if not params:
-            print('-w -h -fps is required parameters for svt_av1 encoder')
-            terminate()
         queue = svt_av1_encode(inputs, passes, pipe, params)
 
     # Catch Error
     if len(queue) == 0:
         print('Error in making command queue')
         terminate()
-    return queue, params
+    return queue
 
 
 def get_video_queue(temp: Path, resume):

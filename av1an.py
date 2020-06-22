@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import time
-from ast import literal_eval
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from utils import *
@@ -268,115 +267,45 @@ class Av1an:
         except KeyboardInterrupt:
             terminate()
 
-    def split_routine(self):
-        scenes = self.d.get('scenes')
-        video = self.d.get('input')
-        split_method = self.d.get('split_method')
-
-        if scenes == '0':
-            self.log('Skipping scene detection\n')
-            return []
-
-
-        sc = []
-
-        if scenes:
-            scenes = Path(scenes)
-            if scenes.exists():
-                # Read stats from CSV file opened in read mode:
-                with scenes.open() as stats_file:
-                    stats = list(literal_eval(stats_file.read().strip()))
-                    self.log('Using Saved Scenes\n')
-                    return stats
-
-        # Splitting using PySceneDetect
-        if split_method == 'pyscene':
-            queue_fix = not self.d.get('queue')
-            threshold = self.d.get("threshold")
-            min_scene_len = self.d.get('min_scene_len')
-            self.log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
-            try:
-                sc = pyscene(video, threshold, queue_fix, min_scene_len)
-            except Exception as e:
-                self.log(f'Error in PySceneDetect: {e}\n')
-                print(f'Error in PySceneDetect{e}\n')
-                terminate()
-
-        # Splitting based on aom keyframe placement
-        elif split_method == 'aom_keyframes':
-            try:
-                video: Path = self.d.get("input")
-                stat_file = self.d.get('temp') / 'keyframes.log'
-                min_scene_len = self.d.get('min_scene_len')
-                sc = aom_keyframes(video, stat_file, min_scene_len)
-            except:
-                self.log('Error in aom_keyframes')
-                print('Error in aom_keyframes')
-                terminate()
-        else:
-            print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
-            terminate()
-
-        self.log(f'Found scenes: {len(sc)}\n')
-
-        # Fix for windows character limit
-        if sys.platform != 'linux':
-            if len(sc) > 600:
-                sc = reduce_scenes(sc)
-
-        # Write scenes to file
-
-        if scenes:
-            Path(scenes).write_text(','.join([str(x) for x in sc]))
-
-        return sc
-
-    def setup_routine(self):
-        """
-        All pre encoding routine.
-        Scene detection, splitting, audio extraction
-        """
-        input = self.d.get('input')
-        temp = self.d.get('temp')
-        audio_params = self.d.get("audio_params")
-
-        if self.d.get('resume') and (temp / 'done.json').exists():
-            self.set_logging()
-
-        else:
-            setup(temp, self.d.get('resume'))
-
-            self.set_logging()
-
-            # Splitting video and sorting big-first
-
-            framenums = self.split_routine()
-            xs = self.d.get('extra_split')
-            if xs:
-                framenums = extra_splits(input, framenums, xs )
-                self.log(f'Applying extra splits\nSplit distance: {xs}\nNew splits:{len(framenums)}\n')
-
-            split(input, temp, framenums)
-
-            # Extracting audio
-            self.log(f'Audio processing\n'
-                     f'Params: {audio_params}\n')
-            extract_audio(input, temp, audio_params)
-
     def video_encoding(self):
         """Encoding video on local machine."""
         passes, pipe, params = self.d.get('passes'), self.d.get("ffmpeg_pipe"), self.d.get("video_params")
         encoder, temp = self.d.get('encoder'), self.d.get('temp')
+        video = self.d.get('input')
+        scenes, split_method, threshold = self.d.get('scenes'), self.d.get('split_method'), self.d.get('threshold')
+        xs = self.d.get('extra_split')
+        resume = self.d.get('resume')
+        l = self.d.get('logging')
+        min_scene_len = self.d.get('min_scene_len')
+        q = self.d.get('queue')
+        audio_params = self.d.get('audio_params')
 
-        self.outputs_filenames()
-        self.setup_routine()
+        self.d['output_file'] = outputs_filenames(self.d.get('input'), self.d.get('output'))
 
-        files = get_video_queue(temp, self.d.get('resume'))
+        if resume and (temp / 'done.json').exists():
+            set_logging(l, temp)
+
+        else:
+            setup(temp, resume)
+
+            set_logging(l, temp)
+
+            # Splitting video and sorting big-first
+
+            framenums = split_routine(video, scenes, split_method, temp, min_scene_len, q, threshold)
+
+            if xs:
+                framenums = extra_splits(input, framenums, xs )
+
+            segment(video, temp, framenums)
+            extract_audio(input, temp, audio_params)
+
+        chunk = get_video_queue(temp, resume)
 
         # Make encode queue
-        commands, params = compose_encoding_queue(files, temp, encoder, params, pipe, passes)
+        commands, params = compose_encoding_queue(chunk, temp, encoder, params, pipe, passes)
         self.d['video_params'] = params
-        self.log(f'Encoding Queue Composed\n'
+        log(f'Encoding Queue Composed\n'
                  f'Encoder: {encoder.upper()} Queue Size: {len(commands)} Passes: {passes}\n'
                  f'Params: {params}\n\n')
 
@@ -385,13 +314,12 @@ class Av1an:
         self.encoding_loop(commands)
 
         try:
-            self.log('Concatenating\n')
             concatenate_video(temp, self.d.get("output_file"), keep=self.d.get('keep'))
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
-            self.log(f'Concatenation failed, aborting, error: {e}\n')
+            log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
 
         if self.d.get("vmaf"):

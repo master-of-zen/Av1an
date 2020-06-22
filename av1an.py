@@ -3,14 +3,10 @@
 import concurrent
 import concurrent.futures
 import json
-import numpy as np
-import os
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
-from subprocess import PIPE, STDOUT
 from utils import *
 
 
@@ -216,7 +212,7 @@ class Av1an:
         else:
             setup(self.temp, self.resume)
             set_logging(self.logging, self.temp)
-
+            print(self.queue)
             framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold)
 
             if self.extra_split:
@@ -251,7 +247,7 @@ class Av1an:
 
     def main_queue(self):
         tm = time.time()
-
+        print(self.scenes)
         self.queue, self.input = process_inputs(self.input)
 
         if self.queue:

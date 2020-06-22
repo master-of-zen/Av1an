@@ -84,22 +84,6 @@ class Av1an:
                 print(f'No such model: {Path(self.d.get("vmaf_path")).as_posix()}')
                 terminate()
 
-    def outputs_filenames(self):
-        if self.d.get('output_file'):
-            self.d['output_file'] = self.d.get('output_file').with_suffix('.mkv')
-        else:
-            self.d['output_file'] = Path(f'{self.d.get("input").stem}_av1.mkv')
-
-    def set_logging(self):
-        """Setting logging file location"""
-
-        if self.d.get('logging'):
-            self.d['logging'] = f"{self.d.get('logging')}.log"
-        else:
-            self.d['logging'] = self.d.get('temp') / 'log.log'
-
-        self.log(f"Av1an Started\nCommand:\n{' '.join(sys.argv)}\n")
-
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
         # TODO reduce complexity

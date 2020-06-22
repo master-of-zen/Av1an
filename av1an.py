@@ -122,19 +122,20 @@ class Av1an:
 
                 # Early Skip on big CQ
                 if count == 0 and round(mean) > vmaf_target:
-                    log = f"File: {source.stem}, Fr: {frames}\n" \
-                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
-                          f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                          f"Target CQ: {max_cq} Vmaf: {mean}\n"
-                    return max_cq, log
+                    log(f"File: {source.stem}, Fr: {frames}\n" \
+                        f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
+                        f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
+                        f"Target CQ: {max_cq} Vmaf: {mean}\n\n")
+
+                    return max_cq
 
                 # Early Skip on small CQ
                 if count == 1 and round(mean) < vmaf_target:
-                    log = f"File: {source.stem}, Fr: {frames}\n" \
-                          f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
-                          f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                          f"Target CQ: {max_cq} Vmaf: {mean}\n"
-                    return min_cq, log
+                    log(f"File: {source.stem}, Fr: {frames}\n" \
+                        f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
+                        f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
+                        f"Target CQ: {max_cq} Vmaf: {mean}\\n")
+                    return min_cq
 
             x = [x[1] for x in sorted(vmaf_cq)]
             y = [float(x[0]) for x in sorted(vmaf_cq)]
@@ -145,12 +146,12 @@ class Av1an:
             if vmaf_plots:
                 plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, cq, frames, self.d.get('temp'))
 
-            f = f'File: {source.stem}, Fr: {frames}\n' \
+            log(f'File: {source.stem}, Fr: {frames}\n' \
                 f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \
                 f'Vmaf: {sorted([x[0] for x in vmaf_cq])}\n' \
-                f'Target CQ: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n'
+                f'Target CQ: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n\n')
 
-            return int(cq[0]), f
+            return int(cq[0])
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -177,9 +178,7 @@ class Av1an:
 
             # Target Vmaf Mode
             if vmaf_target:
-                tg_cq, tg_vf = self.target_vmaf(source)
-
-                lg = lg + f'\n[Target VMAF]\n{tg_vf}'
+                tg_cq = self.target_vmaf(source)
                 cm1 = man_cq(commands[0], tg_cq)
 
                 if passes == 2:

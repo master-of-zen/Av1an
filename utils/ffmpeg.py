@@ -35,7 +35,8 @@ def concatenate_video(temp, output, keep=False):
     with open(f'{temp / "concat" }', 'w') as f:
 
         encode_files = sorted((temp / 'encode').iterdir())
-        f.writelines(f"file '{file.absolute()}'\n" for file in encode_files)
+        # Replace all the ' with '/'' so ffmpeg can read the path correctly
+        f.writelines("file '" + str(file.absolute()).replace('\'','\'\\\'\'') + "'\n" for file in encode_files)
 
     # Add the audio file if one was extracted from the input
     audio_file = temp / "audio.mkv"

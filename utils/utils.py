@@ -5,55 +5,13 @@ import os
 from pathlib import Path
 from subprocess import PIPE
 import statistics
-from psutil import virtual_memory
 import json
 import sys
 import shutil
-from distutils.spawn import find_executable
+from .logger import log, set_log_file
 
 def terminate():
         os.kill(os.getpid(), 9)
-
-
-def check_executables(encoder):
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
-    if not find_executable('ffmpeg'):
-
-        print('No ffmpeg')
-        terminate()
-
-    # Check if encoder executable is reachable
-    if encoder in encoders:
-        enc = encoders.get(encoder)
-
-        if not find_executable(enc):
-            print(f'Encoder {enc} not found')
-            terminate()
-    else:
-        print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx" ')
-        terminate()
-
-
-def determine_resources(encoder, workers):
-    """Returns number of workers that machine can handle with selected encoder."""
-
-    # If set by user, skip
-    if workers != 0:
-        return workers
-
-    cpu = os.cpu_count()
-    ram = round(virtual_memory().total / 2 ** 30)
-
-    if encoder in ('aom', 'rav1e', 'vpx'):
-        return round(min(cpu / 2, ram / 1.5))
-
-    elif encoder == 'svt_av1':
-        return round(min(cpu, ram)) // 5
-
-    # fix if workers round up to 0
-    if workers == 0:
-        return 1
-
 
 def get_keyframes(file):
     """ Read file info and return list of all keyframes """
@@ -161,52 +119,3 @@ def get_brightness(video):
     brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
 
     return brig_geom
-
-
-def reduce_scenes(scenes):
-    """Windows terminal can't handle more than ~500 scenes in length."""
-    count = len(scenes)
-    interval = int(count / 500 + (count % 500 > 0))
-    scenes = scenes[::interval]
-    return scenes
-
-
-def extra_splits(video, frames: list, split_distance):
-    frames.append(frame_probe(video))
-    # Get all keyframes of original video
-    keyframes = get_keyframes(video)
-
-    t = frames[:]
-    t.insert(0, 0)
-    splits = list(zip(t, frames))
-    for i in splits:
-        # Getting distance between splits
-        distance = (i[1] - i[0])
-
-        if distance > split_distance:
-            # Keyframes that between 2 split points
-            candidates = [k for k in keyframes if i[1] > k > i[0]]
-
-            if len(candidates) > 0:
-                # Getting number of splits that need to be inserted
-                to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
-                for k in range(0, to_insert):
-                    # Approximation of splits position
-                    aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
-
-                    # Getting keyframe closest to approximated
-                    key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                    frames.append(key)
-    result = [int(x) for x in sorted(frames)]
-    return result
-
-
-def setup(temp: Path, resume):
-    """Creating temporally folders when needed."""
-    # Make temporal directories, and remove them if already presented
-    if not resume:
-        if temp.is_dir():
-            shutil.rmtree(temp)
-
-    (temp / 'split').mkdir(parents=True, exist_ok=True)
-    (temp / 'encode').mkdir(exist_ok=True)

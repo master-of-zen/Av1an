@@ -31,19 +31,6 @@ class Av1an:
         """Av1an - Python framework for AV1, VP9, VP8 encodes."""
         self.d = dict()
 
-    def log(self, info):
-        """Default logging function, write to file."""
-        with open(self.d.get('logging'), 'a') as log:
-            log.write(time.strftime('%X') + ' ' + info)
-
-    def call_cmd(self, cmd, capture_output=False):
-        """Calling system shell, if capture_output=True output string will be returned."""
-        if capture_output:
-            return subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
-
-        with open(self.d.get('logging'), 'a') as log:
-            subprocess.run(cmd, shell=True, stdout=log, stderr=log)
-
     def process_inputs(self):
         # Check input file for being valid
         if not self.d.get('input'):

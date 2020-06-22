@@ -288,6 +288,10 @@ class Av1an:
             else:
                 initial = 0
                 total = frame_probe_fast(self.d.get('input'))
+
+                if total == 0:
+                    total = frame_probe(self.d.get('input'))
+
                 d = {'total': total, 'done': {}}
                 with open(done_path, 'w') as f:
                     json.dump(d, f)

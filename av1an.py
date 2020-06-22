@@ -340,9 +340,10 @@ class Av1an:
         if split_method == 'pyscene':
             queue_fix = not self.d.get('queue')
             threshold = self.d.get("threshold")
-            self.log(f'Starting scene detection Threshold: {threshold}\n')
+            min_scene_len = self.d.get('min_scene_len')
+            self.log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
             try:
-                sc = pyscene(video, threshold, progress_show=queue_fix )
+                sc = pyscene(video, threshold, queue_fix, min_scene_len)
             except Exception as e:
                 self.log(f'Error in PySceneDetect: {e}\n')
                 print(f'Error in PySceneDetect{e}\n')
@@ -353,7 +354,8 @@ class Av1an:
             try:
                 video: Path = self.d.get("input")
                 stat_file = self.d.get('temp') / 'keyframes.log'
-                sc = aom_keyframes(video, stat_file)
+                min_scene_len = self.d.get('min_scene_len')
+                sc = aom_keyframes(video, stat_file, min_scene_len)
             except:
                 self.log('Error in aom_keyframes')
                 print('Error in aom_keyframes')

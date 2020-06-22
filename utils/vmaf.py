@@ -9,6 +9,7 @@ from math import  isnan
 from scipy import interpolate
 import matplotlib
 from  utils.utils import terminate
+from .logger import log, set_log_file
 
 
 def read_vmaf_xml(file, percentile):

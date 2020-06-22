@@ -5,33 +5,14 @@ import subprocess
 from subprocess import PIPE, STDOUT
 import shutil
 from pathlib import Path
+from .logger import log, set_log_file
 
-def split(video, temp, frames):
-    """Split video by frame numbers, or just copying video."""
-
-    cmd = [
-        "ffmpeg", "-hide_banner", "-y",
-        "-i", video.absolute().as_posix(),
-        "-map", "0:v:0",
-        "-an",
-        "-c", "copy",
-        "-avoid_negative_ts", "1"
-    ]
-
-    if len(frames) > 0:
-        cmd.extend([
-            "-f", "segment",
-            "-segment_frames", ','.join([str(x) for x in frames])
-        ])
-    cmd.append(os.path.join(temp, "split", "%05d.mkv"))
-    pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    while True:
-        line = pipe.stdout.readline().strip()
-        if len(line) == 0 and pipe.poll() is not None:
-            break
 
 def concatenate_video(temp, output, keep=False):
     """With FFMPEG concatenate encoded segments into final file."""
+
+    log('Concatenating\n')
+
     with open(f'{temp / "concat" }', 'w') as f:
 
         encode_files = sorted((temp / 'encode').iterdir())
@@ -58,6 +39,7 @@ def concatenate_video(temp, output, keep=False):
 
 def extract_audio(input_vid: Path, temp, audio_params):
     """Extracting audio from source, transcoding if needed."""
+    log(f'Audio processing\nParams: {audio_params}\n')
     audio_file = temp / 'audio.mkv'
 
     # Checking is source have audio track

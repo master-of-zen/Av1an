@@ -16,6 +16,27 @@ DEFAULT_ENC_PARAMS = {
 }
 
 
+def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
+    """
+    Generates the command for the first pass of the entire video used for aom keyframe split
+    
+    :param video_path: the video path
+    :param stat_file: the stat_file output
+    :param ffmpeg_pipe: the av1an.ffmpeg_pipe with pix_fmt and -ff option
+    :param video_params: the video params for aomenc first pass
+    :return: ffmpeg, encode
+    """
+
+    ffmpeg_pipe = ffmpeg_pipe[:-2]  # remove the ' |' at the end
+
+    f = f'ffmpeg -y -hide_banner -loglevel error -i {video_path.as_posix()} {ffmpeg_pipe}'
+    # removed -w -h from aomenc since ffmpeg filters can change it and it can be added into video_params
+    # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
+    e = f'aomenc --passes=2 --pass=1 {video_params} --fpf={stat_file.as_posix()} -o {os.devnull} -'
+
+    return f, e
+
+
 def get_default_params_for_encoder(enc):
     """
     Gets the default params for an encoder or terminates the program if the encoder is svt_av1 as

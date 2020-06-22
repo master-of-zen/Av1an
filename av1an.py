@@ -220,7 +220,9 @@ class Av1an:
             setup(self.temp, self.resume)
             set_logging(self.logging, self.temp)
 
-            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold)
+            # inherit video params from aom encode unless we are using a different encoder, then use defaults
+            aom_keyframes_params = self.video_params if (self.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
+            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
 
             if self.extra_split:
                 framenums = extra_splits(input, framenums, self.extra_split)

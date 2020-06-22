@@ -342,9 +342,6 @@ class Av1an:
                 self.log('Error in aom_keyframes')
                 print('Error in aom_keyframes')
                 terminate()
-        else:
-            print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
-            terminate()
 
         self.log(f'Found scenes: {len(sc)}\n')
 

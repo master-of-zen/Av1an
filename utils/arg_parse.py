@@ -12,10 +12,9 @@ def arg_parsing():
         parser.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
 
         # Splitting
-        parser.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method')
+        parser.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method', choices=['pyscene', 'aom_keyframes'])
         parser.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
         parser.add_argument('--min_scene_len', type=int, default=None, help='Minimum number of frames in a split')
-
 
         # PySceneDetect split
         parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')

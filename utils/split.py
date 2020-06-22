@@ -77,58 +77,58 @@ def extra_splits(video, frames: list, split_distance):
                     key = min(candidates, key=lambda x: abs(x - aprox_to_place))
                     frames.append(key)
     result = [int(x) for x in sorted(frames)]
-    log(f'Split distance: {split_distance}\nNew splits:{len(len(result))}\n')
+    log(f'Split distance: {split_distance}\nNew splits:{len(result)}\n')
     return result
 
 
 def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold):
 
-        if scenes == '0':
-            log('Skipping scene detection\n')
-            return []
+    if scenes == '0':
+        log('Skipping scene detection\n')
+        return []
 
-        sc = []
+    sc = []
 
-        if scenes:
-            scenes = Path(scenes)
-            if scenes.exists():
-                # Read stats from CSV file opened in read mode:
-                with scenes.open() as stats_file:
-                    stats = list(literal_eval(stats_file.read().strip()))
-                    log('Using Saved Scenes\n')
-                    return stats
+    if scenes:
+        scenes = Path(scenes)
+        if scenes.exists():
+            # Read stats from CSV file opened in read mode:
+            with scenes.open() as stats_file:
+                stats = list(literal_eval(stats_file.read().strip()))
+                log('Using Saved Scenes\n')
+                return stats
 
-        # Splitting using PySceneDetect
-        if split_method == 'pyscene':
-            log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
-            try:
-                sc = pyscene(video, threshold, queue, min_scene_len)
-            except Exception as e:
-                log(f'Error in PySceneDetect: {e}\n')
-                print(f'Error in PySceneDetect{e}\n')
-                terminate()
-
-        # Splitting based on aom keyframe placement
-        elif split_method == 'aom_keyframes':
-            try:
-                stat_file = temp / 'keyframes.log'
-                sc = aom_keyframes(video, stat_file, min_scene_len)
-            except:
-                log('Error in aom_keyframes')
-                print('Error in aom_keyframes')
-                terminate()
-        else:
-            print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+    # Splitting using PySceneDetect
+    if split_method == 'pyscene':
+        log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
+        try:
+            sc = pyscene(video, threshold, queue, min_scene_len)
+        except Exception as e:
+            log(f'Error in PySceneDetect: {e}\n')
+            print(f'Error in PySceneDetect{e}\n')
             terminate()
 
-        # Fix for windows character limit
-        if sys.platform != 'linux':
-            if len(sc) > 600:
-                sc = reduce_scenes(sc)
+    # Splitting based on aom keyframe placement
+    elif split_method == 'aom_keyframes':
+        try:
+            stat_file = temp / 'keyframes.log'
+            sc = aom_keyframes(video, stat_file, min_scene_len)
+        except:
+            log('Error in aom_keyframes')
+            print('Error in aom_keyframes')
+            terminate()
+    else:
+        print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+        terminate()
 
-        # Write scenes to file
+    # Fix for windows character limit
+    if sys.platform != 'linux':
+        if len(sc) > 600:
+            sc = reduce_scenes(sc)
 
-        if scenes:
-            Path(scenes).write_text(','.join([str(x) for x in sc]))
+    # Write scenes to file
 
-        return sc
+    if scenes:
+        Path(scenes).write_text(','.join([str(x) for x in sc]))
+
+    return sc

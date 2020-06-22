@@ -7,6 +7,7 @@ from tqdm import tqdm
 import re
 from pathlib import Path
 import cv2
+from .logger import log, set_log_file
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.
@@ -158,12 +159,12 @@ def aom_keyframes(videoPath: Path, stat_file, min_scene_len):
                 if new > frame:
                     tqdm_bar.update(new - frame)
                 frame = new
-        
+
         # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
         # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816
         # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#1907
         min_scene_len = 0 if min_scene_len is None else min_scene_len
-        
+
         keyframes = find_aom_keyframes(stat_file, min_scene_len)
 
         return keyframes

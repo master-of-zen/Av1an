@@ -1,3 +1,4 @@
+import atexit
 import subprocess
 import cv2
 import re
@@ -10,6 +11,15 @@ import sys
 import shutil
 from .logger import log, set_log_file
 import numpy as np
+
+def startup_check():
+    if sys.version_info < (3, 6):
+        print('Python 3.6+ required')
+        sys.exit()
+    if sys.platform == 'linux':
+        def restore_term():
+            os.system("stty sane")
+        atexit.register(restore_term)
 
 def terminate():
         os.kill(os.getpid(), 9)

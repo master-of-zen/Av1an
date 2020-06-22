@@ -123,25 +123,13 @@ class Av1an:
 
     def set_logging(self):
         """Setting logging file location"""
+
         if self.d.get('logging'):
             self.d['logging'] = f"{self.d.get('logging')}.log"
         else:
             self.d['logging'] = self.d.get('temp') / 'log.log'
 
         self.log(f"Av1an Started\nCommand:\n{' '.join(sys.argv)}\n")
-
-    def setup(self):
-        """Creating temporally folders when needed."""
-        # Make temporal directories, and remove them if already presented
-        if not self.d.get('resume'):
-            if self.d.get('temp').is_dir():
-                shutil.rmtree(self.d.get('temp'))
-
-        (self.d.get('temp') / 'split').mkdir(parents=True, exist_ok=True)
-        (self.d.get('temp') / 'encode').mkdir(exist_ok=True)
-
-        if self.d.get('logging') is os.devnull:
-            self.d['logging'] = self.d.get('temp') / 'log.log'
 
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
@@ -397,7 +385,8 @@ class Av1an:
             self.set_logging()
 
         else:
-            self.setup()
+            setup(temp, self.d.get('resume'))
+
             self.set_logging()
 
             # Splitting video and sorting big-first

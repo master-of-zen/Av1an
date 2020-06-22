@@ -8,6 +8,7 @@ import statistics
 from psutil import virtual_memory
 import json
 import sys
+import shutil
 
 def terminate():
         os.kill(os.getpid(), 9)
@@ -84,6 +85,7 @@ def frame_probe(source: Path):
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     return int(matches[-1])
 
+
 def frame_check(source: Path, encoded: Path, temp, check):
         """Checking is source and encoded video frame count match."""
         try:
@@ -112,6 +114,7 @@ def frame_check(source: Path, encoded: Path, temp, check):
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
+
 
 def get_brightness(video):
     """Getting average brightness value for single video."""
@@ -176,3 +179,14 @@ def extra_splits(video, frames: list, split_distance):
                     frames.append(key)
     result = [int(x) for x in sorted(frames)]
     return result
+
+
+def setup(temp: Path, resume):
+    """Creating temporally folders when needed."""
+    # Make temporal directories, and remove them if already presented
+    if not resume:
+        if temp.is_dir():
+            shutil.rmtree(temp)
+
+    (temp / 'split').mkdir(parents=True, exist_ok=True)
+    (temp / 'encode').mkdir(exist_ok=True)

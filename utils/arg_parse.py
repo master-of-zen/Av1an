@@ -23,7 +23,7 @@ def arg_parsing():
         # Encoding
         parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
         parser.add_argument('--video_params', '-v', type=str, default='', help='encoding settings')
-        parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder')
+        parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder',  choices=['aom', 'svt_av1', 'rav1e', 'vpx'])
         parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         parser.add_argument('-cfg', '--config', type=Path, help='Parameters file. Save/Read: '
                                                                 'Video, Audio, Encoder, FFmpeg parameteres')

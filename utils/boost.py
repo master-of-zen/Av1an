@@ -3,6 +3,7 @@
 from utils.utils import man_cq, get_cq
 import sys
 from utils.utils import get_brightness
+from .logger import log, set_log_file
 
 def boost(command: str, brightness, b_limit, b_range, new_cq=0):
     """Based on average brightness of video decrease(boost) Quantize value for encoding."""

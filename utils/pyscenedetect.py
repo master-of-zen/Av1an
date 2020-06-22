@@ -5,6 +5,7 @@ from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
 from .logger import log, set_log_file
 
+
 def pyscene(video, threshold, progress_show, min_scene_len):
     """
     Running PySceneDetect detection on source video for segmenting.

@@ -7,34 +7,36 @@ import json
 from pathlib import Path
 from .logger import log, set_log_file
 
+
 def svt_av1_encode(inputs, passes, pipe, params):
-        """SVT-AV1 encoding command composition."""
-        encoder = 'SvtAv1EncApp'
-        commands = []
-        if not params:
-            print('-w -h -fps is required parameters for svt_av1 encoder')
-            terminate()
+    """SVT-AV1 encoding command composition."""
+    encoder = 'SvtAv1EncApp'
+    commands = []
+    if not params:
+        print('-w -h -fps is required parameters for svt_av1 encoder')
+        terminate()
 
-        if passes == 1:
-            commands = [
-                (f'-i {file[0]} {pipe} ' +
-                 f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
+    if passes == 1:
+        commands = [
+            (f'-i {file[0]} {pipe} ' +
+             f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
+             (file[0], file[1].with_suffix('.ivf')))
+            for file in inputs]
 
-        if passes == 2:
-            p2i = '-input-stat-file '
-            p2o = '-output-stat-file '
-            commands = [
-                (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
-                 f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
-                 f'-i {file[0]} {pipe} '
-                 f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b '
-                 f'{file[1].with_suffix(".ivf")} - ',
-                 (file[0], file[1].with_suffix('.ivf')))
-                for file in inputs]
+    if passes == 2:
+        p2i = '-input-stat-file '
+        p2o = '-output-stat-file '
+        commands = [
+            (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
+             f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
+             f'-i {file[0]} {pipe} '
+             f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b '
+             f'{file[1].with_suffix(".ivf")} - ',
+             (file[0], file[1].with_suffix('.ivf')))
+            for file in inputs]
 
-        return commands
+    return commands
+
 
 def aom_vpx_encode(inputs, enc, passes, pipe, params):
     """AOM encoding command composition."""
@@ -47,16 +49,17 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
         commands = [
             (f'-i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
-             for file in inputs]
+            for file in inputs]
 
     if passes == 2:
         commands = [
             (f'-i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
              f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
-             for file in inputs]
+            for file in inputs]
 
     return commands
+
 
 def rav1e_encode(inputs, passes, pipe, params):
     """Rav1e encoding command composition."""
@@ -71,7 +74,7 @@ def rav1e_encode(inputs, passes, pipe, params):
              f' rav1e -  {params}  '
              f'--output {file[1].with_suffix(".ivf")}',
              (file[0], file[1].with_suffix('.ivf')))
-             for file in inputs]
+            for file in inputs]
 
     # 2 encode pass not working with FFmpeg pipes :(
     """
@@ -88,40 +91,41 @@ def rav1e_encode(inputs, passes, pipe, params):
     """
     return commands
 
+
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
-        """Composing encoding queue with split videos."""
-        encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
-        enc_exe = encoders.get(encoder)
-        inputs = [(temp / "split" / file.name,
-                   temp / "encode" / file.name,
-                   file) for file in files]
+    """Composing encoding queue with split videos."""
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+    enc_exe = encoders.get(encoder)
+    inputs = [(temp / "split" / file.name,
+               temp / "encode" / file.name,
+               file) for file in files]
 
-        if encoder in ('aom', 'vpx'):
-            if not params:
-                if enc_exe == 'vpxenc':
-                    params = '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30'
+    if encoder in ('aom', 'vpx'):
+        if not params:
+            if enc_exe == 'vpxenc':
+                params = '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30'
 
-                if enc_exe == 'aomenc':
-                    params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30'
+            if enc_exe == 'aomenc':
+                params = '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30'
 
-            queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
+        queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
 
-        elif encoder == 'rav1e':
-            if not params:
-                params = ' --tiles 8 --speed 6 --quantizer 100'
-            queue = rav1e_encode(inputs, passes, pipe, params)
+    elif encoder == 'rav1e':
+        if not params:
+            params = ' --tiles 8 --speed 6 --quantizer 100'
+        queue = rav1e_encode(inputs, passes, pipe, params)
 
-        elif encoder == 'svt_av1':
-            if not params:
-                print('-w -h -fps is required parameters for svt_av1 encoder')
-                terminate()
-            queue = svt_av1_encode(inputs, passes, pipe, params)
-
-        # Catch Error
-        if len(queue) == 0:
-            print('Error in making command queue')
+    elif encoder == 'svt_av1':
+        if not params:
+            print('-w -h -fps is required parameters for svt_av1 encoder')
             terminate()
-        return queue, params
+        queue = svt_av1_encode(inputs, passes, pipe, params)
+
+    # Catch Error
+    if len(queue) == 0:
+        print('Error in making command queue')
+        terminate()
+    return queue, params
 
 
 def get_video_queue(temp: Path, resume):

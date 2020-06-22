@@ -10,6 +10,7 @@ from ast import literal_eval
 from .pyscenedetect import pyscene
 from .aom_keyframes import aom_keyframes
 
+
 def segment(video:Path, temp, frames):
     """Split video by frame numbers, or just copying video."""
 
@@ -39,12 +40,14 @@ def segment(video:Path, temp, frames):
 
     log('Split Done\n')
 
+
 def reduce_scenes(scenes):
     """Windows terminal can't handle more than ~500 scenes in length."""
     count = len(scenes)
     interval = int(count / 500 + (count % 500 > 0))
     scenes = scenes[::interval]
     return scenes
+
 
 def extra_splits(video, frames: list, split_distance):
     log('Applying extra splits\n')
@@ -76,6 +79,7 @@ def extra_splits(video, frames: list, split_distance):
     result = [int(x) for x in sorted(frames)]
     log(f'Split distance: {split_distance}\nNew splits:{len(len(result))}\n')
     return result
+
 
 def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold):
 

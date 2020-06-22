@@ -58,9 +58,9 @@ def setup(temp: Path, resume):
     (temp / 'split').mkdir(parents=True, exist_ok=True)
     (temp / 'encode').mkdir(exist_ok=True)
 
+
 def outputs_filenames(inp: Path, out:Path):
     if out:
         return out.with_suffix('.mkv')
     else:
         return Path(f'{inp.stem}_av1.mkv')
-

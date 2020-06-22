@@ -9,9 +9,30 @@ import json
 import sys
 import shutil
 from .logger import log, set_log_file
+import numpy as np
 
 def terminate():
         os.kill(os.getpid(), 9)
+
+def process_inputs(inputs):
+    # Check input file for being valid
+    if not inputs:
+        print('No input file')
+        terminate()
+
+    if inputs[0].is_dir():
+        inputs = [x for x in inputs[0].iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
+
+    valid = np.array([i.exists() for i in inputs])
+
+    if not all(valid):
+        print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
+        terminate()
+
+    if len(inputs) > 1:
+        return inputs, None
+    else:
+        return None, inputs[0]
 
 def get_keyframes(file):
     """ Read file info and return list of all keyframes """

@@ -30,27 +30,7 @@ class Av1an:
         """Av1an - Python framework for AV1, VP9, VP8 encodes."""
         self.d = dict()
 
-    def process_inputs(self):
-        # Check input file for being valid
-        if not self.d.get('input'):
-            print('No input file')
-            terminate()
 
-        inputs = self.d.get('input')
-
-        if inputs[0].is_dir():
-            inputs = [x for x in inputs[0].iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
-
-        valid = np.array([i.exists() for i in inputs])
-
-        if not all(valid):
-            print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
-            terminate()
-
-        if len(inputs) > 1:
-            self.d['queue'] = inputs
-        else:
-            self.d['input'] = inputs[0]
 
     def config(self):
         """Creation and reading of config files with saved settings"""
@@ -272,11 +252,10 @@ class Av1an:
         encoder, temp = self.d.get('encoder'), self.d.get('temp')
         video = self.d.get('input')
         scenes, split_method, threshold = self.d.get('scenes'), self.d.get('split_method'), self.d.get('threshold')
-        xs = self.d.get('extra_split')
-        resume = self.d.get('resume')
+        xs, resume = self.d.get('extra_split'), self.d.get('resume')
         l = self.d.get('logging')
-        min_scene_len = self.d.get('min_scene_len')
-        q = self.d.get('queue')
+        min_scene_len, q = self.d.get('min_scene_len'), self.d.get('queue')
+
         audio_params = self.d.get('audio_params')
 
         self.d['output_file'] = outputs_filenames(self.d.get('input'), self.d.get('output'))
@@ -327,6 +306,9 @@ class Av1an:
     def main_queue(self):
         # Video Mode. Encoding on local machine
         tm = time.time()
+
+        self.d['queue'], self.d['input'] = process_inputs(self.d.get('input'))
+
         if self.d.get('queue'):
             for file in self.d.get('queue'):
                 tm = time.time()
@@ -350,7 +332,6 @@ class Av1an:
         # Check all executables
         check_executables(self.d.get('encoder'))
 
-        self.process_inputs()
         self.main_queue()
 
 if __name__ == '__main__':

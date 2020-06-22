@@ -5,6 +5,7 @@ import os
 import sys
 import json
 from pathlib import Path
+from .logger import log, set_log_file
 
 def svt_av1_encode(inputs, passes, pipe, params):
         """SVT-AV1 encoding command composition."""

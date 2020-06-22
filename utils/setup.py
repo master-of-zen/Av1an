@@ -33,7 +33,6 @@ def determine_resources(encoder, workers):
 def check_executables(encoder):
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
     if not find_executable('ffmpeg'):
-
         print('No ffmpeg')
         terminate()
 

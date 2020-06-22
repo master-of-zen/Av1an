@@ -85,7 +85,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
     perc_1 = read_vmaf_xml(xml, 1)
     perc_25 = read_vmaf_xml(xml, 25)
     perc_75 = read_vmaf_xml(xml, 75)
-    mean = mean = round(sum(vmafs) / len(vmafs), 3)
+    mean = round(sum(vmafs) / len(vmafs), 3)
 
     # Plot
     plt.figure(figsize=(15, 4))

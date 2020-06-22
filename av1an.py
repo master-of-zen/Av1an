@@ -272,10 +272,12 @@ class Av1an:
         check_executables(self.encoder)
         self.main_queue()
 
-if __name__ == '__main__':
-    # Main thread
+def main():
     try:
         Av1an().main_thread()
     except KeyboardInterrupt:
         print('Encoding stopped')
         sys.exit()
+
+if __name__ == '__main__':
+    main()

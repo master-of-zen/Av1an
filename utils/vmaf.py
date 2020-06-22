@@ -1,4 +1,5 @@
- #!/bin/env python
+#! /bin/env python
+
 from pathlib import Path
 import subprocess
 from subprocess import PIPE, STDOUT
@@ -28,39 +29,39 @@ def read_vmaf_xml(file, percentile):
         return perc
 
 
-def call_vmaf( source: Path, encoded: Path, model=None, return_file=False):
+def call_vmaf(source: Path, encoded: Path, model=None, return_file=False):
 
-        if model:
-            mod = f":model_path={model}"
-        else:
-            mod = ''
+    if model:
+        mod = f":model_path={model}"
+    else:
+        mod = ''
 
-        # For vmaf calculation both source and encoded segment scaled to 1080
-        # for proper vmaf calculation
-        fl = source.with_name(encoded.stem).with_suffix('.xml').as_posix()
-        cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
-              f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled1];' \
-              f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
-              f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
+    # For vmaf calculation both source and encoded segment scaled to 1080
+    # for proper vmaf calculation
+    fl = source.with_name(encoded.stem).with_suffix('.xml').as_posix()
+    cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
+          f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled1];' \
+          f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
+          f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
 
-        c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
-        call = c.stdout
-        # print(c.stdout.decode())
-        if 'error' in call.decode().lower():
-            print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())
-            terminate()
+    c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
+    call = c.stdout
+    # print(c.stdout.decode())
+    if 'error' in call.decode().lower():
+        print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())
+        terminate()
 
+    if return_file:
+        return fl
 
-        if return_file:
-            return fl
+    call = call.decode().strip()
+    vmf = call.split()[-1]
+    try:
+        vmf = float(vmf)
+    except ValueError:
+        vmf = 0
+    return vmf
 
-        call = call.decode().strip()
-        vmf = call.split()[-1]
-        try:
-            vmf = float(vmf)
-        except ValueError:
-            vmf = 0
-        return vmf
 
 def plot_vmaf(inp: Path, out: Path, model=None):
 
@@ -69,8 +70,8 @@ def plot_vmaf(inp: Path, out: Path, model=None):
     xml = call_vmaf(inp, out, model=model, return_file=True)
 
     if not Path(xml).exists():
-            print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
-            sys.exit()
+        print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
+        sys.exit()
 
     with open(xml, 'r') as fl:
         f = fl.readlines()
@@ -108,6 +109,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
     # Save
     file_name = str(out.stem) + '_plot.png'
     plt.savefig(file_name, dpi=500)
+
 
 def x264_probes(video: Path, ffmpeg: str):
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
@@ -162,8 +164,7 @@ def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames
     plt.xlabel('CQ')
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
     # plt.tight_layout()
-    temp =  temp / probe.stem
+    temp = temp / probe.stem
     plt.tight_layout()
     plt.savefig(temp, dpi=300, format='png',transparent=True)
     plt.close()
-

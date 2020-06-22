@@ -5,6 +5,7 @@ import sys
 from utils.utils import get_brightness
 from .logger import log, set_log_file
 
+
 def boost(command: str, brightness, b_limit, b_range, new_cq=0):
     """Based on average brightness of video decrease(boost) Quantize value for encoding."""
     try:
@@ -23,6 +24,7 @@ def boost(command: str, brightness, b_limit, b_range, new_cq=0):
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
+
 
 def boosting(bl, br, source, commands, passes):
     try:

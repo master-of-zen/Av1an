@@ -13,6 +13,7 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 from utils import *
 
+
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encodes."""
     def __init__(self):
@@ -73,7 +74,7 @@ class Av1an:
             for count, i in enumerate(cmd):
                 subprocess.run(i[0], shell=True)
 
-                v = call_vmaf(i[1], i[2], model=self.vmaf_path ,return_file=True)
+                v = call_vmaf(i[1], i[2], model=self.vmaf_path, return_file=True)
                 # Trying 25 percentile
                 mean = read_vmaf_xml(v , 25)
 
@@ -201,7 +202,7 @@ class Av1an:
                         future.result()
                     except Exception as exc:
                         _, _, exc_tb = sys.exc_info()
-                        print(f'Encoding error {e}\nAt line {exc_tb.tb_lineno}')
+                        print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
                         terminate()
         except KeyboardInterrupt:
             terminate()
@@ -227,7 +228,7 @@ class Av1an:
         chunk = get_video_queue(self.temp,  self.resume)
 
         # Make encode queue
-        commands, self.video_params = compose_encoding_queue(chunk,  self.temp,  self.encoder,  self.video_params, self.ffmpeg_pipe,  self.passes)
+        commands, self.video_params = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
         log(f'Encoding Queue Composed\n'
             f'Encoder: {self.encoder.upper()} Queue Size: {len(commands)} Passes: {self.passes}\n'
             f'Params: {self.video_params}\n\n')
@@ -272,12 +273,14 @@ class Av1an:
         check_executables(self.encoder)
         self.main_queue()
 
+
 def main():
     try:
         Av1an().main_thread()
     except KeyboardInterrupt:
         print('Encoding stopped')
         sys.exit()
+
 
 if __name__ == '__main__':
     main()

@@ -12,6 +12,7 @@ import shutil
 from .logger import log, set_log_file
 import numpy as np
 
+
 def startup_check():
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')
@@ -21,8 +22,10 @@ def startup_check():
             os.system("stty sane")
         atexit.register(restore_term)
 
+
 def terminate():
-        os.kill(os.getpid(), 9)
+    os.kill(os.getpid(), 9)
+
 
 def process_inputs(inputs):
     # Check input file for being valid
@@ -43,6 +46,7 @@ def process_inputs(inputs):
         return inputs, None
     else:
         return None, inputs[0]
+
 
 def get_keyframes(file):
     """ Read file info and return list of all keyframes """
@@ -96,33 +100,33 @@ def frame_probe(source: Path):
 
 
 def frame_check(source: Path, encoded: Path, temp, check):
-        """Checking is source and encoded video frame count match."""
-        try:
-            status_file = Path(temp / 'done.json')
-            with status_file.open() as f:
-                d = json.load(f)
+    """Checking is source and encoded video frame count match."""
+    try:
+        status_file = Path(temp / 'done.json')
+        with status_file.open() as f:
+            d = json.load(f)
 
-            if check:
-                s1 = frame_probe(source)
-                d['done'][source.name] = s1
-                with status_file.open('w') as f:
-                    json.dump(d, f)
-                    return
+        if check:
+            s1 = frame_probe(source)
+            d['done'][source.name] = s1
+            with status_file.open('w') as f:
+                json.dump(d, f)
+                return
 
-            s1, s2 = [frame_probe(i) for i in (source, encoded)]
+        s1, s2 = [frame_probe(i) for i in (source, encoded)]
 
-            if s1 == s2:
-                d['done'][source.name] = s1
-                with status_file.open('w') as f:
-                    json.dump(d, f)
-            else:
-                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
-        except IndexError:
-            print('Encoding failed, check validity of your encoding settings/commands and start again')
-            terminate()
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
+        if s1 == s2:
+            d['done'][source.name] = s1
+            with status_file.open('w') as f:
+                json.dump(d, f)
+        else:
+            print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+    except IndexError:
+        print('Encoding failed, check validity of your encoding settings/commands and start again')
+        terminate()
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
 
 
 def get_brightness(video):

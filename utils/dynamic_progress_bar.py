@@ -7,9 +7,11 @@ from tqdm import tqdm
 from utils.utils import terminate
 from .logger import log, set_log_file
 
+
 # Stuff for updating encoded progress in real-time
 class MyManager(BaseManager):
     pass
+
 
 def Manager():
     m = MyManager()

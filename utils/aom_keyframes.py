@@ -19,9 +19,10 @@ from .logger import log, set_log_file
 # I retain no rights or control over distribution.
 
 # Fields meanings: <source root>/av1/encoder/firstpass.h
-fields = ['frame', 'weight', 'intra_error', 'frame_avg_wavelet_energy', 'coded_error', 'sr_coded_error', 'tr_coded_error'
-         ,'pcnt_inter', 'pcnt_motion', 'pcnt_second_ref', 'pcnt_third_ref', 'pcnt_neutral', 'intra_skip_pct', 'inactive_zone_rows'
-         ,'inactive_zone_cols', 'MVr', 'mvr_abs', 'MVc', 'mvc_abs', 'MVrv', 'MVcv', 'mv_in_out_count', 'new_mv_count', 'duration', 'count', 'raw_error_stdev']
+fields = ['frame', 'weight', 'intra_error', 'frame_avg_wavelet_energy', 'coded_error', 'sr_coded_error', 'tr_coded_error',
+         'pcnt_inter', 'pcnt_motion', 'pcnt_second_ref', 'pcnt_third_ref', 'pcnt_neutral', 'intra_skip_pct', 'inactive_zone_rows',
+         'inactive_zone_cols', 'MVr', 'mvr_abs', 'MVc', 'mvc_abs', 'MVrv', 'MVcv', 'mv_in_out_count', 'new_mv_count', 'duration', 'count', 'raw_error_stdev']
+
 
 def get_second_ref_usage_thresh(frame_count_so_far):
     adapt_upto = 32
@@ -31,12 +32,14 @@ def get_second_ref_usage_thresh(frame_count_so_far):
         return min_second_ref_usage_thresh + second_ref_usage_thresh_max_delta
     return min_second_ref_usage_thresh + (frame_count_so_far / (adapt_upto - 1)) * second_ref_usage_thresh_max_delta
 
-#I have no idea if the following function is necessary in the python implementation or what its purpose even is.
+
+# I have no idea if the following function is necessary in the python implementation or what its purpose even is.
 def DOUBLE_DIVIDE_CHECK(x):
     if x < 0:
         return x - 0.000001
     else:
         return x + 0.000001
+
 
 def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     previous_frame_dict = dict_list[current_frame_index - 1]
@@ -59,7 +62,7 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     KF_II_MAX = 128.0
 
     qmode = True
-    #todo: allow user to set whether we're testing for constant-q mode keyframe placement or not. it's not a big difference.
+    # TODO: allow user to set whether we're testing for constant-q mode keyframe placement or not. it's not a big difference.
 
     is_keyframe = False
 
@@ -75,11 +78,11 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
         for i in range(0, 16):
             lnf = dict_list[current_frame_index + 1 + i]
             next_iiratio = (BOOST_FACTOR * lnf['intra_error'] / DOUBLE_DIVIDE_CHECK(lnf['coded_error']))
-            if (next_iiratio > KF_II_MAX):
+            if next_iiratio > KF_II_MAX:
                 next_iiratio = KF_II_MAX
 
             #Cumulative effect of decay in prediction quality.
-            if (lnf['pcnt_inter'] > 0.85):
+            if lnf['pcnt_inter'] > 0.85:
                 decay_accumulator = decay_accumulator * lnf['pcnt_inter']
             else:
                 decay_accumulator = decay_accumulator * ((0.85 + lnf['pcnt_inter']) / 2.0)
@@ -88,7 +91,7 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
             boost_score += (decay_accumulator * next_iiratio)
 
             #Test various breakout clauses.
-            if ((lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20) and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200)):
+            if (lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20) and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200):
                 break
             old_boost_score = boost_score
 
@@ -106,12 +109,12 @@ def find_aom_keyframes(stat_file, key_freq_min):
     dict_list = []
 
     with open(stat_file, 'rb') as file:
-        frameBuf = file.read(208)
-        while len(frameBuf) > 0:
-            stats = struct.unpack('d' * 26, frameBuf)
+        frame_buf = file.read(208)
+        while len(frame_buf) > 0:
+            stats = struct.unpack('d' * 26, frame_buf)
             p = dict(zip(fields, stats))
             dict_list.append(p)
-            frameBuf = file.read(208)
+            frame_buf = file.read(208)
 
     #intentionally skipping 0th frame and last 16 frames
     frame_count_so_far = 1
@@ -127,12 +130,12 @@ def find_aom_keyframes(stat_file, key_freq_min):
     return keyframes_list
 
 
-def aom_keyframes(videoPath: Path, stat_file, min_scene_len):
+def aom_keyframes(video_path: Path, stat_file, min_scene_len):
         """[Get frame numbers for splits from aomenc 1 pass stat file]
         """
 
         # Getting video width and height in pixels
-        video = cv2.VideoCapture(videoPath.as_posix())
+        video = cv2.VideoCapture(video_path.as_posix())
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -140,7 +143,7 @@ def aom_keyframes(videoPath: Path, stat_file, min_scene_len):
         total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         video.release()
 
-        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {videoPath.as_posix()}   -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 -w {width} -h {height} --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
+        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video_path.as_posix()} -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 -w {width} -h {height} --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
         f, e = f.split(), e.split()
 
         tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)

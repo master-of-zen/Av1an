@@ -11,7 +11,6 @@ import subprocess
 import sys
 import time
 from ast import literal_eval
-from distutils.spawn import find_executable
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from utils import *
@@ -31,7 +30,6 @@ class Av1an:
     def __init__(self):
         """Av1an - Python framework for AV1, VP9, VP8 encodes."""
         self.d = dict()
-        self.encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
 
     def log(self, info):
         """Default logging function, write to file."""
@@ -45,22 +43,6 @@ class Av1an:
 
         with open(self.d.get('logging'), 'a') as log:
             subprocess.run(cmd, shell=True, stdout=log, stderr=log)
-
-    def check_executables(self):
-        if not find_executable('ffmpeg'):
-            print('No ffmpeg')
-            terminate()
-
-        # Check if encoder executable is reachable
-        if self.d.get('encoder') in self.encoders:
-            enc = self.encoders.get(self.d.get('encoder'))
-
-            if not find_executable(enc):
-                print(f'Encoder {enc} not found')
-                terminate()
-        else:
-            print(f'Not valid encoder {self.d.get("encoder")} ')
-            terminate()
 
     def process_inputs(self):
         # Check input file for being valid
@@ -468,7 +450,7 @@ class Av1an:
         self.config()
 
         # Check all executables
-        self.check_executables()
+        check_executables(self.d.get('encoder'))
 
         self.process_inputs()
         self.main_queue()

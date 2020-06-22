@@ -9,9 +9,29 @@ from psutil import virtual_memory
 import json
 import sys
 import shutil
+from distutils.spawn import find_executable
 
 def terminate():
         os.kill(os.getpid(), 9)
+
+
+def check_executables(encoder):
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+    if not find_executable('ffmpeg'):
+
+        print('No ffmpeg')
+        terminate()
+
+    # Check if encoder executable is reachable
+    if encoder in encoders:
+        enc = encoders.get(encoder)
+
+        if not find_executable(enc):
+            print(f'Encoder {enc} not found')
+            terminate()
+    else:
+        print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx" ')
+        terminate()
 
 
 def determine_resources(encoder, workers):

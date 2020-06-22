@@ -174,13 +174,13 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = frame_probe(source)
 
-            log = f'Enc: {source.name}, {frame_probe_source} fr'
+            lg = f'Enc: {source.name}, {frame_probe_source} fr'
 
             # Target Vmaf Mode
             if vmaf_target:
                 tg_cq, tg_vf = self.target_vmaf(source)
 
-                log = log + f'\n[Target VMAF]\n{tg_vf}'
+                lg = lg + f'\n[Target VMAF]\n{tg_vf}'
                 cm1 = man_cq(commands[0], tg_cq)
 
                 if passes == 2:
@@ -196,10 +196,10 @@ class Av1an:
                 except Exception as e:
                     _, _, exc_tb = sys.exc_info()
                     print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
-                log = log + f'[Boost]\nAvg brightness: {self.d.get("boost_range")}\nAdjusted CQ: {cq}\n'
+                lg = lg + f'[Boost]\nAvg brightness: {self.d.get("boost_range")}\nAdjusted CQ: {cq}\n'
 
             # Log additional function
-            self.log(log + '\n')
+            log(lg + '\n')
 
             # Queue execution
             for i in commands[:-1]:
@@ -215,7 +215,7 @@ class Av1an:
 
             enc_time = round(time.time() - st_time, 2)
 
-            self.log(f'Done: {source.name} Fr: {frame_probe_fr}\n'
+            log(f'Done: {source.name} Fr: {frame_probe_fr}\n'
                      f'Fps: {round(frame_probe_fr / enc_time, 4)} Time: {enc_time} sec.\n\n')
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -228,7 +228,7 @@ class Av1an:
             done_path = self.d.get('temp') / 'done.json'
 
             if self.d.get('resume') and done_path.exists():
-                self.log('Resuming...\n')
+                log('Resuming...\n')
 
                 with open(done_path) as f:
                     data = json.load(f)
@@ -237,7 +237,7 @@ class Av1an:
                 done = len(data['done'])
                 initial = sum(data['done'].values())
 
-                self.log(f'Resumed with {done} encoded clips done\n\n')
+                log(f'Resumed with {done} encoded clips done\n\n')
             else:
                 initial = 0
                 total = frame_probe_fast(self.d.get('input'))

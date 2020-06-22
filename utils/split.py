@@ -14,7 +14,6 @@ def segment(video:Path, temp, frames):
     """Split video by frame numbers, or just copying video."""
 
     log('Split Video\n')
-
     cmd = [
         "ffmpeg", "-hide_banner", "-y",
         "-i", video.absolute().as_posix(),
@@ -29,7 +28,9 @@ def segment(video:Path, temp, frames):
             "-f", "segment",
             "-segment_frames", ','.join([str(x) for x in frames])
         ])
-    cmd.append(os.path.join(temp, "split", "%05d.mkv"))
+        cmd.append(os.path.join(temp, "split", "%05d.mkv"))
+    else:
+        cmd.append(os.path.join(temp, "split", "0.mkv"))
     pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
     while True:
         line = pipe.stdout.readline().strip()
@@ -73,7 +74,7 @@ def extra_splits(video, frames: list, split_distance):
                     key = min(candidates, key=lambda x: abs(x - aprox_to_place))
                     frames.append(key)
     result = [int(x) for x in sorted(frames)]
-    log(f'Split distance: {split_distance}\nNew splits:{len(framenums)}\n')
+    log(f'Split distance: {split_distance}\nNew splits:{len(len(result))}\n')
     return result
 
 def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold):

@@ -37,7 +37,7 @@ def boosting(bl, br, source, commands, passes):
         else:
             commands = com0 + commands[1:]
         log(f'{source.name}\n[Boost]\nAvg brightness: {br}\nAdjusted CQ: {cq}\n\n')
-        return commands, cq
+        return commands
 
     except Exception as e:
         _, _, exc_tb = sys.exc_info()

@@ -19,7 +19,7 @@ DEFAULT_ENC_PARAMS = {
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
     """
     Generates the command for the first pass of the entire video used for aom keyframe split
-    
+
     :param video_path: the video path
     :param stat_file: the stat_file output
     :param ffmpeg_pipe: the av1an.ffmpeg_pipe with pix_fmt and -ff option

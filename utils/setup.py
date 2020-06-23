@@ -1,6 +1,5 @@
 
 import os
-import sys
 from psutil import virtual_memory
 import shutil
 from pathlib import Path

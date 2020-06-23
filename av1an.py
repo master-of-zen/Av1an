@@ -138,7 +138,7 @@ class Av1an:
 
             # Boost
             if self.boost:
-                commands, cq = boosting(self.boost_limit, self.boost_range, source, commands, self.passes)
+                commands = boosting(self.boost_limit, self.boost_range, source, commands, self.passes)
 
             log(f'Enc: {source.name}, {frame_probe_source} fr\n')
 

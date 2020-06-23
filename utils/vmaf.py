@@ -81,7 +81,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
             vmf = i[i.rfind('="') + 2: i.rfind('"')]
             vmafs.append(float(vmf))
 
-        vmafs = [round(float(x), 3) for x in vmafs if type(x) == float]
+        vmafs = [round(float(x), 3) for x in vmafs if isinstance(x, float)]
 
     perc_1 = read_vmaf_xml(xml, 1)
     perc_25 = read_vmaf_xml(xml, 25)

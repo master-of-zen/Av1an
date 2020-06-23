@@ -6,8 +6,7 @@ from collections import deque
 from multiprocessing.managers import BaseManager
 from tqdm import tqdm
 from utils.utils import terminate
-from .logger import log, set_log_file
-
+from .logger import log
 
 # Stuff for updating encoded progress in real-time
 class MyManager(BaseManager):

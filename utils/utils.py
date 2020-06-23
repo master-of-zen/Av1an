@@ -8,8 +8,7 @@ from subprocess import PIPE
 import statistics
 import json
 import sys
-import shutil
-from .logger import log, set_log_file
+from .logger import log
 import numpy as np
 
 

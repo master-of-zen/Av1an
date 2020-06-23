@@ -5,7 +5,7 @@ import subprocess
 from subprocess import PIPE, STDOUT
 import shutil
 from pathlib import Path
-from .logger import log, set_log_file
+from .logger import log
 
 
 def concatenate_video(temp, output, keep=False):

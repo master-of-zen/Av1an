@@ -129,6 +129,7 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = frame_probe(source)
 
+            # TODO(n9Mtq4): reuse of first pass doesn't work with boosting and vmaf_target
             # Target Vmaf Mode
             if self.vmaf_target:
                 tg_cq = self.target_vmaf(source)
@@ -233,7 +234,7 @@ class Av1an:
         chunk = get_video_queue(self.temp,  self.resume)
 
         # Make encode queue
-        commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
+        commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes, self.reuse_first_pass)
         log(f'Encoding Queue Composed\n'
             f'Encoder: {self.encoder.upper()} Queue Size: {len(commands)} Passes: {self.passes}\n'
             f'Params: {self.video_params}\n\n')

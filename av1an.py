@@ -212,7 +212,6 @@ class Av1an:
         else:
             setup(self.temp, self.resume)
             set_logging(self.logging, self.temp)
-            print(self.queue)
             framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold)
 
             if self.extra_split:

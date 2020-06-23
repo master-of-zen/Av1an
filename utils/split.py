@@ -11,7 +11,7 @@ from .pyscenedetect import pyscene
 from .aom_keyframes import aom_keyframes
 
 
-def segment(video:Path, temp, frames):
+def segment(video: Path, temp, frames):
     """Split video by frame numbers, or just copying video."""
 
     log('Split Video\n')
@@ -81,7 +81,7 @@ def extra_splits(video, frames: list, split_distance):
     return result
 
 
-def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold):
+def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold, ffmpeg_pipe, video_params):
 
     if scenes == '0':
         log('Skipping scene detection\n')
@@ -112,7 +112,7 @@ def split_routine(video, scenes, split_method, temp, min_scene_len, queue, thres
     elif split_method == 'aom_keyframes':
         try:
             stat_file = temp / 'keyframes.log'
-            sc = aom_keyframes(video, stat_file, min_scene_len)
+            sc = aom_keyframes(video, stat_file, min_scene_len, ffmpeg_pipe, video_params)
         except:
             log('Error in aom_keyframes')
             print('Error in aom_keyframes')

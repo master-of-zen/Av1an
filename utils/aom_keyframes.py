@@ -2,11 +2,14 @@
 import struct
 import os
 import subprocess
+from collections import deque
 from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 import re
 from pathlib import Path
 import cv2
+
+from .compose import compose_aomsplit_first_pass_command
 from .logger import log, set_log_file
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
@@ -17,6 +20,11 @@ from .logger import log, set_log_file
 
 # All of my contributions to this script are hereby public domain.
 # I retain no rights or control over distribution.
+
+
+# default params for 1st pass when aom isn't the final encoder and -v won't match aom's options
+AOM_KEYFRAMES_DEFAULT_PARAMS = '--threads=12 --cpu-used=0 --end-usage=q --cq-level=40'
+
 
 # Fields meanings: <source root>/av1/encoder/firstpass.h
 fields = ['frame', 'weight', 'intra_error', 'frame_avg_wavelet_energy', 'coded_error', 'sr_coded_error', 'tr_coded_error',
@@ -130,44 +138,51 @@ def find_aom_keyframes(stat_file, key_freq_min):
     return keyframes_list
 
 
-def aom_keyframes(video_path: Path, stat_file, min_scene_len):
-        """[Get frame numbers for splits from aomenc 1 pass stat file]
-        """
+def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video_params):
+    """[Get frame numbers for splits from aomenc 1 pass stat file]
+    """
 
-        # Getting video width and height in pixels
-        video = cv2.VideoCapture(video_path.as_posix())
-        width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    video = cv2.VideoCapture(video_path.as_posix())  # TODO(n9Mtq4): use a frame probe for this?
+    total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    video.release()
 
-        # Getting Frame Count from Metadata
-        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        video.release()
+    f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params)
+    f, e = f.split(), e.split()
 
-        f, e = f'ffmpeg -y -hide_banner -loglevel error -i {video_path.as_posix()} -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe - | aomenc --passes=2 --pass=1 --threads=12 --cpu-used=0 --end-usage=q --cq-level=40 -w {width} -h {height} --fpf={stat_file.as_posix()} -o {os.devnull} -'.split('|')
-        f, e = f.split(), e.split()
+    tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 
-        tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
+    ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                            stderr=STDOUT, universal_newlines=True)
 
-        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                                stderr=STDOUT, universal_newlines=True)
-        frame = 0
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-            match = re.search(r"frame.*?\/([^ ]+?) ", line)
-            if match:
-                new = int(match.group(1))
-                if new > frame:
-                    tqdm_bar.update(new - frame)
-                frame = new
+    encoder_history = deque(maxlen=20)
+    frame = 0
 
-        # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
-        # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816
-        # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#1907
-        min_scene_len = 0 if min_scene_len is None else min_scene_len
+    while True:
+        line = pipe.stdout.readline()
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+        line = line.strip()
 
-        keyframes = find_aom_keyframes(stat_file, min_scene_len)
+        if line:
+            encoder_history.append(line)
 
-        return keyframes
+        match = re.search(r"frame.*?\/([^ ]+?) ", line)
+        if match:
+            new = int(match.group(1))
+            if new > frame:
+                tqdm_bar.update(new - frame)
+            frame = new
+
+    if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
+        print(f"\nAom first pass encountered an error: {pipe.returncode}")
+        print('\n'.join(encoder_history))
+
+    # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
+    # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816
+    # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#1907
+    min_scene_len = 0 if min_scene_len is None else min_scene_len
+
+    keyframes = find_aom_keyframes(stat_file, min_scene_len)
+
+    return keyframes

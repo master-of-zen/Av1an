@@ -45,6 +45,9 @@ class Av1an:
                 print(f'No such model: {Path(self.vmaf_path).as_posix()}')
                 terminate()
 
+        if self.video_params is None:
+            self.video_params = get_default_params_for_encoder(self.encoder)
+
     def target_vmaf(self, source):
         # TODO speed up for vmaf stuff
         # TODO reduce complexity
@@ -212,7 +215,10 @@ class Av1an:
         else:
             setup(self.temp, self.resume)
             set_logging(self.logging, self.temp)
-            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold)
+
+            # inherit video params from aom encode unless we are using a different encoder, then use defaults
+            aom_keyframes_params = self.video_params if (self.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
+            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
 
             if self.extra_split:
                 framenums = extra_splits(input, framenums, self.extra_split)
@@ -223,7 +229,7 @@ class Av1an:
         chunk = get_video_queue(self.temp,  self.resume)
 
         # Make encode queue
-        commands, self.video_params = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
+        commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
         log(f'Encoding Queue Composed\n'
             f'Encoder: {self.encoder.upper()} Queue Size: {len(commands)} Passes: {self.passes}\n'
             f'Params: {self.video_params}\n\n')

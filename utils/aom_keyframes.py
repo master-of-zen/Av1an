@@ -142,6 +142,7 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     """[Get frame numbers for splits from aomenc 1 pass stat file]
     """
 
+    log(f'Started aom_keyframes scenedetection\nParams: {video_params}\n')
     video = cv2.VideoCapture(video_path.as_posix())  # TODO(n9Mtq4): use a frame probe for this?
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     video.release()
@@ -175,8 +176,10 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
             frame = new
 
     if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
-        print(f"\nAom first pass encountered an error: {pipe.returncode}")
-        print('\n'.join(encoder_history))
+        enc_hist = '\n'.join(encoder_history)
+        er = f"\nAom first pass encountered an error: {pipe.returncode}\n{enc_hist}"
+        log(er)
+        print(er)
 
     # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
     # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816

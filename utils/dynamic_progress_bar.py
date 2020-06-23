@@ -2,6 +2,7 @@ import sys
 import subprocess
 from subprocess import PIPE, STDOUT
 import re
+from collections import deque
 from multiprocessing.managers import BaseManager
 from tqdm import tqdm
 from utils.utils import terminate
@@ -39,7 +40,7 @@ MyManager.register('Counter', Counter)
 def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
     try:
 
-        encoder_history = ''
+        encoder_history = deque(maxlen=20)
 
         f, e = i.split('|')
         f = " ffmpeg -y -hide_banner -loglevel error " + f
@@ -53,7 +54,7 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
         while True:
             line = pipe.stdout.readline().strip()
             if line:
-                encoder_history += line + '\n'
+                encoder_history.append(line)
             if len(line) == 0 and pipe.poll() is not None:
                 break
 
@@ -84,8 +85,8 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                 counter.update(frame_probe_source // passes)
 
         if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
-            print(f"Encoder encountered an error: {pipe.returncode}")
-            print(encoder_history)
+            print(f"\nEncoder encountered an error: {pipe.returncode}")
+            print('\n'.join(encoder_history))
 
     except Exception as e:
         _, _, exc_tb = sys.exc_info()

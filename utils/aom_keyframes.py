@@ -2,6 +2,7 @@
 import struct
 import os
 import subprocess
+from collections import deque
 from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 import re
@@ -153,17 +154,29 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                             stderr=STDOUT, universal_newlines=True)
+
+    encoder_history = deque(maxlen=20)
     frame = 0
+
     while True:
-        line = pipe.stdout.readline().strip()
+        line = pipe.stdout.readline()
         if len(line) == 0 and pipe.poll() is not None:
             break
+        line = line.strip()
+
+        if line:
+            encoder_history.append(line)
+
         match = re.search(r"frame.*?\/([^ ]+?) ", line)
         if match:
             new = int(match.group(1))
             if new > frame:
                 tqdm_bar.update(new - frame)
             frame = new
+
+    if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
+        print(f"\nAom first pass encountered an error: {pipe.returncode}")
+        print('\n'.join(encoder_history))
 
     # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
     # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816

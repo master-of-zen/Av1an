@@ -252,7 +252,6 @@ class Av1an:
 
     def main_queue(self):
         tm = time.time()
-        print(self.scenes)
         self.queue, self.input = process_inputs(self.input)
 
         if self.queue:

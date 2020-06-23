@@ -51,9 +51,9 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                                 universal_newlines=True)
 
         while True:
-            line = pipe.stdout.readline()
-            encoder_history += line
-            line = line.strip()
+            line = pipe.stdout.readline().strip()
+            if line:
+                encoder_history += line + '\n'
             if len(line) == 0 and pipe.poll() is not None:
                 break
 

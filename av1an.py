@@ -3,14 +3,10 @@
 import concurrent
 import concurrent.futures
 import json
-import numpy as np
-import os
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
-from subprocess import PIPE, STDOUT
 from utils import *
 
 
@@ -256,7 +252,7 @@ class Av1an:
 
     def main_queue(self):
         tm = time.time()
-
+        print(self.scenes)
         self.queue, self.input = process_inputs(self.input)
 
         if self.queue:

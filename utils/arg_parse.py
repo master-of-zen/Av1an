@@ -22,6 +22,9 @@ def arg_parsing():
     parser.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     parser.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
 
+    # AOM Keyframe split
+    parser.add_argument('--reuse_first_pass', help='Reuse the first pass from aom_keyframes split on the chunks', action='store_true')
+
     # Encoding
     parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
     parser.add_argument('--video_params', '-v', type=str, default=None, help='encoding settings')

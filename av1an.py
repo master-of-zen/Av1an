@@ -45,6 +45,10 @@ class Av1an:
                 print(f'No such model: {Path(self.vmaf_path).as_posix()}')
                 terminate()
 
+        if self.reuse_first_pass and self.encoder != 'aom' and self.split_method != 'aom_keyframes':
+            print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
+            terminate()
+
         if self.video_params is None:
             self.video_params = get_default_params_for_encoder(self.encoder)
 

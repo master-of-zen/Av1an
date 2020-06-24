@@ -66,6 +66,14 @@ def compute_eos_stats(chunk_stats: List[Dict], old_eos: Dict):
 
 
 def segment_first_pass(temp, framenums):
+    """
+    Segments the first pass file in temp/keyframes.log into individual log files for each chunk.
+    Looks at the len of framenums to determine file names for the chunks.
+
+    :param temp: the temp directory Path
+    :param framenums: a list of frame numbers along the split boundaries
+    :return: None
+    """
     stat_file = temp / 'keyframes.log'  # TODO(n9Mtq4): makes this a constant for use here and w/ aom_keyframes.py
     stats = read_first_pass(stat_file)
 

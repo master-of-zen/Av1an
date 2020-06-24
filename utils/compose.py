@@ -8,14 +8,6 @@ from pathlib import Path
 from .logger import log, set_log_file
 
 
-DEFAULT_ENC_PARAMS = {
-    'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
-    'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
-    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
-    # SVT-AV1 requires params for -w -h -fps
-}
-
-
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
     """
     Generates the command for the first pass of the entire video used for aom keyframe split
@@ -46,6 +38,12 @@ def get_default_params_for_encoder(enc):
     :return: The default params for the encoder. Terminates if enc is svt_av1
     """
 
+    DEFAULT_ENC_PARAMS = {
+    'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
+    'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
+    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
+    # SVT-AV1 requires params for -w -h -fps
+}
     # TODO(n9Mtq4): we can get the width, height, and fps of the video and generate default params for svt
     if enc == 'svt_av1':
         print('-w -h -fps is required parameters (--video_params) for svt_av1 encoder')
@@ -160,7 +158,8 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
 
     # Catch Error
     if len(queue) == 0:
-        print('Error in making command queue')
+        er = 'Error in making command queue'
+        log(er)
         terminate()
     return queue
 
@@ -184,7 +183,9 @@ def get_video_queue(temp: Path, resume):
     queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
     if len(queue) == 0:
-        print('Error: No files found in .temp/split, probably splitting not working')
+        er = 'Error: No files found in .temp/split, probably splitting not working'
+        print(er)
+        log(er)
         terminate()
 
     return queue

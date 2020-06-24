@@ -1,6 +1,5 @@
 #!/bin/env python
 
-import os
 import subprocess
 from subprocess import PIPE, STDOUT
 import shutil

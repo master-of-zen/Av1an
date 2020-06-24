@@ -179,7 +179,7 @@ class Av1an:
                 initial = 0
                 total = frame_probe_fast(self.input)
 
-                if total == 0:
+                if total < 1:
                     total = frame_probe(self.input)
 
                 d = {'total': total, 'done': {}}

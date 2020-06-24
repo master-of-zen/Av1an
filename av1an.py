@@ -129,13 +129,12 @@ class Av1an:
             source, target = Path(commands[-1][0]), Path(commands[-1][1])
             frame_probe_source = frame_probe(source)
 
-            # TODO(n9Mtq4): reuse of first pass doesn't work with boosting and vmaf_target
             # Target Vmaf Mode
             if self.vmaf_target:
                 tg_cq = self.target_vmaf(source)
                 cm1 = man_cq(commands[0], tg_cq)
 
-                if self.passes == 2:
+                if self.passes == 2 and (not self.reuse_first_pass):
                     cm2 = man_cq(commands[1], tg_cq)
                     commands = (cm1, cm2) + commands[2:]
                 else:
@@ -143,7 +142,7 @@ class Av1an:
 
             # Boost
             if self.boost:
-                commands = boosting(self.boost_limit, self.boost_range, source, commands, self.passes)
+                commands = boosting(self.boost_limit, self.boost_range, source, commands, self.passes, self.reuse_first_pass)
 
             log(f'Enc: {source.name}, {frame_probe_source} fr\n')
 

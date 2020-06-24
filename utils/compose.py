@@ -53,7 +53,15 @@ def get_default_params_for_encoder(enc):
 
 
 def svt_av1_encode(inputs, passes, pipe, params):
-    """SVT-AV1 encoding command composition."""
+    """
+    Generates commands for SVT-AV1
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     encoder = 'SvtAv1EncApp'
     commands = []
     if not params:
@@ -83,7 +91,15 @@ def svt_av1_encode(inputs, passes, pipe, params):
 
 
 def aom_vpx_encode(inputs, enc, passes, pipe, params):
-    """AOM encoding command composition."""
+    """
+    Generates commands for AOM, VPX encoders
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     single_p = f'{enc} --passes=1 '
     two_p_1 = f'{enc} --passes=2 --pass=1'
     two_p_2 = f'{enc} --passes=2 --pass=2'
@@ -106,7 +122,15 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
 
 
 def rav1e_encode(inputs, passes, pipe, params):
-    """Rav1e encoding command composition."""
+    """
+    Generates commands for AOM, VPX encoders
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     commands = []
 
     if passes == 2:
@@ -137,7 +161,15 @@ def rav1e_encode(inputs, passes, pipe, params):
 
 
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
-    """Composing encoding queue with split videos."""
+    """
+    Composing encoding queue with split videos.
+    :param files: List of files that need to be encoded
+    :param temp: Path of temp folder
+    :param encoder: Name of encoder to compose for
+    :param params: Encoding parameters
+    :param pipe: FFmpeg pipe
+    :passes: Number of passes
+    """
 
     assert params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
 
@@ -165,7 +197,13 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
 
 
 def get_video_queue(temp: Path, resume):
-    """Returns sorted list of all videos that need to be encoded. Big first."""
+    """
+    Compose and returns sorted list of all files that need to be encoded. Big first.
+
+    :param temp: Path to temp folder
+    :param resume: Flag on should already encoded chunks be discarded from queue
+    :return: Sorted big first list of chunks to encode
+    """
     source_path = temp / 'split'
     queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 

@@ -35,7 +35,7 @@ def boosting(bl, br, source, commands, passes, reuse_first_pass):
             com1, _ = boost(commands[1], brightness, bl, br, new_cq=cq)
             commands = (com0, com1) + commands[2:]
         else:
-            commands = com0 + commands[1:]
+            commands = (com0,) + commands[1:]
         log(f'{source.name}\n[Boost]\nAvg brightness: {br}\nAdjusted CQ: {cq}\n\n')
         return commands
 

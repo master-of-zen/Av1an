@@ -228,6 +228,9 @@ class Av1an:
             if self.extra_split:
                 framenums = extra_splits(input, framenums, self.extra_split)
 
+            if self.reuse_first_pass:
+                segment_first_pass(self.temp, framenums)
+
             segment(self.input, self.temp, framenums)
             extract_audio(input, self.temp,  self.audio_params)
 

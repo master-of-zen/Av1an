@@ -221,10 +221,10 @@ class Av1an:
             framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
 
             if self.extra_split:
-                framenums = extra_splits(input, framenums, self.extra_split)
+                framenums = extra_splits(self.input, framenums, self.extra_split)
 
             segment(self.input, self.temp, framenums)
-            extract_audio(input, self.temp,  self.audio_params)
+            extract_audio(self.input, self.temp,  self.audio_params)
 
         chunk = get_video_queue(self.temp,  self.resume)
 

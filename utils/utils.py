@@ -47,11 +47,11 @@ def process_inputs(inputs):
         return None, inputs[0]
 
 
-def get_keyframes(file):
+def get_keyframes(file: Path):
     """ Read file info and return list of all keyframes """
     keyframes = []
 
-    ff = ["ffmpeg", "-hide_banner", "-i", file,
+    ff = ["ffmpeg", "-hide_banner", "-i", file.as_posix(),
     "-vf", "select=eq(pict_type\,PICT_TYPE_I)",
     "-f", "null", "-loglevel", "debug", "-"]
 
@@ -92,7 +92,7 @@ def frame_probe_fast(source: Path):
 
 def frame_probe(source: Path):
     """Get frame count."""
-    cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
+    cmd = ["ffmpeg", "-hide_banner", "-i", source.as_posix(), "-map", "0:v:0", "-f", "null", "-"]
     r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     return int(matches[-1])

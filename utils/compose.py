@@ -43,7 +43,7 @@ def get_default_params_for_encoder(enc):
     'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
     'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
     # SVT-AV1 requires params for -w -h -fps
-}
+    }
     # TODO(n9Mtq4): we can get the width, height, and fps of the video and generate default params for svt
     if enc == 'svt_av1':
         print('-w -h -fps is required parameters (--video_params) for svt_av1 encoder')

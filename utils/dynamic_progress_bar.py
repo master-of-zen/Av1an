@@ -80,7 +80,7 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                         counter.update(new - frame)
                         frame = new
 
-            if encoder == 'svt_av1':
+        if encoder == 'svt_av1':
                 counter.update(frame_probe_source // passes)
 
         if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom

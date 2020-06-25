@@ -45,6 +45,10 @@ class Av1an:
                 print(f'No such model: {Path(self.vmaf_path).as_posix()}')
                 terminate()
 
+        if self.reuse_first_pass and self.encoder != 'aom' and self.split_method != 'aom_keyframes':
+            print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
+            terminate()
+
         if self.video_params is None:
             self.video_params = get_default_params_for_encoder(self.encoder)
 
@@ -130,7 +134,7 @@ class Av1an:
                 tg_cq = self.target_vmaf(source)
                 cm1 = man_cq(commands[0], tg_cq)
 
-                if self.passes == 2:
+                if self.passes == 2 and (not self.reuse_first_pass):
                     cm2 = man_cq(commands[1], tg_cq)
                     commands = (cm1, cm2) + commands[2:]
                 else:
@@ -138,7 +142,7 @@ class Av1an:
 
             # Boost
             if self.boost:
-                commands = boosting(self.boost_limit, self.boost_range, source, commands, self.passes)
+                commands = boosting(self.boost_limit, self.boost_range, source, commands, self.passes, self.reuse_first_pass)
 
             log(f'Enc: {source.name}, {frame_probe_source} fr\n')
 
@@ -223,13 +227,16 @@ class Av1an:
             if self.extra_split:
                 framenums = extra_splits(self.input, framenums, self.extra_split)
 
+            if self.reuse_first_pass:
+                segment_first_pass(self.temp, framenums)
+
             segment(self.input, self.temp, framenums)
             extract_audio(self.input, self.temp,  self.audio_params)
 
         chunk = get_video_queue(self.temp,  self.resume)
 
         # Make encode queue
-        commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
+        commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes, self.reuse_first_pass)
         log(f'Encoding Queue Composed\n'
             f'Encoder: {self.encoder.upper()} Queue Size: {len(commands)} Passes: {self.passes}\n'
             f'Params: {self.video_params}\n\n')

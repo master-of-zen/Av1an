@@ -90,7 +90,7 @@ def svt_av1_encode(inputs, passes, pipe, params):
     return commands
 
 
-def aom_vpx_encode(inputs, enc, passes, pipe, params):
+def aom_vpx_encode(inputs, enc, passes, pipe, params, skip_first_pass):
     """
     Generates commands for AOM, VPX encoders
 
@@ -103,22 +103,25 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
     single_p = f'{enc} --passes=1 '
     two_p_1 = f'{enc} --passes=2 --pass=1'
     two_p_2 = f'{enc} --passes=2 --pass=2'
-    commands = []
 
     if passes == 1:
-        commands = [
+        return [
             (f'-i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
 
+    if passes == 2 and skip_first_pass:
+        return [
+            (f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+             (file[0], file[1].with_suffix('.ivf')))
+            for file in inputs]
+
     if passes == 2:
-        commands = [
+        return [
             (f'-i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
              f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
-
-    return commands
 
 
 def rav1e_encode(inputs, passes, pipe, params):
@@ -160,7 +163,7 @@ def rav1e_encode(inputs, passes, pipe, params):
     return commands
 
 
-def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
+def compose_encoding_queue(files, temp, encoder, params, pipe, passes, reuse_first_pass):
     """
     Composing encoding queue with split videos.
     :param files: List of files that need to be encoded
@@ -180,7 +183,7 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
                file) for file in files]
 
     if encoder in ('aom', 'vpx'):
-        queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
+        queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params, reuse_first_pass)
 
     elif encoder == 'rav1e':
         queue = rav1e_encode(inputs, passes, pipe, params)

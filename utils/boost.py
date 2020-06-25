@@ -26,16 +26,16 @@ def boost(command: str, brightness, b_limit, b_range, new_cq=0):
         print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
 
 
-def boosting(bl, br, source, commands, passes):
+def boosting(bl, br, source, commands, passes, reuse_first_pass):
     try:
         brightness = get_brightness(source.absolute().as_posix())
         com0, cq = boost(commands[0], brightness, bl, br )
 
-        if passes == 2:
+        if passes == 2 and (not reuse_first_pass):
             com1, _ = boost(commands[1], brightness, bl, br, new_cq=cq)
             commands = (com0, com1) + commands[2:]
         else:
-            commands = com0 + commands[1:]
+            commands = (com0,) + commands[1:]
         log(f'{source.name}\n[Boost]\nAvg brightness: {br}\nAdjusted CQ: {cq}\n\n')
         return commands
 

@@ -183,7 +183,7 @@ class Av1an:
                 initial = 0
                 total = frame_probe_fast(self.input)
 
-                if total == 0:
+                if total < 1:
                     total = frame_probe(self.input)
 
                 d = {'total': total, 'done': {}}
@@ -225,13 +225,13 @@ class Av1an:
             framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
 
             if self.extra_split:
-                framenums = extra_splits(input, framenums, self.extra_split)
+                framenums = extra_splits(self.input, framenums, self.extra_split)
 
             if self.reuse_first_pass:
                 segment_first_pass(self.temp, framenums)
 
             segment(self.input, self.temp, framenums)
-            extract_audio(input, self.temp,  self.audio_params)
+            extract_audio(self.input, self.temp,  self.audio_params)
 
         chunk = get_video_queue(self.temp,  self.resume)
 

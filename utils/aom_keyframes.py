@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 import cv2
 
+from .utils import frame_probe
 from .compose import compose_aomsplit_first_pass_command
 from .logger import log, set_log_file
 
@@ -146,6 +147,9 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     video = cv2.VideoCapture(video_path.as_posix())  # TODO(n9Mtq4): use a frame probe for this?
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     video.release()
+
+    if total < 1:
+        total = frame_probe(video_path)
 
     f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params)
     f, e = f.split(), e.split()

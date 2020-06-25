@@ -8,14 +8,6 @@ from pathlib import Path
 from .logger import log, set_log_file
 
 
-DEFAULT_ENC_PARAMS = {
-    'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
-    'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
-    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
-    # SVT-AV1 requires params for -w -h -fps
-}
-
-
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
     """
     Generates the command for the first pass of the entire video used for aom keyframe split
@@ -46,6 +38,12 @@ def get_default_params_for_encoder(enc):
     :return: The default params for the encoder. Terminates if enc is svt_av1
     """
 
+    DEFAULT_ENC_PARAMS = {
+    'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
+    'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
+    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
+    # SVT-AV1 requires params for -w -h -fps
+    }
     # TODO(n9Mtq4): we can get the width, height, and fps of the video and generate default params for svt
     if enc == 'svt_av1':
         print('-w -h -fps is required parameters (--video_params) for svt_av1 encoder')
@@ -55,7 +53,15 @@ def get_default_params_for_encoder(enc):
 
 
 def svt_av1_encode(inputs, passes, pipe, params):
-    """SVT-AV1 encoding command composition."""
+    """
+    Generates commands for SVT-AV1
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     encoder = 'SvtAv1EncApp'
     commands = []
     if not params:
@@ -85,7 +91,15 @@ def svt_av1_encode(inputs, passes, pipe, params):
 
 
 def aom_vpx_encode(inputs, enc, passes, pipe, params, skip_first_pass):
-    """AOM encoding command composition."""
+    """
+    Generates commands for AOM, VPX encoders
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     single_p = f'{enc} --passes=1 '
     two_p_1 = f'{enc} --passes=2 --pass=1'
     two_p_2 = f'{enc} --passes=2 --pass=2'
@@ -111,7 +125,15 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params, skip_first_pass):
 
 
 def rav1e_encode(inputs, passes, pipe, params):
-    """Rav1e encoding command composition."""
+    """
+    Generates commands for AOM, VPX encoders
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
     commands = []
 
     if passes == 2:
@@ -142,7 +164,15 @@ def rav1e_encode(inputs, passes, pipe, params):
 
 
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes, reuse_first_pass):
-    """Composing encoding queue with split videos."""
+    """
+    Composing encoding queue with split videos.
+    :param files: List of files that need to be encoded
+    :param temp: Path of temp folder
+    :param encoder: Name of encoder to compose for
+    :param params: Encoding parameters
+    :param pipe: FFmpeg pipe
+    :passes: Number of passes
+    """
 
     assert params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
 
@@ -163,13 +193,20 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes, reuse_fir
 
     # Catch Error
     if len(queue) == 0:
-        print('Error in making command queue')
+        er = 'Error in making command queue'
+        log(er)
         terminate()
     return queue
 
 
 def get_video_queue(temp: Path, resume):
-    """Returns sorted list of all videos that need to be encoded. Big first."""
+    """
+    Compose and returns sorted list of all files that need to be encoded. Big first.
+
+    :param temp: Path to temp folder
+    :param resume: Flag on should already encoded chunks be discarded from queue
+    :return: Sorted big first list of chunks to encode
+    """
     source_path = temp / 'split'
     queue = [x for x in source_path.iterdir() if x.suffix == '.mkv']
 
@@ -187,7 +224,9 @@ def get_video_queue(temp: Path, resume):
     queue = sorted(queue, key=lambda x: -x.stat().st_size)
 
     if len(queue) == 0:
-        print('Error: No files found in .temp/split, probably splitting not working')
+        er = 'Error: No files found in .temp/split, probably splitting not working'
+        print(er)
+        log(er)
         terminate()
 
     return queue

@@ -10,6 +10,7 @@ import json
 import sys
 from .logger import log
 import numpy as np
+from threading import Lock
 
 
 def startup_check():
@@ -47,11 +48,11 @@ def process_inputs(inputs):
         return None, inputs[0]
 
 
-def get_keyframes(file):
+def get_keyframes(file: Path):
     """ Read file info and return list of all keyframes """
     keyframes = []
 
-    ff = ["ffmpeg", "-hide_banner", "-i", file,
+    ff = ["ffmpeg", "-hide_banner", "-i", file.as_posix(),
     "-vf", "select=eq(pict_type\,PICT_TYPE_I)",
     "-f", "null", "-loglevel", "debug", "-"]
 
@@ -92,40 +93,46 @@ def frame_probe_fast(source: Path):
 
 def frame_probe(source: Path):
     """Get frame count."""
-    cmd = ["ffmpeg", "-hide_banner", "-i", source.absolute(), "-map", "0:v:0", "-f", "null", "-"]
+    cmd = ["ffmpeg", "-hide_banner", "-i", source.as_posix(), "-map", "0:v:0", "-f", "null", "-"]
     r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     return int(matches[-1])
 
 
+doneFileLock = Lock()
 def frame_check(source: Path, encoded: Path, temp, check):
     """Checking is source and encoded video frame count match."""
     try:
         status_file = Path(temp / 'done.json')
-        with status_file.open() as f:
-            d = json.load(f)
 
         if check:
             s1 = frame_probe(source)
-            d['done'][source.name] = s1
-            with status_file.open('w') as f:
-                json.dump(d, f)
-                return
-
-        s1, s2 = [frame_probe(i) for i in (source, encoded)]
-
-        if s1 == s2:
+            doneFileLock.acquire()
+            with status_file.open() as f:
+                d = json.load(f)
             d['done'][source.name] = s1
             with status_file.open('w') as f:
                 json.dump(d, f)
         else:
-            print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
+            s1, s2 = [frame_probe(i) for i in (source, encoded)]
+            if s1 == s2:
+                doneFileLock.acquire()
+                with status_file.open() as f:
+                    d = json.load(f)
+                d['done'][source.name] = s1
+                with status_file.open('w') as f:
+                    json.dump(d, f)
+            else:
+                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
     except IndexError:
         print('Encoding failed, check validity of your encoding settings/commands and start again')
         terminate()
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
+    finally:
+        if doneFileLock.locked():
+            doneFileLock.release()
 
 
 def get_brightness(video):

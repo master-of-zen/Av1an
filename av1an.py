@@ -97,7 +97,7 @@ class Av1an:
                     log(f"File: {source.stem}, Fr: {frames}\n" \
                         f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
                         f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                        f"Target CQ: {self.max_cq} Vmaf: {mean}\n\n")
+                        f"Target CQ: {self.min_cq} Vmaf: {mean}\n\n")
                     return self.min_cq
 
             x = [x[1] for x in sorted(vmaf_cq)]

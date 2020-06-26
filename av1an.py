@@ -148,7 +148,7 @@ class Av1an:
             if self.reuse_first_pass:
                 commands = remove_first_pass_from_commands(commands, self.passes)
 
-            log(f'Enc: {source.name}, {frame_probe_source} fr\n')
+            log(f'Enc: {source.name}, {frame_probe_source} fr\n\n')
 
             # Queue execution
             for i in commands[:-1]:

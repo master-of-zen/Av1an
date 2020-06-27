@@ -29,6 +29,7 @@ def concatenate_video(temp, output, keep=False):
           f'{audio} -c copy -y "{output}"'
     concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
     if len(concat) > 0:
+        log(concat.decode())
         raise Exception
 
     # Delete temp folders

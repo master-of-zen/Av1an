@@ -5,7 +5,6 @@ from pathlib import Path
 def arg_parsing():
     """Command line parsing"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', '-m', type=int, default=0, help='0 - local, 1 - master, 2 - encoder')
 
     # Input/Output/Temp
     parser.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')
@@ -26,7 +25,7 @@ def arg_parsing():
     parser.add_argument('--reuse_first_pass', help='Reuse the first pass from aom_keyframes split on the chunks', action='store_true')
 
     # Encoding
-    parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes')
+    parser.add_argument('--passes', '-p', type=int, default=2, help='Specify encoding passes', choices=[1, 2])
     parser.add_argument('--video_params', '-v', type=str, default=None, help='encoding settings')
     parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder',
                         choices=['aom', 'svt_av1', 'rav1e', 'vpx'])

@@ -1,11 +1,13 @@
+#!/bin/env python
 
 import os
-from psutil import virtual_memory
 import shutil
 from pathlib import Path
-from .logger import log, set_log_file, set_logging
-from distutils.spawn import find_executable
+from psutil import virtual_memory
+
 from .utils import terminate
+from distutils.spawn import find_executable
+from .logger import log, set_log_file, set_logging
 
 
 def determine_resources(encoder, workers):

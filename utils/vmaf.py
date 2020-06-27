@@ -1,14 +1,15 @@
 #! /bin/env python
 
-from pathlib import Path
-import subprocess
-from subprocess import PIPE, STDOUT
 import sys
-from matplotlib import pyplot as plt
 import numpy as np
-from math import  isnan
-from scipy import interpolate
+import subprocess
 import matplotlib
+from math import  isnan
+from pathlib import Path
+from scipy import interpolate
+from subprocess import PIPE, STDOUT
+from matplotlib import pyplot as plt
+
 from  utils.utils import terminate
 from .logger import log, set_log_file
 

@@ -1,17 +1,19 @@
-import atexit
-import subprocess
-import cv2
+#!/bin/env python
+
 import re
 import os
-from pathlib import Path
-from subprocess import PIPE
-import statistics
-import json
+import cv2
 import sys
-from .logger import log
+import json
+import atexit
+import statistics
+import subprocess
 import numpy as np
 from threading import Lock
+from pathlib import Path
+from subprocess import PIPE
 
+from .logger import log
 
 def startup_check():
     if sys.version_info < (3, 6):
@@ -24,7 +26,7 @@ def startup_check():
 
 
 def terminate():
-    os.kill(os.getpid(), 9)
+    sys.exit(1)
 
 
 def process_inputs(inputs):

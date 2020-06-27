@@ -1,12 +1,15 @@
+#!/bin/env python
+
 import os
 import sys
 import subprocess
+from pathlib import Path
+from ast import literal_eval
 from subprocess import PIPE, STDOUT
 from utils import frame_probe, get_keyframes
+
 from .logger import log
-from pathlib import Path
 from .utils import terminate
-from ast import literal_eval
 from .pyscenedetect import pyscene
 from .aom_keyframes import aom_keyframes
 

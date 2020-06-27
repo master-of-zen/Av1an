@@ -3,6 +3,7 @@
 from scenedetect.video_manager import VideoManager
 from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
+
 from .logger import log
 
 

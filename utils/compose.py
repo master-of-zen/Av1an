@@ -1,10 +1,11 @@
 #!/bin/env python
 
-from utils.utils import terminate
 import os
 import sys
 import json
 from pathlib import Path
+
+from utils.utils import terminate
 from .logger import log, set_log_file
 
 

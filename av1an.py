@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import sys
+import json
+import time
+import subprocess
 import concurrent
 import concurrent.futures
-import json
-import subprocess
-import sys
-import time
 from pathlib import Path
+
 from utils import *
 
 

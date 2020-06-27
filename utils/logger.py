@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/env python
+
 import time
 from pathlib import Path
 import sys

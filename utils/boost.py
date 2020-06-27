@@ -1,7 +1,8 @@
 #!/bin/env python
 
-from utils.utils import man_cq, get_cq
 import sys
+
+from utils.utils import man_cq, get_cq
 from utils.utils import get_brightness
 from .logger import log, set_log_file
 

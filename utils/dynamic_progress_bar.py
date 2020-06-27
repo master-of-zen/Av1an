@@ -1,10 +1,13 @@
+#!/bin/env python
+
+import re
 import sys
 import subprocess
 from subprocess import PIPE, STDOUT
-import re
 from collections import deque
 from multiprocessing.managers import BaseManager
 from tqdm import tqdm
+
 from utils.utils import terminate
 from .logger import log
 

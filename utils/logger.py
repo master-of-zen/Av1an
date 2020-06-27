@@ -35,4 +35,4 @@ def set_logging(log_path: Path, temp):
     else:
         set_log_file(temp / 'log.log')
 
-    log(f"Av1an Started\nCommand:\n{' '.join(sys.argv)}\n")
+    log(f"\nAv1an Started\nCommand:\n{' '.join(sys.argv)}\n")

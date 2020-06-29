@@ -263,6 +263,7 @@ class Av1an:
             plot_vmaf(self.input, self.output_file, model=self.vmaf_path)
 
     def main_queue(self):
+        # Todo: Redo Queue
         tm = time.time()
         self.queue, self.input = process_inputs(self.input)
 

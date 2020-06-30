@@ -9,7 +9,6 @@ from multiprocessing.managers import BaseManager
 from tqdm import tqdm
 
 from utils.utils import terminate
-from .logger import log
 
 # Stuff for updating encoded progress in real-time
 class MyManager(BaseManager):

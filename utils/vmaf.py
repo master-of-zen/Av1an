@@ -11,7 +11,6 @@ from subprocess import PIPE, STDOUT
 from matplotlib import pyplot as plt
 
 from  utils.utils import terminate
-from .logger import log
 
 
 def read_vmaf_xml(file, percentile):

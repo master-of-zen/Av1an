@@ -13,8 +13,6 @@ from threading import Lock
 from pathlib import Path
 from subprocess import PIPE
 
-from .logger import log
-
 def startup_check():
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')

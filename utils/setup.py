@@ -21,15 +21,16 @@ def determine_resources(encoder, workers):
     ram = round(virtual_memory().total / 2 ** 30)
 
     if encoder in ('aom', 'rav1e', 'vpx'):
-        return round(min(cpu / 2, ram / 1.5))
+        workers =  round(min(cpu / 2, ram / 1.5))
 
     elif encoder == 'svt_av1':
-        return round(min(cpu, ram)) // 5
+        workers =  round(min(cpu, ram)) // 5
 
     # fix if workers round up to 0
     if workers == 0:
-        return 1
+        workers = 1
 
+    return workers
 
 def check_executables(encoder):
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}

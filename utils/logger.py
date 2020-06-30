@@ -21,18 +21,18 @@ class Logger():
 
 # Creating logger
 l = Logger()
-set_log_file = l.set_path
+log_file = l.set_path
 log = l.log
 
 
-def set_logging(log_path: Path, temp):
+def set_log(log_path: Path, temp):
     """Setting logging file location"""
     if log_path:
         log_path = Path(log_path)
         if log_path.suffix == '':
             log_path = log_path.with_suffix('.log')
-        set_log_file(log_path)
+        log_file(log_path)
     else:
-        set_log_file(temp / 'log.log')
+        log_file(temp / 'log.log')
 
     log(f"\nAv1an Started\nCommand:\n{' '.join(sys.argv)}\n")

@@ -10,8 +10,8 @@ from utils import frame_probe, get_keyframes
 
 from .logger import log
 from .utils import terminate
-from .pyscenedetect import pyscene
-from .aom_keyframes import aom_keyframes
+from .pyscene import pyscene
+from .aom_kf import aom_keyframes
 
 
 def segment(video: Path, temp, frames):

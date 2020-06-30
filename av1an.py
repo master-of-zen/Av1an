@@ -220,10 +220,10 @@ class Av1an:
         self.output_file = outputs_filenames(self.input, self.output_file)
 
         if self.resume and (self.temp / 'done.json').exists():
-            set_logging(self.logging, self.temp)
+            set_log(self.logging, self.temp)
         else:
             setup(self.temp, self.resume)
-            set_logging(self.logging, self.temp)
+            set_log(self.logging, self.temp)
 
             # inherit video params from aom encode unless we are using a different encoder, then use defaults
             aom_keyframes_params = self.video_params if (self.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS

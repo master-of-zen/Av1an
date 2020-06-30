@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from utils.utils import terminate
-from .logger import log, set_log_file
+from .logger import log, set_log
 
 
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):

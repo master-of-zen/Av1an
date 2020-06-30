@@ -3,7 +3,7 @@ import os
 import struct
 from typing import List, Dict
 
-from .aom_keyframes import fields
+from .aom_kf import fields
 
 
 def remove_first_pass_from_commands(commands, passes):

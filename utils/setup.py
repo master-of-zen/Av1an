@@ -7,7 +7,7 @@ from psutil import virtual_memory
 
 from .utils import terminate
 from distutils.spawn import find_executable
-from .logger import log, set_log_file, set_logging
+from .logger import log
 
 
 def determine_resources(encoder, workers):

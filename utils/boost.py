@@ -4,7 +4,7 @@ import sys
 
 from utils.utils import man_cq, get_cq
 from utils.utils import get_brightness
-from .logger import log, set_log_file
+from .logger import log
 
 
 def boost(command: str, brightness, b_limit, b_range, new_cq=0):

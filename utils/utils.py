@@ -49,7 +49,13 @@ def process_inputs(inputs):
 
 
 def get_keyframes(file: Path):
-    """ Read file info and return list of all keyframes """
+    """
+    Read file info and return list of all keyframes
+
+    :param file: Path for input file
+    :return: list with frame numbers of keyframes
+    """
+
     keyframes = []
 
     ff = ["ffmpeg", "-hide_banner", "-i", file.as_posix(),
@@ -73,7 +79,12 @@ def get_keyframes(file: Path):
 
 
 def get_cq(command):
-    """Return cq values from command"""
+    """
+    Return cq values from command
+    :param command: string with commands for encoder
+    :return: list with frame numbers of keyframes
+
+    """
     matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
     return int(matches[-1])
 

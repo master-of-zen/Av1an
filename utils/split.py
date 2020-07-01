@@ -113,13 +113,8 @@ def split_routine(video, scenes, split_method, temp, min_scene_len, queue, thres
 
     # Splitting based on aom keyframe placement
     elif split_method == 'aom_keyframes':
-        try:
-            stat_file = temp / 'keyframes.log'
-            sc = aom_keyframes(video, stat_file, min_scene_len, ffmpeg_pipe, video_params)
-        except:
-            log('Error in aom_keyframes')
-            print('Error in aom_keyframes')
-            terminate()
+        stat_file = temp / 'keyframes.log'
+        sc = aom_keyframes(video, stat_file, min_scene_len, ffmpeg_pipe, video_params)
     else:
         print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()

@@ -54,25 +54,25 @@ With your own parameters:
 
     --split_method          Method used for generating splits.(Default: PySceneDetect)
                             Options: `pyscene`, `aom_keyframes`
-                            `pyscene` - PyScenedetect, content based scenedetection 
+                            `pyscene` - PyScenedetect, content based scenedetection
                             with threshold.
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
-    
+
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
-    
+
     -xs  --extra_split      Adding extra splits if frame distance beetween splits bigger than
                             given value. Split only on keyframes. Works with/without PySceneDetect
-                            Example: 1000 frames video with single scene, 
-                            -xs 200 will try to add splits at keyframes 
+                            Example: 1000 frames video with single scene,
+                            -xs 200 will try to add splits at keyframes
                             that closest to 200,400,600,800.
-    
+
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
@@ -101,9 +101,9 @@ With your own parameters:
 
     --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
 
-    --boost_range           CQ limit for boosting. CQ can't get lower than this value.
+    -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
 
-    --boost_limit           CQ range for boosting. Delta for which CQ can be changed
+    -bl --boost_limit       CQ range for boosting. Delta for which CQ can be changed
 
     --vmaf                  Calculate vmaf for each encoded clip.
                             Saves plot after encode, showing vmaf values for all frames,
@@ -114,7 +114,7 @@ With your own parameters:
 
     --vmaf_target           Vmaf value to target. Currently aomenc only. Best works with 85-97.
                             When using this mode specify full encoding options.
-                            ` --end-usage=q ` or ` --end-usage=cq ` 
+                            ` --end-usage=q ` or ` --end-usage=cq `
                             with ` --cq-level=N ` must be specified.
 
     --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
@@ -145,8 +145,8 @@ With your own parameters:
 For Windows in the installer check the option to `add Python to PATH`
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
   *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
-  *  [Install rav1e](https://github.com/xiph/rav1e) 
-  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1) 
+  *  [Install rav1e](https://github.com/xiph/rav1e)
+  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)
   *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
 * With a package manager:

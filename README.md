@@ -101,9 +101,9 @@ With your own parameters:
 
     --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
 
-    -bl                     CQ limit for boosting. CQ can't get lower than this value.
+    --boost_range           CQ limit for boosting. CQ can't get lower than this value.
 
-    -br                     CQ range for boosting. Delta for which CQ can be changed
+    --boost_limit           CQ range for boosting. Delta for which CQ can be changed
 
     --vmaf                  Calculate vmaf for each encoded clip.
                             Saves plot after encode, showing vmaf values for all frames,

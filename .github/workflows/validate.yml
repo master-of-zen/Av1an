@@ -1,0 +1,72 @@
+name: validate
+on:
+  push:
+    paths-ignore:
+      - "*.yml"
+      - .gitignore
+      - "*.md"
+  pull_request:
+    paths-ignore:
+      - "*.yml"
+      - .gitignore
+      - "*.md"
+env:
+  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev
+  DEBIAN_FRONTEND: noninteractive
+  temp: .temp
+
+jobs:
+  validate:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: registry.gitlab.com/luigi311/av1-docker:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: baseline
+            flags: ""
+          - name: rav1e
+            flags: -enc rav1e
+          - name: workers
+            flags: -w 2
+          - name: video flags
+            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
+          - name: target vmaf
+            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --vmaf_target 95
+          - name: extra splits
+            flags: -xs 10
+          - name: boost
+            flags: --boost --boost_limit 20 --boost_range 10
+          - name: split method
+            flags: --split_method aom_keyframes
+          - name: temp
+            flags: --temp temporary
+            temp: "temporary"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Validate encoders
+        run: |
+          aomenc --help
+          SvtAv1EncApp --help
+          rav1e --help
+      - name: Install requirements
+        run: |
+          apt-get update && apt-get install -y ${{ env.deps }}
+          pip3 install -r requirements.txt
+      - name: Download videos
+        run: |
+          for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do
+            curl -LO https://$url/video.tar.gz && break
+          done
+          tar xf video.tar.gz
+      - name: Testing ${{ matrix.name }}
+        run: |
+          [ "${{ matrix.temp }}" != "" ] && TEMP=${{ matrix.temp }} || TEMP=${{ env.temp }}
+          ./av1an.py -i bus_cif.y4m -tr 20 --keep ${{ matrix.flags }} -o "$TEMP"/bus_cif_av1.mkv
+          echo ::set-env name=TEMPPATH::$TEMP
+      - name: Upload video
+        uses: actions/upload-artifact@v2
+        with:
+          name: "${{ matrix.name }}"
+          path: "${{ env.TEMPPATH }}"

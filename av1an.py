@@ -1,19 +1,75 @@
 #!/usr/bin/env python3
 
-import sys
-import json
-import time
-import subprocess
 import concurrent
 import concurrent.futures
+import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 from utils import *
 
 
 class Av1an:
-    """Av1an - Python framework for AV1, VP9, VP8 encodes."""
+    """Av1an - Python framework for AV1, VP9, VP8 encoding"""
     def __init__(self):
+        
+        # Input/Output/Temp
+        self.input = None
+        self.temp = None
+        self.output_file = None
+
+        # Splitting
+        self.scenes = None
+        self.split_method = None
+        self.extra_split = None
+        self.min_scene_len = None
+        
+        # PySceneDetect split
+        self.threshold = None
+
+        # AOM Keyframe split
+        self.reuse_first_pass = None
+
+        # Encoding
+        self.passes = None
+        self.video_params = None
+        self.encoder = None
+        self.workers = None
+        self.config = None
+        
+        self.video_params = None
+        
+        # FFmpeg params
+        self.ffmpeg = None
+        self.audio_params = None
+        self.pix_format = None
+        
+        
+        # Misc 
+        self.logging = None
+        self.resume = None
+        self.no_check = None
+        self.keep = None
+
+        # Boost
+        self.boost = None
+        self.boost_range = None
+        self.boost_limit = None
+
+        # Vmaf
+        self.vmaf = None
+        self.vmaf_path = None
+
+        # Target Vmaf
+        self.vmaf_target = None
+        self.vmaf_steps = None
+        self.min_cq = None
+        self.max_cq = None
+        self.vmaf_plots = None
+        
+        # get all values from argparse
         self.__dict__.update(arg_parsing())
 
     def conf(self):

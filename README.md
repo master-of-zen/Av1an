@@ -4,7 +4,7 @@
     </br>
 </h1>
 
-<h2 align="center">A cross-platform all-in-one tool for streamlining AV1 encoding</h2>
+<h2 align="center">A cross-platform framework for streamlining AV1 encoding</h2>
 
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/685103807952060447/143740_05_03_20.png)
 

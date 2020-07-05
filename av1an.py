@@ -314,7 +314,7 @@ class Av1an:
             log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
 
-        if self.vmaf:
+        if self.vmaf and self.vmaf_plots:
             plot_vmaf(self.input, self.output_file, model=self.vmaf_path)
 
     def main_queue(self):

@@ -22,13 +22,14 @@ def concatenate_video(temp, output, keep=False):
     # Add the audio file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
-        audio = f'-i {audio_file} -c:a copy'
+        audio = f'-i {audio_file} -c:a copy -map 1'
     else:
         audio = ''
 
     cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-          f'{audio} -c copy -y "{output}"'
+          f'{audio} -c copy -map 0  -y "{output}"'
     concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
     if len(concat) > 0:
         log(concat.decode())
         print(concat.decode())

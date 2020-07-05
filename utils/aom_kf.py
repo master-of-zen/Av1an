@@ -1,17 +1,18 @@
 #!/bin/env python
-import struct
 import os
+import re
+import struct
 import subprocess
 from collections import deque
-from subprocess import PIPE, STDOUT
-from tqdm import tqdm
-import re
 from pathlib import Path
-import cv2
+from subprocess import PIPE, STDOUT
 
-from .utils import frame_probe
+import cv2
+from tqdm import tqdm
+
 from .compose import compose_aomsplit_first_pass_command
 from .logger import log
+from .utils import frame_probe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.

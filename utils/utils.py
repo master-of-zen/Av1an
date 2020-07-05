@@ -1,17 +1,19 @@
 #!/bin/env python
 
-import re
-import os
-import cv2
-import sys
-import json
 import atexit
+import json
+import os
+import re
 import statistics
 import subprocess
-import numpy as np
-from threading import Lock
+import sys
 from pathlib import Path
 from subprocess import PIPE
+from threading import Lock
+
+import cv2
+import numpy as np
+
 
 def startup_check():
     if sys.version_info < (3, 6):

@@ -1,17 +1,18 @@
 #!/bin/env python
 
 import os
-import sys
 import subprocess
-from pathlib import Path
+import sys
 from ast import literal_eval
+from pathlib import Path
 from subprocess import PIPE, STDOUT
-from utils import frame_probe, get_keyframes
 
-from .logger import log
-from .utils import terminate
-from .pyscene import pyscene
+from utils.utils import frame_probe, get_keyframes
+
 from .aom_kf import aom_keyframes
+from .logger import log
+from .pyscene import pyscene
+from .utils import terminate
 
 
 def segment(video: Path, temp, frames):

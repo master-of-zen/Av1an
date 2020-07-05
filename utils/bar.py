@@ -10,13 +10,8 @@ from tqdm import tqdm
 
 from utils.utils import terminate
 
-# Stuff for updating encoded progress in real-time
-class MyManager(BaseManager):
-    pass
-
-
 def Manager():
-    m = MyManager()
+    m = BaseManager()
     m.start()
     return m
 
@@ -35,7 +30,7 @@ class Counter():
         self.tqdm_bar.update(value)
 
 
-MyManager.register('Counter', Counter)
+BaseManager.register('Counter', Counter)
 
 
 def tqdm_bar(i, encoder, counter, frame_probe_source, passes):

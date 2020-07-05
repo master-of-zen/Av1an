@@ -46,7 +46,6 @@ class Av1an:
         self.audio_params = None
         self.pix_format = None
         
-        
         # Misc 
         self.logging = None
         self.resume = None

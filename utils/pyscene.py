@@ -1,8 +1,8 @@
  #!/bin/env python
 
-from scenedetect.video_manager import VideoManager
-from scenedetect.scene_manager import SceneManager
 from scenedetect.detectors import ContentDetector
+from scenedetect.scene_manager import SceneManager
+from scenedetect.video_manager import VideoManager
 
 from .logger import log
 

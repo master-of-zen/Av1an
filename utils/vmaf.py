@@ -1,16 +1,17 @@
 #! /bin/env python
 
-import sys
-import numpy as np
 import subprocess
-import matplotlib
-from math import  isnan
+import sys
+from math import isnan
 from pathlib import Path
-from scipy import interpolate
 from subprocess import PIPE, STDOUT
-from matplotlib import pyplot as plt
 
-from  utils.utils import terminate
+import matplotlib
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy import interpolate
+
+from utils.utils import terminate
 
 
 def read_vmaf_xml(file, percentile):

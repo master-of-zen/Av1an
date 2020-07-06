@@ -2,8 +2,8 @@
 
 import sys
 
-from utils.utils import man_cq, get_cq
-from utils.utils import get_brightness
+from utils.utils import get_brightness, get_cq, man_cq
+
 from .logger import log
 
 

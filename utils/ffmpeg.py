@@ -1,9 +1,9 @@
 #!/bin/env python
 
-import subprocess
-from subprocess import PIPE, STDOUT
 import shutil
+import subprocess
 from pathlib import Path
+from subprocess import PIPE, STDOUT
 
 from .logger import log
 

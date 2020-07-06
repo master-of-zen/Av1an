@@ -1,14 +1,16 @@
 #!/bin/env python
 
 import re
-import sys
 import subprocess
-from subprocess import PIPE, STDOUT
+import sys
 from collections import deque
 from multiprocessing.managers import BaseManager
+from subprocess import PIPE, STDOUT
+
 from tqdm import tqdm
 
 from utils.utils import terminate
+
 
 def Manager():
     m = BaseManager()

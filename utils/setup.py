@@ -2,11 +2,12 @@
 
 import os
 import shutil
+from distutils.spawn import find_executable
 from pathlib import Path
+
 from psutil import virtual_memory
 
 from .utils import terminate
-from distutils.spawn import find_executable
 
 
 def determine_resources(encoder, workers):

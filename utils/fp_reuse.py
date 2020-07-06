@@ -1,7 +1,7 @@
 #!/bin/env python
 import os
 import struct
-from typing import List, Dict
+from typing import Dict, List
 
 from .aom_kf import fields
 

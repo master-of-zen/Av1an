@@ -1,11 +1,12 @@
 #!/bin/env python
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 from utils.utils import terminate
+
 from .logger import log
 
 

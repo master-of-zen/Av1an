@@ -14,7 +14,7 @@ from utils import *
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encoding"""
     def __init__(self):
-        
+
         # Input/Output/Temp
         self.input = None
         self.temp = None
@@ -25,7 +25,7 @@ class Av1an:
         self.split_method = None
         self.extra_split = None
         self.min_scene_len = None
-        
+
         # PySceneDetect split
         self.threshold = None
 
@@ -38,15 +38,15 @@ class Av1an:
         self.encoder = None
         self.workers = None
         self.config = None
-        
+
         self.video_params = None
-        
+
         # FFmpeg params
         self.ffmpeg = None
         self.audio_params = None
         self.pix_format = None
-        
-        # Misc 
+
+        # Misc
         self.logging = None
         self.resume = None
         self.no_check = None
@@ -67,7 +67,7 @@ class Av1an:
         self.min_cq = None
         self.max_cq = None
         self.vmaf_plots = None
-        
+
         # get all values from argparse
         self.__dict__.update(arg_parsing())
 
@@ -326,11 +326,11 @@ class Av1an:
         for file in self.queue:
             tm = time.time()
             self.input = file
-            
+
             if len(self.queue) > 1:
                 print(f'Encoding: {file}')
                 self.output_file = None
-            
+
             self.video_encoding()
             print(f'Finished: {round(time.time() - tm, 1)}s\n')
 

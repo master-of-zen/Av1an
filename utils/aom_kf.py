@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from .compose import compose_aomsplit_first_pass_command
 from .logger import log
-from .utils import frame_probe
+from .utils import frame_probe, terminate
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.
@@ -185,6 +185,11 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
         er = f"\nAom first pass encountered an error: {pipe.returncode}\n{enc_hist}"
         log(er)
         print(er)
+        if not stat_file.exists():
+            terminate()
+        else:
+            # aom crashed, but created keyframes.log, so we will try to continue
+            print("WARNING: Aom first pass crashed, but created a first pass file. Keyframe splitting may not be accurate.")
 
     # aom kf-min-dist defaults to 0, but hardcoded to 3 in pass2_strategy.c test_candidate_kf. 0 matches default aom behavior
     # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/av1_cx_iface.c#2816

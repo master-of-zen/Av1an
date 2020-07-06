@@ -44,11 +44,7 @@ def process_inputs(inputs):
         print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
         terminate()
 
-    if len(inputs) > 1:
-        return inputs, None
-    else:
-        return None, inputs[0]
-
+    return inputs
 
 def get_keyframes(file: Path):
     """

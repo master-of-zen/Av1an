@@ -85,7 +85,7 @@ def extra_splits(video, frames: list, split_distance):
     return result
 
 
-def split_routine(video, scenes, split_method, temp, min_scene_len, queue, threshold, ffmpeg_pipe, video_params):
+def split_routine(video, scenes, split_method, temp, min_scene_len, threshold, ffmpeg_pipe, video_params):
 
     if scenes == '0':
         log('Skipping scene detection\n')
@@ -106,7 +106,7 @@ def split_routine(video, scenes, split_method, temp, min_scene_len, queue, thres
     if split_method == 'pyscene':
         log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
         try:
-            sc = pyscene(video, threshold, queue, min_scene_len)
+            sc = pyscene(video, threshold, min_scene_len)
         except Exception as e:
             log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')

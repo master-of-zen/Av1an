@@ -7,7 +7,7 @@ from scenedetect.video_manager import VideoManager
 from .logger import log
 
 
-def pyscene(video, threshold, progress_show, min_scene_len):
+def pyscene(video, threshold, min_scene_len):
     """
     Running PySceneDetect detection on source video for segmenting.
     Optimal threshold settings 15-50
@@ -30,7 +30,7 @@ def pyscene(video, threshold, progress_show, min_scene_len):
     # Start video_manager.
     video_manager.start()
 
-    scene_manager.detect_scenes(frame_source=video_manager, show_progress= not progress_show)
+    scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
 
     # Obtain list of detected scenes.
     scene_list = scene_manager.get_scene_list(base_timecode)

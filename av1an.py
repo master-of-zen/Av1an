@@ -282,7 +282,7 @@ class Av1an:
 
             # inherit video params from aom encode unless we are using a different encoder, then use defaults
             aom_keyframes_params = self.video_params if (self.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
-            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.queue, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
+            framenums = split_routine(self.input, self.scenes, self.split_method, self.temp, self.min_scene_len, self.threshold, self.ffmpeg_pipe, aom_keyframes_params)
 
             if self.extra_split:
                 framenums = extra_splits(self.input, framenums, self.extra_split)
@@ -320,19 +320,19 @@ class Av1an:
     def main_queue(self):
         # Todo: Redo Queue
         tm = time.time()
-        self.queue, self.input = process_inputs(self.input)
 
-        if self.queue:
-            for file in self.queue:
-                tm = time.time()
-                self.input = file
+        self.queue = process_inputs(self.input)
+
+        for file in self.queue:
+            tm = time.time()
+            self.input = file
+            
+            if len(self.queue) > 1:
                 print(f'Encoding: {file}')
                 self.output_file = None
-                self.video_encoding()
-                print(f'Finished: {round(time.time() - tm, 1)}s\n')
-        else:
+            
             self.video_encoding()
-            print(f'Finished: {round(time.time() - tm, 1)}s')
+            print(f'Finished: {round(time.time() - tm, 1)}s\n')
 
     def main_thread(self):
         """Main."""

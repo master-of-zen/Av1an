@@ -92,10 +92,6 @@ class Av1an:
         self.pix_format = f'-strict -1 -pix_fmt {self.pix_format}'
         self.ffmpeg_pipe = f' {self.ffmpeg} {self.pix_format} -f yuv4mpegpipe - |'
 
-        # Make sure that vmaf calculated after encoding
-        if self.vmaf_target:
-            self.vmaf = True
-
         if self.vmaf_path:
             if not Path(self.vmaf_path).exists():
                 print(f'No such model: {Path(self.vmaf_path).as_posix()}')
@@ -314,7 +310,7 @@ class Av1an:
             log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
 
-        if self.vmaf and self.vmaf_plots:
+        if self.vmaf or self.vmaf_plots:
             plot_vmaf(self.input, self.output_file, model=self.vmaf_path)
 
     def main_queue(self):

@@ -48,8 +48,8 @@ def arg_parsing():
     # Boost
     parser.add_argument('--boost', help='Experimental feature, decrease CQ of clip based on brightness.'
                                         'Darker = lower CQ', action='store_true')
-    parser.add_argument('--boost_range', '-bl', default=15, type=int, help='Range/strength of CQ change')
-    parser.add_argument('--boost_limit', '-br', default=10, type=int, help='CQ limit for boosting')
+    parser.add_argument('--boost_range', '-br', default=15, type=int, help='Range/strength of CQ change')
+    parser.add_argument('--boost_limit', '-bl', default=10, type=int, help='CQ limit for boosting')
 
     # Vmaf
     parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')

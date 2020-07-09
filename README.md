@@ -25,7 +25,7 @@ Example with default parameters:
 
 With your own parameters:
 
-    av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10 -p 2
+    av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10
      -ff " -vf scale=-1:720 "  -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
@@ -100,7 +100,7 @@ With your own parameters:
 
     --temp                  Set path for temporally folders. Default: .temp
 
-    --boost                 Enable experimental CQ boosting for dark scenes. Refer to 1.7 release notes.
+    --boost                 Enable experimental CQ boosting for dark scenes. See 1.7 release notes.
 
     -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
 
@@ -109,19 +109,19 @@ With your own parameters:
     --vmaf                  Calculate vmaf for each encoded clip.
                             Saves plot after encode, showing vmaf values for all frames,
                             mean, 1,25,75 percentile.
-                            Requires: Installed FFMPEG and installed libvmaf.
 
-    --vmaf_path             Custom path to libvmaf models, by default used system one.
+    --vmaf_path             Custom path to libvmaf models. By default used system one.
 
-    --vmaf_target           Vmaf value to target. Currently aomenc only. Best works with 85-97.
+    --vmaf_target           Vmaf value to target. Currently aomenc only.
+                            Best works with 85-97.
                             When using this mode specify full encoding options.
                             ` --end-usage=q ` or ` --end-usage=cq `
                             with ` --cq-level=N ` must be specified.
 
-    --vmaf_steps            Number of evenly spaced probes that is used to interpolate vmaf to cq change.
+    --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
 
-    --min_cq, --max_cq      Minimum and maximum CQ values used in interpolation in target Vmaf mode
+    --min_cq, --max_cq      Min,Max CQ values used in interpolation for target Vmaf
                             Use to limit CQ values range. Default: 25, 50.
 
 <h2 align="center">Main Features</h2>

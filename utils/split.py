@@ -71,9 +71,11 @@ def extra_splits(video, frames: list, split_distance):
             candidates = [k for k in keyframes if i[1] > k > i[0]]
 
             if len(candidates) > 0:
+
                 # Getting number of splits that need to be inserted
                 to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
                 for k in range(0, to_insert):
+
                     # Approximation of splits position
                     aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
 

@@ -100,7 +100,8 @@ With your own parameters:
 
     --temp                  Set path for temporally folders. Default: .temp
 
-    --boost                 Enable experimental CQ boosting for dark scenes. See 1.7 release notes.
+    --boost                 Enable experimental CQ boosting for dark scenes. 
+                            Aomenc/VPX only. See 1.7 release notes.
 
     -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
 

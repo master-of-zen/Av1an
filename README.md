@@ -146,6 +146,7 @@ With your own parameters:
   *  [Install Python3](https://www.python.org/downloads/) <br>
 For Windows in the installer check the option to `add Python to PATH`
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
+* Encoder of choice:
   *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
   *  [Install rav1e](https://github.com/xiph/rav1e)
   *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)

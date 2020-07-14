@@ -9,7 +9,7 @@
 ![alt text](https://cdn.discordapp.com/attachments/665440744567472169/685103807952060447/143740_05_03_20.png)
 
 <h4 align="center">
-<a href="https://discord.gg/TssVH86"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
+<a href="https://discord.gg/bhkYVtF"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
 <img src="https://github.com/master-of-zen/Av1an/workflows/tests/badge.svg">
 <a href="https://codeclimate.com/github/master-of-zen/Av1an/maintainability"><img src="https://api.codeclimate.com/v1/badges/41ea7ad221dcdad3fe8d/maintainability" />
 <img= src="https://app.codacy.com/manual/Grenight/Av1an?utm_source=github.com&utm_medium=referral&utm_content=master-of-zen/Av1an&utm_campaign=Badge_Grade_Dashboard"></a>
@@ -100,7 +100,8 @@ With your own parameters:
 
     --temp                  Set path for temporally folders. Default: .temp
 
-    --boost                 Enable experimental CQ boosting for dark scenes. See 1.7 release notes.
+    --boost                 Enable experimental CQ boosting for dark scenes. 
+                            Aomenc/VPX only. See 1.7 release notes.
 
     -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
 
@@ -145,6 +146,7 @@ With your own parameters:
   *  [Install Python3](https://www.python.org/downloads/) <br>
 For Windows in the installer check the option to `add Python to PATH`
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
+* Encoder of choice:
   *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
   *  [Install rav1e](https://github.com/xiph/rav1e)
   *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)

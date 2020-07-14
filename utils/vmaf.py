@@ -114,7 +114,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
 
 def x264_probes(video: Path, ffmpeg: str):
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
-                  f'-r 2 -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
+                  f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
     subprocess.run(cmd, shell=True)
 
 

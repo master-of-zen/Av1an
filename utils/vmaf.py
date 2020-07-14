@@ -30,12 +30,17 @@ def read_vmaf_xml(file, percentile):
         return perc
 
 
-def call_vmaf(source: Path, encoded: Path, model=None, return_file=False):
+def call_vmaf(source: Path, encoded: Path, model, n_threads, return_file=False):
 
     if model:
         mod = f":model_path={model}"
     else:
         mod = ''
+
+    if n_threads:
+        n_threads = f':n_threads={n_threads}'
+    else:
+        n_threads = ''
 
     # For vmaf calculation both source and encoded segment scaled to 1080
     # for proper vmaf calculation
@@ -43,7 +48,7 @@ def call_vmaf(source: Path, encoded: Path, model=None, return_file=False):
     cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {source.as_posix()} -r 60 -i {encoded.as_posix()}  ' \
           f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled1];' \
           f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[scaled2];' \
-          f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}" -f null - '
+          f'[scaled2][scaled1]libvmaf=log_path={fl}{mod}{n_threads}" -f null - '
 
     c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
     call = c.stdout

@@ -61,6 +61,7 @@ def arg_parsing():
     parser.add_argument('--min_cq', type=int, default=25, help='Min cq for target vmaf')
     parser.add_argument('--max_cq', type=int, default=50, help='Max cq for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
+    parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
     # Store all vars in dictionary
     return vars(parser.parse_args())

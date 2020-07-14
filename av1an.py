@@ -67,6 +67,7 @@ class Av1an:
         self.min_cq = None
         self.max_cq = None
         self.vmaf_plots = None
+        self.n_treads = None
 
         # get all values from argparse
         self.__dict__.update(arg_parsing())
@@ -129,7 +130,7 @@ class Av1an:
             for count, i in enumerate(cmd):
                 subprocess.run(i[0], shell=True)
 
-                v = call_vmaf(i[1], i[2], model=self.vmaf_path, return_file=True)
+                v = call_vmaf(i[1], i[2], n_threads=self.n_threads, model=self.vmaf_path, return_file=True)
                 # Trying 25 percentile
                 mean = read_vmaf_xml(v, 25)
 

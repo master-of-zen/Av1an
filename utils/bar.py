@@ -48,7 +48,8 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
         pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)
-
+        pass_1_check = True
+        skip_1_pass = False
         while True:
             line = pipe.stdout.readline().strip()
             if line:
@@ -58,9 +59,9 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
 
             if len(line) == 0:
                 continue
-
-            if encoder in ('aom', 'vpx', 'rav1e'):
+            if encoder in ('aom', 'vpx', 'rav1e','x265'):
                 match = None
+
                 if encoder in ('aom', 'vpx'):
                     if 'fatal' in line.lower():
                         print('\n\nERROR IN ENCODING PROCESS\n\n', line)
@@ -73,11 +74,22 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                         terminate()
                     match = re.search(r"encoded.*? ([^ ]+?) ", line)
 
+                elif encoder in  ('x265'):
+                    if not skip_1_pass and pass_1_check:
+                        if 'output file' in line:
+                            if 'nul' in line.lower():
+                                skip_1_pass = True
+                            else:
+                                pass_1_check = False
+                    if not skip_1_pass:
+                        match = re.search(r"^(\d+)", line)
+
                 if match:
                     new = int(match.group(1))
                     if new > frame:
                         counter.update(new - frame)
                         frame = new
+
 
         if encoder == 'svt_av1':
                 counter.update(frame_probe_source // passes)

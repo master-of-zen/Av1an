@@ -23,7 +23,7 @@ def determine_resources(encoder, workers):
     if encoder in ('aom', 'rav1e', 'vpx'):
         workers =  round(min(cpu / 2, ram / 1.5))
 
-    elif encoder == 'svt_av1':
+    elif encoder in ('svt_av1', 'x265'):
         workers =  round(min(cpu, ram)) // 5
 
     # fix if workers round up to 0
@@ -34,7 +34,7 @@ def determine_resources(encoder, workers):
 
 
 def check_executables(encoder):
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
@@ -47,7 +47,7 @@ def check_executables(encoder):
             print(f'Encoder {enc} not found')
             terminate()
     else:
-        print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx" ')
+        print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
         terminate()
 
 
@@ -62,8 +62,13 @@ def setup(temp: Path, resume):
     (temp / 'encode').mkdir(exist_ok=True)
 
 
-def outputs_filenames(inp: Path, out:Path):
-    if out:
-        return out.with_suffix('.mkv')
+def outputs_filenames(inp: Path, out:Path, encoder):
+    if encoder == 'x265':
+        suffix = '.mp4'
     else:
-        return Path(f'{inp.stem}_av1.mkv')
+        suffix = '.mkv'
+
+    if out:
+        return out.with_suffix(suffix)
+    else:
+        return Path(f'{inp.stem}_av1{suffix}')

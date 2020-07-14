@@ -43,13 +43,10 @@ def get_default_params_for_encoder(enc):
     DEFAULT_ENC_PARAMS = {
     'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
     'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
-    'rav1e': ' --tiles 8 --speed 6 --quantizer 100'
-    # SVT-AV1 requires params for -w -h -fps
+    'rav1e': ' --tiles 8 --speed 6 --quantizer 100',
+    'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
+    'x265': ' -p slow --crf 23 --vbv-maxrate 10000 --vbv-bufsize 8000 ',
     }
-    # TODO(n9Mtq4): we can get the width, height, and fps of the video and generate default params for svt
-    if enc == 'svt_av1':
-        print('-w -h -fps is required parameters (--video_params) for svt_av1 encoder')
-        terminate()
 
     return DEFAULT_ENC_PARAMS[enc]
 
@@ -66,9 +63,6 @@ def svt_av1_encode(inputs, passes, pipe, params):
     """
     encoder = 'SvtAv1EncApp'
     commands = []
-    if not params:
-        print('-w -h -fps is required parameters for svt_av1 encoder')
-        terminate()
 
     if passes == 1:
         commands = [
@@ -124,7 +118,8 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
 
 def rav1e_encode(inputs, passes, pipe, params):
     """
-    Generates commands for AOM, VPX encoders
+    Generates commands for Rav1e encoder
+    Currently 2 pass rav1e piping doesn't work
 
     :param inputs: Files that need to be enocoded
     :param passes: Encoding passes
@@ -153,13 +148,47 @@ def rav1e_encode(inputs, passes, pipe, params):
          f' rav1e - --first-pass {file[0].with_suffix(".stat")} {params} '
          f'--output {file[1].with_suffix(".ivf")}',
          f'-i {file[0]} {pipe} '
-         f' rav1e - --second-pass {file[0].with_suffix(".stat")} {params} '
+         f' rav1e - --second-pass {file[0].with_suffix(".stat")} {pa65 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+265
+rams} '
          f'--output {file[1].with_suffix(".ivf")}',
          (file[0], file[1].with_suffix('.ivf')))
          for file in inputs]
     """
     return commands
 
+
+def x265_encode(inputs, passes, pipe, params):
+    """
+    Generates commands for AOM, VPX encoders
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
+    commands = []
+    single_p = 'x265 --y4m'
+    two_p_1 = 'x265 --pass 1 --y4m'
+    two_p_2 = 'x265 --pass 2 --y4m'
+
+    if passes == 1:
+        commands = [
+                (f' -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".ivf")}',
+                (file[0], file[1].with_suffix('.ivf')))
+                for file in inputs
+                ]
+
+    if passes == 2:
+        commands = [
+            (f' -i {file[0]} {pipe} {two_p_1} {params} --stats {file[0].with_suffix(".log")} - -o {os.devnull}',
+             f' -i {file[0]} {pipe} {two_p_2} {params} --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".ivf")}',
+             (file[0], file[1].with_suffix('.ivf')))
+             for file in inputs
+        ]
+
+    return commands
 
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
     """
@@ -174,7 +203,7 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
 
     assert params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
 
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc'}
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc', 'x265': 'x265'}
     enc_exe = encoders.get(encoder)
     inputs = [(temp / "split" / file.name,
                temp / "encode" / file.name,
@@ -188,6 +217,9 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
 
     elif encoder == 'svt_av1':
         queue = svt_av1_encode(inputs, passes, pipe, params)
+
+    elif encoder == 'x265':
+        queue = x265_encode(inputs, passes, pipe, params)
 
     # Catch Error
     if len(queue) == 0:

@@ -131,7 +131,7 @@ class Av1an:
 
                 v = call_vmaf(i[1], i[2], model=self.vmaf_path, return_file=True)
                 # Trying 25 percentile
-                mean = read_vmaf_xml(v , 25)
+                mean = read_vmaf_xml(v, 25)
 
                 vmaf_cq.append((mean, i[3]))
 
@@ -268,7 +268,8 @@ class Av1an:
 
     def video_encoding(self):
         """Encoding video on local machine."""
-        self.output_file = outputs_filenames(self.input, self.output_file)
+
+        self.output_file = outputs_filenames(self.input, self.output_file, self.encoder )
 
         if self.resume and (self.temp / 'done.json').exists():
             set_log(self.logging, self.temp)

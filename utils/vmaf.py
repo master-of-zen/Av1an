@@ -73,7 +73,7 @@ def plot_vmaf(inp: Path, out: Path, model=None):
 
     print('Calculating Vmaf...\r', end='')
 
-    xml = call_vmaf(inp, out, model=model, return_file=True)
+    xml = call_vmaf(inp, out, n_threads=0, model=model, return_file=True)
 
     if not Path(xml).exists():
         print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')

@@ -67,7 +67,7 @@ class Av1an:
         self.min_cq = None
         self.max_cq = None
         self.vmaf_plots = None
-        self.n_treads = None
+        self.n_threads = None
 
         # get all values from argparse
         self.__dict__.update(arg_parsing())
@@ -106,8 +106,6 @@ class Av1an:
             self.video_params = get_default_params_for_encoder(self.encoder)
 
     def target_vmaf(self, source):
-        # TODO speed up for vmaf stuff
-        # TODO reduce complexity
 
         if self.vmaf_steps < 4:
             print('Target vmaf require more than 3 probes/steps')

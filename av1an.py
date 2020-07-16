@@ -105,73 +105,6 @@ class Av1an:
         if self.video_params is None:
             self.video_params = get_default_params_for_encoder(self.encoder)
 
-    def target_vmaf(self, source):
-
-        if self.vmaf_steps < 4:
-            print('Target vmaf require more than 3 probes/steps')
-            terminate()
-        frames = frame_probe(source)
-        probe = source.with_suffix(".mp4")
-
-        try:
-            # Making 4 fps probing file
-            x264_probes(source, self.ffmpeg)
-
-            # Making encoding fork
-            fork = encoding_fork(self.min_cq, self.max_cq, self.vmaf_steps)
-
-            # Making encoding commands
-            cmd = vmaf_probes(probe, fork, self.ffmpeg_pipe)
-
-            # Encoding probe and getting vmaf
-            vmaf_cq = []
-            for count, i in enumerate(cmd):
-                subprocess.run(i[0], shell=True)
-
-                v = call_vmaf(i[1], i[2], n_threads=self.n_threads, model=self.vmaf_path, return_file=True)
-                # Trying 25 percentile
-                mean = read_vmaf_xml(v, 25)
-
-                vmaf_cq.append((mean, i[3]))
-
-                # Early Skip on big CQ
-                if count == 0 and round(mean) > self.vmaf_target:
-                    log(f"File: {source.stem}, Fr: {frames}\n" \
-                        f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
-                        f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                        f"Target CQ: {self.max_cq} Vmaf: {mean}\n\n")
-
-                    return self.max_cq
-
-                # Early Skip on small CQ
-                if count == 1 and round(mean) < self.vmaf_target:
-                    log(f"File: {source.stem}, Fr: {frames}\n" \
-                        f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
-                        f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                        f"Target CQ: {self.min_cq} Vmaf: {mean}\n\n")
-                    return self.min_cq
-
-            x = [x[1] for x in sorted(vmaf_cq)]
-            y = [float(x[0]) for x in sorted(vmaf_cq)]
-
-            # Interpolate data
-            cq, tl, f, xnew = interpolate_data(vmaf_cq, self.vmaf_target)
-
-            if self.vmaf_plots:
-                plot_probes(x, y, f, tl, self.min_cq, self.max_cq, probe, xnew, cq, frames, self.temp)
-
-            log(f'File: {source.stem}, Fr: {frames}\n' \
-                f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \
-                f'Vmaf: {sorted([x[0] for x in vmaf_cq])}\n' \
-                f'Target CQ: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n\n')
-
-            return int(cq[0])
-
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
-            terminate()
-
     def encode(self, commands):
         """Single encoder command queue and logging output."""
         commands, counter  = commands[0], commands[1]
@@ -182,7 +115,7 @@ class Av1an:
 
             # Target Vmaf Mode
             if self.vmaf_target:
-                tg_cq = self.target_vmaf(source)
+                tg_cq = target_vmaf(source, self.temp, self.vmaf_path, self.vmaf_steps, self.min_cq, self.max_cq, self.ffmpeg, self.ffmpeg_pipe, self.n_threads, self.vmaf_target, self.vmaf_plots)
                 cm1 = man_cq(commands[0], tg_cq)
 
                 if self.passes == 2:

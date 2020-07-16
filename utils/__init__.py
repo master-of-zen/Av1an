@@ -14,5 +14,5 @@ from .setup import (check_executables, determine_resources, outputs_filenames,
 from .split import extra_splits, segment, split_routine
 from .utils import (frame_check, frame_probe, frame_probe_fast, man_cq,
                     process_inputs, startup_check, terminate)
-from .vmaf import (call_vmaf, encoding_fork, interpolate_data, plot_probes,
-                   plot_vmaf, read_vmaf_xml, vmaf_probes, x264_probes)
+from .vmaf import plot_vmaf
+from .target_vmaf import target_vmaf

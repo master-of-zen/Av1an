@@ -226,6 +226,11 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
         er = 'Error in making command queue'
         log(er)
         terminate()
+
+    log(f'Encoding Queue Composed\n'
+        f'Encoder: {encoder.upper()} Queue Size: {len(queue)} Passes: {passes}\n'
+        f'Params: {params}\n\n')
+
     return queue
 
 

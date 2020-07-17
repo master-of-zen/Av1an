@@ -226,9 +226,6 @@ class Av1an:
 
         # Make encode queue
         commands = compose_encoding_queue(chunk, self.temp, self.encoder, self.video_params, self.ffmpeg_pipe, self.passes)
-        log(f'Encoding Queue Composed\n'
-            f'Encoder: {self.encoder.upper()} Queue Size: {len(commands)} Passes: {self.passes}\n'
-            f'Params: {self.video_params}\n\n')
 
         self.workers = determine_resources(self.encoder, self.workers)
 

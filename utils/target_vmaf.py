@@ -29,10 +29,16 @@ def encoding_fork(min_cq, max_cq, steps):
     return q
 
 
-def vmaf_probes(probe, fork, ffmpeg):
-    params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
-    cmd = [[f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg}'
-            f'{params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
+def vmaf_probes(probe, fork, ffmpeg, encoder):
+
+    pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg}'
+
+    if encoder == 'aom':
+        params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
+    elif encoder == 'x265':
+        params = "x265  --log-level 0  --no-progress --y4m --preset faster --crf "
+
+    cmd = [[f'{pipe} {params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
             probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in fork]
     return cmd
 
@@ -51,30 +57,30 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     return vmaf_target_cq, tl, f, xnew
 
 
-def plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, vmaf_target_cq, frames, temp):
+def plot_probes(args, x, y, vmaf_cq, vmaf_target, probe, xnew, frames):
     # Saving plot of vmaf calculation
+    cq, tl, f, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
     matplotlib.use('agg')
     plt.ioff()
     plt.plot(x, y, 'x', color='tab:blue', alpha=1)
     plt.plot(xnew, f(xnew), color='tab:blue', alpha=1)
-    plt.plot(vmaf_target_cq[0], vmaf_target_cq[1], 'o', color='red', alpha=1)
+    plt.plot(cq[0], cq[1], 'o', color='red', alpha=1)
     plt.grid(True)
-    plt.xlim(min_cq, max_cq)
+    plt.xlim(args.min_cq, args.max_cq)
     vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
     plt.ylim(min(vmafs), max(vmafs) + 1)
     plt.ylabel('VMAF')
-    plt.xlabel('CQ')
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
     # plt.tight_layout()
-    temp = temp / probe.stem
+    temp = args.temp / probe.stem
     plt.tight_layout()
     plt.savefig(temp, dpi=300, format='png',transparent=True)
     plt.close()
 
 
-def target_vmaf(source, temp, vmaf_path, vmaf_steps, min_cq, max_cq, ffmpeg, ffmpeg_pipe, n_threads, vmaf_target, vmaf_plots):
+def target_vmaf(source, args):
 
-    if vmaf_steps < 4:
+    if args.vmaf_steps < 4:
         print('Target vmaf require more than 3 probes/steps')
         terminate()
     frames = frame_probe(source)
@@ -82,50 +88,50 @@ def target_vmaf(source, temp, vmaf_path, vmaf_steps, min_cq, max_cq, ffmpeg, ffm
 
     try:
         # Making 4 fps probing file
-        x264_probes(source, ffmpeg)
+        x264_probes(source, args.ffmpeg)
 
         # Making encoding fork
-        fork = encoding_fork(min_cq, max_cq, vmaf_steps)
+        fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
 
         # Making encoding commands
-        cmd = vmaf_probes(probe, fork, ffmpeg_pipe)
+        cmd = vmaf_probes(probe, fork, args.ffmpeg_pipe, args.encoder)
 
         # Encoding probe and getting vmaf
         vmaf_cq = []
         for count, i in enumerate(cmd):
             subprocess.run(i[0], shell=True)
 
-            v = call_vmaf(i[1], i[2], n_threads=n_threads, model=vmaf_path, return_file=True)
+            v = call_vmaf(i[1], i[2], n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
             # Trying 25 percentile
             mean = read_vmaf_xml(v, 25)
 
             vmaf_cq.append((mean, i[3]))
 
             # Early Skip on big CQ
-            if count == 0 and round(mean) > vmaf_target:
+            if count == 0 and round(mean) > args.vmaf_target:
                 log(f"File: {source.stem}, Fr: {frames}\n" \
                     f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
                     f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                    f"Target CQ: {max_cq} Vmaf: {mean}\n\n")
+                    f"Target Q: {args.max_cq} Vmaf: {mean}\n\n")
 
-                return max_cq
+                return args.max_cq
 
             # Early Skip on small CQ
-            if count == 1 and round(mean) < vmaf_target:
+            if count == 1 and round(mean) < args.vmaf_target:
                 log(f"File: {source.stem}, Fr: {frames}\n" \
                     f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
                     f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                    f"Target CQ: {min_cq} Vmaf: {mean}\n\n")
-                return min_cq
+                    f"Target Q: {args.min_cq} Vmaf: {mean}\n\n")
+                return args.min_cq
 
         x = [x[1] for x in sorted(vmaf_cq)]
         y = [float(x[0]) for x in sorted(vmaf_cq)]
 
         # Interpolate data
-        cq, tl, f, xnew = interpolate_data(vmaf_cq, vmaf_target)
+        cq, _, _, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
 
-        if vmaf_plots:
-            plot_probes(x, y, f, tl, min_cq, max_cq, probe, xnew, cq, frames, temp)
+        if args.vmaf_plots:
+            plot_probes(args, x, y, vmaf_cq, args.vmaf_target, probe, xnew, frames)
 
         log(f'File: {source.stem}, Fr: {frames}\n' \
             f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \

@@ -2,6 +2,64 @@
 import argparse
 from pathlib import Path
 
+class Args(object):
+    def __init__(self, initial_data):
+        # Input/Output/Temp
+        self.input = None
+        self.temp = None
+        self.output_file = None
+
+        # Splitting
+        self.scenes = None
+        self.split_method = None
+        self.extra_split = None
+        self.min_scene_len = None
+
+        # PySceneDetect split
+        self.threshold = None
+
+        # AOM Keyframe split
+        self.reuse_first_pass = None
+
+        # Encoding
+        self.passes = None
+        self.video_params = None
+        self.encoder = None
+        self.workers = None
+        self.config = None
+
+        self.video_params = None
+
+        # FFmpeg params
+        self.ffmpeg = None
+        self.audio_params = None
+        self.pix_format = None
+
+        # Misc
+        self.logging = None
+        self.resume = None
+        self.no_check = None
+        self.keep = None
+
+        # Boost
+        self.boost = None
+        self.boost_range = None
+        self.boost_limit = None
+
+        # Vmaf
+        self.vmaf = None
+        self.vmaf_path = None
+
+        # Target Vmaf
+        self.vmaf_target = None
+        self.vmaf_steps = None
+        self.min_cq = None
+        self.max_cq = None
+        self.vmaf_plots = None
+        self.n_threads = None
+
+        for key in initial_data:
+            setattr(self, key, initial_data[key])
 
 def arg_parsing():
     """Command line parsing"""
@@ -63,5 +121,4 @@ def arg_parsing():
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
-    # Store all vars in dictionary
-    return vars(parser.parse_args())
+    return Args(vars(parser.parse_args()))

@@ -63,11 +63,7 @@ def setup(temp: Path, resume):
 
 
 def outputs_filenames(inp: Path, out:Path, encoder):
-    if encoder == 'x265':
-        suffix = '.mp4'
-    else:
-        suffix = '.mkv'
-
+    suffix = '.mkv'
     if out:
         return out.with_suffix(suffix)
     else:

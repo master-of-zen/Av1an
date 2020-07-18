@@ -87,39 +87,39 @@ def extra_splits(video, frames: list, split_distance):
     return result
 
 
-def split_routine(video, scenes, split_method, temp, min_scene_len, threshold, ffmpeg_pipe, video_params):
+def split_routine(args, aom_keyframes_params):
 
-    if scenes == '0':
+    if args.scenes == '0':
         log('Skipping scene detection\n')
         return []
 
     sc = []
 
-    if scenes:
-        scenes = Path(scenes)
-        if scenes.exists():
+    if args.scenes:
+        args.scenes = Path(args.scenes)
+        if args.scenes.exists():
             # Read stats from CSV file opened in read mode:
-            with scenes.open() as stats_file:
+            with args.scenes.open() as stats_file:
                 stats = list(literal_eval(stats_file.read().strip()))
                 log('Using Saved Scenes\n')
                 return stats
 
     # Splitting using PySceneDetect
-    if split_method == 'pyscene':
-        log(f'Starting scene detection Threshold: {threshold}, Min_scene_length: {min_scene_len}\n')
+    if args.split_method == 'pyscene':
+        log(f'Starting scene detection Threshold: {args.threshold}, Min_scene_length: {args.min_scene_len}\n')
         try:
-            sc = pyscene(video, threshold, min_scene_len)
+            sc = pyscene(args.input, args.threshold, args.min_scene_len)
         except Exception as e:
             log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')
             terminate()
 
     # Splitting based on aom keyframe placement
-    elif split_method == 'aom_keyframes':
-        stat_file = temp / 'keyframes.log'
-        sc = aom_keyframes(video, stat_file, min_scene_len, ffmpeg_pipe, video_params)
+    elif args.split_method == 'aom_keyframes':
+        stat_file = args.temp / 'keyframes.log'
+        sc = aom_keyframes(args.input, stat_file, args.min_scene_len, args.ffmpeg_pipe, aom_keyframes_params)
     else:
-        print(f'No valid split option: {split_method}\nValid options: "pyscene", "aom_keyframes"')
+        print(f'No valid split option: {args.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()
 
     # Fix for windows character limit
@@ -129,7 +129,7 @@ def split_routine(video, scenes, split_method, temp, min_scene_len, threshold, f
 
     # Write scenes to file
 
-    if scenes:
-        Path(scenes).write_text(','.join([str(x) for x in sc]))
+    if args.scenes:
+        Path(args.scenes).write_text(','.join([str(x) for x in sc]))
 
     return sc

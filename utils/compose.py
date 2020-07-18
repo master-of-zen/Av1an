@@ -174,15 +174,15 @@ def x265_encode(inputs, passes, pipe, params):
     if passes == 1:
         commands = [
                 (f' -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".mkv")}',
-                (file[0], file[1].with_suffix('.ivf')))
+                (file[0], file[1].with_suffix('.mkv')))
                 for file in inputs
                 ]
 
     if passes == 2:
         commands = [
             (f' -i {file[0]} {pipe} {two_p_1} {params} --stats {file[0].with_suffix(".log")} - -o {os.devnull}',
-             f' -i {file[0]} {pipe} {two_p_2} {params} --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".ivf")}',
-             (file[0], file[1].with_suffix('.ivf')))
+             f' -i {file[0]} {pipe} {two_p_2} {params} --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".mkv")}',
+             (file[0], file[1].with_suffix('.mkv')))
              for file in inputs
         ]
 

@@ -87,11 +87,17 @@ def get_cq(command):
     return int(matches[-1])
 
 
-def man_cq(command: str, cq: int):
+def man_q(command: str, q: int):
     """Return command with new cq value"""
-    mt = '--cq-level='
-    cmd = command[:command.find(mt) + 11] + str(cq) + command[command.find(mt) + 13:]
+    if 'aomenc' in command:
+        mt = '--cq-level='
+        cmd = command[:command.find(mt) + 11] + str(q) + ' ' + command[command.find(mt) + 13:]
+    elif 'x265' in command:
+        mt = '--crf'
+        cmd = command[:command.find(mt) + 6] + str(q) + ' ' +  command[command.find(mt) + 9:]
+
     return cmd
+
 
 
 def frame_probe_fast(source: Path):

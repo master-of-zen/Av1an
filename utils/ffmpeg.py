@@ -1,6 +1,6 @@
 #!/bin/env python
 
-import shutil
+
 import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
@@ -8,7 +8,7 @@ from subprocess import PIPE, STDOUT
 from .logger import log
 
 
-def concatenate_video(temp, output, keep=False):
+def concatenate_video(temp, output, encoder):
     """With FFMPEG concatenate encoded segments into final file."""
 
     log('Concatenating\n')
@@ -26,18 +26,31 @@ def concatenate_video(temp, output, keep=False):
     else:
         audio = ''
 
-    cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-          f'{audio} -c copy -map 0  -y "{output}"'
-    concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+    if encoder == 'x265':
+        # Idk method to make concatenation work with x265 right away
+        tmp = temp / 'tmp.mp4'
+
+        cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
+            f'{audio} -c copy -map 0  -y "{tmp}"'
+        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
+        cmd = f'ffmpeg -y -hide_banner -loglevel error -i {tmp} -c copy {output}'
+        subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
+    else:
+        cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
+            f'{audio} -c copy -map 0  -y "{output}"'
+
+
+        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
 
     if len(concat) > 0:
         log(concat.decode())
         print(concat.decode())
         raise Exception
 
-    # Delete temp folders
-    if not keep:
-        shutil.rmtree(temp)
+
 
 
 def extract_audio(input_vid: Path, temp, audio_params):

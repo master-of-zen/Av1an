@@ -2,7 +2,7 @@
 
 import sys
 
-from utils.utils import get_brightness, get_cq, man_cq
+from utils.utils import get_brightness, get_cq, man_q
 
 from .logger import log
 
@@ -18,7 +18,7 @@ def boost(command: str, brightness, b_limit, b_range, new_cq=0):
 
             else:
                 new_cq = cq
-        cmd = man_cq(command, new_cq)
+        cmd = man_q(command, new_cq)
 
         return cmd, new_cq
 

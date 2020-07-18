@@ -148,9 +148,7 @@ def rav1e_encode(inputs, passes, pipe, params):
          f' rav1e - --first-pass {file[0].with_suffix(".stat")} {params} '
          f'--output {file[1].with_suffix(".ivf")}',
          f'-i {file[0]} {pipe} '
-         f' rav1e - --second-pass {file[0].with_suffix(".stat")} {pa65 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
-265
-rams} '
+         f' rav1e - --second-pass {file[0].with_suffix(".stat")}
          f'--output {file[1].with_suffix(".ivf")}',
          (file[0], file[1].with_suffix('.ivf')))
          for file in inputs]
@@ -175,7 +173,7 @@ def x265_encode(inputs, passes, pipe, params):
 
     if passes == 1:
         commands = [
-                (f' -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".ivf")}',
+                (f' -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".mkv")}',
                 (file[0], file[1].with_suffix('.ivf')))
                 for file in inputs
                 ]
@@ -189,6 +187,7 @@ def x265_encode(inputs, passes, pipe, params):
         ]
 
     return commands
+
 
 def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
     """

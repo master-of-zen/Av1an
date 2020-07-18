@@ -31,6 +31,7 @@ class Args(object):
         self.video_params = None
 
         # FFmpeg params
+        self.ffmpeg_pipe = None
         self.ffmpeg = None
         self.audio_params = None
         self.pix_format = None

@@ -32,11 +32,9 @@ def concatenate_video(temp, output, encoder):
             f'{audio} -c copy -movflags frag_keyframe+empty_moov -map 0  -f mp4 - | ffmpeg -y -hide_banner -loglevel error -i - -c copy {output} '
         concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 
-
     else:
         cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
             f'{audio} -c copy -map 0  -y "{output}"'
-
 
         concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 

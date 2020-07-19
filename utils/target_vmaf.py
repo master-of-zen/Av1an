@@ -30,6 +30,8 @@ def encoding_fork(min_cq, max_cq, steps):
 
 
 def vmaf_probes(probe, fork, ffmpeg, encoder):
+    """Generate and return commands for probes at set Q values
+    """
 
     pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg}'
 

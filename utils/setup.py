@@ -50,6 +50,22 @@ def check_executables(encoder):
         print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
         terminate()
 
+    if args.vmaf_path:
+        if not Path(args.vmaf_path).exists():
+            print(f'No such model: {Path(args.vmaf_path).as_posix()}')
+            terminate()
+
+    if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
+        print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
+        terminate()
+
+    if args.vmaf_steps < 4:
+        print('Target vmaf require more than 3 probes/steps')
+        terminate()
+
+    if args.video_params is None:
+        args.video_params = get_default_params_for_encoder(args.encoder)
+
 
 def setup(temp: Path, resume):
     """Creating temporally folders when needed."""

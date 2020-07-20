@@ -24,15 +24,3 @@ def conf(args):
     # Changing pixel format, bit format
     args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
     args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
-
-    if args.vmaf_path:
-        if not Path(args.vmaf_path).exists():
-            print(f'No such model: {Path(args.vmaf_path).as_posix()}')
-            terminate()
-
-    if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
-        print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
-        terminate()
-
-    if args.video_params is None:
-        args.video_params = get_default_params_for_encoder(args.encoder)

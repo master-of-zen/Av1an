@@ -86,9 +86,6 @@ def plot_probes(args, x, y, vmaf_cq, vmaf_target, probe, xnew, frames):
 
 def target_vmaf(source, args):
 
-    if args.vmaf_steps < 4:
-        print('Target vmaf require more than 3 probes/steps')
-        terminate()
     frames = frame_probe(source)
     probe = source.with_suffix(".mp4")
 

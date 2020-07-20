@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 
 class Args(object):
+
     def __init__(self, initial_data):
         # Input/Output/Temp
         self.input = None

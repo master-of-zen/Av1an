@@ -29,19 +29,23 @@ def encoding_fork(min_cq, max_cq, steps):
     return q
 
 
-def vmaf_probes(probe, fork, ffmpeg, encoder):
+def gen_probes_names(probe, q):
+    return probe, probe.with_name(f'v_{q}{probe.stem}').with_suffix('.ivf')
+
+
+def probe_cmd(probe, q, ffmpeg_pipe, encoder):
     """Generate and return commands for probes at set Q values
     """
 
-    pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg}'
+    pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg_pipe}'
 
     if encoder == 'aom':
         params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
     elif encoder == 'x265':
         params = "x265  --log-level 0  --no-progress --y4m --preset faster --crf "
 
-    cmd = [[f'{pipe} {params}{x} -o {probe.with_name(f"v_{x}{probe.stem}")}.ivf - ',
-            probe, probe.with_name(f'v_{x}{probe.stem}').with_suffix('.ivf'), x] for x in fork]
+    cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
+
     return cmd
 
 
@@ -95,35 +99,36 @@ def target_vmaf(source, args):
         # Making encoding fork
         fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
 
-        # Making encoding commands
-        cmd = vmaf_probes(probe, fork, args.ffmpeg_pipe, args.encoder)
-
         # Encoding probe and getting vmaf
         vmaf_cq = []
-        for count, i in enumerate(cmd):
-            subprocess.run(i[0], shell=True)
+        for i in range(len(fork)):
 
-            v = call_vmaf(i[1], i[2], n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
+            cmd = probe_cmd(probe, fork[i], args.ffmpeg_pipe, args.encoder)
+            names = gen_probes_names(probe, fork[i])
+            subprocess.run(cmd, shell=True)
+
+            v = call_vmaf(names[0], names[1], n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
             # Trying 25 percentile
             mean = read_vmaf_xml(v, 25)
 
-            vmaf_cq.append((mean, i[3]))
+            vmaf_cq.append((mean, fork[i]))
 
             # Early Skip on big CQ
-            if count == 0 and round(mean) > args.vmaf_target:
+            if i == 0 and round(mean) > args.vmaf_target:
                 log(f"File: {source.stem}, Fr: {frames}\n" \
-                    f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
+                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
                     f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
                     f"Target Q: {args.max_cq} Vmaf: {mean}\n\n")
 
                 return args.max_cq
 
             # Early Skip on small CQ
-            if count == 1 and round(mean) < args.vmaf_target:
+            if i == 1 and round(mean) < args.vmaf_target:
                 log(f"File: {source.stem}, Fr: {frames}\n" \
-                    f"Probes: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
+                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
                     f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
                     f"Target Q: {args.min_cq} Vmaf: {mean}\n\n")
+
                 return args.min_cq
 
         x = [x[1] for x in sorted(vmaf_cq)]
@@ -136,9 +141,9 @@ def target_vmaf(source, args):
             plot_probes(args, x, y, vmaf_cq, args.vmaf_target, probe, xnew, frames)
 
         log(f'File: {source.stem}, Fr: {frames}\n' \
-            f'Probes: {sorted([x[1] for x in vmaf_cq])}\n' \
-            f'Vmaf: {sorted([x[0] for x in vmaf_cq])}\n' \
-            f'Target CQ: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n\n')
+            f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
+            f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
+            f'Target Q: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n\n')
 
         return int(cq[0])
 

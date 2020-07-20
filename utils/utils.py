@@ -130,7 +130,7 @@ def frame_check(source: Path, encoded: Path, temp, check):
                 json.dump(d, f)
         else:
             s1, s2 = [frame_probe(i) for i in (source, encoded)]
-            if s1 == s2:
+            if s1 <= s2:
                 doneFileLock.acquire()
                 with status_file.open() as f:
                     d = json.load(f)

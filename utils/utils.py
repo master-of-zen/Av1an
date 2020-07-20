@@ -14,17 +14,6 @@ from threading import Lock
 import cv2
 import numpy as np
 
-
-def startup_check():
-    if sys.version_info < (3, 6):
-        print('Python 3.6+ required')
-        sys.exit()
-    if sys.platform == 'linux':
-        def restore_term():
-            os.system("stty sane")
-        atexit.register(restore_term)
-
-
 def terminate():
     sys.exit(1)
 

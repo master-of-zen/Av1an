@@ -20,17 +20,17 @@ def x264_probes(video: Path, ffmpeg: str):
 
 
 def encoding_fork(min_cq, max_cq, steps):
-    # Make encoding fork
+    """Makin list of Q values for probing. Highest Q first check, lowest Q second, for early skips
+    """
     q = list(np.unique(np.linspace(min_cq, max_cq, num=steps, dtype=int, endpoint=True)))
-
-    # Moving highest cq to first check, for early skips
-    # checking highest first, lowers second, for early skips
     q.insert(0, q.pop(-1))
     return q
 
 
 def gen_probes_names(probe, q):
-    return probe, probe.with_name(f'v_{q}{probe.stem}').with_suffix('.ivf')
+    """Make name of vmaf probe
+    """
+    return probe.with_name(f'v_{q}{probe.stem}').with_suffix('.ivf')
 
 
 def probe_cmd(probe, q, ffmpeg_pipe, encoder):
@@ -98,14 +98,12 @@ def target_vmaf(source, args):
 
         # Encoding probe and getting vmaf
         vmaf_cq = []
-        for i in range(len(fork)):
+        for i in range(args.vmaf_steps):
 
             cmd = probe_cmd(probe, fork[i], args.ffmpeg_pipe, args.encoder)
-            names = gen_probes_names(probe, fork[i])
             subprocess.run(cmd, shell=True)
 
-            v = call_vmaf(names[0], names[1], n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
-            # Trying 25 percentile
+            v = call_vmaf(probe, gen_probes_names(probe, fork[i]), n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
             mean = read_vmaf_xml(v, 25)
 
             vmaf_cq.append((mean, fork[i]))

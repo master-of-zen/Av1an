@@ -1,13 +1,16 @@
 #!/bin/env python
 
 import os
+import sys
 import shutil
+import atexit
 from distutils.spawn import find_executable
 from pathlib import Path
 
 from psutil import virtual_memory
 
 from .utils import terminate
+from .compose import get_default_params_for_encoder
 
 
 def determine_resources(encoder, workers):
@@ -33,21 +36,30 @@ def determine_resources(encoder, workers):
     return workers
 
 
-def check_executables(encoder):
+def startup_check(args):
+
+    if sys.version_info < (3, 6):
+        print('Python 3.6+ required')
+        sys.exit()
+    if sys.platform == 'linux':
+        def restore_term():
+            os.system("stty sane")
+        atexit.register(restore_term)
+
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
 
     # Check if encoder executable is reachable
-    if encoder in encoders:
-        enc = encoders.get(encoder)
+    if args.encoder in encoders:
+        enc = encoders.get(args.encoder)
 
         if not find_executable(enc):
             print(f'Encoder {enc} not found')
             terminate()
     else:
-        print(f'Not valid encoder {encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
+        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
         terminate()
 
     if args.vmaf_path:

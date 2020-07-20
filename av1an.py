@@ -132,9 +132,8 @@ class Av1an:
 
     def main_thread(self):
         """Main."""
-        startup_check()
+        startup_check(self.args)
         conf(self.args)
-        check_executables(self.args.encoder)
         self.main_queue()
 
 

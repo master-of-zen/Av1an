@@ -7,8 +7,7 @@ from ast import literal_eval
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
-from utils.utils import frame_probe, get_keyframes
-
+from .utils import frame_probe, get_keyframes
 from .aom_kf import aom_keyframes
 from .logger import log
 from .pyscene import pyscene

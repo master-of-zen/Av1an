@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 import json
-from pathlib import Path
-from .utils import terminate
-from .compose import get_default_params_for_encoder
 
 def conf(args):
     """Creation and reading of config files with saved settings"""

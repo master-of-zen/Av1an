@@ -1,8 +1,6 @@
 #!/bin/env python
 
-import atexit
 import json
-import os
 import re
 import statistics
 import subprocess

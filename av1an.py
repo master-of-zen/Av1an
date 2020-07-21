@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 
-
-import shutil
-import subprocess
-import sys
-import time
-from pathlib import Path
-import json
-
-from utils import *
+from Av1an import *
 
 
 class Av1an:

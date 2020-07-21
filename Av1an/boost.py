@@ -2,7 +2,7 @@
 
 import sys
 
-from utils.utils import get_brightness, get_cq, man_q
+from .utils import get_brightness, get_cq, man_q
 
 from .logger import log
 

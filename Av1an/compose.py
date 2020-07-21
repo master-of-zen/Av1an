@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from utils.utils import terminate
+from .utils import terminate
 
 from .logger import log
 

@@ -1,12 +1,12 @@
 #!/bin/env python
 
-from utils.utils import terminate, frame_probe
-from utils.vmaf import call_vmaf, read_vmaf_xml
+from .utils import terminate, frame_probe
+from .vmaf import call_vmaf, read_vmaf_xml
 from scipy import interpolate
 from pathlib import Path
 import subprocess
 import numpy as np
-from utils.logger import log
+from .logger import log
 from matplotlib import pyplot as plt
 import matplotlib
 import sys
@@ -103,7 +103,7 @@ def target_vmaf(source, args):
             cmd = probe_cmd(probe, fork[i], args.ffmpeg_pipe, args.encoder)
             subprocess.run(cmd, shell=True)
 
-            v = call_vmaf(probe, gen_probes_names(probe, fork[i]), n_threads=args.n_threads, model=args.vmaf_path, return_file=True)
+            v = call_vmaf(probe, gen_probes_names(probe, fork[i]), args.n_threads, args.vmaf_path, return_file=True)
             mean = read_vmaf_xml(v, 25)
 
             vmaf_cq.append((mean, fork[i]))

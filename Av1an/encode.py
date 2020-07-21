@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from .target_vmaf import target_vmaf
 from .boost import boosting
-from .utils import frame_probe, frame_check, frame_probe_fast, terminate
+from .utils import  frame_probe_cv2, terminate, process_inputs
 from .fp_reuse import remove_first_pass_from_commands
 from .utils import man_q
 from .logger import log
@@ -16,11 +16,10 @@ import concurrent
 import concurrent.futures
 from .logger import log, set_log
 from .config  import conf
-from .compose import (compose_encoding_queue, get_video_queue)
-from .ffmpeg import concatenate_video, extract_audio
+from .compose import compose_encoding_queue, get_video_queue
+from .ffmpeg import concatenate_video, extract_audio, frame_probe, frame_check
 from .fp_reuse import segment_first_pass
 from .split import extra_splits, segment, split_routine
-from .utils import (frame_probe, frame_probe_fast,process_inputs, terminate)
 from .vmaf import plot_vmaf
 import shutil
 
@@ -75,6 +74,7 @@ def video_encoding(args):
 def main_queue(args):
     # Todo: Redo Queue
     try:
+        conf(args)
         tm = time.time()
 
         args.queue = process_inputs(args.input)
@@ -112,7 +112,7 @@ def encoding_loop(args, commands):
                 log(f'Resumed with {done} encoded clips done\n\n')
             else:
                 initial = 0
-                total = frame_probe_fast(args.input)
+                total = frame_probe_cv2(args.input)
 
                 if total < 1:
                     total = frame_probe(args.input)

@@ -11,7 +11,6 @@ class Av1an:
     def main_thread(self):
         """Main."""
         startup_check(self.args)
-        conf(self.args)
         main_queue(self.args)
 
 

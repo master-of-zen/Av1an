@@ -12,7 +12,8 @@ from tqdm import tqdm
 
 from .compose import compose_aomsplit_first_pass_command
 from .logger import log
-from .utils import frame_probe, terminate
+from .utils import  terminate
+from .ffmpeg import frame_probe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.

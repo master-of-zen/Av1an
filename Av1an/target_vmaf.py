@@ -1,6 +1,7 @@
 #!/bin/env python
 
-from .utils import terminate, frame_probe
+from .utils import terminate
+from .ffmpeg import frame_probe
 from .vmaf import call_vmaf, read_vmaf_xml
 from scipy import interpolate
 from pathlib import Path

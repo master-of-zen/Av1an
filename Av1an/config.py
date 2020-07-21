@@ -18,6 +18,3 @@ def conf(args):
                 c['audio_params'] = args.audio_params
                 json.dump(c, f)
 
-    # Changing pixel format, bit format
-    args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
-    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'

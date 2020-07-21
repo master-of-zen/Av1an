@@ -78,6 +78,9 @@ def startup_check(args):
     if args.video_params is None:
         args.video_params = get_default_params_for_encoder(args.encoder)
 
+    args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
+    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
+
 
 def setup(temp: Path, resume):
     """Creating temporally folders when needed."""

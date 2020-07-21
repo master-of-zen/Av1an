@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 
 import numpy as np
 
-from utils.utils import terminate
+from .utils import terminate
 
 
 def read_vmaf_xml(file, percentile):

@@ -34,33 +34,43 @@ class Counter():
 
 BaseManager.register('Counter', Counter)
 
+def make_pipes(command):
+
+    f, e = command.split('|')
+    f = " ffmpeg -y -hide_banner -loglevel error " + f
+    f, e = f.split(), e.split()
+
+    ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                            stderr=STDOUT,
+                            universal_newlines=True)
+
+    return pipe
+
+
+
+
 
 def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
+
+    encoder_history = deque(maxlen=20)
+    frame = 0
+    pass_1_check = True
+    skip_1_pass = False
+    match = None
+
     try:
+        pipe = make_pipes(i)
+        if encoder in ('aom', 'vpx', 'rav1e','x265'):
+            while True:
+                line = pipe.stdout.readline().strip()
+                if line:
+                    encoder_history.append(line)
+                if len(line) == 0 and pipe.poll() is not None:
+                    break
 
-        encoder_history = deque(maxlen=20)
-
-        f, e = i.split('|')
-        f = " ffmpeg -y -hide_banner -loglevel error " + f
-        f, e = f.split(), e.split()
-        frame = 0
-        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                                stderr=STDOUT,
-                                universal_newlines=True)
-        pass_1_check = True
-        skip_1_pass = False
-        while True:
-            line = pipe.stdout.readline().strip()
-            if line:
-                encoder_history.append(line)
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-
-            if len(line) == 0:
-                continue
-            if encoder in ('aom', 'vpx', 'rav1e','x265'):
-                match = None
+                if len(line) == 0:
+                    continue
 
                 if encoder in ('aom', 'vpx'):
                     if 'fatal' in line.lower():
@@ -89,10 +99,13 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
                     if new > frame:
                         counter.update(new - frame)
                         frame = new
+                    match = None
 
 
         if encoder == 'svt_av1':
-                counter.update(frame_probe_source // passes)
+            # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
+            pipe.wait()
+            counter.update(frame_probe_source // passes)
 
         if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
             print(f"\nEncoder encountered an error: {pipe.returncode}")

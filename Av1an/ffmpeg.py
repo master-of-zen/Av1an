@@ -121,8 +121,6 @@ def concatenate_video(temp, output, encoder):
         raise Exception
 
 
-
-
 def extract_audio(input_vid: Path, temp, audio_params):
     """Extracting audio from source, transcoding if needed."""
     log(f'Audio processing\nParams: {audio_params}\n')

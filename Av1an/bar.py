@@ -9,7 +9,7 @@ from subprocess import PIPE, STDOUT
 
 from tqdm import tqdm
 
-from utils.utils import terminate
+from .utils import terminate
 
 
 def Manager():

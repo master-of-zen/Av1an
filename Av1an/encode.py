@@ -191,6 +191,7 @@ def encode(commands):
 
         log(f'Done: {source.name} Fr: {frame_probe_fr}\n'
             f'Fps: {round(frame_probe_fr / enc_time, 4)} Time: {enc_time} sec.\n\n')
+
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')

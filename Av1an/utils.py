@@ -48,7 +48,7 @@ def get_cq(command):
 def man_q(command: str, q: int):
     """Return command with new cq value"""
 
-    if 'aomenc' in command:
+    if 'aomenc' in command or 'vpxenc' in command:
         mt = '--cq-level='
         cmd = command[:command.find(mt) + 11] + str(q) + ' ' + command[command.find(mt) + 13:]
 

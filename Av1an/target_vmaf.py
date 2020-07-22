@@ -14,7 +14,6 @@ import sys
 from math import isnan
 import os
 from .bar import make_pipes
-from subprocess import PIPE, STDOUT
 
 def x264_probes(video: Path, ffmpeg: str):
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
@@ -31,7 +30,6 @@ def gen_probes_names(probe, q):
 def probe_cmd(probe, q, ffmpeg_pipe, encoder):
     """Generate and return commands for probes at set Q values
     """
-
     pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg_pipe}'
 
     if encoder == 'aom':
@@ -45,6 +43,10 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
     elif encoder == 'rav1e':
         params = "rav1e - -q -s 10 --tiles 8 --quantizer "
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
+
+    elif encoder == 'vpx':
+        params = "vpxenc --passes=1 --pass=1 --codec=vp9 --threads=4 --cpu-used=6 --end-usage=q --cq-level="
+        cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
     return cmd
 
@@ -101,18 +103,7 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
 def vmaf_probe(probe, q, args):
 
     cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder)
-    if args.encoder =='rav1e':
-        # temp to prevent console spam
-        f, e = cmd.split('|')
-        f, e = f.split(), e.split()
-
-        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                                stderr=STDOUT,
-                                universal_newlines=True)
-        pipe.wait()
-    else:
-        subprocess.run(cmd, shell=True)
+    make_pipes(cmd).wait()
 
     file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path)
     score = read_vmaf_json(file, 25)

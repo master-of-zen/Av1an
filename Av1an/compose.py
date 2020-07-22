@@ -113,8 +113,6 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
 
-    return []
-
 
 def rav1e_encode(inputs, passes, pipe, params):
     """

@@ -37,9 +37,7 @@ BaseManager.register('Counter', Counter)
 def make_pipes(command):
 
     f, e = command.split('|')
-    f = " ffmpeg -y -hide_banner -loglevel error " + f
     f, e = f.split(), e.split()
-
     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                             stderr=STDOUT,

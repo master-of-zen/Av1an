@@ -109,6 +109,7 @@ def vmaf_probe(probe, q, args):
 
     return score
 
+
 def early_skips(probe, source, frames,args):
 
     cq = [args.max_cq, args.min_cq]
@@ -137,6 +138,30 @@ def early_skips(probe, source, frames,args):
 
     return False, scores
 
+
+def target_vmaf_search(probe, source, frames, args):
+
+    fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
+    fork = fork[1:-1]
+    vmaf_cq = []
+    vmaf_steps = args.vmaf_steps - 2
+
+
+    for i in range(vmaf_steps):
+
+        score = vmaf_probe(probe, fork[i], args)
+
+        vmaf_cq.append((score, fork[i]))
+
+    q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
+
+    log(f'File: {source.stem}, Fr: {frames}\n' \
+        f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
+        f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
+        f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
+
+    return q, vmaf_cq
+
 def target_vmaf(source, args):
 
     frames = frame_probe(source)
@@ -144,31 +169,17 @@ def target_vmaf(source, args):
     vmaf_cq = []
 
     try:
-        # Making 4 fps probing file
         x264_probes(source, args.ffmpeg)
 
-        skips, scores = early_skips(probe, source,frames, args)
+        skips, scores = early_skips(probe, source, frames, args)
         if skips:
             return scores
         else:
             vmaf_cq.extend(scores)
 
-        # Making encoding fork
-        fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
-        fork = fork[1:-1]
+        q, scores = target_vmaf_search(probe, source, frames, args)
 
-        for i in range(len(fork)):
-
-            score = vmaf_probe(probe, fork[i], args)
-
-            vmaf_cq.append((score, fork[i]))
-
-        q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
-
-        log(f'File: {source.stem}, Fr: {frames}\n' \
-            f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
-            f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
-            f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
+        vmaf_cq.extend(scores)
 
         if args.vmaf_plots:
             plot_probes(args, vmaf_cq, args.vmaf_target, probe, frames)

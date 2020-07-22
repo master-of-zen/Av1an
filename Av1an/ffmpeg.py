@@ -11,13 +11,13 @@ import re
 import sys
 
 
-
 def frame_probe(source: Path):
     """Get frame count."""
     cmd = ["ffmpeg", "-hide_banner", "-i", source.as_posix(), "-map", "0:v:0", "-f", "null", "-"]
     r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     return int(matches[-1])
+
 
 def get_keyframes(file: Path):
     """
@@ -47,6 +47,7 @@ def get_keyframes(file: Path):
             keyframes.append(keyframe)
 
     return keyframes
+
 
 doneFileLock = Lock()
 def write_progress_file(file, chunk, frames):

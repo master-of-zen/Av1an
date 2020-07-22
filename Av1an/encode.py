@@ -23,6 +23,7 @@ from .split import extra_splits, segment, split_routine
 from .vmaf import plot_vmaf
 import shutil
 
+
 def video_encoding(args):
         """Encoding video on local machine."""
 
@@ -71,6 +72,7 @@ def video_encoding(args):
         if not args.keep:
             shutil.rmtree(args.temp)
 
+
 def main_queue(args):
     # Todo: Redo Queue
     try:
@@ -92,6 +94,7 @@ def main_queue(args):
     except KeyboardInterrupt:
         print('Encoding stopped')
         sys.exit()
+
 
 def encoding_loop(args, commands):
         """Creating process pool for encoders, creating progress bar."""
@@ -140,6 +143,7 @@ def encoding_loop(args, commands):
                         terminate()
         except KeyboardInterrupt:
             terminate()
+
 
 def encode(commands):
     """Main encoding flow, appliying all scene based features

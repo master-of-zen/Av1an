@@ -34,12 +34,15 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
 
     if encoder == 'aom':
         params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
+        cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
+
     elif encoder == 'x265':
         params = "x265  --log-level 0  --no-progress --y4m --preset faster --crf "
-    elif encoder == 'rav1e':
-        params = "rav1e -q -s 10 "
+        cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
-    cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
+    elif encoder == 'rav1e':
+        params = "rav1e - -s 10 --tiles 8 --quantizer "
+        cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
 
     return cmd
 

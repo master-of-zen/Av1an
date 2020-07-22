@@ -30,7 +30,6 @@ def set_vmaf(args):
     if args.min_cq is None or args.max_cq is None:
         args.min_cq, args.max_cq = defaul_ranges.get(args.encoder)
 
-    print(args.min_cq, args.max_cq)
 
 def check_exes(args):
     if not find_executable('ffmpeg'):

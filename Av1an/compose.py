@@ -136,7 +136,6 @@ def rav1e_encode(inputs, passes, pipe, params):
              f'--output {file[1].with_suffix(".ivf")}',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
-
     # 2 encode pass not working with FFmpeg pipes :(
     """
     if passes == 2:

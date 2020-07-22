@@ -49,6 +49,17 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
     return cmd
 
 
+def get_target_q(scores, vmaf_target):
+    x = [x[1] for x in sorted(scores)]
+    y = [float(x[0]) for x in sorted(scores)]
+    f = interpolate.interp1d(x, y, kind='cubic')
+    xnew = np.linspace(min(x), max(x), max(x) - min(x))
+    tl = list(zip(xnew, f(xnew)))
+    q = min(tl, key=lambda x: abs(x[1] - vmaf_target))
+
+    return int(q[0]), round(q[1],3)
+
+
 def interpolate_data(vmaf_cq: list, vmaf_target):
     x = [x[1] for x in sorted(vmaf_cq)]
     y = [float(x[0]) for x in sorted(vmaf_cq)]
@@ -63,8 +74,12 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     return vmaf_target_cq, tl, f, xnew
 
 
-def plot_probes(args, x, y, vmaf_cq, vmaf_target, probe, xnew, frames):
+def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
     # Saving plot of vmaf calculation
+
+    x = [x[1] for x in sorted(vmaf_cq)]
+    y = [float(x[0]) for x in sorted(vmaf_cq)]
+
     cq, tl, f, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
     matplotlib.use('agg')
     plt.ioff()
@@ -126,25 +141,21 @@ def target_vmaf(source, args):
 
     frames = frame_probe(source)
     probe = source.with_suffix(".mp4")
+    vmaf_cq = []
 
     try:
         # Making 4 fps probing file
         x264_probes(source, args.ffmpeg)
 
-        # Making encoding fork
-        fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
-        fork = fork[1:-1]
-
-        # Encoding probe and getting vmaf
-        vmaf_cq = []
-
-        # check for early skips
         skips, scores = early_skips(probe, source,frames, args)
-
         if skips:
             return scores
         else:
             vmaf_cq.extend(scores)
+
+        # Making encoding fork
+        fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
+        fork = fork[1:-1]
 
         for i in range(len(fork)):
 
@@ -152,21 +163,17 @@ def target_vmaf(source, args):
 
             vmaf_cq.append((score, fork[i]))
 
-        x = [x[1] for x in sorted(vmaf_cq)]
-        y = [float(x[0]) for x in sorted(vmaf_cq)]
-
-        # Interpolate data
-        cq, _, _, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
-
-        if args.vmaf_plots:
-            plot_probes(args, x, y, vmaf_cq, args.vmaf_target, probe, xnew, frames)
+        q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
 
         log(f'File: {source.stem}, Fr: {frames}\n' \
             f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
             f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
-            f'Target Q: {int(cq[0])} Vmaf: {round(float(cq[1]), 2)}\n\n')
+            f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
 
-        return int(cq[0])
+        if args.vmaf_plots:
+            plot_probes(args, vmaf_cq, args.vmaf_target, probe, frames)
+
+        return q
 
     except Exception as e:
         _, _, exc_tb = sys.exc_info()

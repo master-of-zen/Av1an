@@ -2,7 +2,7 @@
 
 from .utils import terminate
 from .ffmpeg import frame_probe
-from .vmaf import call_vmaf, read_vmaf_xml
+from .vmaf import call_vmaf, read_vmaf_json
 from scipy import interpolate
 from pathlib import Path
 import subprocess
@@ -21,10 +21,9 @@ def x264_probes(video: Path, ffmpeg: str):
 
 
 def encoding_fork(min_cq, max_cq, steps):
-    """Makin list of Q values for probing. Highest Q first check, lowest Q second, for early skips
+    """Makin list of Q values for probing.
     """
     q = list(np.unique(np.linspace(min_cq, max_cq, num=steps, dtype=int, endpoint=True)))
-    q.insert(0, q.pop(-1))
     return q
 
 
@@ -85,6 +84,44 @@ def plot_probes(args, x, y, vmaf_cq, vmaf_target, probe, xnew, frames):
     plt.close()
 
 
+def vmaf_probe(probe, q, args):
+
+    cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder)
+    subprocess.run(cmd, shell=True)
+
+    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path)
+    score = read_vmaf_json(file, 25)
+
+    return score
+
+def early_skips(probe, source, frames,args):
+
+    cq = [args.max_cq, args.min_cq]
+    scores = []
+    for i in (0, 1):
+
+        score = vmaf_probe(probe, cq[i], args)
+        scores.append((score, cq[i]))
+        # Early Skip on big CQ
+        if i == 0 and round(score) > args.vmaf_target:
+            log(f"File: {source.stem}, Fr: {frames}\n" \
+            f"Q: {sorted([x[1] for x in scores])}, Early Skip High CQ\n" \
+            f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
+            f"Target Q: {args.max_cq} Vmaf: {score}\n\n")
+
+            return True, args.max_cq
+
+        # Early Skip on small CQ
+        if i == 1 and round(score) < args.vmaf_target:
+            log(f"File: {source.stem}, Fr: {frames}\n" \
+                f"Q: {sorted([x[1] for x in scores])}, Early Skip Low CQ\n" \
+                f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
+                f"Target Q: {args.min_cq} Vmaf: {score}\n\n")
+
+            return True, args.min_cq
+
+    return False, scores
+
 def target_vmaf(source, args):
 
     frames = frame_probe(source)
@@ -96,36 +133,24 @@ def target_vmaf(source, args):
 
         # Making encoding fork
         fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
+        fork = fork[1:-1]
 
         # Encoding probe and getting vmaf
         vmaf_cq = []
-        for i in range(args.vmaf_steps):
 
-            cmd = probe_cmd(probe, fork[i], args.ffmpeg_pipe, args.encoder)
-            subprocess.run(cmd, shell=True)
+        # check for early skips
+        skips, scores = early_skips(probe, source,frames, args)
 
-            v = call_vmaf(probe, gen_probes_names(probe, fork[i]), args.n_threads, args.vmaf_path, return_file=True)
-            mean = read_vmaf_xml(v, 25)
+        if skips:
+            return scores
+        else:
+            vmaf_cq.extend(scores)
 
-            vmaf_cq.append((mean, fork[i]))
+        for i in range(len(fork)):
 
-            # Early Skip on big CQ
-            if i == 0 and round(mean) > args.vmaf_target:
-                log(f"File: {source.stem}, Fr: {frames}\n" \
-                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
-                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                    f"Target Q: {args.max_cq} Vmaf: {mean}\n\n")
+            score = vmaf_probe(probe, fork[i], args)
 
-                return args.max_cq
-
-            # Early Skip on small CQ
-            if i == 1 and round(mean) < args.vmaf_target:
-                log(f"File: {source.stem}, Fr: {frames}\n" \
-                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
-                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
-                    f"Target Q: {args.min_cq} Vmaf: {mean}\n\n")
-
-                return args.min_cq
+            vmaf_cq.append((score, fork[i]))
 
         x = [x[1] for x in sorted(vmaf_cq)]
         y = [float(x[0]) for x in sorted(vmaf_cq)]

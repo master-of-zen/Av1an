@@ -20,13 +20,6 @@ def x264_probes(video: Path, ffmpeg: str):
     subprocess.run(cmd, shell=True)
 
 
-def encoding_fork(min_cq, max_cq, steps):
-    """Makin list of Q values for probing.
-    """
-    q = list(np.unique(np.linspace(min_cq, max_cq, num=steps, dtype=int, endpoint=True)))
-    return q
-
-
 def gen_probes_names(probe, q):
     """Make name of vmaf probe
     """
@@ -137,13 +130,7 @@ def early_skips(probe, source, frames,args):
 
     return False, scores
 
-def get_q(start, end):
-    """Returns value beetween start and end
-    :return: q value
-    :rtype: int
-    """
-    #return round((1/3 * start) + (2/3 * end))
-    return (start + end) // 2
+
 def get_closest(q_list, q, positive=True):
     """Returns closest value from the list, ascending or descending
     """
@@ -164,7 +151,7 @@ def target_vmaf_search(probe, source, frames, args):
     next_q = args.max_cq
     for _ in range(args.vmaf_steps - 2 ):
 
-        new_point= get_q(last_q, next_q)
+        new_point= (last_q + next_q) // 2
         last_q = new_point
 
         q_list.append(new_point)

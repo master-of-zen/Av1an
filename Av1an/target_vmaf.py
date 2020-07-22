@@ -36,6 +36,8 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
         params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
     elif encoder == 'x265':
         params = "x265  --log-level 0  --no-progress --y4m --preset faster --crf "
+    elif encoder == 'rav1e':
+        params = "rav1e -q -s 10 "
 
     cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
@@ -160,6 +162,7 @@ def target_vmaf_search(probe, source, frames, args):
         vmaf_cq.append((score, new_point))
 
     return vmaf_cq
+
 
 def target_vmaf(source, args):
 

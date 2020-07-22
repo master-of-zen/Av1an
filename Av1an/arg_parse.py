@@ -117,7 +117,7 @@ def arg_parsing():
 
     # Target Vmaf
     parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
-    parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
+    parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
     parser.add_argument('--min_cq', type=int, default=25, help='Min cq for target vmaf')
     parser.add_argument('--max_cq', type=int, default=50, help='Max cq for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')

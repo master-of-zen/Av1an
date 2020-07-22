@@ -12,7 +12,9 @@ from matplotlib import pyplot as plt
 import matplotlib
 import sys
 from math import isnan
-
+import os
+from .bar import make_pipes
+from subprocess import PIPE, STDOUT
 
 def x264_probes(video: Path, ffmpeg: str):
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
@@ -41,7 +43,7 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
     elif encoder == 'rav1e':
-        params = "rav1e - -s 10 --tiles 8 --quantizer "
+        params = "rav1e - -q -s 10 --tiles 8 --quantizer "
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
 
     return cmd
@@ -99,7 +101,18 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
 def vmaf_probe(probe, q, args):
 
     cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder)
-    subprocess.run(cmd, shell=True)
+    if args.encoder =='rav1e':
+        # temp to prevent console spam
+        f, e = cmd.split('|')
+        f, e = f.split(), e.split()
+
+        ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
+        pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                                stderr=STDOUT,
+                                universal_newlines=True)
+        pipe.wait()
+    else:
+        subprocess.run(cmd, shell=True)
 
     file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path)
     score = read_vmaf_json(file, 25)

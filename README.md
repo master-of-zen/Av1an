@@ -4,7 +4,7 @@
     </br>
 </h1>
 
-<h2 align="center">A cross-platform framework for streamlining AV1 encoding</h2>
+<h2 align="center">A cross-platform framework to streamline encoding</h2>
 
 ![alt text](https://cdn.discordapp.com/attachments/702307493623103518/733639763919110184/prew3.png)
 
@@ -17,7 +17,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using AV1 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX are supported.
+An easy way to start using AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX, x265 are supported.
 
 Example with default parameters:
 
@@ -36,7 +36,7 @@ With your own parameters:
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use (aom,rav1e,svt_av1,vpx. Default: aom)
+    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`vpx`,`x265`. Default: aom)
                             Example: -enc rav1e
 
     -v   --video_params     Encoder settings flags (If not set, will be used default parameters.

@@ -66,7 +66,7 @@ def svt_av1_encode(inputs, passes, pipe, params):
 
     if passes == 1:
         commands = [
-            (f'-i {file[0]} {pipe} ' +
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} ' +
              f'  {encoder} -i stdin {params} -b {file[1].with_suffix(".ivf")} -',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
@@ -75,9 +75,9 @@ def svt_av1_encode(inputs, passes, pipe, params):
         p2i = '-input-stat-file '
         p2o = '-output-stat-file '
         commands = [
-            (f'-i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {encoder} -i stdin {params} {p2o} '
              f'{file[0].with_suffix(".stat")} -b {file[0]}.bk - ',
-             f'-i {file[0]} {pipe} '
+             f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} '
              f'{encoder} -i stdin {params} {p2i} {file[0].with_suffix(".stat")} -b '
              f'{file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
@@ -102,14 +102,14 @@ def aom_vpx_encode(inputs, enc, passes, pipe, params):
 
     if passes == 1:
         return [
-            (f'-i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {single_p} {params} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
 
     if passes == 2:
         return [
-            (f'-i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
-             f'-i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_1} {params} --fpf={file[0].with_suffix(".log")} -o {os.devnull} - ',
+             f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_2} {params} --fpf={file[0].with_suffix(".log")} -o {file[1].with_suffix(".ivf")} - ',
              (file[0], file[1].with_suffix('.ivf')))
             for file in inputs]
 
@@ -131,7 +131,7 @@ def rav1e_encode(inputs, passes, pipe, params):
 
     if passes:
         commands = [
-            (f'-i {file[0]} {pipe} '
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} '
              f' rav1e -  {params}  '
              f'--output {file[1].with_suffix(".ivf")}',
              (file[0], file[1].with_suffix('.ivf')))
@@ -169,15 +169,15 @@ def x265_encode(inputs, passes, pipe, params):
 
     if passes == 1:
         commands = [
-                (f' -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".mkv")}',
+                (f'ffmpeg -y -hide_banner -loglevel error  -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".mkv")}',
                 (file[0], file[1].with_suffix('.mkv')))
                 for file in inputs
                 ]
 
     if passes == 2:
         commands = [
-            (f' -i {file[0]} {pipe} {two_p_1} {params} --stats {file[0].with_suffix(".log")} - -o {os.devnull}',
-             f' -i {file[0]} {pipe} {two_p_2} {params} --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".mkv")}',
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_1} {params} --stats {file[0].with_suffix(".log")} - -o {os.devnull}',
+             f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_2} {params} --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".mkv")}',
              (file[0], file[1].with_suffix('.mkv')))
              for file in inputs
         ]

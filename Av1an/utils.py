@@ -60,6 +60,9 @@ def man_q(command: str, q: int):
         mt = '--quantizer'
         cmd = command[:command.find(mt) + 11] + ' ' + str(q) + ' ' +  command[command.find(mt) + 15:]
 
+    elif 'SvtAv1EncApp' in command:
+        mt = '--qp'
+        cmd = command[:command.find(mt) + 4] + ' ' + str(q) + ' ' +  command[command.find(mt) + 7:]
     return cmd
 
 

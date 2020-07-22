@@ -107,6 +107,7 @@ def process_encoding_pipe(pipe, encoder, counter):
 def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
     try:
         pipe = make_pipes(i)
+
         if encoder in ('aom', 'vpx', 'rav1e','x265'):
             process_encoding_pipe(pipe, encoder, counter)
 

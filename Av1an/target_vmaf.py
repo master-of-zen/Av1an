@@ -48,6 +48,10 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
         params = "vpxenc --passes=1 --pass=1 --codec=vp9 --threads=4 --cpu-used=9 --end-usage=q --cq-level="
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
+    elif encoder == 'svt_av1':
+        params = " SvtAv1EncApp -i stdin --preset 8 --rc 0 --qp "
+        cmd = f'{pipe} {params}{q} -b {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
+
     return cmd
 
 

@@ -94,7 +94,6 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
     plt.tight_layout()
     temp = args.temp / probe.stem
-    plt.tight_layout()
     plt.savefig(f'{temp}.png', dpi=200, format='png')
     plt.close()
 
@@ -160,23 +159,17 @@ def target_vmaf_search(probe, source, frames, args):
 
     vmaf_cq = []
     q_list = [args.min_cq, args.max_cq]
-    vmaf_steps = args.vmaf_steps - 2
     score = 0
+    last_q = args.min_cq
+    next_q = args.max_cq
+    for _ in range(args.vmaf_steps - 2 ):
 
-    for i in range(vmaf_steps):
-        if i == 0:
-            middle_point = (args.min_cq + args.max_cq) // 2
-            score = vmaf_probe(probe, middle_point, args )
-            vmaf_cq.append((score, middle_point))
-            q_list.append(middle_point)
-            continue
-
-        last_q = vmaf_cq[-1][1]
-        next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
-        new_point = get_q(last_q, next_q)
+        new_point= get_q(last_q, next_q)
+        last_q = new_point
 
         q_list.append(new_point)
         score = vmaf_probe(probe, new_point, args)
+        next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
         vmaf_cq.append((score, new_point))
 
     return vmaf_cq

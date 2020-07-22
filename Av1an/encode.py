@@ -50,7 +50,7 @@ def video_encoding(args):
         chunk = get_video_queue(args.temp,  args.resume)
 
         # Make encode queue
-        commands = compose_encoding_queue(chunk, args.temp, args.encoder, args.video_params, args.ffmpeg_pipe, args.passes)
+        commands = compose_encoding_queue(chunk, args)
 
         args.workers = determine_resources(args.encoder, args.workers)
 

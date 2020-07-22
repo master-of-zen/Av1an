@@ -45,7 +45,7 @@ def get_default_params_for_encoder(enc):
     'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
     'rav1e': ' --tiles 8 --speed 6 --quantizer 100',
     'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
-    'x265': ' -p slow --crf 23 --vbv-maxrate 10000 --vbv-bufsize 8000 ',
+    'x265': ' -p slow --crf 23 ',
     }
 
     return DEFAULT_ENC_PARAMS[enc]
@@ -129,9 +129,6 @@ def rav1e_encode(inputs, passes, pipe, params):
     """
     commands = []
 
-    if passes == 2:
-        print("Implicitly changing passes to 1\nCurrently 2 pass Rav1e doesn't work")
-
     if passes:
         commands = [
             (f'-i {file[0]} {pipe} '
@@ -189,7 +186,7 @@ def x265_encode(inputs, passes, pipe, params):
     return commands
 
 
-def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
+def compose_encoding_queue(files, args):
     """
     Composing encoding queue with split videos.
     :param files: List of files that need to be encoded
@@ -199,26 +196,29 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
     :param pipe: FFmpeg pipe
     :passes: Number of passes
     """
-
-    assert params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
+    assert args.video_params is not None  # params needs to be set with at least get_default_params_for_encoder before this func
 
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc', 'x265': 'x265'}
-    enc_exe = encoders.get(encoder)
-    inputs = [(temp / "split" / file.name,
-               temp / "encode" / file.name,
+    enc_exe = encoders.get(args.encoder)
+    inputs = [(args.temp / "split" / file.name,
+               args.temp / "encode" / file.name,
                file) for file in files]
 
-    if encoder in ('aom', 'vpx'):
-        queue = aom_vpx_encode(inputs, enc_exe, passes, pipe, params)
+    if args.encoder in ('aom', 'vpx'):
+        queue = aom_vpx_encode(inputs, enc_exe, args.passes, args.ffmpeg_pipe, args.video_params)
 
-    elif encoder == 'rav1e':
-        queue = rav1e_encode(inputs, passes, pipe, params)
+    elif args.encoder == 'rav1e':
+        if args.passes == 2:
+            print("Implicitly changing passes to 1\n2 pass Rav1e doesn't work")
+            args.passes = 1
+        queue = rav1e_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
 
-    elif encoder == 'svt_av1':
-        queue = svt_av1_encode(inputs, passes, pipe, params)
 
-    elif encoder == 'x265':
-        queue = x265_encode(inputs, passes, pipe, params)
+    elif args.encoder == 'svt_av1':
+        queue = svt_av1_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
+
+    elif args.encoder == 'x265':
+        queue = x265_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
 
     # Catch Error
     if len(queue) == 0:
@@ -227,8 +227,8 @@ def compose_encoding_queue(files, temp, encoder, params, pipe, passes):
         terminate()
 
     log(f'Encoding Queue Composed\n'
-        f'Encoder: {encoder.upper()} Queue Size: {len(queue)} Passes: {passes}\n'
-        f'Params: {params}\n\n')
+        f'Encoder: {args.encoder.upper()} Queue Size: {len(queue)} Passes: {args.passes}\n'
+        f'Params: {args.video_params}\n\n')
 
     return queue
 

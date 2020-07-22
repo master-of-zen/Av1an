@@ -38,6 +38,9 @@ def determine_resources(encoder, workers):
 
 def startup_check(args):
 
+    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1}
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
+
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')
         sys.exit()
@@ -46,7 +49,7 @@ def startup_check(args):
             os.system("stty sane")
         atexit.register(restore_term)
 
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
+
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
@@ -61,6 +64,9 @@ def startup_check(args):
     else:
         print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
         terminate()
+
+    if args.passes == None:
+        args.passes = encoders_default_passes.get(args.encoder)
 
     if args.vmaf_path:
         if not Path(args.vmaf_path).exists():
@@ -80,6 +86,7 @@ def startup_check(args):
 
     args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
     args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
+
 
 
 def setup(temp: Path, resume):

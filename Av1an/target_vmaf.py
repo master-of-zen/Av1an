@@ -45,7 +45,7 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
 
     elif encoder == 'vpx':
-        params = "vpxenc --passes=1 --pass=1 --codec=vp9 --threads=4 --cpu-used=6 --end-usage=q --cq-level="
+        params = "vpxenc --passes=1 --pass=1 --codec=vp9 --threads=4 --cpu-used=9 --end-usage=q --cq-level="
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
     return cmd

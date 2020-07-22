@@ -153,14 +153,7 @@ def target_vmaf_search(probe, source, frames, args):
 
         vmaf_cq.append((score, fork[i]))
 
-    q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
-
-    log(f'File: {source.stem}, Fr: {frames}\n' \
-        f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
-        f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
-        f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
-
-    return q, vmaf_cq
+    return vmaf_cq
 
 def target_vmaf(source, args):
 
@@ -177,9 +170,16 @@ def target_vmaf(source, args):
         else:
             vmaf_cq.extend(scores)
 
-        q, scores = target_vmaf_search(probe, source, frames, args)
+        scores = target_vmaf_search(probe, source, frames, args)
 
         vmaf_cq.extend(scores)
+
+        q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
+
+        log(f'File: {source.stem}, Fr: {frames}\n' \
+            f'Q: {sorted([x[1] for x in vmaf_cq])}\n' \
+            f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n' \
+            f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
 
         if args.vmaf_plots:
             plot_probes(args, vmaf_cq, args.vmaf_target, probe, frames)

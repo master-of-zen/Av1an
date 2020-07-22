@@ -13,6 +13,75 @@ from .utils import terminate
 from .compose import get_default_params_for_encoder
 
 
+def set_vmaf(args):
+
+    if args.vmaf_path:
+        if not Path(args.vmaf_path).exists():
+            print(f'No such model: {Path(args.vmaf_path).as_posix()}')
+            terminate()
+
+    if args.vmaf_steps < 4:
+        print('Target vmaf require more than 3 probes/steps')
+        terminate()
+
+
+    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40)}
+
+    if args.min_cq is None or args.max_cq is None:
+        args.min_cq, args.max_cq = defaul_ranges.get(args.encoder)
+
+    print(args.min_cq, args.max_cq)
+
+def check_exes(args):
+    if not find_executable('ffmpeg'):
+        print('No ffmpeg')
+        terminate()
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
+
+
+    # Check if encoder executable is reachable
+    if args.encoder in encoders:
+        enc = encoders.get(args.encoder)
+
+        if not find_executable(enc):
+            print(f'Encoder {enc} not found')
+            terminate()
+    else:
+        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
+        terminate()
+
+
+def startup_check(args):
+
+    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1}
+
+
+    if sys.version_info < (3, 6):
+        print('Python 3.6+ required')
+        sys.exit()
+    if sys.platform == 'linux':
+        def restore_term():
+            os.system("stty sane")
+        atexit.register(restore_term)
+
+    check_exes(args)
+
+    set_vmaf(args)
+
+    if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
+        print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
+        terminate()
+
+    if args.passes is None:
+        args.passes = encoders_default_passes.get(args.encoder)
+
+    if args.video_params is None:
+        args.video_params = get_default_params_for_encoder(args.encoder)
+
+    args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
+    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
+
+
 def determine_resources(encoder, workers):
     """Returns number of workers that machine can handle with selected encoder."""
 
@@ -34,59 +103,6 @@ def determine_resources(encoder, workers):
         workers = 1
 
     return workers
-
-
-def startup_check(args):
-
-    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1}
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
-
-    if sys.version_info < (3, 6):
-        print('Python 3.6+ required')
-        sys.exit()
-    if sys.platform == 'linux':
-        def restore_term():
-            os.system("stty sane")
-        atexit.register(restore_term)
-
-
-    if not find_executable('ffmpeg'):
-        print('No ffmpeg')
-        terminate()
-
-    # Check if encoder executable is reachable
-    if args.encoder in encoders:
-        enc = encoders.get(args.encoder)
-
-        if not find_executable(enc):
-            print(f'Encoder {enc} not found')
-            terminate()
-    else:
-        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
-        terminate()
-
-    if args.passes == None:
-        args.passes = encoders_default_passes.get(args.encoder)
-
-    if args.vmaf_path:
-        if not Path(args.vmaf_path).exists():
-            print(f'No such model: {Path(args.vmaf_path).as_posix()}')
-            terminate()
-
-    if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
-        print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
-        terminate()
-
-    if args.vmaf_steps < 4:
-        print('Target vmaf require more than 3 probes/steps')
-        terminate()
-
-    if args.video_params is None:
-        args.video_params = get_default_params_for_encoder(args.encoder)
-
-    args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
-    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
-
 
 
 def setup(temp: Path, resume):

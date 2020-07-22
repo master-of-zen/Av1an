@@ -83,8 +83,8 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
     cq, tl, f, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
     matplotlib.use('agg')
     plt.ioff()
-    plt.plot(x, y, 'x', color='tab:blue', alpha=1)
     plt.plot(xnew, f(xnew), color='tab:blue', alpha=1)
+    plt.plot(x, y, 'p', color='tab:green', alpha=1)
     plt.plot(cq[0], cq[1], 'o', color='red', alpha=1)
     plt.grid(True)
     plt.xlim(args.min_cq, args.max_cq)
@@ -92,10 +92,10 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
     plt.ylim(min(vmafs), max(vmafs) + 1)
     plt.ylabel('VMAF')
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
-    # plt.tight_layout()
+    plt.tight_layout()
     temp = args.temp / probe.stem
     plt.tight_layout()
-    plt.savefig(temp, dpi=300, format='png',transparent=True)
+    plt.savefig(f'{temp}.png', dpi=200, format='png')
     plt.close()
 
 
@@ -138,20 +138,46 @@ def early_skips(probe, source, frames,args):
 
     return False, scores
 
+def get_q(start, end):
+    """Returns value beetween start and end
+    :return: q value
+    :rtype: int
+    """
+    #return round((1/3 * start) + (2/3 * end))
+    return (start + end) // 2
+def get_closest(q_list, q, positive=True):
+    """Returns closest value from the list, ascending or descending
+    """
+    if positive:
+        q_list = [x for x in q_list if x > q]
+    else:
+        q_list = [x for x in q_list if x < q]
+
+    return min(q_list, key=lambda x:abs(x-q))
+
 
 def target_vmaf_search(probe, source, frames, args):
 
-    fork = encoding_fork(args.min_cq, args.max_cq, args.vmaf_steps)
-    fork = fork[1:-1]
     vmaf_cq = []
+    q_list = [args.min_cq, args.max_cq]
     vmaf_steps = args.vmaf_steps - 2
-
+    score = 0
 
     for i in range(vmaf_steps):
+        if i == 0:
+            middle_point = (args.min_cq + args.max_cq) // 2
+            score = vmaf_probe(probe, middle_point, args )
+            vmaf_cq.append((score, middle_point))
+            q_list.append(middle_point)
+            continue
 
-        score = vmaf_probe(probe, fork[i], args)
+        last_q = vmaf_cq[-1][1]
+        next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
+        new_point = get_q(last_q, next_q)
 
-        vmaf_cq.append((score, fork[i]))
+        q_list.append(new_point)
+        score = vmaf_probe(probe, new_point, args)
+        vmaf_cq.append((score, new_point))
 
     return vmaf_cq
 

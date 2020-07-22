@@ -96,7 +96,7 @@ With your own parameters:
 
     --keep                  Not deleting temprally folders after encode finished.
 
-    -log --logging          Path to .log file(Default: no logging)
+    -log --logging          Path to .log file(By default created in temp folder)
 
     --temp                  Set path for temporally folders. Default: .temp
 

@@ -124,6 +124,9 @@ def determine_resources(encoder, workers):
     elif encoder in ('svt_av1', 'x265'):
         workers =  round(min(cpu, ram)) // 8
 
+    elif encoder in ('vvc'):
+        workers = round(min(cpu, ram))
+
     # fix if workers round up to 0
     if workers == 0:
         workers = 1

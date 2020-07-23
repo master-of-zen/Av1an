@@ -62,7 +62,8 @@ class Args(object):
 
         # VVC
         self.vvc_conf = None
-
+        self.video_dimensions = (None, None)
+        self.video_framerate = None
         for key in initial_data:
             setattr(self, key, initial_data[key])
 

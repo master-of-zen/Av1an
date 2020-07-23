@@ -25,7 +25,7 @@ def set_vmaf(args):
         terminate()
 
 
-    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40)}
+    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'vvc': (20, 50)}
 
     if args.min_cq is None or args.max_cq is None:
         args.min_cq, args.max_cq = defaul_ranges.get(args.encoder)
@@ -35,7 +35,7 @@ def check_exes(args):
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265'}
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265', 'vvc': 'vvc_encoder'}
 
 
     # Check if encoder executable is reachable
@@ -52,7 +52,7 @@ def check_exes(args):
 
 def startup_check(args):
 
-    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1}
+    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1, 'vvc':1 }
 
 
     if sys.version_info < (3, 6):

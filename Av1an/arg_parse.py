@@ -89,7 +89,7 @@ def arg_parsing():
     parser.add_argument('--passes', '-p', type=int, default=None, help='Specify encoding passes', choices=[1, 2])
     parser.add_argument('--video_params', '-v', type=str, default=None, help='encoding settings')
     parser.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder',
-                        choices=['aom', 'svt_av1', 'rav1e', 'vpx','x265'])
+                        choices=['aom', 'svt_av1', 'rav1e', 'vpx','x265', 'vvc'])
     parser.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
     parser.add_argument('-cfg', '--config', type=Path, help='Parameters file. Save/Read: '
                                                             'Video, Audio, Encoder, FFmpeg parameteres')
@@ -122,5 +122,8 @@ def arg_parsing():
     parser.add_argument('--max_cq', type=int, default=None, help='Max cq for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
+
+    # VVC
+    parser.add_argument('--vvc_conf', type=Path, default=None, help='Path to VVC confing file')
 
     return Args(vars(parser.parse_args()))

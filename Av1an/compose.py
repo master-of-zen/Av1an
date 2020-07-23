@@ -4,7 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
-
+from .vvc import to_yuv
 from .utils import terminate
 
 from .logger import log
@@ -46,6 +46,7 @@ def get_default_params_for_encoder(enc):
     'rav1e': ' --tiles 8 --speed 6 --quantizer 100',
     'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
     'x265': ' -p slow --crf 23 ',
+    'vvc': ' -wdt 640 -hgt 360 -fr 23.98 -q 30 '
     }
 
     return DEFAULT_ENC_PARAMS[enc]
@@ -183,6 +184,18 @@ def x265_encode(inputs, passes, pipe, params):
     return commands
 
 
+def vvc_encode(inputs, params, vvc_conf):
+    """Experimental support for VVC encoder
+    """
+    commands = [
+        (f' vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} --InputBitDepth=8 --OutputBitDepth=8 --SummaryVerboseness -b {x[1].with_suffix(".h266")}',
+        (x[0], x[1].with_suffix(".h266")))
+        for x in inputs
+        ]
+    print(commands)
+    return commands
+
+
 def compose_encoding_queue(files, args):
     """
     Composing encoding queue with split videos.
@@ -197,6 +210,7 @@ def compose_encoding_queue(files, args):
 
     encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc', 'x265': 'x265'}
     enc_exe = encoders.get(args.encoder)
+
     inputs = [(args.temp / "split" / file.name,
                args.temp / "encode" / file.name,
                file) for file in files]
@@ -216,6 +230,9 @@ def compose_encoding_queue(files, args):
 
     elif args.encoder == 'x265':
         queue = x265_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
+
+    elif args.encoder == 'vvc':
+        queue = vvc_encode(inputs, args.video_params, args.vvc_conf)
 
     # Catch Error
     if len(queue) == 0:

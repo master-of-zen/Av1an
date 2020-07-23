@@ -6,7 +6,7 @@ import sys
 from collections import deque
 from multiprocessing.managers import BaseManager
 from subprocess import PIPE, STDOUT
-
+from .vvc import vvc_encoding
 from tqdm import tqdm
 
 from .utils import terminate
@@ -53,11 +53,16 @@ def match_aom_vpx(line):
     if 'Pass 2/2' in line or 'Pass 1/1' in line:
         return re.search(r"frame.*?\/([^ ]+?) ", line)
 
+
 def match_rav1e(line):
     if 'error' in line.lower():
         print('\n\nERROR IN ENCODING PROCESS\n\n', line)
         terminate()
     return re.search(r"encoded.*? ([^ ]+?) ", line)
+
+
+def match_vvc(line):
+    return re.search(r"POC.*? ([^ ]+?)", line)
 
 
 def process_encoding_pipe(pipe, encoder, counter):
@@ -90,6 +95,9 @@ def process_encoding_pipe(pipe, encoder, counter):
             if not skip_1_pass:
                 match = re.search(r"^(\d+)", line)
 
+        if encoder in ('vvc'):
+            match = match_vvc(line)
+
         if match:
             new = int(match.group(1))
             if new > frame:
@@ -115,7 +123,8 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
             # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
             pipe.wait()
             counter.update(frame_probe_source // passes)
-
+        if encoder == 'vvc':
+            vvc_encoding(i, pipe, counter)
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')

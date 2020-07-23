@@ -127,15 +127,15 @@ With your own parameters:
 
 <h2 align="center">Main Features</h2>
 
-**Spliting video by scenes for parallel encoding** because AV1 encoders currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
+**Spliting video by scenes for parallel encoding** because AV1 encoders are currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 *  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-*  Fastest way to encode AV1 without losing quality, as fast as many cores cpu have :).
+*  Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
 *  Target VMAF mode. Targeting end result visual quality.
 *  Resuming encoding without loss of encoded progress.
 *  Simple and clean console look.
-*  Automatic determination of how many workers the host can handle.
-*  Building encoding queue with bigger files first, minimizing waiting for last scene to encode.
+*  Automatic detection of the number of workers the host can handle.
+*  Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
 *  Both video and audio transcoding with FFmpeg.
 *  Logging of progress of all encoders.
 *  "Boosting" quality of dark scenes based on their brightness.
@@ -144,7 +144,7 @@ With your own parameters:
 
 * Prerequisites:
   *  [Install Python3](https://www.python.org/downloads/) <br>
-For Windows in the installer check the option to `add Python to PATH`
+When installing under Windows, select the option `add Python to PATH` in the installer
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
 * Encoder of choice:
   *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
@@ -157,11 +157,10 @@ For Windows in the installer check the option to `add Python to PATH`
   *  [AUR](https://aur.archlinux.org/packages/python-av1an/)
 
 * Manually:
-
   *  Clone Repo or Download from Releases
   *  `python setup.py install`
 * Also:
-    On ubuntu systems packages `python3-opencv` and `libsm6` are required
+    On Ubuntu systems packages `python3-opencv` and `libsm6` are required
 
 ### I have no money
 

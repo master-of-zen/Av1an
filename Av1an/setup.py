@@ -49,6 +49,11 @@ def check_exes(args):
         print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
         terminate()
 
+    if args.encoder == 'vvc':
+        if not find_executable('vvc_concat'):
+            print('vvc concatenation executabe "vvc_concat" not found')
+            terminate()
+
 
 def startup_check(args):
 
@@ -71,11 +76,33 @@ def startup_check(args):
         print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
         terminate()
 
+
+    if args.encoder == 'vvc' and not args.vvc_conf:
+        print('Conf file for vvc required')
+        terminate()
+
+    # No check because vvc
+    if args.encoder == 'vvc':
+        args.no_check = True
+
     if args.passes is None:
         args.passes = encoders_default_passes.get(args.encoder)
 
+
+    if args.video_params is None and args.encoder == 'vvc':
+        print('VVC require:\n',
+        ' -wdt X - video width\n',
+        ' -hgt X - video height\n',
+        ' -fr X  - framerate\n',
+        ' -q X   - quantizer\n',
+        'Example: -wdt 640 -hgt 360 -fr 23.98 -q 30 '
+        )
+        terminate()
+
     if args.video_params is None:
         args.video_params = get_default_params_for_encoder(args.encoder)
+
+
 
     args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
     args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'

@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from .vvc import to_yuv
 from .utils import terminate
-
 from .logger import log
 
 
@@ -188,11 +187,11 @@ def vvc_encode(inputs, params, vvc_conf):
     """Experimental support for VVC encoder
     """
     commands = [
-        (f' vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} --InputBitDepth=8 --OutputBitDepth=8 --SummaryVerboseness -b {x[1].with_suffix(".h266")}',
+        (f' vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f 99999 --InputBitDepth=8 --OutputBitDepth=8 -b {x[1].with_suffix(".h266")}',
         (x[0], x[1].with_suffix(".h266")))
         for x in inputs
         ]
-    print(commands)
+
     return commands
 
 

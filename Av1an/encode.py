@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import time
 import json
+import os
 from pathlib import Path
 from .target_vmaf import target_vmaf
 from .boost import boosting
@@ -22,6 +23,7 @@ from .fp_reuse import segment_first_pass
 from .split import extra_splits, segment, split_routine
 from .vmaf import plot_vmaf
 import shutil
+from .vvc import to_yuv, vvc_concat
 
 
 def video_encoding(args):
@@ -58,7 +60,10 @@ def video_encoding(args):
         encoding_loop(args, commands)
 
         try:
-            concatenate_video(args.temp, args.output_file, args.encoder )
+            if args.encoder == 'vvc':
+                vvc_concat(args.temp, args.output_file.with_suffix('.h266'))
+            else:
+                concatenate_video(args.temp, args.output_file, args.encoder )
 
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
@@ -181,11 +186,21 @@ def encode(commands):
 
         # Queue execution
         for i in commands[:-1]:
+                if args.encoder == 'vvc':
+                    log(f'Creating yuv for file {commands[1][0]}\n')
+                    fl = to_yuv(commands[1][0])
+                    log(f'Created yuv for file {commands[1][0]}\n')
                 tqdm_bar(i, args.encoder, counter, frame_probe_source, args.passes)
+
+                if args.encoder == 'vvc':
+                    os.remove(fl)
 
         frame_check(source, target, args.temp, args.no_check)
 
-        frame_probe_fr = frame_probe(target)
+        if args.encoder == 'vvc':
+            frame_probe_fr = frame_probe(source)
+        else:
+             frame_probe_fr = frame_probe(target_vmaf)
 
         enc_time = round(time.time() - st_time, 2)
 

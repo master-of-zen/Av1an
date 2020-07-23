@@ -102,6 +102,9 @@ def process_encoding_pipe(pipe, encoder, counter):
 
         if encoder in ('vvc'):
             match = match_vvc(line)
+            if match:
+                counter.update(1)
+                continue
 
         if match:
             new = int(match.group(1))

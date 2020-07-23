@@ -7,6 +7,7 @@ from pathlib import Path
 from .vvc import to_yuv
 from .utils import terminate
 from .logger import log
+from .ffmpeg import frame_probe
 
 
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
@@ -187,7 +188,7 @@ def vvc_encode(inputs, params, vvc_conf):
     """Experimental support for VVC encoder
     """
     commands = [
-        (f' vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f 99999 --InputBitDepth=8 --OutputBitDepth=8 -b {x[1].with_suffix(".h266")}',
+        (f' vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f {frame_probe(x[0])} --InputBitDepth=8 --OutputBitDepth=8 -b {x[1].with_suffix(".h266")}',
         (x[0], x[1].with_suffix(".h266")))
         for x in inputs
         ]

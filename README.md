@@ -122,8 +122,8 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
 
-    --min_cq, --max_cq      Min,Max CQ values used in interpolation for target Vmaf
-                            Use to limit CQ values range. Default: 25, 50.
+    --min_cq, --max_cq      Min,Max Q values limits for Target VMAF
+                            If not set by user, encoder default will be used.
 
 <h2 align="center">Main Features</h2>
 

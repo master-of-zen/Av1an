@@ -151,6 +151,7 @@ When installing under Windows, select the option `add Python to PATH` in the ins
   *  [Install rav1e](https://github.com/xiph/rav1e)
   *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)
   *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
+  *  [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
 
 * With a package manager:
   *  [PyPI](https://pypi.org/project/Av1an/)

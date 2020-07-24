@@ -55,8 +55,8 @@ class Args(object):
         # Target Vmaf
         self.vmaf_target = None
         self.vmaf_steps = None
-        self.min_cq = None
-        self.max_cq = None
+        self.min_q = None
+        self.max_q = None
         self.vmaf_plots = None
         self.n_threads = None
 
@@ -122,8 +122,8 @@ def arg_parsing():
     # Target Vmaf
     parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
     parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
-    parser.add_argument('--min_cq', type=int, default=None, help='Min cq for target vmaf')
-    parser.add_argument('--max_cq', type=int, default=None, help='Max cq for target vmaf')
+    parser.add_argument('--min_q', type=int, default=None, help='Min q for target vmaf')
+    parser.add_argument('--max_q', type=int, default=None, help='Max q for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 

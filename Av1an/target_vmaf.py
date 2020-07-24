@@ -93,7 +93,7 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
     plt.plot(x, y, 'p', color='tab:green', alpha=1)
     plt.plot(cq[0], cq[1], 'o', color='red', alpha=1)
     plt.grid(True)
-    plt.xlim(args.min_cq, args.max_cq)
+    plt.xlim(args.min_q, args.max_q)
     vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
     plt.ylim(min(vmafs), max(vmafs) + 1)
     plt.ylabel('VMAF')
@@ -117,7 +117,7 @@ def vmaf_probe(probe, q, args):
 
 def early_skips(probe, source, frames,args):
 
-    cq = [args.max_cq, args.min_cq]
+    cq = [args.max_q, args.min_q]
     scores = []
     for i in (0, 1):
 
@@ -128,18 +128,18 @@ def early_skips(probe, source, frames,args):
             log(f"File: {source.stem}, Fr: {frames}\n" \
             f"Q: {sorted([x[1] for x in scores])}, Early Skip High CQ\n" \
             f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
-            f"Target Q: {args.max_cq} Vmaf: {score}\n\n")
+            f"Target Q: {args.max_q} Vmaf: {score}\n\n")
 
-            return True, args.max_cq
+            return True, args.max_q
 
         # Early Skip on small CQ
         if i == 1 and round(score) < args.vmaf_target:
             log(f"File: {source.stem}, Fr: {frames}\n" \
                 f"Q: {sorted([x[1] for x in scores])}, Early Skip Low CQ\n" \
                 f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
-                f"Target Q: {args.min_cq} Vmaf: {score}\n\n")
+                f"Target Q: {args.min_q} Vmaf: {score}\n\n")
 
-            return True, args.min_cq
+            return True, args.min_q
 
     return False, scores
 
@@ -158,10 +158,10 @@ def get_closest(q_list, q, positive=True):
 def target_vmaf_search(probe, source, frames, args):
 
     vmaf_cq = []
-    q_list = [args.min_cq, args.max_cq]
+    q_list = [args.min_q, args.max_q]
     score = 0
-    last_q = args.min_cq
-    next_q = args.max_cq
+    last_q = args.min_q
+    next_q = args.max_q
     for _ in range(args.vmaf_steps - 2 ):
 
         new_point= (last_q + next_q) // 2

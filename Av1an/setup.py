@@ -27,8 +27,8 @@ def set_vmaf(args):
 
     defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'vvc': (20, 50)}
 
-    if args.min_cq is None or args.max_cq is None:
-        args.min_cq, args.max_cq = defaul_ranges.get(args.encoder)
+    if args.min_q is None or args.max_q is None:
+        args.min_q, args.max_q = defaul_ranges.get(args.encoder)
 
 
 def check_exes(args):

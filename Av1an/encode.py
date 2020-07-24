@@ -200,7 +200,7 @@ def encode(commands):
         if args.encoder == 'vvc':
             frame_probe_fr = frame_probe(source)
         else:
-             frame_probe_fr = frame_probe(target_vmaf)
+             frame_probe_fr = frame_probe(target)
 
         enc_time = round(time.time() - st_time, 2)
 

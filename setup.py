@@ -15,7 +15,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="Av1an",
-    version="1.11.2",
+    version="1.12",
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
     description="All-in-one encode toolkit",

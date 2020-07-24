@@ -17,7 +17,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX, x265, VVC are supported.
+An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX, x265, VTM are supported.
 
 Example with default parameters:
 

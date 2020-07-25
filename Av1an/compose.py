@@ -188,7 +188,7 @@ def vvc_encode(inputs, params, vvc_conf):
     """Experimental support for VVC encoder
     """
     commands = [
-        (f'vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f {frame_probe(x[0])} --InputBitDepth=8 --OutputBitDepth=8 -b {x[1].with_suffix(".h266")}',
+        (f'vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f {frame_probe(x[0])} --InputBitDepth=10 --OutputBitDepth=10 -b {x[1].with_suffix(".h266")}',
         (x[0], x[1].with_suffix(".h266")))
         for x in inputs
         ]

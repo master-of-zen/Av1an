@@ -113,7 +113,7 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models. By default used system one.
 
-    --vmaf_target           Vmaf value to target. Currently aomenc only.
+    --vmaf_target           Vmaf value to target. Supported about all encoders.
                             Best works with 85-97.
                             When using this mode specify full encoding options.
                             ` --end-usage=q ` or ` --end-usage=cq `

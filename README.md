@@ -113,7 +113,7 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models. By default used system one.
 
-    --vmaf_target           Vmaf value to target. Currently aomenc only.
+    --vmaf_target           Vmaf value to target. Supported about all encoders.
                             Best works with 85-97.
                             When using this mode specify full encoding options.
                             ` --end-usage=q ` or ` --end-usage=cq `
@@ -122,7 +122,7 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
 
-    --min_q, --max_q      Min,Max Q values limits for Target VMAF
+    --min_q, --max_q        Min,Max Q values limits for Target VMAF
                             If not set by user, encoder default will be used.
 
 <h2 align="center">Main Features</h2>

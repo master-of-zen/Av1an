@@ -107,17 +107,23 @@ With your own parameters:
 
     -bl --boost_limit       CQ range for boosting. Delta for which CQ can be changed
 
-    --vmaf                  Calculate vmaf for each encoded clip.
-                            Saves plot after encode, showing vmaf values for all frames,
-                            mean, 1,25,75 percentile.
-
-    --vmaf_path             Custom path to libvmaf models. By default used system one.
-
-    --vmaf_target           Vmaf value to target. Supported about all encoders.
-                            Best works with 85-97.
+    --vmaf_target           Vmaf value to target. Supported for all encoders(Exception:VVC).
+                            Best works in range 85-97.
                             When using this mode specify full encoding options.
-                            ` --end-usage=q ` or ` --end-usage=cq `
-                            with ` --cq-level=N ` must be specified.
+                            Encoding options must include quantizer based mode,
+                            and some quantizer option provided. (This value got replaced)
+                            `--crf`,`--cq-level`,`--quantizer` etc
+                            
+    --vmaf                  Calculate vmaf after encode is done.
+                            showing vmaf values for all frames,
+                            mean, 1,25,75 percentile.
+                            
+    --vmaf_plots            Make plots for target_vmaf search decisions
+                            (Exception: early skips)
+                            Saved in temp folder
+
+    --vmaf_path             Custom path to libvmaf models.
+                            (Required if vmaf calculation doesn't work by default)
 
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4

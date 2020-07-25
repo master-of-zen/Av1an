@@ -28,7 +28,7 @@ def read_vmaf_json(file, percentile):
     return perc
 
 
-def call_vmaf(source: Path, encoded: Path, n_threads, model):
+def call_vmaf(source: Path, encoded: Path, n_threads, model, res):
 
     if model:
         mod = f":model_path={model}"
@@ -45,8 +45,8 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model):
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
     fl = source.with_name(encoded.stem).with_suffix('.json').as_posix()
     cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i  {source.as_posix()}  ' \
-          f'-filter_complex "[0:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[distorted];' \
-          f'[1:v]scale=1920:1080:flags=spline:force_original_aspect_ratio=decrease[ref];' \
+          f'-filter_complex "[0:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[distorted];' \
+          f'[1:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[ref];' \
           f'[distorted][ref]libvmaf=log_fmt="json":log_path={fl}{mod}{n_threads}" -f null - '
 
     c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
@@ -59,11 +59,11 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model):
     return fl
 
 
-def plot_vmaf(inp: Path, out: Path, model):
+def plot_vmaf(inp: Path, out: Path, model, vmaf_res):
 
     print('Calculating Vmaf...\r', end='')
 
-    scores = call_vmaf(inp, out, 0, model)
+    scores = call_vmaf(inp, out, 0, model, vmaf_res)
 
     if not Path(scores).exists():
         print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')

@@ -30,6 +30,7 @@ jobs:
           - name: rav1e
             flags: -enc rav1e
           - name: x265
+            encoder: x265
             flags: -enc x265
           - name: workers
             flags: -w 2
@@ -58,7 +59,7 @@ jobs:
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install -r requirements.txt
       - name: Install x265
-        if: matrix.name == 'x265'
+        if: matrix.encoder == 'x265'
         run: |
           apt-get install -y ${{ env.x265_deps }}
           hg clone https://bitbucket.org/multicoreware/x265
@@ -66,7 +67,6 @@ jobs:
           cmake -G "Unix Makefiles" -DENABLE_SHARED=off ../../source
           make -j$(nproc)
           make install
-          x265 --help
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do

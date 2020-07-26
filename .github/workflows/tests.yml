@@ -59,7 +59,7 @@ jobs:
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install -r requirements.txt
       - name: Install x265
-        if: matrix.encoder == "x265"
+        if: matrix.encoder == 'x265'
         run: |
           apt-get install -y ${{ env.x265_deps }}
           hg clone https://bitbucket.org/multicoreware/x265

@@ -76,7 +76,7 @@ jobs:
       - name: Testing ${{ matrix.name }}
         run: |
           [ "${{ matrix.temp }}" != "" ] && TEMP=${{ matrix.temp }} || TEMP=${{ env.temp }}
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep ${{ matrix.flags }} -o "$TEMP"/bus_cif_av1.mkv
+          ./av1an.py -i bus_cif.y4m -tr 20 --keep ${{ matrix.flags }} -o "$TEMP"/bus_cif.mkv
           echo ::set-env name=TEMPPATH::$TEMP
       - name: Upload video
         uses: actions/upload-artifact@v2

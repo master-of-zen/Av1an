@@ -47,9 +47,6 @@ With your own parameters:
                             (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 2, VPX: 2)
                             At current moment 2nd pass rav1e not working
 
-    -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
-                            Example: -a '-c:a libopus -b:a  64k'
-
     -w   --workers          Override number of workers.
                                 
     --resume                If encode was stopped/quit resumes encode with saving all progress
@@ -70,12 +67,18 @@ With your own parameters:
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
+<h3 align="center">FFmpeg options</h3>
+
+    -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
+                            Example: -a '-c:a libopus -b:a  64k'
+
     -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
                             Example:
                             --ff " -r 24 -vf scale=320:240 "
 
-    -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
-                            Example for 10 bit: 'yuv420p10le'
+    -fmt --pix_format       Setting custom pixel/bit format for piping
+                            (Default: 'yuv420p')
+                            Example for 10 bit source: 'yuv420p10le'
                             Encoding options should be adjusted accordingly.
 
 <h3 align="center">Segmenting</h3>

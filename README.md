@@ -50,8 +50,35 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -w   --workers          Overrides automatically set number of workers.
-                            Example: rav1e settings " ... --tile-rows 2 --tile-cols 2 ... " -w 3
+    -w   --workers          Override number of workers.
+                                
+    --resume                If encode was stopped/quit resumes encode with saving all progress
+                            Resuming automatically skips scenedetection, audio encoding/copy,
+                            spliting, so resuming only possible after actuall encoding is started.
+                            /.temp folder must be presented for resume.
+
+    --no_check              Skip checking numbers of frames for source and encoded chunks.
+                            Needed if framerate changes to avoid console spam.
+                            By default any differences in frames of encoded files will be reported.
+
+    --keep                  Not deleting temprally folders after encode finished.
+
+    -log --logging          Path to .log file(By default created in temp folder)
+
+    --temp                  Set path for temporally folders. Default: .temp
+    
+    -cfg                    Save/Read config file with encoder, encoder parameters,
+                            FFmpeg and audio settings.
+
+    -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
+                            Example:
+                            --ff " -r 24 -vf scale=320:240 "
+
+    -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
+                            Example for 10 bit: 'yuv420p10le'
+                            Encoding options should be adjusted accordingly.
+
+<h3 align="center">Segmenting</h3>
 
     --split_method          Method used for generating splits.(Default: PySceneDetect)
                             Options: `pyscene`, `aom_keyframes`
@@ -74,31 +101,11 @@ With your own parameters:
                             -xs 200 will try to add splits at keyframes
                             that closest to 200,400,600,800.
 
-    -cfg                    Save/Read config file with encoder, encoder parameters,
-                            FFmpeg and audio settings.
 
-    -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
-                            Example:
-                            --ff " -r 24 -vf scale=320:240 "
 
-    -fmt --pix_format       Setting custom pixel/bit format(Default: 'yuv420p')
-                            Example for 10 bit: 'yuv420p10le'
-                            Encoding options should be adjusted accordingly.
 
-    --resume                If encode was stopped/quit resumes encode with saving all progress
-                            Resuming automatically skips scenedetection, audio encoding/copy,
-                            spliting, so resuming only possible after actuall encoding is started.
-                            /.temp folder must be presented for resume.
+<h3 align="center">Dark scenes boosting</h3>
 
-    --no_check              Skip checking numbers of frames for source and encoded chunks.
-                            Needed if framerate changes to avoid console spam.
-                            By default any differences in frames of encoded files will be reported.
-
-    --keep                  Not deleting temprally folders after encode finished.
-
-    -log --logging          Path to .log file(By default created in temp folder)
-
-    --temp                  Set path for temporally folders. Default: .temp
 
     --boost                 Enable experimental CQ boosting for dark scenes. 
                             Aomenc/VPX only. See 1.7 release notes.
@@ -107,12 +114,19 @@ With your own parameters:
 
     -bl --boost_limit       CQ range for boosting. Delta for which CQ can be changed
 
+
+<h3 align="center">Target VMAF</h3>
+ 
+ 
     --vmaf_target           Vmaf value to target. Supported for all encoders(Exception:VVC).
                             Best works in range 85-97.
                             When using this mode specify full encoding options.
                             Encoding options must include quantizer based mode,
                             and some quantizer option provided. (This value got replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
+                            
+    --min_q, --max_q        Min,Max Q values limits for Target VMAF
+                            If not set by user, encoder default will be used.
                             
     --vmaf                  Calculate vmaf after encode is done.
                             showing vmaf values for all frames,
@@ -128,8 +142,7 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
 
-    --min_q, --max_q        Min,Max Q values limits for Target VMAF
-                            If not set by user, encoder default will be used.
+
 
 <h2 align="center">Main Features</h2>
 

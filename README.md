@@ -140,10 +140,17 @@ With your own parameters:
                             Saved in temp folder
 
     --vmaf_path             Custom path to libvmaf models.
+                            example: --vmaf_path "vmaf_v0.6.1.pkl"
+                            Recomended to place both files in encoding folder
+                            (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if vmaf calculation doesn't work by default)
 
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
+    
+    --n_threads             Limit number of threads that used for vmaf calculation
+                            Example: --n_threads 12
+                            (Required if VMAF calculation gives error on high core counts)
 
 
 

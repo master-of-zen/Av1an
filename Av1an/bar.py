@@ -90,7 +90,11 @@ def process_encoding_pipe(pipe, encoder, counter):
         elif encoder == 'rav1e':
             match = match_rav1e(line)
 
-        if encoder in  ('x265'):
+        elif encoder in ('x264'):
+            if not skip_1_pass:
+                match = re.search(r"^[^\d]*(\d+)", line)
+
+        elif encoder in  ('x265'):
             if not skip_1_pass and pass_1_check:
                 if 'output file' in line:
                     if 'nul' in line.lower():
@@ -100,7 +104,7 @@ def process_encoding_pipe(pipe, encoder, counter):
             if not skip_1_pass:
                 match = re.search(r"^(\d+)", line)
 
-        if encoder in ('vvc'):
+        elif encoder in ('vvc'):
             match = match_vvc(line)
             if match:
                 counter.update(1)
@@ -128,7 +132,7 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
         else:
             pipe = make_pipes(i)
 
-        if encoder in ('aom', 'vpx', 'rav1e','x265', 'vvc'):
+        if encoder in ('aom', 'vpx', 'rav1e','x265', 'x264', 'vvc'):
             process_encoding_pipe(pipe, encoder, counter)
 
         if encoder == 'svt_av1':

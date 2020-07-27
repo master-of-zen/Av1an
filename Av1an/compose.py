@@ -46,6 +46,7 @@ def get_default_params_for_encoder(enc):
     'rav1e': ' --tiles 8 --speed 6 --quantizer 100',
     'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
     'x265': ' -p slow --crf 23 ',
+    'x264': ' --preset slow --crf 23 ',
     'vvc': ' -wdt 640 -hgt 360 -fr 23.98 -q 30 '
     }
 
@@ -151,9 +152,32 @@ def rav1e_encode(inputs, passes, pipe, params):
     return commands
 
 
+def x264_encode(inputs, passes, pipe, params):
+
+    commands = []
+    single_p = 'x264 --stitchable --log-level error --demuxer y4m '
+    two_p_1 = 'x264 --stitchable --log-level error --pass 1 --demuxer y4m '
+    two_p_2 = 'x264 --stitchable --log-level error --pass 2 --demuxer y4m '
+
+    if passes == 1:
+        commands = [
+                (f'ffmpeg -y -hide_banner -loglevel error  -i {file[0]} {pipe} {single_p} {params} - -o {file[1].with_suffix(".mkv")}',
+                (file[0], file[1].with_suffix('.mkv')))
+                for file in inputs
+                ]
+
+    if passes == 2:
+        commands = [
+            (f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_1} {params} - --stats {file[0].with_suffix(".log")} - -o {os.devnull}',
+             f'ffmpeg -y -hide_banner -loglevel error -i {file[0]} {pipe} {two_p_2} {params} - --stats {file[0].with_suffix(".log")} - -o {file[1].with_suffix(".mkv")}',
+             (file[0], file[1].with_suffix('.mkv')))
+             for file in inputs
+        ]
+    return commands
+
 def x265_encode(inputs, passes, pipe, params):
     """
-    Generates commands for AOM, VPX encoders
+    Generates commands for x265 encoder
 
     :param inputs: Files that need to be enocoded
     :param passes: Encoding passes
@@ -163,8 +187,8 @@ def x265_encode(inputs, passes, pipe, params):
     """
     commands = []
     single_p = 'x265 --y4m'
-    two_p_1 = 'x265 --pass 1 --y4m'
-    two_p_2 = 'x265 --pass 2 --y4m'
+    two_p_1 = 'x265 --log-level error --pass 1 --y4m'
+    two_p_2 = 'x265 --log-level error --pass 2 --y4m'
 
     if passes == 1:
         commands = [
@@ -230,6 +254,9 @@ def compose_encoding_queue(files, args):
 
     elif args.encoder == 'x265':
         queue = x265_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
+
+    elif args.encoder == 'x264':
+        queue = x264_encode(inputs, args.passes, args.ffmpeg_pipe, args.video_params)
 
     elif args.encoder == 'vvc':
         queue = vvc_encode(inputs, args.video_params, args.vvc_conf)

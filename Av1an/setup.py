@@ -25,7 +25,7 @@ def set_vmaf(args):
         terminate()
 
 
-    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'vvc': (20, 50)}
+    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
 
     if args.min_q is None or args.max_q is None:
         args.min_q, args.max_q = defaul_ranges.get(args.encoder)
@@ -35,7 +35,7 @@ def check_exes(args):
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265', 'vvc': 'vvc_encoder'}
+    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265', 'x264': 'x264', 'vvc': 'vvc_encoder'}
 
 
     # Check if encoder executable is reachable
@@ -46,7 +46,7 @@ def check_exes(args):
             print(f'Encoder {enc} not found')
             terminate()
     else:
-        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265" ')
+        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265", "x264" ')
         terminate()
 
     if args.encoder == 'vvc':
@@ -57,7 +57,7 @@ def check_exes(args):
 
 def startup_check(args):
 
-    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1, 'vvc':1 }
+    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1, 'x264': 1, 'vvc':1 }
 
 
     if sys.version_info < (3, 6):
@@ -121,7 +121,7 @@ def determine_resources(encoder, workers):
     if encoder in ('aom', 'rav1e', 'vpx'):
         workers =  round(min(cpu / 2, ram / 1.5))
 
-    elif encoder in ('svt_av1', 'x265'):
+    elif encoder in ('svt_av1', 'x265', 'x264'):
         workers =  round(min(cpu, ram)) // 8
 
     elif encoder in ('vvc'):

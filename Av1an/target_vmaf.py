@@ -52,6 +52,9 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
         params = " SvtAv1EncApp -i stdin --preset 8 --rc 0 --qp "
         cmd = f'{pipe} {params}{q} -b {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
 
+    elif encoder == 'x264':
+        params = "x264 --log-level error --demuxer y4m - --no-progress --preset slow --crf "
+        cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
     return cmd
 
 

@@ -52,7 +52,7 @@ def man_q(command: str, q: int):
         mt = '--cq-level='
         cmd = command[:command.find(mt) + 11] + str(q) + ' ' + command[command.find(mt) + 13:]
 
-    elif 'x265' in command:
+    elif 'x265' in command or 'x264' in command:
         mt = '--crf'
         cmd = command[:command.find(mt) + 6] + str(q) + ' ' +  command[command.find(mt) + 9:]
 

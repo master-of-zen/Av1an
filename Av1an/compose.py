@@ -43,7 +43,7 @@ def get_default_params_for_encoder(enc):
     DEFAULT_ENC_PARAMS = {
     'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
     'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
-    'rav1e': ' --tiles 8 --speed 6 --quantizer 100',
+    'rav1e': ' --tiles 8 --speed 6 --quantizer 100 ',
     'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
     'x265': ' -p slow --crf 23 ',
     'x264': ' --preset slow --crf 23 ',
@@ -153,6 +153,15 @@ def rav1e_encode(inputs, passes, pipe, params):
 
 
 def x264_encode(inputs, passes, pipe, params):
+    """
+    Generates commands for x264 encoder
+
+    :param inputs: Files that need to be enocoded
+    :param passes: Encoding passes
+    :param pipe: FFmpeg piping settings
+    :param params: Encoding parameters
+    :return: Composed commands for execution
+    """
 
     commands = []
     single_p = 'x264 --stitchable --log-level error --demuxer y4m '
@@ -209,7 +218,13 @@ def x265_encode(inputs, passes, pipe, params):
 
 
 def vvc_encode(inputs, params, vvc_conf):
-    """Experimental support for VVC encoder
+    """
+    Generates commands for VCC encoder with yuv as input + get set frame count.
+    1 pass only/
+
+    :param inputs: Files that need to be enocoded
+    :param params: Encoding parameters
+    :return: Composed commands for execution
     """
     commands = [
         (f'vvc_encoder -c {vvc_conf} -i {x[0].with_suffix(".yuv").as_posix()} {params} -f {frame_probe(x[0])} --InputBitDepth=10 --OutputBitDepth=10 -b {x[1].with_suffix(".h266")}',

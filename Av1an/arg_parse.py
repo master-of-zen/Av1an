@@ -51,6 +51,7 @@ class Args(object):
         # Vmaf
         self.vmaf = None
         self.vmaf_path = None
+        self.vmaf_res = None
 
         # Target Vmaf
         self.vmaf_target = None
@@ -119,6 +120,7 @@ def arg_parsing():
     # Vmaf
     parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
     parser.add_argument('--vmaf_path', type=Path, default=None, help='Path to vmaf models')
+    parser.add_argument('--vmaf_res', type=str, default="1920x1080", help='Resolution used in vmaf calculation')
 
     # Target Vmaf
     parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')

@@ -72,7 +72,7 @@ def video_encoding(args):
             terminate()
 
         if args.vmaf or args.vmaf_plots:
-            plot_vmaf(args.input, args.output_file, args.vmaf_path)
+            plot_vmaf(args.input, args.output_file, args.vmaf_path, args.vmaf_res)
         # Delete temp folders
         if not args.keep:
             shutil.rmtree(args.temp)

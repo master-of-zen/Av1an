@@ -119,7 +119,7 @@ def vmaf_probe(probe, q, args):
     cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder)
     make_pipes(cmd).wait()
 
-    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path)
+    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res)
     score = read_vmaf_json(file, 25)
 
     return score

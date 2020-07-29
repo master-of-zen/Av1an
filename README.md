@@ -145,6 +145,10 @@ With your own parameters:
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if vmaf calculation doesn't work by default)
 
+    --vmaf_res              Resolution used for vmaf calculation, models was trained for
+                            certain resoultion, vmaf_v0.6.1.pkl is 1920x1080 (by default),
+                            vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf_path)
+
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
     

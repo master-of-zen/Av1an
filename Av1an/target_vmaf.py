@@ -15,9 +15,16 @@ from math import isnan
 import os
 from .bar import make_pipes
 
-def x264_probes(video: Path, ffmpeg: str):
+def x264_probes(video: Path, ffmpeg: str, probe_framerate):
+
+    if probe_framerate == 0:
+        fr = ''
+    else:
+        fr = f'-r {probe_framerate}'
+
     cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
-                  f'-r 4 -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
+          f' {fr} -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
+
     subprocess.run(cmd, shell=True)
 
 
@@ -185,7 +192,7 @@ def target_vmaf(source, args):
     vmaf_cq = []
 
     try:
-        x264_probes(source, args.ffmpeg)
+        x264_probes(source, args.ffmpeg, args.probe_framerate)
 
         skips, scores = early_skips(probe, source, frames, args)
         if skips:

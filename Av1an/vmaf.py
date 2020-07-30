@@ -20,7 +20,7 @@ def read_vmaf_json(file, percentile):
     """
     with open(file, 'r') as f:
         file = json.load(f)
-        vmafs = list({x['metrics']['vmaf'] for x in file['frames']})
+        vmafs = [x['metrics']['vmaf'] for x in file['frames']]
 
     vmafs = [float(x) for x in vmafs if isinstance(x, float)]
     calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]

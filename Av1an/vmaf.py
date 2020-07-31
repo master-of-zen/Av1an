@@ -51,7 +51,6 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model, res):
 
     c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
     call = c.stdout
-    # print(c.stdout.decode())
     if 'error' in call.decode().lower():
         print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())
         terminate()
@@ -76,7 +75,7 @@ def plot_vmaf(inp: Path, out: Path, model, vmaf_res):
 
     with open(scores) as f:
         file = json.load(f)
-        vmafs = list({x['metrics']['vmaf'] for x in file['frames']})
+        vmafs = [x['metrics']['vmaf'] for x in file['frames']]
         plot_size = len(vmafs)
 
     plt.figure(figsize=(15, 4))

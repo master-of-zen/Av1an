@@ -68,7 +68,7 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
 def get_target_q(scores, vmaf_target):
     x = [x[1] for x in sorted(scores)]
     y = [float(x[0]) for x in sorted(scores)]
-    f = interpolate.interp1d(x, y, kind='cubic')
+    f = interpolate.interp1d(x, y, kind='quadratic')
     xnew = np.linspace(min(x), max(x), max(x) - min(x))
     tl = list(zip(xnew, f(xnew)))
     q = min(tl, key=lambda x: abs(x[1] - vmaf_target))
@@ -81,7 +81,7 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     y = [float(x[0]) for x in sorted(vmaf_cq)]
 
     # Interpolate data
-    f = interpolate.interp1d(x, y, kind='cubic')
+    f = interpolate.interp1d(x, y, kind='quadratic')
     xnew = np.linspace(min(x), max(x), max(x) - min(x))
 
     # Getting value closest to target

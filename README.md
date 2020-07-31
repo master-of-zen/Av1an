@@ -152,7 +152,7 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
     
-    ----probe_framerate     Setting framerate for vmaf probes (Default: 4)
+    --probe_framerate     Setting framerate for vmaf probes (Default: 4)
     
     --n_threads             Limit number of threads that used for vmaf calculation
                             Example: --n_threads 12

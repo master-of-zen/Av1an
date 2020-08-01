@@ -28,7 +28,7 @@ def read_vmaf_json(file, percentile):
     return perc
 
 
-def call_vmaf(source: Path, encoded: Path, n_threads, model, res):
+def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path = None):
 
     if model:
         mod = f":model_path={model}"
@@ -40,10 +40,13 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model, res):
     else:
         n_threads = ''
 
+    if fl_path is None:
+        fl_path = source.with_name(encoded.stem).with_suffix('.json')
+    fl = fl_path.as_posix()
+
     # For vmaf calculation both source and encoded segment scaled to 1080
     # for proper vmaf calculation
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
-    fl = source.with_name(encoded.stem).with_suffix('.json').as_posix()
     cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i  {source.as_posix()}  ' \
           f'-filter_complex "[0:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[distorted];' \
           f'[1:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[ref];' \
@@ -55,17 +58,18 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model, res):
         print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())
         terminate()
 
-    return fl
+    return fl_path
 
 
-def plot_vmaf(inp: Path, out: Path, model, vmaf_res):
+def plot_vmaf(source: Path, encoded: Path, model, vmaf_res):
 
     print('Calculating Vmaf...\r', end='')
 
-    scores = call_vmaf(inp, out, 0, model, vmaf_res)
+    fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
+    scores = call_vmaf(source, encoded, 0, model, vmaf_res, fl_path=fl_path)
 
-    if not Path(scores).exists():
-        print(f'Vmaf calculation failed for files:\n {inp.stem} {out.stem}')
+    if not scores.exists():
+        print(f'Vmaf calculation failed for files:\n {source.stem} {encoded.stem}')
         sys.exit()
 
     perc_1 = read_vmaf_json(scores, 1)
@@ -97,7 +101,7 @@ def plot_vmaf(inp: Path, out: Path, model, vmaf_res):
     plt.margins(0)
 
     # Save
-    file_name = str(out.stem) + '_plot.png'
+    file_name = str(encoded.stem) + '_plot.png'
     plt.savefig(file_name, dpi=500)
 
 

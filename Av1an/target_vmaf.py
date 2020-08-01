@@ -1,19 +1,21 @@
 #!/bin/env python
 
-from .utils import terminate
-from .ffmpeg import frame_probe
-from .vmaf import call_vmaf, read_vmaf_json
+
 from scipy import interpolate
 from pathlib import Path
 import subprocess
 import numpy as np
-from .logger import log
 from matplotlib import pyplot as plt
 import matplotlib
 import sys
 from math import isnan
 import os
 from .bar import make_pipes
+from .utils import terminate
+from .ffmpeg import frame_probe
+from .vmaf import call_vmaf, read_vmaf_json
+from .logger import log
+
 
 def x264_probes(video: Path, ffmpeg: str, probe_framerate):
 

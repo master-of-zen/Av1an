@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 from .target_vmaf import target_vmaf
-from .boost import boosting
 from .utils import  frame_probe_cv2, terminate, process_inputs
 from .fp_reuse import remove_first_pass_from_commands
 from .utils import man_q
@@ -174,11 +173,6 @@ def encode(commands):
             else:
                 commands = (cm1,) + commands[1:]
 
-        # Boost
-        if args.boost:
-            commands = boosting(args.boost_limit, args.boost_range, source, commands, args.passes)
-
-        # first pass reuse
         if args.reuse_first_pass:
             commands = remove_first_pass_from_commands(commands, args.passes)
 

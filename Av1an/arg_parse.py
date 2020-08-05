@@ -43,11 +43,6 @@ class Args(object):
         self.no_check = None
         self.keep = None
 
-        # Boost
-        self.boost = None
-        self.boost_range = None
-        self.boost_limit = None
-
         # Vmaf
         self.vmaf = None
         self.vmaf_path = None
@@ -110,12 +105,6 @@ def arg_parsing():
     parser.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
     parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
     parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
-
-    # Boost
-    parser.add_argument('--boost', help='Experimental feature, decrease CQ of clip based on brightness.'
-                                        'Darker = lower CQ', action='store_true')
-    parser.add_argument('--boost_range', '-br', default=15, type=int, help='Range/strength of CQ change')
-    parser.add_argument('--boost_limit', '-bl', default=10, type=int, help='CQ limit for boosting')
 
     # Vmaf
     parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')

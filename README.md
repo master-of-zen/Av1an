@@ -106,19 +106,6 @@ With your own parameters:
                             that closest to 200,400,600,800.
 
 
-
-
-<h3 align="center">Dark scenes boosting</h3>
-
-
-    --boost                 Enable experimental CQ boosting for dark scenes. 
-                            Aomenc/VPX only. See 1.7 release notes.
-
-    -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
-
-    -bl --boost_limit       CQ range for boosting. Delta for which CQ can be changed
-
-
 <h3 align="center">Target VMAF</h3>
  
  

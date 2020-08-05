@@ -113,11 +113,11 @@ def arg_parsing():
 
     # Target Vmaf
     parser.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
-    parser.add_argument('--vmaf_steps', type=int, default=5, help='Steps between min and max qp for target vmaf')
+    parser.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
     parser.add_argument('--min_q', type=int, default=None, help='Min q for target vmaf')
     parser.add_argument('--max_q', type=int, default=None, help='Max q for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
-    parser.add_argument('--vmaf_rate', type=int, default=6, help='Framerate for probes, 0 - original')
+    parser.add_argument('--vmaf_rate', type=int, default=4, help='Framerate for probes, 0 - original')
     parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
     # VVC

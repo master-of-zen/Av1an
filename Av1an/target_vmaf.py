@@ -23,11 +23,11 @@ def gen_probes_names(probe, q):
     return probe.with_name(f'v_{q}{probe.stem}').with_suffix('.ivf')
 
 
-def probe_cmd(probe, q, ffmpeg_pipe, encoder, probe_framerate):
+def probe_cmd(probe, q, ffmpeg_pipe, encoder, vmaf_rate):
     """Generate and return commands for probes at set Q values
     """
     #
-    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i {probe} -vf "select=not(mod(n\,{probe_framerate}))" {ffmpeg_pipe}'
+    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i {probe} -vf "select=not(mod(n\,{vmaf_rate}))" {ffmpeg_pipe}'
 
     if encoder == 'aom':
         params = " aomenc  --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
@@ -107,11 +107,11 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
 
 def vmaf_probe(probe, q, args):
 
-    cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder, args.probe_framerate)
+    cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
     subprocess.Popen(cmd, universal_newlines=True, shell=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
-    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res, probe_framerate=args.probe_framerate)
+    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
     score = read_vmaf_json(file, 50)
 
     return score

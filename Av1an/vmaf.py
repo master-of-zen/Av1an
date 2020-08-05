@@ -25,7 +25,7 @@ def read_vmaf_json(file, percentile):
     return perc
 
 
-def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path = None, probe_framerate=0):
+def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path = None, vmaf_rate=0):
     
 
     cmd = ''
@@ -47,8 +47,8 @@ def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path 
     fl = fl_path.as_posix()
 
     # Change framerate of comparison to framerate of probe
-    if probe_framerate != 0:
-        select_frames = f"select=not(mod(n\,{probe_framerate})),"
+    if vmaf_rate != 0:
+        select_frames = f"select=not(mod(n\,{vmaf_rate})),"
     else:
         select_frames = ''
 

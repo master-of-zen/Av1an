@@ -17,32 +17,20 @@ from .vmaf import call_vmaf, read_vmaf_json
 from .logger import log
 
 
-def x264_probes(video: Path, ffmpeg: str, probe_framerate):
-
-    if probe_framerate == 0:
-        fr = ''
-    else:
-        fr = f'-r {probe_framerate}'
-
-    cmd = f' ffmpeg -y -hide_banner -loglevel error -i {video.as_posix()} ' \
-          f' {fr} -an {ffmpeg} -c:v libx264 -crf 0 {video.with_suffix(".mp4")}'
-
-    subprocess.run(cmd, shell=True)
-
-
 def gen_probes_names(probe, q):
     """Make name of vmaf probe
     """
     return probe.with_name(f'v_{q}{probe.stem}').with_suffix('.ivf')
 
 
-def probe_cmd(probe, q, ffmpeg_pipe, encoder):
+def probe_cmd(probe, q, ffmpeg_pipe, encoder, vmaf_rate):
     """Generate and return commands for probes at set Q values
     """
-    pipe = f'ffmpeg -y -hide_banner -loglevel error -i {probe} {ffmpeg_pipe}'
+    #
+    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i {probe} -vf "select=not(mod(n\,{vmaf_rate}))" {ffmpeg_pipe}'
 
     if encoder == 'aom':
-        params = " aomenc  -q --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
+        params = " aomenc  --passes=1 --threads=8 --end-usage=q --cpu-used=6 --cq-level="
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf - '
 
     elif encoder == 'x265':
@@ -64,6 +52,7 @@ def probe_cmd(probe, q, ffmpeg_pipe, encoder):
     elif encoder == 'x264':
         params = "x264 --log-level error --demuxer y4m - --no-progress --preset slow --crf "
         cmd = f'{pipe} {params}{q} -o {probe.with_name(f"v_{q}{probe.stem}")}.ivf'
+
     return cmd
 
 
@@ -92,7 +81,7 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     return vmaf_target_cq, tl, f, xnew
 
 
-def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
+def plot_probes(args, vmaf_cq, probe, frames):
     # Saving plot of vmaf calculation
 
     x = [x[1] for x in sorted(vmaf_cq)]
@@ -118,23 +107,25 @@ def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
 
 def vmaf_probe(probe, q, args):
 
-    cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder)
-    make_pipes(cmd).wait()
+    cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
+    subprocess.Popen(cmd, universal_newlines=True, shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
-    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res)
-    score = read_vmaf_json(file, 25)
+    file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
+    score = read_vmaf_json(file, 50)
 
     return score
 
 
-def early_skips(probe, source, frames,args):
+def early_skips(source, frames,args):
 
     cq = [args.max_q, args.min_q]
     scores = []
     for i in (0, 1):
 
-        score = vmaf_probe(probe, cq[i], args)
+        score = vmaf_probe(source, cq[i], args)
         scores.append((score, cq[i]))
+
         # Early Skip on big CQ
         if i == 0 and round(score) > args.vmaf_target:
             log(f"File: {source.stem}, Fr: {frames}\n" \
@@ -180,7 +171,7 @@ def target_vmaf_search(probe, source, frames, args):
         last_q = new_point
 
         q_list.append(new_point)
-        score = vmaf_probe(probe, new_point, args)
+        score = vmaf_probe(source, new_point, args)
         next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
         vmaf_cq.append((score, new_point))
 
@@ -194,9 +185,7 @@ def target_vmaf(source, args):
     vmaf_cq = []
 
     try:
-        x264_probes(source, args.ffmpeg, args.probe_framerate)
-
-        skips, scores = early_skips(probe, source, frames, args)
+        skips, scores = early_skips(source, frames, args)
         if skips:
             return scores
         else:
@@ -214,7 +203,7 @@ def target_vmaf(source, args):
             f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
 
         if args.vmaf_plots:
-            plot_probes(args, vmaf_cq, args.vmaf_target, probe, frames)
+            plot_probes(args, vmaf_cq, source, frames)
 
         return q
 

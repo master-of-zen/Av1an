@@ -26,7 +26,8 @@ Example with default parameters:
 With your own parameters:
 
     av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10
-     -ff " -vf scale=-1:720 "  -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output
+    --split_method aom_keyframes --vmaf_target 95 --vmaf_path "vmaf_v0.6.1.pkl" -min_q 20 -max_q 60
+    -ff " -vf scale=-1:720 "  -a " -c:a libopus -b:a 24k " -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
 
@@ -105,19 +106,6 @@ With your own parameters:
                             that closest to 200,400,600,800.
 
 
-
-
-<h3 align="center">Dark scenes boosting</h3>
-
-
-    --boost                 Enable experimental CQ boosting for dark scenes. 
-                            Aomenc/VPX only. See 1.7 release notes.
-
-    -br --boost_range       CQ limit for boosting. CQ can't get lower than this value.
-
-    -bl --boost_limit       CQ range for boosting. Delta for which CQ can be changed
-
-
 <h3 align="center">Target VMAF</h3>
  
  
@@ -152,7 +140,7 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
     
-    --probe_framerate     Setting framerate for vmaf probes (Default: 4)
+    --probe_framerate       Setting rate for vmaf probes (Every N frame used in probe, Default: 6)
     
     --n_threads             Limit number of threads that used for vmaf calculation
                             Example: --n_threads 12

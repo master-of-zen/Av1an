@@ -40,8 +40,6 @@ jobs:
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --vmaf_target 95
           - name: extra splits
             flags: -xs 10
-          - name: boost
-            flags: --boost --boost_limit 20 --boost_range 10
           - name: split method
             flags: --split_method aom_keyframes
           - name: temp

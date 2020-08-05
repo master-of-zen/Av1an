@@ -43,11 +43,6 @@ class Args(object):
         self.no_check = None
         self.keep = None
 
-        # Boost
-        self.boost = None
-        self.boost_range = None
-        self.boost_limit = None
-
         # Vmaf
         self.vmaf = None
         self.vmaf_path = None
@@ -59,7 +54,7 @@ class Args(object):
         self.min_q = None
         self.max_q = None
         self.vmaf_plots = None
-        self.probe_framerate = None
+        self.vmaf_rate = None
         self.n_threads = None
 
         # VVC
@@ -111,12 +106,6 @@ def arg_parsing():
     parser.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
     parser.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
 
-    # Boost
-    parser.add_argument('--boost', help='Experimental feature, decrease CQ of clip based on brightness.'
-                                        'Darker = lower CQ', action='store_true')
-    parser.add_argument('--boost_range', '-br', default=15, type=int, help='Range/strength of CQ change')
-    parser.add_argument('--boost_limit', '-bl', default=10, type=int, help='CQ limit for boosting')
-
     # Vmaf
     parser.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
     parser.add_argument('--vmaf_path', type=Path, default=None, help='Path to vmaf models')
@@ -128,7 +117,7 @@ def arg_parsing():
     parser.add_argument('--min_q', type=int, default=None, help='Min q for target vmaf')
     parser.add_argument('--max_q', type=int, default=None, help='Max q for target vmaf')
     parser.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
-    parser.add_argument('--probe_framerate', type=int, default=4, help='Framerate for probes, 0 - original')
+    parser.add_argument('--vmaf_rate', type=int, default=6, help='Framerate for probes, 0 - original')
     parser.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
     # VVC

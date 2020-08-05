@@ -14,7 +14,6 @@ from .chunk import Chunk
 from .chunk_queue import create_encoding_queue
 from .concat import concat_routine
 from .target_vmaf import target_vmaf
-from .boost import boosting
 from .utils import frame_probe_cv2, terminate, process_inputs
 from .utils import man_q
 from .bar import Manager, tqdm_bar
@@ -178,11 +177,6 @@ def encode(chunk: Chunk, counter, args: Args):
         #         commands = (cm1, cm2) + commands[2:]
         #     else:
         #         commands = (cm1,) + commands[1:]
-
-        # TODO: maybe support boosting. It's deprecated and being removed
-        # Boost
-        # if args.boost:
-        #     commands = boosting(args.boost_limit, args.boost_range, source, commands, args.passes)
 
         # remove first pass command if reusing
         if args.reuse_first_pass:

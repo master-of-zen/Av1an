@@ -21,38 +21,55 @@ def read_vmaf_json(file, percentile):
     with open(file, 'r') as f:
         file = json.load(f)
         vmafs = [x['metrics']['vmaf'] for x in file['frames']]
-
-    vmafs = [float(x) for x in vmafs if isinstance(x, float)]
-    calc = [x for x in vmafs if isinstance(x, float) and not isnan(x)]
-    perc = round(np.percentile(calc, percentile), 2)
+    perc = round(np.percentile(vmafs, percentile), 2)
     return perc
 
 
-def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path = None):
+def call_vmaf(source: Path, encoded: Path, n_threads, model, res, fl_path: Path = None, vmaf_rate=0):
+    
 
+    cmd = ''
+    # settings model path
     if model:
         mod = f":model_path={model}"
     else:
         mod = ''
 
+    # limiting amount of threads for calculation
     if n_threads:
         n_threads = f':n_threads={n_threads}'
     else:
         n_threads = ''
 
+
     if fl_path is None:
         fl_path = source.with_name(encoded.stem).with_suffix('.json')
     fl = fl_path.as_posix()
 
+    # Change framerate of comparison to framerate of probe
+    if vmaf_rate != 0:
+        select_frames = f"select=not(mod(n\,{vmaf_rate})),"
+    else:
+        select_frames = ''
+
     # For vmaf calculation both source and encoded segment scaled to 1080
-    # for proper vmaf calculation
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
-    cmd = f'ffmpeg -loglevel error -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i  {source.as_posix()}  ' \
-          f'-filter_complex "[0:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[distorted];' \
-          f'[1:v]scale={res}:flags=spline:force_original_aspect_ratio=decrease[ref];' \
-          f'[distorted][ref]libvmaf=log_fmt="json":log_path={fl}{mod}{n_threads}" -f null - '
+
+    cmd = f"ffmpeg -loglevel info -y -thread_queue_size 1024 -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i  {source.as_posix()} "
+    
+    filter_complex = ' -filter_complex '
+
+    distorted = f'\"[0:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
+    
+
+    ref = fr"[1:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];"
+
+    vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={fl}{mod}{n_threads}\" -f null - "
+
+    cmd = cmd + filter_complex + distorted + ref + vmaf_filter
 
     c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
+
     call = c.stdout
     if 'error' in call.decode().lower():
         print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())

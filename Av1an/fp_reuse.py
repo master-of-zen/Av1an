@@ -80,7 +80,7 @@ def segment_first_pass(temp, framenums):
     # special case for only 1 scene
     # we don't need to do anything with the log
     if len(framenums) == 0:
-        write_first_pass_log(os.path.join(temp, "split", "0.log"), stats)
+        write_first_pass_log(os.path.join(temp, "split", "0_fpf.log"), stats)
         return
 
     eos_stats = stats[-1]  # EOS stats is the last one
@@ -90,7 +90,7 @@ def segment_first_pass(temp, framenums):
     for i in range(0, len(frm_split) - 1):
         frm_start_idx = frm_split[i]
         frm_end_idx = frm_split[i + 1]
-        log_name = split_names[i] + '.log'
+        log_name = split_names[i] + '_fpf.log'
 
         chunk_stats = stats[frm_start_idx:frm_end_idx]
         reindex_chunk(chunk_stats)

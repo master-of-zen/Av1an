@@ -44,13 +44,27 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
 
 
 def write_scenes_to_file(scenes: List[int], scene_path: Path):
+    """
+    Writes a list of scenes to the a file
+
+    :param scenes: the scenes to write
+    :param scene_path: the file to write to
+    :return: None
+    """
     with open(scene_path, 'w') as scene_file:
         scene_file.write(','.join([str(x) for x in scenes]))
 
 
 def read_scenes_from_file(scene_path: Path) -> List[int]:
+    """
+    Reads a list of split locations from a file
+
+    :param scene_path: the file to read from
+    :return: a list of frames to split on
+    """
     with open(scene_path, 'r') as scene_file:
-        return list(literal_eval(scene_file.read().strip()))
+        scenes = scene_file.readline().strip().split(',')
+        return [int(scene) for scene in scenes]
 
 
 def segment(video: Path, temp: Path, frames: List[int]):

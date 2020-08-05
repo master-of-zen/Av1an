@@ -11,16 +11,17 @@ import shutil
 
 from .arg_parse import Args
 from .chunk import Chunk
-from .chunk_queue import create_encoding_queue
+from .chunk_queue import load_or_gen_chunk_queue
 from .concat import concat_routine
+from .resume import write_progress_file
 from .target_vmaf import target_vmaf
 from .utils import frame_probe_cv2, terminate, process_inputs
 from .utils import man_q
 from .bar import Manager, tqdm_bar
-from .setup import (startup_check, determine_resources, outputs_filenames, setup)
+from .setup import determine_resources, outputs_filenames, setup
 from .logger import log, set_log
 from .config import conf
-from .ffmpeg import extract_audio, frame_probe, write_progress_file
+from .ffmpeg import extract_audio, frame_probe
 from .fp_reuse import segment_first_pass
 from .split import split_routine
 from .vmaf import plot_vmaf
@@ -70,6 +71,9 @@ def encode_file(args: Args):
     # find split locations
     split_locations = split_routine(args, resuming)
 
+    # create a chunk queue
+    chunk_queue = load_or_gen_chunk_queue(args, resuming, split_locations)
+
     # things that need to be done only the first time
     if not resuming:
 
@@ -78,17 +82,9 @@ def encode_file(args: Args):
         if args.reuse_first_pass:
             segment_first_pass(args.temp, split_locations)
 
-    # create a chunk queue
-    chunk_queue = create_encoding_queue(args, split_locations)
-
-    # remove already encoded files from the queue
-    if resuming:
-        done_chunk_names = []  # FIXME: read in done chunks here
-        chunk_queue = [c for c in chunk_queue if c.name not in done_chunk_names]
-
     # do encoding loop
     args.workers = determine_resources(args.encoder, args.workers)
-    encoding_loop(args, chunk_queue, None, None)
+    encoding_loop(args, chunk_queue)
 
     # concat
     concat_routine(args)
@@ -101,7 +97,7 @@ def encode_file(args: Args):
         shutil.rmtree(args.temp)
 
 
-def encoding_loop(args: Args, chunk_queue: List[Chunk], total_frames, initial_frames):
+def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
     try:
         done_path = args.temp / 'done.json'

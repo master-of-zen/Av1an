@@ -81,7 +81,7 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
     return vmaf_target_cq, tl, f, xnew
 
 
-def plot_probes(args, vmaf_cq, vmaf_target, probe, frames):
+def plot_probes(args, vmaf_cq, probe, frames):
     # Saving plot of vmaf calculation
 
     x = [x[1] for x in sorted(vmaf_cq)]
@@ -203,7 +203,7 @@ def target_vmaf(source, args):
             f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
 
         if args.vmaf_plots:
-            plot_probes(args, vmaf_cq, args.vmaf_target, probe, frames)
+            plot_probes(args, vmaf_cq, source, frames)
 
         return q
 

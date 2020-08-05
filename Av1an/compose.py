@@ -6,6 +6,7 @@ from typing import List
 
 from .arg_parse import Args
 from .chunk import Chunk
+from .vvc import get_yuv_file_path
 
 
 def gen_pass_commands(args: Args, chunk: Chunk) -> List[str]:
@@ -213,9 +214,9 @@ def compose_vvc(a: Args, c: Chunk) -> List[str]:
     :param c: the Chunk
     :return: A list of commands
     """
-    # FIXME: vvc requires special yuv file
+    yuv_file = get_yuv_file_path(c).as_posix()
     return [
-        f'vvc_encoder -c {a.vvc_conf} -i {c.name} {a.video_params} -f {c.frames} --InputBitDepth=10 --OutputBitDepth=10 -b {c.output}',
+        f'vvc_encoder -c {a.vvc_conf} -i {yuv_file} {a.video_params} -f {c.frames} --InputBitDepth=10 --OutputBitDepth=10 -b {c.output}',
     ]
 
 

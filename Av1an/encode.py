@@ -180,10 +180,9 @@ def encode(chunk: Chunk, counter, args: Args):
 
         # if vvc, we need to create a yuv file
         if args.encoder == 'vvc':
-            # FIXME: create and delete vvc yuv file
-            # log(f'Creating yuv for file {commands[1][0]}\n')
-            # fl = to_yuv(commands[1][0])
-            # log(f'Created yuv for file {commands[1][0]}\n')
+            log(f'Creating yuv for chunk {chunk.name}\n')
+            vvc_yuv_file = to_yuv(chunk)
+            log(f'Created yuv for chunk {chunk.name}\n')
             pass
 
         # Run all passes for this chunk
@@ -192,8 +191,7 @@ def encode(chunk: Chunk, counter, args: Args):
 
         # if vvc, we need to delete the yuv file
         if args.encoder == 'vvc':
-            # os.remove(fl)
-            pass
+            os.remove(vvc_yuv_file)
 
         # get the number of encoded frames, if no check or vvc, assume it worked and encoded same number of frames
         perform_encoded_frame_check = not (args.no_check or args.encoder == 'vvc')

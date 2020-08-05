@@ -60,7 +60,7 @@ class Chunk:
         return fpf_file.as_posix()
 
     @property
-    def name(self):
+    def name(self) -> str:
         return str(self.index).zfill(5)
 
     @staticmethod

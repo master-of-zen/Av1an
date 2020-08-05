@@ -6,22 +6,6 @@ from typing import Dict, List
 from .aom_kf import fields
 
 
-def remove_first_pass_from_commands(commands, passes):
-    """
-    Removes the first pass command from the list of commands since we generated the first pass file ourselves.
-
-    :param commands: the list of commands
-    :param passes: the number of passes
-    :return: The new list of commands
-    """
-    # just one pass to begin with, do nothing
-    if passes == 1:
-        return commands
-
-    # passes >= 2, remove the command for first pass (commands[0])
-    return commands[1:]
-
-
 def read_first_pass(log_path):
     """
     Reads libaom first pass log into a list of dictionaries.

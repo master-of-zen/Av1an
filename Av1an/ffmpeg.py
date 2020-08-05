@@ -50,76 +50,17 @@ def get_keyframes(file: Path):
 
 
 doneFileLock = Lock()
-def write_progress_file(file, chunk, frames):
-    doneFileLock.acquire()
-    with file.open() as f:
-        d = json.load(f)
-    d['done'][chunk.name] = frames
-    with file.open('w') as f:
-        json.dump(d, f)
-
-
-def frame_check(source: Path, encoded: Path, temp, check):
-    """Checking is source and encoded video frame count match."""
+def write_progress_file(progress_file: Path, chunk, encoded_frames: int):
     try:
-        status_file = Path(temp / 'done.json')
-
-        if check:
-            s1 = frame_probe(source)
-            write_progress_file(status_file, source, s1)
-        else:
-            s1, s2 = [frame_probe(i) for i in (source, encoded)]
-            if s1 == s2:
-                write_progress_file(status_file, source, s1)
-            else:
-                print(f'Frame Count Differ for Source {source.name}: {s2}/{s1}')
-
-    except IndexError:
-        print('Encoding failed, check validity of your encoding settings/commands and start again')
-        terminate()
-    except Exception as e:
-        _, _, exc_tb = sys.exc_info()
-        print(f'\nError frame_check: {e}\nAt line: {exc_tb.tb_lineno}\n')
+        doneFileLock.acquire()
+        with progress_file.open() as f:
+            d = json.load(f)
+        d['done'][chunk.name] = encoded_frames
+        with progress_file.open('w') as f:
+            json.dump(d, f)
     finally:
         if doneFileLock.locked():
             doneFileLock.release()
-
-
-def concatenate_video(temp, output, encoder):
-    """With FFMPEG concatenate encoded segments into final file."""
-
-    log('Concatenating\n')
-
-    with open(f'{temp / "concat" }', 'w') as f:
-
-        encode_files = sorted((temp / 'encode').iterdir())
-        # Replace all the ' with '/'' so ffmpeg can read the path correctly
-        f.writelines("file '" + str(file.absolute()).replace('\'','\'\\\'\'') + "'\n" for file in encode_files)
-
-    # Add the audio file if one was extracted from the input
-    audio_file = temp / "audio.mkv"
-    if audio_file.exists():
-        audio = f'-i {audio_file} -c:a copy -map 1'
-    else:
-        audio = ''
-
-    if encoder == 'x265':
-
-        cmd = f' ffmpeg -y -fflags +genpts  -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-            f'{audio} -c copy -movflags frag_keyframe+empty_moov -map 0  -f mp4 - | ffmpeg -y -hide_banner -loglevel error -i - -c copy {output} '
-        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
-
-    else:
-        cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-            f'{audio} -c copy -map 0  -y "{output}"'
-
-        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
-
-
-    if len(concat) > 0:
-        log(concat.decode())
-        print(concat.decode())
-        raise Exception
 
 
 def extract_audio(input_vid: Path, temp, audio_params):

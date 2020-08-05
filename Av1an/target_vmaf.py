@@ -99,7 +99,7 @@ def plot_probes(args, vmaf_cq, probe, frames):
     plt.ylim(min(vmafs), max(vmafs) + 1)
     plt.ylabel('VMAF')
     plt.title(f'Chunk: {probe.stem}, Frames: {frames}')
-    plt.tight_layout()
+    plt.xticks(np.arange(args.min_q, args.max_q + 1, 1.0))
     temp = args.temp / probe.stem
     plt.savefig(f'{temp}.png', dpi=200, format='png')
     plt.close()
@@ -110,41 +110,10 @@ def vmaf_probe(probe, q, args):
     cmd = probe_cmd(probe, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
     subprocess.Popen(cmd, universal_newlines=True, shell=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
-
     file = call_vmaf(probe, gen_probes_names(probe, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
-    score = read_vmaf_json(file, 50)
+    score = read_vmaf_json(file, 20)
 
     return score
-
-
-def early_skips(source, frames,args):
-
-    cq = [args.max_q, args.min_q]
-    scores = []
-    for i in (0, 1):
-
-        score = vmaf_probe(source, cq[i], args)
-        scores.append((score, cq[i]))
-
-        # Early Skip on big CQ
-        if i == 0 and round(score) > args.vmaf_target:
-            log(f"File: {source.stem}, Fr: {frames}\n" \
-            f"Q: {sorted([x[1] for x in scores])}, Early Skip High CQ\n" \
-            f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
-            f"Target Q: {args.max_q} Vmaf: {score}\n\n")
-
-            return True, args.max_q
-
-        # Early Skip on small CQ
-        if i == 1 and round(score) < args.vmaf_target:
-            log(f"File: {source.stem}, Fr: {frames}\n" \
-                f"Q: {sorted([x[1] for x in scores])}, Early Skip Low CQ\n" \
-                f"Vmaf: {sorted([x[0] for x in scores], reverse=True)}\n" \
-                f"Target Q: {args.min_q} Vmaf: {score}\n\n")
-
-            return True, args.min_q
-
-    return False, scores
 
 
 def get_closest(q_list, q, positive=True):
@@ -158,42 +127,88 @@ def get_closest(q_list, q, positive=True):
     return min(q_list, key=lambda x:abs(x-q))
 
 
-def target_vmaf_search(probe, source, frames, args):
+def weighted_search(num1, vmaf1, num2, vmaf2, target):
+    """
+    Returns weighted value closest to searched
+    """
+    dif1 = abs(target - vmaf2)
+    dif2 = abs(target - vmaf1)
+
+    tot = dif1 + dif2
+    
+    new_point = round(num1 * (dif1 / tot ) + (num2 * (dif2 / tot)))
+    return new_point
+
+
+def target_vmaf_search(source, frames, args):
 
     vmaf_cq = []
-    q_list = [args.min_q, args.max_q]
+    q_list = []
     score = 0
-    last_q = args.min_q
-    next_q = args.max_q
+
+    # Make middle probe
+    middle_point = (args.min_q + args.max_q) // 2
+    q_list.append(middle_point)
+    last_q = middle_point
+
+    score = vmaf_probe(source, last_q, args)
+    vmaf_cq.append((score, last_q))
+
+    # Branch
+    if score < args.vmaf_target:
+        next_q = args.min_q
+        q_list.append(args.min_q)
+    else:
+        next_q = args.max_q
+        q_list.append(args.max_q)
+    
+    # Edge case check
+    score = vmaf_probe(source, next_q, args)
+    vmaf_cq.append((score, next_q))
+
+    if next_q == args.min_q and score < args.vmaf_target:
+        return vmaf_cq, True
+
+    elif next_q == args.max_q and score > args.vmaf_target:
+        return vmaf_cq, True
+    
     for _ in range(args.vmaf_steps - 2 ):
+        new_point = weighted_search(vmaf_cq[-2][1], vmaf_cq[-2][0], vmaf_cq[-1][1], vmaf_cq[-1][0], args.vmaf_target)
+        if new_point in [x[1] for x in vmaf_cq]:
+            return vmaf_cq, False
 
-        new_point= (last_q + next_q) // 2
         last_q = new_point
-
+        
         q_list.append(new_point)
         score = vmaf_probe(source, new_point, args)
         next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
         vmaf_cq.append((score, new_point))
 
-    return vmaf_cq
+    return vmaf_cq, False
 
 
 def target_vmaf(source, args):
 
     frames = frame_probe(source)
-    probe = source.with_suffix(".mp4")
     vmaf_cq = []
 
     try:
-        skips, scores = early_skips(source, frames, args)
-        if skips:
-            return scores
-        else:
-            vmaf_cq.extend(scores)
+        vmaf_cq, skip = target_vmaf_search(source, frames, args)
+        if skip or len(vmaf_cq) == 2:
+            if vmaf_cq[-1][1] == args.max_q:
+                log(f"File: {source.stem}, Fr: {frames}\n" \
+                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
+                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
+                    f"Target Q: {args.max_q} Vmaf: {vmaf_cq[-1][0]}\n\n")
+                
+            else:
+                log(f"File: {source.stem}, Fr: {frames}\n" \
+                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \
+                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
+                    f"Target Q: {args.min_q} Vmaf: {vmaf_cq[-1][0]}\n\n")
 
-        scores = target_vmaf_search(probe, source, frames, args)
+            return vmaf_cq[-1][1]
 
-        vmaf_cq.extend(scores)
 
         q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target )
 

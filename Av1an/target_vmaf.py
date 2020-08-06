@@ -11,7 +11,7 @@ import sys
 from math import isnan
 import os
 from collections import deque
-from .bar import make_pipes
+from .bar import make_pipes, process_pipe
 from .utils import terminate
 from .ffmpeg import frame_probe
 from .vmaf import call_vmaf, read_vmaf_json
@@ -104,21 +104,6 @@ def plot_probes(args, vmaf_cq, probe, frames):
     temp = args.temp / probe.stem
     plt.savefig(f'{temp}.png', dpi=200, format='png')
     plt.close()
-
-def process_pipe(pipe):
-    encoder_history = deque(maxlen=20)
-    while True:
-        line = pipe.stdout.readline().strip()
-        if len(line) == 0 and pipe.poll() is not None:
-            break
-        if len(line) == 0:
-            continue
-        if line:
-            encoder_history.append(line)
-
-    if pipe.returncode != 0 and pipe.returncode != -2:
-        print(f"\nEncoder encountered an error: {pipe.returncode}")
-        print('\n'.join(encoder_history))
 
 def vmaf_probe(probe, q, args):
 

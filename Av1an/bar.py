@@ -45,11 +45,28 @@ def make_pipes(command):
     return pipe
 
 
+def process_pipe(pipe):
+    encoder_history = deque(maxlen=20)
+    while True:
+        line = pipe.stdout.readline().strip()
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+        if len(line) == 0:
+            continue
+        if line:
+            encoder_history.append(line)
+
+    if pipe.returncode != 0 and pipe.returncode != -2:
+        print(f"\nEncoder encountered an error: {pipe.returncode}")
+        print('\n'.join(encoder_history))
+
+
 def make_vvc_pipe(command):
     pipe = subprocess.Popen(command.split(), stdout=PIPE,
                             stderr=STDOUT,
                             universal_newlines=True)
     return pipe
+
 
 def match_aom_vpx(line):
     if 'fatal' in line.lower():
@@ -137,8 +154,9 @@ def tqdm_bar(i, encoder, counter, frame_probe_source, passes):
 
         if encoder == 'svt_av1':
             # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
-            pipe.wait()
+            process_pipe(pipe)
             counter.update(frame_probe_source // passes)
+
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')

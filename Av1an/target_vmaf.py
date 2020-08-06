@@ -11,6 +11,7 @@ import matplotlib
 import sys
 from math import isnan
 import os
+from collections import deque
 
 from .arg_parse import Args
 from .bar import make_pipes
@@ -43,7 +44,7 @@ def gen_probes_names(chunk: Chunk, q):
 def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate):
     """Generate and return commands for probes at set Q values
     """
-    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i - -vf "select=not(mod(n\,{vmaf_rate}))" {ffmpeg_pipe}'
+    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i - -vf select=not(mod(n\,{vmaf_rate})) {ffmpeg_pipe}'
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
@@ -122,16 +123,36 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
     plt.savefig(f'{temp}.png', dpi=200, format='png')
     plt.close()
 
+def process_pipe(pipe):
+    encoder_history = deque(maxlen=20)
+    while True:
+        line = pipe.stdout.readline().strip()
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+        if len(line) == 0:
+            continue
+        if line:
+            encoder_history.append(line)
+
+    if pipe.returncode != 0 and pipe.returncode != -2:
+        print(f"\nEncoder encountered an error: {pipe.returncode}")
+        print('\n'.join(encoder_history))
+
 
 def vmaf_probe(chunk: Chunk, q, args):
 
     cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
-
-    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
-    # TODO: this requires the shell do do a pipe. May cause problems on windows
-    pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, shell=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-    pipe.wait()
+    
+    pipe = make_pipes(cmd)
+    process_pipe(pipe)
+    
+    # from n9mtq4:feature/newchunkhandling
+    # ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
+    # # TODO: this requires the shell do do a pipe. May cause problems on windows
+    # pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, shell=True,
+    #                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    # pipe.wait()
+    
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
     score = read_vmaf_json(file, 20)
 

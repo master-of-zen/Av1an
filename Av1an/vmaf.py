@@ -26,7 +26,7 @@ def read_vmaf_json(file, percentile):
     return perc
 
 
-def call_vmaf(sourcec: Chunk, encoded: Path, n_threads, model, res, fl_path: Path = None, vmaf_rate=0):
+def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path = None, vmaf_rate=0):
 
     cmd = ''
     # settings model path
@@ -42,7 +42,7 @@ def call_vmaf(sourcec: Chunk, encoded: Path, n_threads, model, res, fl_path: Pat
         n_threads = ''
 
     if fl_path is None:
-        fl_path = sourcec.fake_input_path.with_name(encoded.stem).with_suffix('.json')
+        fl_path = chunk.fake_input_path.with_name(encoded.stem).with_suffix('.json')
     fl = fl_path.as_posix()
 
     # Change framerate of comparison to framerate of probe
@@ -54,8 +54,7 @@ def call_vmaf(sourcec: Chunk, encoded: Path, n_threads, model, res, fl_path: Pat
     # For vmaf calculation both source and encoded segment scaled to 1080
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
 
-    # TODO: shell pipes might cause problems on windows
-    cmd = f"{sourcec.ffmpeg_gen_cmd} | ffmpeg -loglevel info -y -thread_queue_size 1024 -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i - "
+    cmd = f"ffmpeg -loglevel info -y -thread_queue_size 1024 -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i - "
 
     filter_complex = ' -filter_complex '
 
@@ -67,11 +66,13 @@ def call_vmaf(sourcec: Chunk, encoded: Path, n_threads, model, res, fl_path: Pat
 
     cmd = cmd + filter_complex + distorted + ref + vmaf_filter
 
-    c = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
+    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
+    pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, shell=True, universal_newlines=True)
+    pipe.wait()
 
-    call = c.stdout
-    if 'error' in call.decode().lower():
-        print('\n\nERROR IN VMAF CALCULATION\n\n',call.decode())
+    vmaf_text = pipe.stdout.read()
+    if 'error' in vmaf_text.lower():
+        print('\n\nERROR IN VMAF CALCULATION\n\n', vmaf_text)
         terminate()
 
     return fl_path

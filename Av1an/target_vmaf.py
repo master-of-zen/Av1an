@@ -4,6 +4,7 @@
 from scipy import interpolate
 from pathlib import Path
 import subprocess
+from subprocess import PIPE, STDOUT
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
@@ -42,8 +43,7 @@ def gen_probes_names(chunk: Chunk, q):
 def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate):
     """Generate and return commands for probes at set Q values
     """
-    # TODO: pipes might cause issues on windows
-    pipe = fr'{chunk.ffmpeg_gen_cmd} | ffmpeg -y -hide_banner -loglevel error -i - -vf "select=not(mod(n\,{vmaf_rate}))" {ffmpeg_pipe}'
+    pipe = fr'ffmpeg -y -hide_banner -loglevel error -i - -vf "select=not(mod(n\,{vmaf_rate}))" {ffmpeg_pipe}'
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
@@ -126,8 +126,12 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
 def vmaf_probe(chunk: Chunk, q, args):
 
     cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
-    subprocess.Popen(cmd, universal_newlines=True, shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+
+    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
+    # TODO: this requires the shell do do a pipe. May cause problems on windows
+    pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    pipe.wait()
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
     score = read_vmaf_json(file, 20)
 

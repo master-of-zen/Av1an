@@ -105,7 +105,7 @@ def startup_check(args):
 
 
     args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
-    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -f yuv4mpegpipe - |'
+    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -bufsize 50000K -f yuv4mpegpipe - |'
 
 
 def determine_resources(encoder, workers):

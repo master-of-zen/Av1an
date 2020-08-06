@@ -47,6 +47,16 @@ class Chunk:
         }
 
     @property
+    def fake_input_path(self) -> Path:
+        """
+        Returns the mkv chunk file that would have been for this chunk in the old chunk system.
+        Ex .temp/split/00000.mkv
+
+        :return: a path
+        """
+        return (self.temp / 'split') / f'{self.name}.mkv'
+
+    @property
     def output_path(self) -> Path:
         return (self.temp / 'encode') / f'{self.name}.{self.output_ext}'
 

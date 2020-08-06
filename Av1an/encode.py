@@ -14,9 +14,8 @@ from .chunk import Chunk
 from .chunk_queue import load_or_gen_chunk_queue
 from .concat import concat_routine
 from .resume import write_progress_file
-from .target_vmaf import target_vmaf
+from .target_vmaf import target_vmaf_routine
 from .utils import frame_probe_cv2, terminate, process_inputs
-from .utils import man_q
 from .bar import Manager, tqdm_bar
 from .setup import determine_resources, outputs_filenames, setup
 from .logger import log, set_log
@@ -90,7 +89,7 @@ def encode_file(args: Args):
     concat_routine(args)
 
     if args.vmaf or args.vmaf_plots:
-        plot_vmaf(args.input, args.output_file, args.vmaf_path, args.vmaf_res)
+        plot_vmaf(args.input, args.output_file, args, args.vmaf_path, args.vmaf_res)
 
     # Delete temp folders
     if not args.keep:
@@ -162,17 +161,9 @@ def encode(chunk: Chunk, counter, args: Args):
 
         log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
 
-        # FIXME: support target vmaf
         # Target Vmaf Mode
-        # if args.vmaf_target:
-        #     tg_cq = target_vmaf(source, args)
-        #     cm1 = man_q(commands[0], tg_cq, )
-        # 
-        #     if args.passes == 2:
-        #         cm2 = man_q(commands[1], tg_cq)
-        #         commands = (cm1, cm2) + commands[2:]
-        #     else:
-        #         commands = (cm1,) + commands[1:]
+        if args.vmaf_target:
+            target_vmaf_routine(args, chunk)
 
         # remove first pass command if reusing
         if args.reuse_first_pass:

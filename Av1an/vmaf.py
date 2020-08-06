@@ -86,7 +86,7 @@ def plot_vmaf(source: Path, encoded: Path, args, model, vmaf_res):
 
     # call_vmaf takes a chunk, so make a chunk of the entire source
     ffmpeg_gen_cmd = f'ffmpeg -y -hide_banner -loglevel error -i {source.as_posix()} {args.pix_format} -f yuv4mpegpipe -'
-    input_chunk = Chunk(0, ffmpeg_gen_cmd, 0, args.temp, 0, '')
+    input_chunk = Chunk(args.temp, 0, ffmpeg_gen_cmd, '', 0, 0)
 
     scores = call_vmaf(input_chunk, encoded, 0, model, vmaf_res, fl_path=fl_path)
 

@@ -118,7 +118,7 @@ def create_chunk_from_segment(args: Args, index: int, file: Path) -> Chunk:
     frames = frame_probe(file)
     extension = get_file_extension_for_encoder(args.encoder)
 
-    chunk = Chunk(index, ffmpeg_gen_cmd, file_size, args.temp, frames, extension)
+    chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, file_size, frames)
     chunk.generate_pass_cmds(args)
 
     return chunk

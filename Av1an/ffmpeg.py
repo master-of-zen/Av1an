@@ -1,13 +1,10 @@
 #!/bin/env python
 
-import json
 import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
-from .utils import terminate
 from .logger import log
 import re
-import sys
 
 
 def frame_probe(source: Path):

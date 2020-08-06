@@ -174,7 +174,6 @@ def encode(chunk: Chunk, counter, args: Args):
             log(f'Creating yuv for chunk {chunk.name}\n')
             vvc_yuv_file = to_yuv(chunk)
             log(f'Created yuv for chunk {chunk.name}\n')
-            pass
 
         # Run all passes for this chunk
         for pass_cmd in chunk.pass_cmds:

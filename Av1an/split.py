@@ -6,16 +6,77 @@ import sys
 from ast import literal_eval
 from pathlib import Path
 from subprocess import PIPE, STDOUT
+from typing import List
 
+from .arg_parse import Args
 from .ffmpeg import frame_probe, get_keyframes
-from .aom_kf import aom_keyframes
+from .aom_kf import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS
 from .logger import log
 from .pyscene import pyscene
 from .utils import terminate
 
 
-def segment(video: Path, temp, frames):
-    """Split video by frame numbers, or just copying video."""
+def split_routine(args: Args, resuming: bool) -> List[int]:
+    """
+    Performs the split routine. Runs pyscenedetect/aom keyframes and adds in extra splits if needed
+
+    :param args: the Args
+    :param resuming: if the encode is being resumed
+    :return: A list of frames to split on
+    """
+    scene_file = args.temp / 'scenes.txt'
+
+    # if resuming, we already have the split file, so just read that
+    if resuming:
+        return read_scenes_from_file(scene_file)
+
+    # determines split frames with pyscenedetect or aom keyframes
+    split_locations = calc_split_locations(args)
+
+    # add in extra splits if needed
+    if args.extra_split:
+        split_locations = extra_splits(args.input, split_locations, args.extra_split)
+
+    # write scenes for resuming later if needed
+    write_scenes_to_file(split_locations, scene_file)
+
+    return split_locations
+
+
+def write_scenes_to_file(scenes: List[int], scene_path: Path):
+    """
+    Writes a list of scenes to the a file
+
+    :param scenes: the scenes to write
+    :param scene_path: the file to write to
+    :return: None
+    """
+    with open(scene_path, 'w') as scene_file:
+        scene_file.write(','.join([str(x) for x in scenes]))
+
+
+def read_scenes_from_file(scene_path: Path) -> List[int]:
+    """
+    Reads a list of split locations from a file
+
+    :param scene_path: the file to read from
+    :return: a list of frames to split on
+    """
+    with open(scene_path, 'r') as scene_file:
+        scenes = scene_file.readline().strip().split(',')
+        return [int(scene) for scene in scenes]
+
+
+def segment(video: Path, temp: Path, frames: List[int]):
+    """
+    Uses ffmpeg to segment the video into separate files.
+    Splits the video by frame numbers or copies the video if no splits are needed
+
+    :param video: the source video
+    :param temp: the temp directory
+    :param frames: the split locations
+    :return: None
+    """
 
     log('Split Video\n')
     cmd = [
@@ -44,7 +105,7 @@ def segment(video: Path, temp, frames):
     log('Split Done\n')
 
 
-def reduce_scenes(scenes):
+def reduce_scenes(scenes: List[int]) -> List[int]:
     """Windows terminal can't handle more than ~500 scenes in length."""
     count = len(scenes)
     interval = int(count / 500 + (count % 500 > 0))
@@ -86,7 +147,15 @@ def extra_splits(video, frames: list, split_distance):
     return result
 
 
-def split_routine(args, aom_keyframes_params):
+def calc_split_locations(args: Args) -> List[int]:
+    """
+    Determines a list of frame numbers to split on with pyscenedetect or aom keyframes
+
+    :param args: the Args
+    :return: A list of frame numbers
+    """
+    # inherit video params from aom encode unless we are using a different encoder, then use defaults
+    aom_keyframes_params = args.video_params if (args.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
 
     if args.scenes == '0':
         log('Skipping scene detection\n')
@@ -98,10 +167,8 @@ def split_routine(args, aom_keyframes_params):
         args.scenes = Path(args.scenes)
         if args.scenes.exists():
             # Read stats from CSV file opened in read mode:
-            with args.scenes.open() as stats_file:
-                stats = list(literal_eval(stats_file.read().strip()))
-                log('Using Saved Scenes\n')
-                return stats
+            log('Using Saved Scenes\n')
+            return read_scenes_from_file(args.scenes)
 
     # Splitting using PySceneDetect
     if args.split_method == 'pyscene':
@@ -129,6 +196,6 @@ def split_routine(args, aom_keyframes_params):
     # Write scenes to file
 
     if args.scenes:
-        Path(args.scenes).write_text(','.join([str(x) for x in sc]))
+        write_scenes_to_file(sc, args.scenes)
 
     return sc

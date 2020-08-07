@@ -88,7 +88,7 @@ def compose_ffmpeg_pipe(a: Args) -> str:
     :param a: the Args
     :return: the ffmpeg command as a string
     """
-    return f'ffmpeg -y -hide_banner -loglevel error -i - {a.ffmpeg} -strict -1 -pix_fmt yuv420p -f yuv4mpegpipe -'
+    return f'ffmpeg -y -hide_banner -loglevel error -i - {a.ffmpeg} {a.pix_format} -bufsize 50000K -f yuv4mpegpipe -'
 
 
 def compose_svt_av1(a: Args, c: Chunk) -> List[str]:

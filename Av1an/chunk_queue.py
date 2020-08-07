@@ -113,7 +113,7 @@ def create_chunk_from_segment(args: Args, index: int, file: Path) -> Chunk:
     :param file: the segmented file
     :return: A Chunk
     """
-    ffmpeg_gen_cmd = f'ffmpeg -y -hide_banner -loglevel error -i {file.as_posix()} {args.pix_format} -f yuv4mpegpipe -'
+    ffmpeg_gen_cmd = f'ffmpeg -y -hide_banner -loglevel error -i {file.as_posix()} {args.pix_format} -bufsize 50000K -f yuv4mpegpipe -'
     file_size = file.stat().st_size
     frames = frame_probe(file)
     extension = get_file_extension_for_encoder(args.encoder)

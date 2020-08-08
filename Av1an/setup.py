@@ -9,6 +9,7 @@ from pathlib import Path
 
 from psutil import virtual_memory
 
+from .arg_parse import Args
 from .utils import terminate
 from .compose import get_default_params_for_encoder
 
@@ -31,7 +32,7 @@ def set_vmaf(args):
         args.min_q, args.max_q = defaul_ranges.get(args.encoder)
 
 
-def check_exes(args):
+def check_exes(args: Args):
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
@@ -52,6 +53,11 @@ def check_exes(args):
     if args.encoder == 'vvc':
         if not find_executable('vvc_concat'):
             print('vvc concatenation executabe "vvc_concat" not found')
+            terminate()
+
+    if args.chunk_method == 'vs_ffms2':
+        if not find_executable('vspipe'):
+            print('vspipe executable not found')
             terminate()
 
 

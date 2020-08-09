@@ -84,7 +84,7 @@ def arg_parsing():
     # Splitting
     split_group = parser.add_argument_group('Splitting')
     split_group.add_argument('--chunk_method', '-cs', type=str, default='segment', help='Method for creating chunks',
-                             choices=['segment', 'select'])
+                             choices=['segment', 'select', 'vs_ffms2'])
     split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
                              choices=['pyscene', 'aom_keyframes'])

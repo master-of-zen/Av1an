@@ -12,6 +12,7 @@ class Args(object):
         self.output_file = None
 
         # Splitting
+        self.chunk_method = None
         self.scenes = None
         self.split_method = None
         self.extra_split = None
@@ -82,6 +83,8 @@ def arg_parsing():
 
     # Splitting
     split_group = parser.add_argument_group('Splitting')
+    split_group.add_argument('--chunk_method', '-cs', type=str, default='segment', help='Method for creating chunks',
+                             choices=['segment', 'select'])
     split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
                              choices=['pyscene', 'aom_keyframes'])

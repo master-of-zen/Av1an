@@ -63,17 +63,67 @@ def load_or_gen_chunk_queue(args: Args, resuming: bool, split_locations: List[in
 
 def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
-    Creates a list of chunks using the cli option specified
+    Creates a list of chunks using the cli option chunk_method specified
 
     :param args: Args
     :param split_locations: a list of frames to split on
     :return: A list of chunks
     """
-    chunk_queue = create_video_queue_segment(args, split_locations)
+    chunk_method_gen = {
+        'segment': create_video_queue_segment,
+        'select': create_video_queue_select,
+    }
+    chunk_queue = chunk_method_gen[args.chunk_method](args, split_locations)
 
     # Sort largest first so chunks that take a long time to encode start first
     chunk_queue.sort(key=lambda c: c.size, reverse=True)
     return chunk_queue
+
+
+def create_video_queue_select(args: Args, split_locations: List[int]) -> List[Chunk]:
+    """
+    Create a list of chunks using the select filter
+
+    :param args: the Args
+    :param split_locations: a list of frames to split on
+    :return: A list of chunks
+    """
+    # add first frame and last frame
+    last_frame = frame_probe(args.input)
+    split_locs_fl = [0] + split_locations + [last_frame]
+
+    # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
+    chunk_boundaries = zip(split_locs_fl, split_locs_fl[1:])
+
+    chunk_queue = [create_select_chunk(args, index, args.input, *cb) for index, cb in enumerate(chunk_boundaries)]
+
+    return chunk_queue
+
+
+def create_select_chunk(args: Args, index: int, src_path: Path, frame_start: int, frame_end: int) -> Chunk:
+    """
+    Creates a chunk using ffmpeg's select filter
+
+    :param args: the Args
+    :param src_path: the path of the entire unchunked source file
+    :param index: the index of the chunk
+    :param frame_start: frame that this chunk should start on (0-based, inclusive)
+    :param frame_end: frame that this chunk should end on (0-based, exclusive)
+    :return: a Chunk
+    """
+    assert frame_end > frame_start, "Can't make a chunk with <= 0 frames!"
+
+    frames = frame_end - frame_start
+    frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
+
+    ffmpeg_gen_cmd = f'ffmpeg -y -hide_banner -loglevel error -i {src_path.as_posix()} -vf select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS {args.pix_format} -bufsize 50000K -f yuv4mpegpipe -'
+    extension = get_file_extension_for_encoder(args.encoder)
+    size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
+
+    chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, size, frames)
+    chunk.generate_pass_cmds(args)
+
+    return chunk
 
 
 def create_video_queue_segment(args: Args, split_locations: List[int]) -> List[Chunk]:

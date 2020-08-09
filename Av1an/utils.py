@@ -71,29 +71,3 @@ def frame_probe_cv2(source: Path):
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     return total
 
-
-def get_brightness(video):
-    """Getting average brightness value for single video."""
-    brightness = []
-    cap = cv2.VideoCapture(video)
-    try:
-        while True:
-            # Capture frame-by-frame
-            _, frame = cap.read()
-
-            # Our operations on the frame come here
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            # Display the resulting frame
-            mean = cv2.mean(gray)
-            brightness.append(mean[0])
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    except cv2.error:
-        pass
-
-    # When everything done, release the capture
-    cap.release()
-    brig_geom = round(statistics.geometric_mean([x + 1 for x in brightness]), 1)
-
-    return brig_geom

@@ -68,9 +68,8 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
 
     ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, shell=True, universal_newlines=True)
-    pipe.communicate()
     pipe.wait()
-    
+
     vmaf_text = pipe.stdout.read()
     if 'error' in vmaf_text.lower():
         print('\n\nERROR IN VMAF CALCULATION\n\n', vmaf_text)

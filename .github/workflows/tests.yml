@@ -10,8 +10,9 @@ on:
       - "*.yml"
       - .gitignore
       - "*.md"
+
 env:
-  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev
+  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx
   x265_deps: libx265-dev libnuma-dev mercurial cmake nasm
   DEBIAN_FRONTEND: noninteractive
   temp: .temp
@@ -55,7 +56,7 @@ jobs:
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
-          pip3 install -r requirements.txt
+          pip3 install --no-cache-dir -r requirements.txt 
       - name: Install x265
         if: matrix.encoder == 'x265'
         run: |

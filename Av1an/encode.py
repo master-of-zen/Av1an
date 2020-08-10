@@ -201,7 +201,7 @@ def encode(chunk: Chunk, counter, args: Args):
 
 
 def frame_check_output(chunk: Chunk, expected_frames: int) -> int:
-    actual_frames = frame_probe(chunk.output_path.with_suffix(".ivf"))
+    actual_frames = frame_probe(chunk.output_path)
     if actual_frames != expected_frames:
         print(f'Frame Count Differ for Source {chunk.name}: {actual_frames}/{expected_frames}')
     return actual_frames

@@ -25,11 +25,12 @@ def set_vmaf(args):
         print('Target vmaf require more than 3 probes/steps')
         terminate()
 
+    default_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
 
-    defaul_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
-
-    if args.min_q is None or args.max_q is None:
-        args.min_q, args.max_q = defaul_ranges.get(args.encoder)
+    if args.min_q is None:
+        args.min_q, _ = default_ranges[args.encoder]
+    if args.max_q is None:
+        _, args.max_q = default_ranges[args.encoder]
 
 
 def check_exes(args: Args):

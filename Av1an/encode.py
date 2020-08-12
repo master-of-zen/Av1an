@@ -131,7 +131,7 @@ def startup(args: Args, chunk_queue: List[Chunk]):
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        future_cmd = {executor.submit(encode, cmd, args.counter, args): cmd for cmd in chunk_queue}
+        future_cmd = {executor.submit(encode, cmd, args): cmd for cmd in chunk_queue}
         for future in concurrent.futures.as_completed(future_cmd):
             future_cmd[future]
             try:
@@ -141,12 +141,11 @@ def encoding_loop(args: Args, chunk_queue: List[Chunk]):
                 print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
                 terminate()
 
-def encode(chunk: Chunk, counter, args: Args):
+def encode(chunk: Chunk, args: Args):
     """
     Encodes a chunk.
 
     :param chunk: The chunk to encode
-    :param counter: the counter to update the bar
     :param args: The cli args
     :return: None
     """
@@ -173,7 +172,7 @@ def encode(chunk: Chunk, counter, args: Args):
 
         # Run all passes for this chunk
         for pass_cmd in chunk.pass_cmds:
-            tqdm_bar(chunk.ffmpeg_gen_cmd, pass_cmd, args.encoder, counter, chunk_frames, args.passes)
+            tqdm_bar(chunk.ffmpeg_gen_cmd, pass_cmd, args.encoder, args.counter, chunk_frames, args.passes)
 
         # if vvc, we need to delete the yuv file
         if args.encoder == 'vvc':

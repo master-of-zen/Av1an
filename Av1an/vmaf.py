@@ -8,7 +8,7 @@ from subprocess import PIPE, STDOUT
 from matplotlib import pyplot as plt
 import json
 import numpy as np
-
+from .bar import process_pipe
 from .chunk import Chunk
 from .utils import terminate
 
@@ -68,12 +68,8 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
 
     ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, shell=True, universal_newlines=True)
-    pipe.wait()
+    process_pipe(pipe)
 
-    vmaf_text = pipe.stdout.read()
-    if 'error' in vmaf_text.lower():
-        print('\n\nERROR IN VMAF CALCULATION\n\n', vmaf_text)
-        terminate()
 
     return fl_path
 

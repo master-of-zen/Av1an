@@ -66,6 +66,9 @@ class Args(object):
         for key in initial_data:
             setattr(self, key, initial_data[key])
 
+        # Inner
+        self.counter = None
+
 
 def arg_parsing():
     """Command line parsing"""

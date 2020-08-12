@@ -83,6 +83,7 @@ def encode_file(args: Args):
 
     # do encoding loop
     args.workers = determine_resources(args.encoder, args.workers)
+    startup(args, chunk_queue)
     encoding_loop(args, chunk_queue)
 
     # concat
@@ -95,55 +96,50 @@ def encode_file(args: Args):
     if not args.keep:
         shutil.rmtree(args.temp)
 
+def startup(args: Args, chunk_queue: List[Chunk]):
+    """ 
+    If resuming, open done file and get file properties from there
+    else get file properties and 
+
+    """
+    # TODO: move this out and pass in total frames and initial frames
+    done_path = args.temp / 'done.json'
+    if args.resume and done_path.exists():
+        log('Resuming...\n')
+        with open(done_path) as done_file:
+            data = json.load(done_file)
+        total = data['total']
+        done = len(data['done'])
+        initial = sum(data['done'].values())
+        log(f'Resumed with {done} encoded clips done\n\n')
+    else:
+        initial = 0
+        total = frame_probe_cv2(args.input)
+        if total < 1:
+            total = frame_probe(args.input)
+        d = {'total': total, 'done': {}}
+        with open(done_path, 'w') as done_file:
+            json.dump(d, done_file)
+    clips = len(chunk_queue)
+    args.workers = min(args.workers, clips)
+    counter = Manager().Counter(total, initial)
+    args.counter = counter
+    print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
+          f'Params: {args.video_params.strip()}'   )
+
 
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
-    try:
-        done_path = args.temp / 'done.json'
-
-        # TODO: move this out and pass in total frames and initial frames
-        if args.resume and done_path.exists():
-            log('Resuming...\n')
-
-            with open(done_path) as done_file:
-                data = json.load(done_file)
-
-            total = data['total']
-            done = len(data['done'])
-            initial = sum(data['done'].values())
-
-            log(f'Resumed with {done} encoded clips done\n\n')
-        else:
-            initial = 0
-            total = frame_probe_cv2(args.input)
-
-            if total < 1:
-                total = frame_probe(args.input)
-
-            d = {'total': total, 'done': {}}
-            with open(done_path, 'w') as done_file:
-                json.dump(d, done_file)
-
-        clips = len(chunk_queue)
-        args.workers = min(args.workers, clips)
-
-        print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
-              f'Params: {args.video_params.strip()}')
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-            counter = Manager().Counter(total, initial)
-            future_cmd = {executor.submit(encode, cmd, counter, args): cmd for cmd in chunk_queue}
-            for future in concurrent.futures.as_completed(future_cmd):
-                future_cmd[future]
-                try:
-                    future.result()
-                except Exception as exc:
-                    _, _, exc_tb = sys.exc_info()
-                    print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
-                    terminate()
-    except KeyboardInterrupt:
-        terminate()
-
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+        future_cmd = {executor.submit(encode, cmd, args.counter, args): cmd for cmd in chunk_queue}
+        for future in concurrent.futures.as_completed(future_cmd):
+            future_cmd[future]
+            try:
+                future.result()
+            except Exception as exc:
+                _, _, exc_tb = sys.exc_info()
+                print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
+                terminate()
 
 def encode(chunk: Chunk, counter, args: Args):
     """

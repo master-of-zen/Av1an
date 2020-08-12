@@ -109,8 +109,8 @@ def startup_check(args):
 
     if args.video_params is None:
         args.video_params = get_default_params_for_encoder(args.encoder)
-
-    args.video_params = shlex.split(args.video_params)
+    else:
+        args.video_params = shlex.split(args.video_params)
     args.audio_params = shlex.split(args.audio_params)
     args.ffmpeg = shlex.split(args.ffmpeg)
 

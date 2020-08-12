@@ -4,6 +4,7 @@ import os
 import sys
 import shutil
 import atexit
+import shlex
 from distutils.spawn import find_executable
 from pathlib import Path
 
@@ -109,10 +110,12 @@ def startup_check(args):
     if args.video_params is None:
         args.video_params = get_default_params_for_encoder(args.encoder)
 
+    args.video_params = shlex.split(args.video_params)
+    args.audio_params = shlex.split(args.audio_params)
+    args.ffmpeg = shlex.split(args.ffmpeg)
 
-
-    args.pix_format = f'-strict -1 -pix_fmt {args.pix_format}'
-    args.ffmpeg_pipe = f' {args.ffmpeg} {args.pix_format} -bufsize 50000K -f yuv4mpegpipe - |'
+    args.pix_format = ('-strict', '-1', '-pix_fmt', args.pix_format)
+    args.ffmpeg_pipe = (*args.ffmpeg, *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-')
 
 
 def determine_resources(encoder, workers):

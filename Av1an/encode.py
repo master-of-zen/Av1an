@@ -125,7 +125,7 @@ def startup(args: Args, chunk_queue: List[Chunk]):
     counter = Manager().Counter(total, initial)
     args.counter = counter
     print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
-          f'Params: {args.video_params.strip()}'   )
+          f'Params: {" ".join(args.video_params)}')
 
 
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):

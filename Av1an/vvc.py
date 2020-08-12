@@ -26,7 +26,7 @@ def to_yuv(chunk: Chunk) -> Path:
     """
     output = get_yuv_file_path(chunk)
 
-    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
+    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
 
     # TODO: apply ffmpeg filter to the yuv file
     cmd = f'ffmpeg -y -loglevel error -i - -f rawvideo -vf format=yuv420p10le {output.as_posix()}'

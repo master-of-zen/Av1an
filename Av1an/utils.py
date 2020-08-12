@@ -45,25 +45,31 @@ def get_cq(command):
     return int(matches[-1])
 
 
-def man_q(command: str, q: int):
+def man_q(command: list, q: int):
     """Return command with new cq value"""
 
-    if 'aomenc' in command or 'vpxenc' in command:
-        mt = '--cq-level='
-        cmd = command[:command.find(mt) + 11] + str(q) + ' ' + command[command.find(mt) + 13:]
+    adjusted_command = []
+    for cmd in command:
+        if 'aomenc' in command or 'vpxenc' in command:
+            mt = '--cq-level='
+            for x in command:
+                if mt in x:
+                    adjusted_command.append(command[:command.index(x) - 1] + (f'{mt}{q}',) + command[command.index(mt) + 1:])
 
-    elif 'x265' in command or 'x264' in command:
-        mt = '--crf'
-        cmd = command[:command.find(mt) + 6] + str(q) + ' ' +  command[command.find(mt) + 9:]
+        elif 'x265' in command or 'x264' in command:
+            mt = '--crf'
+            adjusted_command.append(command[:command.index(mt)] + (str(q),) + command[command.index(mt) + 2:])
 
-    elif 'rav1e' in command:
-        mt = '--quantizer'
-        cmd = command[:command.find(mt) + 11] + ' ' + str(q) + ' ' +  command[command.find(mt) + 15:]
+        elif 'rav1e' in command:
+            mt = '--quantizer'
+            adjusted_command.append(command[:command.index(mt)] + (str(q),) + command[command.index(mt) + 2:])
 
-    elif 'SvtAv1EncApp' in command:
-        mt = '--qp'
-        cmd = command[:command.find(mt) + 4] + ' ' + str(q) + ' ' +  command[command.find(mt) + 7:]
-    return cmd
+        elif 'SvtAv1EncApp' in command:
+            mt = '--qp'
+            adjusted_command.append(command[:command.index(mt)] + (str(q),) + command[command.index(mt) + 2:])
+        else:
+            adjusted_command.append(cmd)
+    return tuple(adjusted_command)
 
 
 def frame_probe_cv2(source: Path):

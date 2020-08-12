@@ -47,15 +47,14 @@ def get_keyframes(file: Path):
 
 def extract_audio(input_vid: Path, temp, audio_params):
     """Extracting audio from source, transcoding if needed."""
-    log(f'Audio processing\nParams: {audio_params}\n')
+    log(f'Audio processing\nParams: {" ".join(audio_params)}\n')
     audio_file = temp / 'audio.mkv'
 
     # Checking is source have audio track
-    check = fr' ffmpeg -y -hide_banner -loglevel error -ss 0 -i "{input_vid}" -t 0 -vn -c:a copy -f null -'
-    is_audio_here = len(subprocess.run(check, shell=True, stdout=PIPE, stderr=STDOUT).stdout) == 0
+    check = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-ss', '0', '-i', input_vid, '-t', '0', '-vn', '-c:a', 'copy', '-f', 'null', '-')
+    is_audio_here = len(subprocess.run(check, stdout=PIPE, stderr=STDOUT).stdout) == 0
 
     # If source have audio track - process it
     if is_audio_here:
-        cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{input_vid}" -vn ' \
-              f'{audio_params} {audio_file}'
-        subprocess.run(cmd, shell=True)
+        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', input_vid, '-vn', *audio_params, audio_file)
+        subprocess.run(cmd)

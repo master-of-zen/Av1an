@@ -11,7 +11,7 @@ class Chunk:
     to be run on this chunk.
     """
 
-    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: str, output_ext: str, size: int, frames: int):
+    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: list, output_ext: str, size: int, frames: int):
         """
         Chunk class constructor
 

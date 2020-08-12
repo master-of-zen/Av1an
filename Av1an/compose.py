@@ -9,7 +9,7 @@ from .chunk import Chunk
 from .vvc import get_yuv_file_path
 
 
-def gen_pass_commands(args: Args, chunk: Chunk) -> List[str]:
+def gen_pass_commands(args: Args, chunk: Chunk) -> List[List]:
     """
     Generates commands for ffmpeg and the encoder specified in args for the given chunk
 
@@ -48,13 +48,13 @@ def get_default_params_for_encoder(enc):
     """
 
     default_enc_params = {
-        'vpx': '--codec=vp9 --threads=4 --cpu-used=0 --end-usage=q --cq-level=30',
-        'aom': '--threads=4 --cpu-used=6 --end-usage=q --cq-level=30',
-        'rav1e': ' --tiles 8 --speed 6 --quantizer 100 ',
-        'svt_av1': ' --preset 4 --rc 0 --qp 25 ',
-        'x265': ' -p slow --crf 23 ',
-        'x264': ' --preset slow --crf 23 ',
-        'vvc': ' -wdt 640 -hgt 360 -fr 23.98 -q 30 ',
+        'vpx': ('--codec=vp9', '--threads=4', '--cpu-used=0', '--end-usage=q', '--cq-level=30'),
+        'aom': ('--threads=4', '--cpu-used=6', '--end-usage=q', '--cq-level=30'),
+        'rav1e': ('--tiles', '8', '--speed', '6', '--quantizer', '100'),
+        'svt_av1': ('--preset', '4', '--rc', '0', '--qp', '25'),
+        'x265': ('-p', 'slow', '--crf', '23'),
+        'x264': ('--preset', 'slow', '--crf', '23'),
+        'vvc': ('-wdt', '640', '-hgt', '360', '-fr', '23.98', '-q', '30'),
     }
 
     return default_enc_params[enc]
@@ -86,9 +86,9 @@ def compose_ffmpeg_pipe(a: Args) -> str:
     Gets the ffmpeg command with filters that pipes into the encoder
 
     :param a: the Args
-    :return: the ffmpeg command as a string
+    :return: the ffmpeg command as a list
     """
-    return f'ffmpeg -y -hide_banner -loglevel error -i - {a.ffmpeg} {a.pix_format} -bufsize 50000K -f yuv4mpegpipe -'
+    return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
 
 
 def compose_svt_av1(a: Args, c: Chunk) -> List[str]:
@@ -100,14 +100,14 @@ def compose_svt_av1(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | SvtAv1EncApp -i stdin {a.video_params} -b {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-b', c.output, '-')),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | SvtAv1EncApp -i stdin {a.video_params} -output-stat-file {c.fpf}.stat -b {os.devnull} -',
-            f'{compose_ffmpeg_pipe(a)} | SvtAv1EncApp -i stdin {a.video_params} -input-stat-file {c.fpf}.stat -b {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull, '-')),
+            (compose_ffmpeg_pipe(a), ('SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', c.output, '-'))
+        )
 
 
 def compose_rav1e(a: Args, c: Chunk) -> List[str]:
@@ -120,14 +120,14 @@ def compose_rav1e(a: Args, c: Chunk) -> List[str]:
     """
     assert a.passes == 1  # TODO: rav1e 2 pass is broken
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | rav1e - {a.video_params} --output {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('rav1e', '-', *a.video_params, '--output', c.output)),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | rav1e - --first-pass {c.fpf}.stat {a.video_params} --output {os.devnull}',
-            f'{compose_ffmpeg_pipe(a)} | rav1e - --second-pass {c.fpf}.stat {a.video_params} --output {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('rav1e', '-', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull)),
+            (compose_ffmpeg_pipe(a), ('rav1e', '-', '--second-pass', f'{c.fpf}.stat', *a.video_params, '--output', c.output))
+        )
 
 
 def compose_aom(a: Args, c: Chunk) -> List[str]:
@@ -139,14 +139,14 @@ def compose_aom(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | aomenc --passes=1 {a.video_params} -o {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('aomenc', '--passes=1', *a.video_params, '-o', c.output, '-')),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | aomenc --passes=2 --pass=1 {a.video_params} --fpf={c.fpf}.log -o {os.devnull} -',
-            f'{compose_ffmpeg_pipe(a)} | aomenc --passes=2 --pass=2 {a.video_params} --fpf={c.fpf}.log -o {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('aomenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}.log', '-o', os.devnull, '-')),
+            (compose_ffmpeg_pipe(a), ('aomenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}.log', '-o', c.output, '-'))
+        )
 
 
 def compose_vpx(a: Args, c: Chunk) -> List[str]:
@@ -158,14 +158,14 @@ def compose_vpx(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | vpxenc --passes=1 {a.video_params} -o {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('vpxenc', '--passes=1', *a.video_params, '-o', c.output, '-')),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | vpxenc --passes=2 --pass=1 {a.video_params} --fpf={c.fpf} -o {os.devnull} -',
-            f'{compose_ffmpeg_pipe(a)} | vpxenc --passes=2 --pass=2 {a.video_params} --fpf={c.fpf} -o {c.output} -',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('vpxenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}', '-o', os.devnull, '-')),
+            (compose_ffmpeg_pipe(a), ('vpxenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}', '-o', c.output, '-'))
+        )
 
 
 def compose_x265(a: Args, c: Chunk) -> List[str]:
@@ -177,14 +177,14 @@ def compose_x265(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | x265 --y4m {a.video_params} - -o {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('x265', '--y4m', *a.video_params, '-', '-o', c.output)),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | x265 --log-level error --pass 1 --y4m {a.video_params} --stats {c.fpf}.log - -o {os.devnull}',
-            f'{compose_ffmpeg_pipe(a)} | x265 --log-level error --pass 2 --y4m {a.video_params} --stats {c.fpf}.log - -o {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('x265', '--log-level', 'error', '--pass', '1', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log', '-', '-o', os.devnull)),
+            (compose_ffmpeg_pipe(a), ('x265', '--log-level', 'error', '--pass', '2', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log', '-', '-o', c.output))
+        )
 
 
 def compose_x264(a: Args, c: Chunk) -> List[str]:
@@ -196,14 +196,14 @@ def compose_x264(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     if a.passes == 1:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | x264 --stitchable --log-level error --demuxer y4m {a.video_params} - -o {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('x264', '--stitchable', '--log-level', 'error', '--demuxer', 'y4m', *a.video_params, '-', '-o', c.output)),
+        )
     elif a.passes == 2:
-        return [
-            f'{compose_ffmpeg_pipe(a)} | x264 --stitchable --log-level error --pass 1 --demuxer y4m {a.video_params} - --stats {c.fpf}.log - -o {os.devnull}',
-            f'{compose_ffmpeg_pipe(a)} | x264 --stitchable --log-level error --pass 2 --demuxer y4m {a.video_params} - --stats {c.fpf}.log - -o {c.output}',
-        ]
+        return (
+            (compose_ffmpeg_pipe(a), ('x264', '--stitchable', '--log-level', 'error', '--pass', '1', '--demuxer', 'y4m', *a.video_params, '-', '--stats', f'{c.fpf}.log', '-', '-o', os.devnull)),
+            (compose_ffmpeg_pipe(a), ('x264', '--stitchable', '--log-level', 'error', '--pass', '2', '--demuxer', 'y4m', *a.video_params, '-', '--stats', f'{c.fpf}.log', '-', '-o', c.output))
+        )
 
 
 def compose_vvc(a: Args, c: Chunk) -> List[str]:
@@ -215,9 +215,9 @@ def compose_vvc(a: Args, c: Chunk) -> List[str]:
     :return: A list of commands
     """
     yuv_file = get_yuv_file_path(c).as_posix()
-    return [
-        f'vvc_encoder -c {a.vvc_conf} -i {yuv_file} {a.video_params} -f {c.frames} --InputBitDepth=10 --OutputBitDepth=10 -b {c.output}',
-    ]
+    return (
+        ('vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', c.frames, '--InputBitDepth=10', '--OutputBitDepth=10', '-b', c.output),
+    )
 
 
 def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe, video_params):
@@ -231,11 +231,10 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file, ffmpeg_pipe
     :return: ffmpeg, encode
     """
 
-    ffmpeg_pipe = ffmpeg_pipe[:-2]  # remove the ' |' at the end
 
-    f = f'ffmpeg -y -hide_banner -loglevel error -i {video_path.as_posix()} {ffmpeg_pipe}'
+    f = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', video_path.as_posix(), *ffmpeg_pipe)
     # removed -w -h from aomenc since ffmpeg filters can change it and it can be added into video_params
     # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
-    e = f'aomenc --passes=2 --pass=1 {video_params} --fpf={stat_file.as_posix()} -o {os.devnull} -'
+    e = ('aomenc', '--passes=2', '--pass=1', *video_params, f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-')
 
     return f, e

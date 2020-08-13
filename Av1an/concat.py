@@ -73,7 +73,7 @@ def concatenate_video(temp: Path, output, encoder: str):
     if encoder == 'x265':
 
         cmd = ('ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov', '-map', '0', '-f', 'mp4', output)
-        concat = subprocess.run(cmd, shell=False, stdout=PIPE, stderr=STDOUT).stdout
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     else:
         cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-map', '0', output)

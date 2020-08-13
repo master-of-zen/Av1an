@@ -62,7 +62,7 @@ def process_pipe(pipe):
 
 
 def make_vvc_pipe(command):
-    pipe = subprocess.Popen(command[0], stdout=PIPE,
+    pipe = subprocess.Popen(command, stdout=PIPE,
                             stderr=STDOUT,
                             universal_newlines=True)
     return pipe

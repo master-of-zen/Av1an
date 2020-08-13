@@ -206,7 +206,7 @@ def compose_x264(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
         )
 
 
-def compose_vvc(a: Args, c: Chunk) -> List[str]:
+def compose_vvc(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
     """
     Composes the vvc command(s) for the chunk with respect to args
 

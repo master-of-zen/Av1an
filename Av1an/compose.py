@@ -88,7 +88,7 @@ def compose_ffmpeg_pipe(a: Args) -> str:
     :param a: the Args
     :return: the ffmpeg command as a list
     """
-    return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
+    return ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe)
 
 
 def compose_svt_av1(a: Args, c: Chunk) -> List[str]:

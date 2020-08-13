@@ -91,7 +91,7 @@ def compose_ffmpeg_pipe(a: Args) -> str:
     return ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe)
 
 
-def compose_svt_av1(a: Args, c: Chunk) -> List[str]:
+def compose_svt_av1(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
     """
     Composes the ffmpeg and svt-av1 command(s) for the chunk with respect to args
 

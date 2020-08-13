@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 from .arg_parse import Args
 import Av1an
@@ -11,7 +11,7 @@ class Chunk:
     to be run on this chunk.
     """
 
-    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: str, output_ext: str, size: int, frames: int):
+    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: Tuple[str], output_ext: str, size: int, frames: int):
         """
         Chunk class constructor
 

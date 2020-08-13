@@ -2,6 +2,7 @@ import subprocess
 import sys
 from subprocess import PIPE, STDOUT
 from pathlib import Path
+import shlex
 
 from Av1an.arg_parse import Args
 from Av1an.logger import log
@@ -60,26 +61,24 @@ def concatenate_video(temp: Path, output, encoder: str):
 
         encode_files = sorted((temp / 'encode').iterdir())
         # Replace all the ' with '/'' so ffmpeg can read the path correctly
-        f.writelines("file '" + str(file.absolute()).replace('\'','\'\\\'\'') + "'\n" for file in encode_files)
+        f.writelines(f'file {shlex.quote(str(file.absolute()))}\n' for file in encode_files)
 
     # Add the audio file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
-        audio = f'-i {audio_file} -c:a copy -map 1'
+        audio = ('-i', audio_file, '-c:a', 'copy', '-map', '1')
     else:
-        audio = ''
+        audio = ()
 
     if encoder == 'x265':
 
-        cmd = f' ffmpeg -y -fflags +genpts  -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-            f'{audio} -c copy -movflags frag_keyframe+empty_moov -map 0  -f mp4 - | ffmpeg -y -hide_banner -loglevel error -i - -c copy {output} '
-        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+        cmd = ('ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov', '-map', '0', '-f', 'mp4', output)
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     else:
-        cmd = f' ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 -i {temp / "concat"} ' \
-            f'{audio} -c copy -map 0  -y "{output}"'
+        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-map', '0', output)
 
-        concat = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     if len(concat) > 0:
         log(concat.decode())

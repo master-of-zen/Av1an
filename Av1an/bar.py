@@ -3,6 +3,7 @@
 import re
 import subprocess
 import sys
+from typing import Tuple
 from collections import deque
 from multiprocessing.managers import BaseManager
 from subprocess import PIPE, STDOUT
@@ -34,13 +35,11 @@ class Counter():
 BaseManager.register('Counter', Counter)
 
 
-def make_pipes(ffmpeg_gen, command):
+def make_pipes(ffmpeg_gen_cmd: Tuple[str], command: Tuple[Tuple[str]]):
 
-    f, e = command.split('|')
-    f, e = f.split(), e.split()
-    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen.split(), stdout=PIPE, stderr=STDOUT)
-    ffmpeg_pipe = subprocess.Popen(f, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
-    pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+    ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
+    pipe = subprocess.Popen(command[1], stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                             stderr=STDOUT,
                             universal_newlines=True)
 
@@ -64,7 +63,7 @@ def process_pipe(pipe):
 
 
 def make_vvc_pipe(command):
-    pipe = subprocess.Popen(command.split(), stdout=PIPE,
+    pipe = subprocess.Popen(command, stdout=PIPE,
                             stderr=STDOUT,
                             universal_newlines=True)
     return pipe

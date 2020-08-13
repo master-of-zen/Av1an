@@ -154,7 +154,6 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
         total = frame_probe(video_path)
 
     f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params)
-    f, e = f.split(), e.split()
 
     tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 

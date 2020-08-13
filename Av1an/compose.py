@@ -130,7 +130,7 @@ def compose_rav1e(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
         )
 
 
-def compose_aom(a: Args, c: Chunk) -> List[str]:
+def compose_aom(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
     """
     Composes the ffmpeg and libaom command(s) for the chunk with respect to args
 

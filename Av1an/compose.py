@@ -149,7 +149,7 @@ def compose_aom(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
         )
 
 
-def compose_vpx(a: Args, c: Chunk) -> List[str]:
+def compose_vpx(a: Args, c: Chunk) -> Tuple[Tuple[str]]:
     """
     Composes the ffmpeg and vpx command(s) for the chunk with respect to args
 

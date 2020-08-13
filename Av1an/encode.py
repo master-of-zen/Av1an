@@ -130,16 +130,17 @@ def startup(args: Args, chunk_queue: List[Chunk]):
 
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        future_cmd = {executor.submit(encode, cmd, args): cmd for cmd in chunk_queue}
-        for future in concurrent.futures.as_completed(future_cmd):
-            future_cmd[future]
-            try:
-                future.result()
-            except Exception as exc:
-                _, _, exc_tb = sys.exc_info()
-                print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
-                terminate()
+    if args.workers != 0:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+            future_cmd = {executor.submit(encode, cmd, args): cmd for cmd in chunk_queue}
+            for future in concurrent.futures.as_completed(future_cmd):
+                future_cmd[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    _, _, exc_tb = sys.exc_info()
+                    print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
+                    terminate()
 
 def encode(chunk: Chunk, args: Args):
     """

@@ -15,6 +15,7 @@ from collections import deque
 
 from .arg_parse import Args
 from .chunk import Chunk
+from .commandtypes import CommandPair
 from .utils import terminate, man_q
 from .bar import make_pipes, process_pipe
 from .utils import terminate
@@ -33,7 +34,7 @@ def target_vmaf_routine(args: Args, chunk: Chunk):
     :return: None
     """
     tg_cq = target_vmaf(chunk, args)
-    chunk.pass_cmds = (man_q(command, tg_cq) for command in chunk.pass_cmds)
+    chunk.pass_cmds = [CommandPair(f, man_q(e, tg_cq)) for f, e in chunk.pass_cmds]
 
 
 def gen_probes_names(chunk: Chunk, q):
@@ -42,36 +43,36 @@ def gen_probes_names(chunk: Chunk, q):
     return chunk.fake_input_path.with_name(f'v_{q}{chunk.name}').with_suffix('.ivf')
 
 
-def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate):
+def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
     """Generate and return commands for probes at set Q values
     """
-    pipe = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\,{vmaf_rate}))', *ffmpeg_pipe)
+    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\,{vmaf_rate}))', *ffmpeg_pipe]
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
     if encoder == 'aom':
-        params = ('aomenc',  '--passes=1', '--threads=8', '--end-usage=q', '--cpu-used=6', f'--cq-level={q}')
-        cmd = (pipe, (*params, '-o', probe_name, '-'))
+        params = ['aomenc',  '--passes=1', '--threads=8', '--end-usage=q', '--cpu-used=6', f'--cq-level={q}']
+        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'x265':
-        params = ('x265',  '--log-level', '0', '--no-progress', '--y4m', '--preset', 'faster', '--crf', f'{q}')
-        cmd = (pipe, (*params, '-o', probe_name, '-'))
+        params = ['x265',  '--log-level', '0', '--no-progress', '--y4m', '--preset', 'faster', '--crf', f'{q}']
+        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
-        params = ('rav1e', '-s', '10', '--tiles', '8', '--quantizer', f'{q}')
-        cmd = (pipe, (*params, '-o', probe_name, '-'))
+        params = ['rav1e', '-s', '10', '--tiles', '8', '--quantizer', f'{q}']
+        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':
-        params = ('vpxenc', '--passes=1', '--pass=1', '--codec=vp9', '--threads=4', '--cpu-used=9', '--end-usage=q', f'--cq-level={q}')
-        cmd = (pipe, (*params, '-o', probe_name, '-'))
+        params = ['vpxenc', '--passes=1', '--pass=1', '--codec=vp9', '--threads=4', '--cpu-used=9', '--end-usage=q', f'--cq-level={q}']
+        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'svt_av1':
-        params = ('SvtAv1EncApp', '-i', 'stdin', '--preset', '8', '--rc', '0', '--qp', f'{q}')
-        cmd = (pipe, (*params, '-b', probe_name, '-'))
+        params = ['SvtAv1EncApp', '-i', 'stdin', '--preset', '8', '--rc', '0', '--qp', f'{q}']
+        cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'x264':
-        params = ('x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf', f'{q}')
-        cmd = (pipe, (*params, '-o', probe_name, '-'))
+        params = ['x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf', f'{q}']
+        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     return cmd
 

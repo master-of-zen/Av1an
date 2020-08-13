@@ -1,8 +1,9 @@
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 
-from .arg_parse import Args
 import Av1an
+from .arg_parse import Args
+from .commandtypes import Command, MPCommands, CommandPair
 
 
 class Chunk:
@@ -11,9 +12,11 @@ class Chunk:
     to be run on this chunk.
     """
 
-    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: Tuple[str], output_ext: str, size: int, frames: int):
+    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: Command, output_ext: str, size: int, frames: int):
         """
         Chunk class constructor
+
+        Note: while ffmpeg_gen_cmd is a Command, it must be serializable, so Path can't be used
 
         :param temp: The temp directory
         :param index: the index of this chunk
@@ -22,24 +25,25 @@ class Chunk:
         :param size: the size of this chunk. used for sorting
         :param frames: the number of frames in this chunk
         """
-        self.index = index
-        self.ffmpeg_gen_cmd = ffmpeg_gen_cmd
-        self.size = size
-        self.temp = temp
-        self.pass_cmds = []
-        self.frames = frames
-        self.output_ext = output_ext
+        self.index: int = index
+        self.ffmpeg_gen_cmd: Command = ffmpeg_gen_cmd
+        self.size: int = size
+        self.temp: Path = temp
+        self.pass_cmds: MPCommands = []
+        self.frames: int = frames
+        self.output_ext: str = output_ext
 
-    def generate_pass_cmds(self, args: Args):
+    def generate_pass_cmds(self, args: Args) -> None:
         """
         Generates and sets the encoding commands for this chunk
 
         :param args: the Args
         :return: None
         """
-        self.pass_cmds = Av1an.gen_pass_commands(args, self)
+        encoder = Av1an.ENCODERS[args.encoder]
+        self.pass_cmds = encoder.compose_1_pass(args, self) if args.passes == 1 else encoder.compose_2_pass(args, self)
 
-    def remove_first_pass_from_commands(self):
+    def remove_first_pass_from_commands(self) -> None:
         """
         Removes the first pass command from the list of commands.
         Used with first pass reuse
@@ -131,5 +135,6 @@ class Chunk:
         :return: A Chunk from the dictionary
         """
         chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'], d['size'], d['frames'])
-        chunk.pass_cmds = d['pass_cmds']
+        pass_cmds = [CommandPair(f, e) for f, e in d['pass_cmds']]
+        chunk.pass_cmds = pass_cmds
         return chunk

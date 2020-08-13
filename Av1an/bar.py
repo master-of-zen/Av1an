@@ -34,7 +34,7 @@ class Counter():
 BaseManager.register('Counter', Counter)
 
 
-def make_pipes(ffmpeg_gen_cmd: list, command: list):
+def make_pipes(ffmpeg_gen_cmd: Tuple[str], command: Tuple[Tuple[str]]):
 
     ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
     ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)

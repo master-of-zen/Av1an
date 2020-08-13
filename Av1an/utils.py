@@ -45,7 +45,7 @@ def get_cq(command):
     return int(matches[-1])
 
 
-def man_q(command: list, q: int):
+def man_q(command: Tuple[str], q: int):
     """Return command with new cq value"""
 
     adjusted_command = []
@@ -76,4 +76,3 @@ def frame_probe_cv2(source: Path):
     video = cv2.VideoCapture(source.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     return total
-

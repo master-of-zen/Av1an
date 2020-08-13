@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 from .arg_parse import Args
 import Av1an

@@ -3,6 +3,7 @@
 import re
 import subprocess
 import sys
+from typing import Tuple
 from collections import deque
 from multiprocessing.managers import BaseManager
 from subprocess import PIPE, STDOUT

@@ -5,6 +5,7 @@ import re
 import statistics
 import subprocess
 import sys
+from typing import Tuple
 from pathlib import Path
 from subprocess import PIPE
 

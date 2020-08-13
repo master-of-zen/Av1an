@@ -216,7 +216,7 @@ def compose_vvc(a: Args, c: Chunk) -> List[str]:
     """
     yuv_file = get_yuv_file_path(c).as_posix()
     return (
-        ('vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', c.frames, '--InputBitDepth=10', '--OutputBitDepth=10', '-b', c.output),
+        ('vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', str(c.frames), '--InputBitDepth=10', '--OutputBitDepth=10', '-b', c.output),
     )
 
 

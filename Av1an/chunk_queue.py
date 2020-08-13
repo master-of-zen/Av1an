@@ -147,6 +147,8 @@ def create_video_queue_select(args: Args, split_locations: List[int]) -> List[Ch
     """
     # add first frame and last frame
     last_frame = frame_probe(args.input)
+    split_locs_fl = [0] + split_locations + [last_frame]
+    
     # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
     chunk_boundaries = zip(split_locs_fl, split_locs_fl[1:])
 

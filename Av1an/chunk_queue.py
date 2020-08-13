@@ -127,7 +127,7 @@ def create_vsffms2_chunk(args: Args, index: int, load_script: Path, frame_start:
     frames = frame_end - frame_start
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
-    ffmpeg_gen_cmd = ('vspipe', load_script, '-y', '-', '-s', frame_start, '-e', frame_end)
+    ffmpeg_gen_cmd = ('vspipe', load_script.as_posix(), '-y', '-', '-s', str(frame_start), '-e', str(frame_end))
     extension = get_file_extension_for_encoder(args.encoder)
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 

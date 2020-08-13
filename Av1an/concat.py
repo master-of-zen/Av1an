@@ -78,7 +78,7 @@ def concatenate_video(temp: Path, output, encoder: str):
     else:
         cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-map', '0', output)
 
-        concat = subprocess.run(cmd, shell=False, stdout=PIPE, stderr=STDOUT).stdout
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     if len(concat) > 0:
         log(concat.decode())

@@ -68,6 +68,9 @@ With your own parameters:
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
+    --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.
+                            Files will be a bit smaller. Recommended for x265.
+
 <h3 align="center">FFmpeg options</h3>
 
     -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)

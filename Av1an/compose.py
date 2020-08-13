@@ -9,7 +9,7 @@ from .chunk import Chunk
 from .vvc import get_yuv_file_path
 
 
-def gen_pass_commands(args: Args, chunk: Chunk) -> List[List]:
+def gen_pass_commands(args: Args, chunk: Chunk) -> Tuple[Tuple[str]]:
     """
     Generates commands for ffmpeg and the encoder specified in args for the given chunk
 

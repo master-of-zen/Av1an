@@ -157,8 +157,8 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     dif2 = abs(target - vmaf1)
 
     tot = dif1 + dif2
-    
-    new_point = round(num1 * (dif1 / tot ) + (num2 * (dif2 / tot)))
+
+    new_point = int(round(num1 * (dif1 / tot ) + (num2 * (dif2 / tot))))
     return new_point
 
 
@@ -183,7 +183,7 @@ def target_vmaf_search(chunk: Chunk, frames, args):
     else:
         next_q = args.max_q
         q_list.append(args.max_q)
-    
+
     # Edge case check
     score = vmaf_probe(chunk, next_q, args)
     vmaf_cq.append((score, next_q))
@@ -193,14 +193,14 @@ def target_vmaf_search(chunk: Chunk, frames, args):
 
     elif next_q == args.max_q and score > args.vmaf_target:
         return vmaf_cq, True
-    
+
     for _ in range(args.vmaf_steps - 2 ):
         new_point = weighted_search(vmaf_cq[-2][1], vmaf_cq[-2][0], vmaf_cq[-1][1], vmaf_cq[-1][0], args.vmaf_target)
         if new_point in [x[1] for x in vmaf_cq]:
             return vmaf_cq, False
 
         last_q = new_point
-        
+
         q_list.append(new_point)
         score = vmaf_probe(chunk, new_point, args)
         next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
@@ -222,7 +222,7 @@ def target_vmaf(chunk: Chunk, args: Args):
                     f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n" \
                     f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n" \
                     f"Target Q: {args.max_q} Vmaf: {vmaf_cq[-1][0]}\n\n")
-                
+
             else:
                 log(f"Chunk: {chunk.name}, Fr: {frames}\n" \
                     f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n" \

@@ -3,12 +3,12 @@
 import re
 import subprocess
 import sys
-from typing import Tuple
 from collections import deque
 from multiprocessing.managers import BaseManager
 from subprocess import PIPE, STDOUT
 from tqdm import tqdm
 
+from .commandtypes import Command, CommandPair
 from .utils import terminate
 
 
@@ -41,7 +41,7 @@ class Counter():
 BaseManager.register('Counter', Counter)
 
 
-def make_pipes(ffmpeg_gen_cmd: Tuple[str], command: Tuple[Tuple[str]]):
+def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
 
     ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
     ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
@@ -68,7 +68,7 @@ def process_pipe(pipe):
         print('\n'.join(encoder_history))
 
 
-def make_vvc_pipe(command):
+def make_vvc_pipe(command: Command):
     pipe = subprocess.Popen(command, stdout=PIPE,
                             stderr=STDOUT,
                             universal_newlines=True)
@@ -148,11 +148,11 @@ def process_encoding_pipe(pipe, encoder, counter):
         print('\n'.join(encoder_history))
 
 
-def tqdm_bar(ffmpeg_gen_cmd, pass_cmd, encoder, counter, frame_probe_source, passes):
+def tqdm_bar(ffmpeg_gen_cmd, pass_cmd: CommandPair, encoder, counter, frame_probe_source, passes):
     try:
 
         if encoder in 'vvc':
-            pipe = make_vvc_pipe(pass_cmd)
+            pipe = make_vvc_pipe(pass_cmd.encode_cmd)
         else:
             pipe = make_pipes(ffmpeg_gen_cmd, pass_cmd)
 

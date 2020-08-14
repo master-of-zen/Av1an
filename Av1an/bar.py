@@ -13,12 +13,18 @@ from .utils import terminate
 
 
 def Manager():
+    """
+    Thread save manager for frame counter
+    """
     m = BaseManager()
     m.start()
     return m
 
 
 class Counter():
+    """
+    Frame Counter based on TQDM
+    """
     def __init__(self, total, initial):
         self.first_update = True
         self.initial = initial

@@ -30,7 +30,6 @@ class Args(object):
         self.encoder = None
         self.workers = None
         self.config = None
-
         self.video_params = None
 
         # FFmpeg params
@@ -87,7 +86,7 @@ def arg_parsing():
     # Splitting
     split_group = parser.add_argument_group('Splitting')
     split_group.add_argument('--chunk_method', '-cs', type=str, default='segment', help='Method for creating chunks',
-                             choices=['segment', 'select', 'vs_ffms2'])
+                             choices=['segment', 'select', 'vs_ffms2', 'hybrid'])
     split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
                              choices=['pyscene', 'aom_keyframes'])
@@ -126,7 +125,7 @@ def arg_parsing():
     vmaf_group.add_argument('--vmaf', help='Calculating vmaf after encode', action='store_true')
     vmaf_group.add_argument('--vmaf_path', type=Path, default=None, help='Path to vmaf models')
     vmaf_group.add_argument('--vmaf_res', type=str, default="1920x1080", help='Resolution used in vmaf calculation')
-    vmaf_group.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')    
+    vmaf_group.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
     # Target Vmaf
     tvmaf_group = parser.add_argument_group('Target VMAF')

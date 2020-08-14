@@ -14,7 +14,7 @@ from .utils import terminate
 
 def Manager():
     """
-    Thread save manager for frame counter 
+    Thread save manager for frame counter
     """
     m = BaseManager()
     m.start()

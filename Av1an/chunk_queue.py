@@ -5,7 +5,7 @@ from typing import List
 from .arg_parse import Args
 from .chunk import Chunk
 from .compose import get_file_extension_for_encoder
-from .ffmpeg import frame_probe
+from .ffmpeg import frame_probe, get_keyframes
 from .logger import log
 from .resume import read_done_data
 from .split import segment
@@ -73,6 +73,7 @@ def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]
         'segment': create_video_queue_segment,
         'select': create_video_queue_select,
         'vs_ffms2': create_video_queue_vsffms2,
+        'hybrid': create_video_queue_hybrid
     }
     chunk_queue = chunk_method_gen[args.chunk_method](args, split_locations)
 
@@ -80,6 +81,36 @@ def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]
     chunk_queue.sort(key=lambda c: c.size, reverse=True)
     return chunk_queue
 
+def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Chunk]:
+    """
+    Create list of chunks using hybrid segment-select approach
+
+    :param args: the Args
+    :param split_locations: a list of frames to split on
+    :return: A list of chunks
+    """
+    keyframes = get_keyframes(args.input)
+    end = [frame_probe(args.input)]
+    splits = [0] + split_locations + end
+
+    segments_list = list(zip(splits, splits[1:]))
+    to_split = [x for x in keyframes if x in splits]
+    segments = []
+
+    # Make segments
+    segment(args.input, args.temp, to_split[1:])
+    source_path = args.temp / 'split'
+    queue_files = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+    queue_files.sort(key=lambda p: p.stem)
+
+
+    kf_list = list(zip(to_split, to_split[1:] + end))
+    for f, (x, y) in zip(queue_files, kf_list):
+        to_add = [(f,[s[0] - x, s[1] - x]) for s in segments_list if s[0] >= x and s[1] <= y]
+        segments.extend(to_add)
+
+    chunk_queue = [create_select_chunk(args, index, file, *cb) for index, (file , cb) in enumerate(segments)]
+    return chunk_queue
 
 def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
@@ -148,7 +179,7 @@ def create_video_queue_select(args: Args, split_locations: List[int]) -> List[Ch
     # add first frame and last frame
     last_frame = frame_probe(args.input)
     split_locs_fl = [0] + split_locations + [last_frame]
-    
+
     # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
     chunk_boundaries = zip(split_locs_fl, split_locs_fl[1:])
 

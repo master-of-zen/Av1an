@@ -88,6 +88,7 @@ def concatenate_ffmpeg(temp: Path, output, encoder: str):
         print(concat.decode())
         raise Exception
 
+
 def concatenate_mkvmerge(temp: Path, output):
     """
     Uses mkvmerge to concatenate encoded segments into the final file
@@ -100,16 +101,10 @@ def concatenate_mkvmerge(temp: Path, output):
     log('Concatenating\n')
 
     encode_files = sorted((temp / 'encode').iterdir())
-
-    concat = str(encode_files[0])
-    for file in encode_files[1:]:
-        concat += f' +{file}'
+    concat = ' +'.join(f.as_posix() for f in encode_files)
 
     audio_file = temp / "audio.mkv"
-    if audio_file.exists():
-        audio = f'{audio_file}'
-    else:
-        audio = ''
+    audio = audio_file.as_posix() if audio_file.exists() else ''
 
     cmd = f' mkvmerge {concat} {audio} -o "{output}"'
     concat = subprocess.Popen(cmd, stdout=PIPE, universal_newlines=True, shell=True)

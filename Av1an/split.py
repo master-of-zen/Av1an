@@ -104,14 +104,6 @@ def segment(video: Path, temp: Path, frames: List[int]):
     log('Split Done\n')
 
 
-def reduce_scenes(scenes: List[int]) -> List[int]:
-    """Windows terminal can't handle more than ~500 scenes in length."""
-    count = len(scenes)
-    interval = int(count / 500 + (count % 500 > 0))
-    scenes = scenes[::interval]
-    return scenes
-
-
 def extra_splits(video, split_locations: list, split_distance):
     log('Applying extra splits\n')
     # Get all keyframes of original video
@@ -189,11 +181,6 @@ def calc_split_locations(args: Args) -> List[int]:
     else:
         print(f'No valid split option: {args.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()
-
-    # Fix for windows character limit
-    if sys.platform != 'linux':
-        if len(sc) > 600:
-            sc = reduce_scenes(sc)
 
     # Write scenes to file
 

@@ -11,8 +11,8 @@ from pathlib import Path
 from psutil import virtual_memory
 
 from .arg_parse import Args
+from .encoders import ENCODERS
 from .utils import terminate
-from .compose import get_default_params_for_encoder
 
 
 def set_vmaf(args):
@@ -35,32 +35,27 @@ def set_vmaf(args):
 
 
 def check_exes(args: Args):
+
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
-    encoders = {'svt_av1': 'SvtAv1EncApp', 'rav1e': 'rav1e', 'aom': 'aomenc', 'vpx': 'vpxenc','x265': 'x265', 'x264': 'x264', 'vvc': 'vvc_encoder'}
 
-
-    # Check if encoder executable is reachable
-    if args.encoder in encoders:
-        enc = encoders.get(args.encoder)
-
-        if not find_executable(enc):
-            print(f'Encoder {enc} not found')
-            terminate()
-    else:
-        print(f'Not valid encoder {args.encoder}\nValid encoders: "aom rav1e", "svt_av1", "vpx", "x265", "x264" ')
+    # this shouldn't happen as encoder choices are validated by argparse
+    if args.encoder not in ENCODERS:
+        valid_encoder_str = ", ".join([repr(k) for k in ENCODERS.keys()])
+        print(f'Not valid encoder {args.encoder}')
+        print(f'Valid encoders: {valid_encoder_str}')
         terminate()
 
-    if args.encoder == 'vvc':
-        if not find_executable('vvc_concat'):
-            print('vvc concatenation executabe "vvc_concat" not found')
-            terminate()
+    # make sure encoder is valid on system path
+    encoder = ENCODERS[args.encoder]
+    if not encoder.check_exists():
+        print(f'Encoder {encoder.encoder_bin} not found. Is it installed in the system path?')
+        terminate()
 
-    if args.chunk_method == 'vs_ffms2':
-        if not find_executable('vspipe'):
-            print('vspipe executable not found')
-            terminate()
+    if args.chunk_method == 'vs_ffms2' and (not find_executable('vspipe')):
+        print('vspipe executable not found')
+        terminate()
 
 
 def startup_check(args):
@@ -107,15 +102,20 @@ def startup_check(args):
         )
         terminate()
 
+    # TODO: rav1e 2 pass is broken
+    if args.encoder == 'rav1e' and args.passes == 2:
+        print("Implicitly changing 2 pass rav1e to 1 pass\n2 pass Rav1e doesn't work")
+        args.passes = 1
+
     if args.video_params is None:
-        args.video_params = get_default_params_for_encoder(args.encoder)
+        args.video_params = ENCODERS[args.encoder].default_args
     else:
         args.video_params = shlex.split(args.video_params)
     args.audio_params = shlex.split(args.audio_params)
     args.ffmpeg = shlex.split(args.ffmpeg)
 
-    args.pix_format = ('-strict', '-1', '-pix_fmt', args.pix_format)
-    args.ffmpeg_pipe = (*args.ffmpeg, *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-')
+    args.pix_format = ['-strict', '-1', '-pix_fmt', args.pix_format]
+    args.ffmpeg_pipe = [*args.ffmpeg, *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
 
 
 def determine_resources(encoder, workers):

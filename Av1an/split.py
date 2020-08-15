@@ -3,7 +3,6 @@
 import os
 import subprocess
 import sys
-from ast import literal_eval
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List
@@ -113,15 +112,18 @@ def reduce_scenes(scenes: List[int]) -> List[int]:
     return scenes
 
 
-def extra_splits(video, frames: list, split_distance):
+def extra_splits(video, split_locations: list, split_distance):
     log('Applying extra splits\n')
-    frames.append(frame_probe(video))
     # Get all keyframes of original video
     keyframes = get_keyframes(video)
 
-    t = frames[:]
-    t.insert(0, 0)
-    splits = list(zip(t, frames))
+    split_locs_with_start = split_locations[:]
+    split_locs_with_start.insert(0, 0)
+
+    split_locs_with_end = split_locations[:]
+    split_locs_with_end.append(frame_probe(video))
+
+    splits = list(zip(split_locs_with_start, split_locs_with_end))
     for i in splits:
         # Getting distance between splits
         distance = (i[1] - i[0])
@@ -141,8 +143,8 @@ def extra_splits(video, frames: list, split_distance):
 
                     # Getting keyframe closest to approximated
                     key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                    frames.append(key)
-    result = [int(x) for x in sorted(frames)]
+                    split_locations.append(key)
+    result = [int(x) for x in sorted(split_locations)]
     log(f'Split distance: {split_distance}\nNew splits:{len(result)}\n')
     return result
 

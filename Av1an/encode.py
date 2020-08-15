@@ -13,6 +13,7 @@ from .arg_parse import Args
 from .chunk import Chunk
 from .chunk_queue import load_or_gen_chunk_queue
 from .concat import concat_routine
+from .encoders.vvc import Vvc
 from .resume import write_progress_file
 from .target_vmaf import target_vmaf_routine
 from .utils import frame_probe_cv2, terminate, process_inputs
@@ -24,7 +25,6 @@ from .ffmpeg import extract_audio, frame_probe
 from .fp_reuse import segment_first_pass
 from .split import split_routine
 from .vmaf import plot_vmaf
-from .vvc import to_yuv
 
 
 def main_queue(args):
@@ -96,6 +96,7 @@ def encode_file(args: Args):
     if not args.keep:
         shutil.rmtree(args.temp)
 
+
 def startup(args: Args, chunk_queue: List[Chunk]):
     """ 
     If resuming, open done file and get file properties from there
@@ -141,6 +142,7 @@ def encoding_loop(args: Args, chunk_queue: List[Chunk]):
                 print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
                 terminate()
 
+
 def encode(chunk: Chunk, args: Args):
     """
     Encodes a chunk.
@@ -167,7 +169,7 @@ def encode(chunk: Chunk, args: Args):
         # if vvc, we need to create a yuv file
         if args.encoder == 'vvc':
             log(f'Creating yuv for chunk {chunk.name}\n')
-            vvc_yuv_file = to_yuv(chunk)
+            vvc_yuv_file = Vvc.to_yuv(chunk)
             log(f'Created yuv for chunk {chunk.name}\n')
 
         # Run all passes for this chunk

@@ -159,7 +159,7 @@ def tqdm_bar(ffmpeg_gen_cmd, pass_cmd: CommandPair, encoder, counter, frame_prob
         if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc'):
             process_encoding_pipe(pipe, encoder, counter)
 
-        if encoder == 'svt_av1':
+        if encoder in ('svt_av1', 'svt_vp9'):
             # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
             process_pipe(pipe)
             counter.update(frame_probe_source // passes)

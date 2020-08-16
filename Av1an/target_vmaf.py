@@ -70,6 +70,11 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
         params = ['SvtAv1EncApp', '-i', 'stdin', '--preset', '8', '--rc', '0', '--qp', f'{q}']
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
+    elif encoder == 'svt_vp9':
+        params = ['SvtVp9EncApp', '-i', 'stdin', '-enc-mode', '8', '-q', f'{q}']
+        # TODO: pipe needs to output rawvideo
+        cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
+
     elif encoder == 'x264':
         params = ['x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])

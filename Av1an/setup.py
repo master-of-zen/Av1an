@@ -26,7 +26,7 @@ def set_vmaf(args):
         print('Target vmaf require more than 3 probes/steps')
         terminate()
 
-    default_ranges = {'svt_av1': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
+    default_ranges = {'svt_av1': (20, 40), 'svt_vp9': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
 
     if args.min_q is None:
         args.min_q, _ = default_ranges[args.encoder]
@@ -58,9 +58,9 @@ def check_exes(args: Args):
         terminate()
 
 
-def startup_check(args):
+def startup_check(args: Args):
 
-    encoders_default_passes = {'svt_av1': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1, 'x264': 1, 'vvc':1 }
+    encoders_default_passes = {'svt_av1': 1, 'svt_vp9': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2,'x265': 1, 'x264': 1, 'vvc':1 }
 
 
     if sys.version_info < (3, 6):
@@ -102,9 +102,17 @@ def startup_check(args):
         )
         terminate()
 
+    if args.video_params is None and args.encoder == 'svt_vp9':
+        print('SVT-VP9 requires: -w, -h, and -fps/-fps-num/-fps-denom')
+        terminate()
+
     # TODO: rav1e 2 pass is broken
     if args.encoder == 'rav1e' and args.passes == 2:
         print("Implicitly changing 2 pass rav1e to 1 pass\n2 pass Rav1e doesn't work")
+        args.passes = 1
+
+    if args.encoder == 'svt_vp9' and args.passes == 2:
+        print("Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported")
         args.passes = 1
 
     if args.video_params is None:
@@ -131,7 +139,7 @@ def determine_resources(encoder, workers):
     if encoder in ('aom', 'rav1e', 'vpx'):
         workers =  round(min(cpu / 2, ram / 1.5))
 
-    elif encoder in ('svt_av1', 'x265', 'x264'):
+    elif encoder in ('svt_av1', 'svt_vp9', 'x265', 'x264'):
         workers =  round(min(cpu, ram)) // 8
 
     elif encoder in ('vvc'):

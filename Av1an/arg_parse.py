@@ -107,7 +107,7 @@ def arg_parsing():
     encode_group.add_argument('--passes', '-p', type=int, default=None, help='Specify encoding passes', choices=[1, 2])
     encode_group.add_argument('--video_params', '-v', type=str, default=None, help='encoding settings')
     encode_group.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder',
-                              choices=['aom', 'svt_av1', 'rav1e', 'vpx','x265', 'x264', 'vvc'])
+                              choices=['aom', 'svt_av1', 'svt_vp9', 'rav1e', 'vpx', 'x265', 'x264', 'vvc'])
     encode_group.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
     encode_group.add_argument('-cfg', '--config', type=Path, help='Parameters file. Save/Read: '
                                                                   'Video, Audio, Encoder, FFmpeg parameteres')

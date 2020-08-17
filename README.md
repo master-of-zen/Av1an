@@ -17,7 +17,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX, x265, VTM are supported.
+An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, SVT-VP9, VPX, x265, VTM are supported.
 
 Example with default parameters:
 
@@ -37,7 +37,8 @@ With your own parameters:
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`vpx`,`x265`,`vvc`. Default: aom)
+    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`,`vvc`)
+                            Default: aom
                             Example: -enc rav1e
 
     -v   --video_params     Encoder settings flags (If not set, will be used default parameters.

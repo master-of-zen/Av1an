@@ -10,9 +10,9 @@ from subprocess import PIPE, STDOUT
 import cv2
 from tqdm import tqdm
 
-from .compose import compose_aomsplit_first_pass_command
+from .commandtypes import CommandPair
 from .logger import log
-from .utils import  terminate
+from .utils import terminate
 from .ffmpeg import frame_probe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
@@ -141,6 +141,25 @@ def find_aom_keyframes(stat_file, key_freq_min):
     return keyframes_list
 
 
+def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpeg_pipe, video_params) -> CommandPair:
+    """
+    Generates the command for the first pass of the entire video used for aom keyframe split
+
+    :param video_path: the video path
+    :param stat_file: the stat_file output
+    :param ffmpeg_pipe: the av1an.ffmpeg_pipe with pix_fmt and -ff option
+    :param video_params: the video params for aomenc first pass
+    :return: ffmpeg, encode
+    """
+
+    f = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', video_path.as_posix(), *ffmpeg_pipe]
+    # removed -w -h from aomenc since ffmpeg filters can change it and it can be added into video_params
+    # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
+    e = ['aomenc', '--passes=2', '--pass=1', *video_params, f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-']
+
+    return CommandPair(f, e)
+
+
 def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video_params):
     """[Get frame numbers for splits from aomenc 1 pass stat file]
     """
@@ -154,7 +173,6 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
         total = frame_probe(video_path)
 
     f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params)
-    f, e = f.split(), e.split()
 
     tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 

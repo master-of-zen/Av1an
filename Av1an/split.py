@@ -3,7 +3,6 @@
 import os
 import subprocess
 import sys
-from ast import literal_eval
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List
@@ -105,23 +104,18 @@ def segment(video: Path, temp: Path, frames: List[int]):
     log('Split Done\n')
 
 
-def reduce_scenes(scenes: List[int]) -> List[int]:
-    """Windows terminal can't handle more than ~500 scenes in length."""
-    count = len(scenes)
-    interval = int(count / 500 + (count % 500 > 0))
-    scenes = scenes[::interval]
-    return scenes
-
-
-def extra_splits(video, frames: list, split_distance):
+def extra_splits(video, split_locations: list, split_distance):
     log('Applying extra splits\n')
-    frames.append(frame_probe(video))
     # Get all keyframes of original video
     keyframes = get_keyframes(video)
 
-    t = frames[:]
-    t.insert(0, 0)
-    splits = list(zip(t, frames))
+    split_locs_with_start = split_locations[:]
+    split_locs_with_start.insert(0, 0)
+
+    split_locs_with_end = split_locations[:]
+    split_locs_with_end.append(frame_probe(video))
+
+    splits = list(zip(split_locs_with_start, split_locs_with_end))
     for i in splits:
         # Getting distance between splits
         distance = (i[1] - i[0])
@@ -141,8 +135,8 @@ def extra_splits(video, frames: list, split_distance):
 
                     # Getting keyframe closest to approximated
                     key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                    frames.append(key)
-    result = [int(x) for x in sorted(frames)]
+                    split_locations.append(key)
+    result = [int(x) for x in sorted(split_locations)]
     log(f'Split distance: {split_distance}\nNew splits:{len(result)}\n')
     return result
 
@@ -187,11 +181,6 @@ def calc_split_locations(args: Args) -> List[int]:
     else:
         print(f'No valid split option: {args.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()
-
-    # Fix for windows character limit
-    if sys.platform != 'linux':
-        if len(sc) > 600:
-            sc = reduce_scenes(sc)
 
     # Write scenes to file
 

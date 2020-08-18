@@ -5,12 +5,14 @@ import re
 import statistics
 import subprocess
 import sys
+from typing import Tuple, List
 from pathlib import Path
 from subprocess import PIPE
-
-
 import cv2
 import numpy as np
+
+from Av1an.commandtypes import Command
+
 
 def terminate():
     sys.exit(1)
@@ -45,29 +47,47 @@ def get_cq(command):
     return int(matches[-1])
 
 
-def man_q(command: str, q: int):
+def list_index_of_regex(lst: List[str], regex_str: str) -> int:
+    """
+    Gets the first index of the list where regex_str matches
+
+    :param lst: the list
+    :param regex_str: the regex as a string
+    :return: the index where regex_str appears in the list
+    :raises ValueError: if regex_str is not found
+    """
+    reg = re.compile(regex_str)
+    for i, elem in enumerate(lst):
+        if reg.match(elem):
+            return i
+    raise ValueError(f'{reg} is not in list')
+
+
+def man_q(command: Command, q: int):
     """Return command with new cq value"""
 
-    if 'aomenc' in command or 'vpxenc' in command:
-        mt = '--cq-level='
-        cmd = command[:command.find(mt) + 11] + str(q) + ' ' + command[command.find(mt) + 13:]
+    adjusted_command = command.copy()
 
-    elif 'x265' in command or 'x264' in command:
-        mt = '--crf'
-        cmd = command[:command.find(mt) + 6] + str(q) + ' ' +  command[command.find(mt) + 9:]
+    if ('aomenc' in command) or ('vpxenc' in command):
+        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
+        adjusted_command[i] = f'--cq-level={q}'
+
+    elif ('x265' in command) or ('x264' in command):
+        i = list_index_of_regex(adjusted_command, r"--crf")
+        adjusted_command[i + 1] = f'{q}'
 
     elif 'rav1e' in command:
-        mt = '--quantizer'
-        cmd = command[:command.find(mt) + 11] + ' ' + str(q) + ' ' +  command[command.find(mt) + 15:]
+        i = list_index_of_regex(adjusted_command, r"--quantizer")
+        adjusted_command[i + 1] = f'{q}'
 
     elif 'SvtAv1EncApp' in command:
-        mt = '--qp'
-        cmd = command[:command.find(mt) + 4] + ' ' + str(q) + ' ' +  command[command.find(mt) + 7:]
-    return cmd
+        i = list_index_of_regex(adjusted_command, r"--qp")
+        adjusted_command[i + 1] = f'{q}'
+
+    return adjusted_command
 
 
 def frame_probe_cv2(source: Path):
     video = cv2.VideoCapture(source.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     return total
-

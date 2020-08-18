@@ -9,6 +9,8 @@ from matplotlib import pyplot as plt
 import json
 import numpy as np
 from .bar import process_pipe
+import shlex
+
 from .chunk import Chunk
 from .utils import terminate
 
@@ -54,22 +56,23 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
     # For vmaf calculation both source and encoded segment scaled to 1080
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
 
-    cmd = f"ffmpeg -loglevel info -y -thread_queue_size 1024 -hide_banner -r 60 -i {encoded.as_posix()} -r 60 -i - "
+    cmd_in = ('ffmpeg', '-loglevel', 'info', '-y', '-thread_queue_size', '1024', '-hide_banner', '-r', '60', '-i', encoded.as_posix(), '-r', '60', '-i', '-')
 
-    filter_complex = ' -filter_complex '
+    filter_complex = ('-filter_complex',)
 
-    distorted = f'\"[0:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
+    distorted = f'[0:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
 
-    ref = fr"[1:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];"
+    ref = fr'[1:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];'
 
-    vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={fl}{mod}{n_threads}\" -f null - "
+    vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={shlex.quote(fl)}{mod}{n_threads}"
 
-    cmd = cmd + filter_complex + distorted + ref + vmaf_filter
+    cmd_out = ('-f', 'null', '-')
 
-    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd.split(), stdout=PIPE, stderr=STDOUT)
-    pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, shell=True, universal_newlines=True)
+    cmd = (*cmd_in, *filter_complex, distorted + ref + vmaf_filter, *cmd_out)
+
+    ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+    pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
     process_pipe(pipe)
-
 
     return fl_path
 
@@ -81,7 +84,7 @@ def plot_vmaf(source: Path, encoded: Path, args, model, vmaf_res):
     fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
 
     # call_vmaf takes a chunk, so make a chunk of the entire source
-    ffmpeg_gen_cmd = f'ffmpeg -y -hide_banner -loglevel error -i {source.as_posix()} {args.pix_format} -f yuv4mpegpipe -'
+    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', source.as_posix(), *args.pix_format, '-f', 'yuv4mpegpipe', '-']
     input_chunk = Chunk(args.temp, 0, ffmpeg_gen_cmd, '', 0, 0)
 
     scores = call_vmaf(input_chunk, encoded, 0, model, vmaf_res, fl_path=fl_path)

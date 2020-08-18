@@ -17,7 +17,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, VPX, x265, VTM are supported.
+An easy way to start using VVC / AV1 / X265 / VP9 / VP8 encoding. AOM, rav1e, SVT-AV1, SVT-VP9, VPX, x265, VTM are supported.
 
 Example with default parameters:
 
@@ -37,7 +37,8 @@ With your own parameters:
     -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`vpx`,`x265`,`vvc`. Default: aom)
+    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`,`vvc`)
+                            Default: aom
                             Example: -enc rav1e
 
     -v   --video_params     Encoder settings flags (If not set, will be used default parameters.
@@ -94,6 +95,9 @@ With your own parameters:
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
 
+    -ch  --chunk_method     Determine way in which chunks made for encoding.
+                            ['segment', 'select', 'vs_ffms2', 'hybrid']
+
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
 
     -s   --scenes           Path to file with scenes timestamps.
@@ -143,7 +147,7 @@ With your own parameters:
     --vmaf_steps            Number of probes for interpolation.
                             Must be bigger than 3. Optimal is 4-6 probes. Default: 4
     
-    --probe_framerate       Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
+    --vmaf_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
     
     --n_threads             Limit number of threads that used for vmaf calculation
                             Example: --n_threads 12

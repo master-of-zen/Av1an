@@ -46,7 +46,7 @@ With your own parameters:
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, VPX: 2, x265: 1, x264: 1)
+                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1, VPX: 2, x265: 1, x264: 1)
                             At current moment 2nd pass rav1e not working
 
     -w   --workers          Override number of workers.
@@ -71,17 +71,17 @@ With your own parameters:
 
 <h3 align="center">FFmpeg options</h3>
 
-    -a   --audio_params     FFmpeg audio settings flags (Default: copy audio from source to output)
+    -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
     -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
                             Example:
-                            --ff " -r 24 -vf scale=320:240 "
+                            --ff " -vf scale=320:240 "
 
     -fmt --pix_format       Setting custom pixel/bit format for piping
                             (Default: 'yuv420p')
                             Example for 10 bit source: 'yuv420p10le'
-                            Encoding options should be adjusted accordingly.
+                            Based on encoder, options should be adjusted accordingly.
 
 <h3 align="center">Segmenting</h3>
 

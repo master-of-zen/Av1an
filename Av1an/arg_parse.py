@@ -13,6 +13,7 @@ class Args(object):
         self.input: Path = None
         self.temp: Path = None
         self.output_file: Path = None
+        self.mkvmerge: bool = None
 
         # Splitting
         self.chunk_method: str = None
@@ -80,6 +81,7 @@ def arg_parsing():
     io_group.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')
     io_group.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
     io_group.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
+    io_group.add_argument('--mkvmerge', help='Use mkvmerge instead of ffmpeg to concatenate', action='store_true')
 
     io_group.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
     io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')

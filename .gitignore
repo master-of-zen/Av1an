@@ -135,3 +135,6 @@ dmypy.json
 *.avi
 *.mkv
 *.exe
+
+# VS Code
+.vscode/*

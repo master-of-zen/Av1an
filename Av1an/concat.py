@@ -19,11 +19,13 @@ def concat_routine(args: Args):
     try:
         if args.encoder == 'vvc':
             vvc_concat(args.temp, args.output_file.with_suffix('.h266'))
+        elif args.mkvmerge:
+            concatenate_mkvmerge(args.temp, args.output_file)
         else:
-            concatenate_video(args.temp, args.output_file, args.encoder)
+            concatenate_ffmpeg(args.temp, args.output_file, args.encoder)
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
-        print(f'Concatenation failed, FFmpeg error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
+        print(f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
         log(f'Concatenation failed, aborting, error: {e}\n')
         terminate()
 
@@ -44,7 +46,7 @@ def vvc_concat(temp: Path, output: Path):
     output = subprocess.run(cmd, shell=True)
 
 
-def concatenate_video(temp: Path, output, encoder: str):
+def concatenate_ffmpeg(temp: Path, output, encoder: str):
     """
     Uses ffmpeg to concatenate encoded segments into the final file
 
@@ -83,4 +85,32 @@ def concatenate_video(temp: Path, output, encoder: str):
     if len(concat) > 0:
         log(concat.decode())
         print(concat.decode())
+        raise Exception
+
+
+def concatenate_mkvmerge(temp: Path, output):
+    """
+    Uses mkvmerge to concatenate encoded segments into the final file
+
+    :param temp: the temp directory
+    :param output: the final output file
+    :return: None
+    """
+
+    log('Concatenating\n')
+
+    encode_files = sorted((temp / 'encode').iterdir())
+    concat = ' +'.join(f.as_posix() for f in encode_files)
+
+    audio_file = temp / "audio.mkv"
+    audio = audio_file.as_posix() if audio_file.exists() else ''
+
+    cmd = f' mkvmerge {concat} {audio} -o "{output}"'
+    concat = subprocess.Popen(cmd, stdout=PIPE, universal_newlines=True, shell=True)
+    output, err = concat.communicate()
+    concat.wait()
+
+    if concat.returncode != 0:
+        log(output)
+        print(output)
         raise Exception

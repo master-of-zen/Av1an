@@ -1,8 +1,8 @@
+import shlex
 import subprocess
 import sys
-from subprocess import PIPE, STDOUT
 from pathlib import Path
-import shlex
+from subprocess import PIPE, STDOUT
 
 from Av1an.arg_parse import Args
 from Av1an.logger import log
@@ -59,7 +59,7 @@ def concatenate_ffmpeg(temp: Path, output, encoder: str):
 
     log('Concatenating\n')
 
-    with open(f'{temp / "concat" }', 'w') as f:
+    with open(temp / "concat", 'w') as f:
 
         encode_files = sorted((temp / 'encode').iterdir())
         # Replace all the ' with '/'' so ffmpeg can read the path correctly
@@ -74,11 +74,14 @@ def concatenate_ffmpeg(temp: Path, output, encoder: str):
 
     if encoder == 'x265':
 
-        cmd = ('ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov', '-map', '0', '-f', 'mp4', output)
+        cmd = ['ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0',
+               '-i', temp / "concat", *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov', '-map', '0', '-f',
+               'mp4', output]
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     else:
-        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', temp / "concat", *audio, '-c', 'copy', '-map', '0', output)
+        cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
+               temp / "concat", *audio, '-c', 'copy', '-map', '0', output]
 
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 

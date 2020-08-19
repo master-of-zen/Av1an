@@ -17,11 +17,20 @@ class Aom(Encoder):
 
     def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['aomenc', '--passes=1', *a.video_params, '-o', c.output, '-'])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['aomenc', '--passes=1', *a.video_params, '-o', c.output, '-']
+            )
         ]
 
     def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['aomenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}.log', '-o', os.devnull, '-']),
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['aomenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}.log', '-o', c.output, '-'])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['aomenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}.log', '-o', os.devnull, '-']
+            ),
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['aomenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}.log', '-o', c.output, '-']
+            )
         ]

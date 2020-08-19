@@ -94,7 +94,8 @@ def arg_parsing():
     split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
                              choices=['pyscene', 'aom_keyframes'])
-    split_group.add_argument('--extra_split', '-xs', type=int, default=0, help='Number of frames after which make split')
+    split_group.add_argument('--extra_split', '-xs', type=int, default=0,
+                             help='Number of frames after which make split')
     split_group.add_argument('--min_scene_len', type=int, default=None, help='Minimum number of frames in a split')
 
     # PySceneDetect split

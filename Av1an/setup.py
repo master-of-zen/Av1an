@@ -1,10 +1,10 @@
 #!/bin/env python
 
-import os
-import sys
-import shutil
 import atexit
+import os
 import shlex
+import shutil
+import sys
 from distutils.spawn import find_executable
 from pathlib import Path
 
@@ -16,7 +16,6 @@ from .utils import terminate
 
 
 def set_vmaf(args):
-
     if args.vmaf_path:
         if not Path(args.vmaf_path).exists():
             print(f'No such model: {Path(args.vmaf_path).as_posix()}')
@@ -26,7 +25,8 @@ def set_vmaf(args):
         print('Target vmaf require more than 3 probes/steps')
         terminate()
 
-    default_ranges = {'svt_av1': (20, 40), 'svt_vp9': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50), 'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
+    default_ranges = {'svt_av1': (20, 40), 'svt_vp9': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),
+                      'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
 
     if args.min_q is None:
         args.min_q, _ = default_ranges[args.encoder]
@@ -35,7 +35,6 @@ def set_vmaf(args):
 
 
 def check_exes(args: Args):
-
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
@@ -59,8 +58,8 @@ def check_exes(args: Args):
 
 
 def startup_check(args: Args):
-
-    encoders_default_passes = {'svt_av1': 1, 'svt_vp9': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2, 'x265': 1, 'x264': 1, 'vvc': 1}
+    encoders_default_passes = {'svt_av1': 1, 'svt_vp9': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2, 'x265': 1, 'x264': 1,
+                               'vvc': 1}
 
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')
@@ -68,6 +67,7 @@ def startup_check(args: Args):
     if sys.platform == 'linux':
         def restore_term():
             os.system("stty sane")
+
         atexit.register(restore_term)
 
     check_exes(args)

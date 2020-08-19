@@ -21,7 +21,11 @@ class Vvc(Encoder):
     def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
         yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
-            CommandPair([], ['vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', str(c.frames), '--InputBitDepth=10', '--OutputBitDepth=10', '-b', c.output])
+            CommandPair(
+                [],
+                ['vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', str(c.frames),
+                 '--InputBitDepth=10', '--OutputBitDepth=10', '-b', c.output]
+            )
         ]
 
     def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:
@@ -56,8 +60,9 @@ class Vvc(Encoder):
         ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
 
         # TODO: apply ffmpeg filter to the yuv file
-        cmd = f'ffmpeg -y -loglevel error -i - -f rawvideo -vf format=yuv420p10le {output.as_posix()}'
-        pipe = subprocess.Popen(cmd.split(), stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+        cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', '-', '-f', 'rawvideo', '-vf', 'format=yuv420p10le',
+               output.as_posix()]
+        pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
         pipe.wait()
 
         return output

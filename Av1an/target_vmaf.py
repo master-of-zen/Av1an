@@ -1,21 +1,22 @@
 #!/bin/env python
 
 
-from scipy import interpolate
-import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib
 import sys
 from math import isnan
 
+import matplotlib
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy import interpolate
+
 from .arg_parse import Args
+from .bar import make_pipes, process_pipe
 from .chunk import Chunk
 from .commandtypes import CommandPair
+from .logger import log
 from .utils import man_q
-from .bar import make_pipes, process_pipe
 from .utils import terminate
 from .vmaf import call_vmaf, read_vmaf_json
-from .logger import log
 
 
 def target_vmaf_routine(args: Args, chunk: Chunk):
@@ -40,16 +41,17 @@ def gen_probes_names(chunk: Chunk, q):
 def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
     """Generate and return commands for probes at set Q values
     """
-    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{vmaf_rate}))', *ffmpeg_pipe]
+    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{vmaf_rate}))',
+            *ffmpeg_pipe]
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
     if encoder == 'aom':
-        params = ['aomenc',  '--passes=1', '--threads=8', '--end-usage=q', '--cpu-used=6', f'--cq-level={q}']
+        params = ['aomenc', '--passes=1', '--threads=8', '--end-usage=q', '--cpu-used=6', f'--cq-level={q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'x265':
-        params = ['x265',  '--log-level', '0', '--no-progress', '--y4m', '--preset', 'faster', '--crf', f'{q}']
+        params = ['x265', '--log-level', '0', '--no-progress', '--y4m', '--preset', 'faster', '--crf', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
@@ -57,7 +59,8 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':
-        params = ['vpxenc', '--passes=1', '--pass=1', '--codec=vp9', '--threads=4', '--cpu-used=9', '--end-usage=q', f'--cq-level={q}']
+        params = ['vpxenc', '--passes=1', '--pass=1', '--codec=vp9', '--threads=4', '--cpu-used=9', '--end-usage=q',
+                  f'--cq-level={q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'svt_av1':
@@ -70,7 +73,8 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'x264':
-        params = ['x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf', f'{q}']
+        params = ['x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf',
+                  f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     return cmd
@@ -126,13 +130,13 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
 
 
 def vmaf_probe(chunk: Chunk, q, args):
-
     cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
 
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
     process_pipe(pipe)
 
-    file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_rate=args.vmaf_rate)
+    file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res,
+                     vmaf_rate=args.vmaf_rate)
     score = read_vmaf_json(file, 20)
 
     return score
@@ -146,7 +150,7 @@ def get_closest(q_list, q, positive=True):
     else:
         q_list = [x for x in q_list if x < q]
 
-    return min(q_list, key=lambda x: abs(x-q))
+    return min(q_list, key=lambda x: abs(x - q))
 
 
 def weighted_search(num1, vmaf1, num2, vmaf2, target):
@@ -163,7 +167,6 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
 
 
 def target_vmaf_search(chunk: Chunk, frames, args):
-
     vmaf_cq = []
     q_list = []
     score = 0
@@ -210,7 +213,6 @@ def target_vmaf_search(chunk: Chunk, frames, args):
 
 
 def target_vmaf(chunk: Chunk, args: Args):
-
     frames = chunk.frames
     vmaf_cq = []
 

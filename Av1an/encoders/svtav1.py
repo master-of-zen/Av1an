@@ -13,6 +13,8 @@ class SvtAv1(Encoder):
         super(SvtAv1, self).__init__(
             encoder_bin='SvtAv1EncApp',
             default_args=['--preset', '4', '--rc', '0', '--qp', '25'],
+            default_passes=1,
+            default_q_range=(20, 40),
             output_extension='ivf'
         )
 

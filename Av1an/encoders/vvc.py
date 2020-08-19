@@ -1,13 +1,16 @@
+import os
 import subprocess
 from distutils.spawn import find_executable
 from pathlib import Path
 from subprocess import PIPE, STDOUT
+from typing import Tuple, Optional
 import re
 
 from Av1an.arg_parse import Args
 from Av1an.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Av1an.encoders.encoder import Encoder
+from Av1an.logger import log
 from Av1an.utils import list_index_of_regex
 
 
@@ -16,7 +19,9 @@ class Vvc(Encoder):
     def __init__(self):
         super(Vvc, self).__init__(
             encoder_bin='vvc_encoder',
-            default_args=[],
+            default_args=None,
+            default_passes=1,
+            default_q_range=(20, 50),
             output_extension='h266'
         )
 
@@ -79,11 +84,38 @@ class Vvc(Encoder):
                                 universal_newlines=True)
         return pipe
 
-    def check_exists(self) -> bool:
-        # vvc also requires a special concat executable
+    def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
+        # vvc requires a special concat executable
         if find_executable('vvc_concat') is not None:
-            print('vvc concatenation executable "vvc_concat" not found')
-        return super().check_exists()
+            return False, 'vvc concatenation executable "vvc_concat" not found'
+
+        # make sure there's a vvc config file
+        if args.vvc_conf is None:
+            return False, 'Conf file for vvc required'
+
+        # vvc requires video information that av1an can't provide
+        if args.video_params is None:
+            return False, 'VVC requires:\n' \
+                          ' -wdt X - video width\n' \
+                          ' -hgt X - video height\n' \
+                          ' -fr X  - framerate\n' \
+                          ' -q X   - quantizer\n' \
+                          'Example: -wdt 640 -hgt 360 -fr 23.98 -q 30'
+
+        return super().is_valid(args)
+
+    def on_before_chunk(self, args: Args, chunk: Chunk) -> None:
+        # vvc requires a yuv files as input, make it here
+        log(f'Creating yuv for chunk {chunk.name}\n')
+        Vvc.to_yuv(chunk)
+        log(f'Created yuv for chunk {chunk.name}\n')
+        super().on_before_chunk(args, chunk)
+
+    def on_after_chunk(self, args: Args, chunk: Chunk) -> None:
+        # delete the yuv file for this chunk
+        yuv_path = Vvc.get_yuv_file_path(chunk)
+        os.remove(yuv_path)
+        super().on_after_chunk(args, chunk)
 
     @staticmethod
     def get_yuv_file_path(chunk: Chunk) -> Path:
@@ -96,21 +128,19 @@ class Vvc(Encoder):
         return (chunk.temp / 'split') / f'{chunk.name}.yuv'
 
     @staticmethod
-    def to_yuv(chunk: Chunk) -> Path:
+    def to_yuv(chunk: Chunk) -> None:
         """
         Generates a yuv file for a given chunk
 
         :param chunk: the Chunk
-        :return: a yuv file path for the chunk
+        :return: None
         """
-        output = Vvc.get_yuv_file_path(chunk)
+        yuv_path = Vvc.get_yuv_file_path(chunk)
 
         ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
 
         # TODO: apply ffmpeg filter to the yuv file
         cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', '-', '-f', 'rawvideo', '-vf', 'format=yuv420p10le',
-               output.as_posix()]
+               yuv_path.as_posix()]
         pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
         pipe.wait()
-
-        return output

@@ -14,6 +14,8 @@ class X264(Encoder):
         super().__init__(
             encoder_bin='x264',
             default_args=['--preset', 'slow', '--crf', '23'],
+            default_passes=1,
+            default_q_range=(20, 35),
             output_extension='mkv'
         )
 

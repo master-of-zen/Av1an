@@ -10,8 +10,8 @@ from pathlib import Path
 
 from psutil import virtual_memory
 
+from Av1an.encoders import ENCODERS
 from .arg_parse import Args
-from .encoders import ENCODERS
 from .utils import terminate
 
 
@@ -25,13 +25,12 @@ def set_vmaf(args):
         print('Target vmaf require more than 3 probes/steps')
         terminate()
 
-    default_ranges = {'svt_av1': (20, 40), 'svt_vp9': (20, 40), 'rav1e': (70, 150), 'aom': (25, 50), 'vpx': (25, 50),
-                      'x265': (20, 40), 'x264': (20, 35), 'vvc': (20, 50)}
+    encoder = ENCODERS[args.encoder]
 
     if args.min_q is None:
-        args.min_q, _ = default_ranges[args.encoder]
+        args.min_q, _ = encoder.default_q_range
     if args.max_q is None:
-        _, args.max_q = default_ranges[args.encoder]
+        _, args.max_q = encoder.default_q_range
 
 
 def check_exes(args: Args):
@@ -46,21 +45,27 @@ def check_exes(args: Args):
         print(f'Valid encoders: {valid_encoder_str}')
         terminate()
 
-    # make sure encoder is valid on system path
-    encoder = ENCODERS[args.encoder]
-    if not encoder.check_exists():
-        print(f'Encoder {encoder.encoder_bin} not found. Is it installed in the system path?')
-        terminate()
-
     if args.chunk_method == 'vs_ffms2' and (not find_executable('vspipe')):
         print('vspipe executable not found')
         terminate()
 
 
-def startup_check(args: Args):
-    encoders_default_passes = {'svt_av1': 1, 'svt_vp9': 1, 'rav1e': 1, 'aom': 2, 'vpx': 2, 'x265': 1, 'x264': 1,
-                               'vvc': 1}
+def setup_encoder(args: Args):
+    encoder = ENCODERS[args.encoder]
 
+    # validate encoder settings
+    settings_valid, error_msg = encoder.is_valid(args)
+    if not settings_valid:
+        print(error_msg)
+        terminate()
+
+    if args.passes is None:
+        args.passes = encoder.default_passes
+
+    args.video_params = encoder.default_args if args.video_params is None else shlex.split(args.video_params)
+
+
+def startup_check(args: Args):
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')
         sys.exit()
@@ -78,29 +83,11 @@ def startup_check(args: Args):
         print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
         terminate()
 
-    if args.encoder == 'vvc' and not args.vvc_conf:
-        print('Conf file for vvc required')
-        terminate()
+    setup_encoder(args)
 
     # No check because vvc
     if args.encoder == 'vvc':
         args.no_check = True
-
-    if args.passes is None:
-        args.passes = encoders_default_passes.get(args.encoder)
-
-    if args.video_params is None and args.encoder == 'vvc':
-        print('VVC require:\n',
-              ' -wdt X - video width\n',
-              ' -hgt X - video height\n',
-              ' -fr X  - framerate\n',
-              ' -q X   - quantizer\n',
-              'Example: -wdt 640 -hgt 360 -fr 23.98 -q 30 ')
-        terminate()
-
-    if args.video_params is None and args.encoder == 'svt_vp9':
-        print('SVT-VP9 requires: -w, -h, and -fps/-fps-num/-fps-denom')
-        terminate()
 
     # TODO: rav1e 2 pass is broken
     if args.encoder == 'rav1e' and args.passes == 2:
@@ -111,10 +98,6 @@ def startup_check(args: Args):
         print("Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported")
         args.passes = 1
 
-    if args.video_params is None:
-        args.video_params = ENCODERS[args.encoder].default_args
-    else:
-        args.video_params = shlex.split(args.video_params)
     args.audio_params = shlex.split(args.audio_params)
     args.ffmpeg = shlex.split(args.ffmpeg)
 

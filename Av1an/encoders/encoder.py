@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from distutils.spawn import find_executable
+from typing import Tuple, Optional
 import subprocess
 from subprocess import PIPE, STDOUT
 
@@ -13,7 +14,8 @@ class Encoder(ABC):
     An abstract class used for encoders
     """
 
-    def __init__(self, encoder_bin: str, default_args: Command, output_extension: str):
+    def __init__(self, encoder_bin: str, default_args: Command, default_passes: int, default_q_range: Tuple[int, int],
+                 output_extension: str):
         """
         Encoder constructor
 
@@ -23,6 +25,8 @@ class Encoder(ABC):
         """
         self.encoder_bin = encoder_bin
         self.default_args = default_args
+        self.default_passes = default_passes
+        self.default_q_range = default_q_range
         self.output_extension = output_extension
 
     @staticmethod
@@ -104,13 +108,41 @@ class Encoder(ABC):
 
         return pipe
 
+    def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
+        """
+        Determines if the encoder is properly set up. Checkes to make sure executable exists and args are all compatible
+        with this encoder.
+        :param args: the Args
+        :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
+        """
+        if not self.check_exists():
+            return False, f'Encoder {self.encoder_bin} not found. Is it installed in the system path?'
+        return True, None
+
     def check_exists(self) -> bool:
         """
         Verifies that this encoder exists in the system path and is ok to use
-
         :return: True if the encoder bin exists
         """
         return find_executable(self.encoder_bin) is not None
+
+    def on_before_chunk(self, args: Args, chunk: Chunk) -> None:
+        """
+        An event that is called before the encoding passes of a chunk starts
+        :param args: the Args
+        :param chunk: the chunk
+        :return: None
+        """
+        pass
+
+    def on_after_chunk(self, args: Args, chunk: Chunk) -> None:
+        """
+        An event that is called after the encoding passes of a chunk completes
+        :param args: the Args
+        :param chunk: the chunk
+        :return: None
+        """
+        pass
 
     def __eq__(self, o: object) -> bool:
         """

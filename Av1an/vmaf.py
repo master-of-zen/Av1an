@@ -117,8 +117,8 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
             plt.axhline(i, color='black', linewidth=0.6)
 
     plt.plot(range(plot_size), vmafs,
-            label=f'Frames: {plot_size}\nMean:{mean}\n'
-            f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+             label=f'Frames: {plot_size}\nMean:{mean}\n'
+             f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
     plt.ylabel('VMAF')
     plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
     plt.ylim(int(perc_1), 100)

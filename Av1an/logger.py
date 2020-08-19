@@ -20,9 +20,9 @@ class Logger():
 
 
 # Creating logger
-l = Logger()
-log_file = l.set_path
-log = l.log
+logger = Logger()
+log_file = logger.set_path
+log = logger.log
 
 
 def set_log(log_path: Path, temp):

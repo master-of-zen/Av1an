@@ -118,7 +118,7 @@ def process_encoding_pipe(pipe, encoder, counter):
             if not skip_1_pass:
                 match = re.search(r"^[^\d]*(\d+)", line)
 
-        elif encoder in  ('x265'):
+        elif encoder in ('x265'):
             if not skip_1_pass and pass_1_check:
                 if 'output file' in line:
                     if 'nul' in line.lower():

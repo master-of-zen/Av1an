@@ -98,9 +98,9 @@ def encode_file(args: Args):
 
 
 def startup(args: Args, chunk_queue: List[Chunk]):
-    """ 
+    """
     If resuming, open done file and get file properties from there
-    else get file properties and 
+    else get file properties and
 
     """
     # TODO: move this out and pass in total frames and initial frames

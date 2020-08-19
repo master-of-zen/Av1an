@@ -26,8 +26,8 @@ def get_keyframes(file: Path):
     keyframes = []
 
     ff = ["ffmpeg", "-hide_banner", "-i", file.as_posix(),
-    "-vf", r"select=eq(pict_type\,PICT_TYPE_I)",
-    "-f", "null", "-loglevel", "debug", "-"]
+          "-vf", r"select=eq(pict_type\,PICT_TYPE_I)",
+          "-f", "null", "-loglevel", "debug", "-"]
 
     pipe = subprocess.Popen(ff, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 

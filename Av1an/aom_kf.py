@@ -195,7 +195,7 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
         if line:
             encoder_history.append(line)
 
-        match = re.search(r"frame.*?\/([^ ]+?) ", line)
+        match = re.search(r"frame.*?/([^ ]+?) ", line)
         if match:
             new = int(match.group(1))
             if new > frame:

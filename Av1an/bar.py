@@ -80,7 +80,7 @@ def match_aom_vpx(line):
         print('\n\nERROR IN ENCODING PROCESS\n\n', line)
         terminate()
     if 'Pass 2/2' in line or 'Pass 1/1' in line:
-        return re.search(r"frame.*?\/([^ ]+?) ", line)
+        return re.search(r"frame.*?/([^ ]+?) ", line)
 
 
 def match_rav1e(line):

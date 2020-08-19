@@ -21,7 +21,7 @@ def Manager():
     return m
 
 
-class Counter():
+class Counter:
     """
     Frame Counter based on TQDM
     """

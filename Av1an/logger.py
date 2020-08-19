@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 
-class Logger():
+class Logger:
     def __init__(self):
         self.set_file = False
 

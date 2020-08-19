@@ -46,7 +46,8 @@ With your own parameters:
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1, VPX: 2, x265: 1, x264: 1)
+                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1, 
+                            VPX: 2, x265: 1, x264: 1, VVC:1)
                             At current moment 2nd pass rav1e not working
 
     -w   --workers          Override number of workers.

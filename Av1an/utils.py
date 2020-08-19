@@ -1,13 +1,9 @@
 #!/bin/env python
 
-import json
 import re
-import statistics
-import subprocess
 import sys
-from typing import Tuple, List
+from typing import List
 from pathlib import Path
-from subprocess import PIPE
 import cv2
 import numpy as np
 

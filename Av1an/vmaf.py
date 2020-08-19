@@ -2,7 +2,6 @@
 
 import subprocess
 import sys
-from math import isnan
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from matplotlib import pyplot as plt
@@ -12,7 +11,6 @@ from .bar import process_pipe
 import shlex
 
 from .chunk import Chunk
-from .utils import terminate
 
 
 def read_vmaf_json(file, percentile):

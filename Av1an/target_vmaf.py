@@ -2,24 +2,18 @@
 
 
 from scipy import interpolate
-from pathlib import Path
-import subprocess
-from subprocess import PIPE, STDOUT
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
 import sys
 from math import isnan
-import os
-from collections import deque
 
 from .arg_parse import Args
 from .chunk import Chunk
 from .commandtypes import CommandPair
-from .utils import terminate, man_q
+from .utils import man_q
 from .bar import make_pipes, process_pipe
 from .utils import terminate
-from .ffmpeg import frame_probe
 from .vmaf import call_vmaf, read_vmaf_json
 from .logger import log
 

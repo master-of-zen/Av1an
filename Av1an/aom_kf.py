@@ -45,6 +45,7 @@ def get_second_ref_usage_thresh(frame_count_so_far):
 
 
 # I have no idea if the following function is necessary in the python implementation or what its purpose even is.
+# noinspection PyPep8Naming
 def DOUBLE_DIVIDE_CHECK(x):
     if x < 0:
         return x - 0.000001
@@ -52,6 +53,7 @@ def DOUBLE_DIVIDE_CHECK(x):
         return x + 0.000001
 
 
+# noinspection PyPep8Naming
 def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     previous_frame_dict = dict_list[current_frame_index - 1]
     current_frame_dict = dict_list[current_frame_index]
@@ -63,7 +65,8 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
 
     BOOST_FACTOR = 12.5
 
-    # For more documentation on the below, see https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/encoder/pass2_strategy.c#1897
+    # For more documentation on the below, see
+    # https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/encoder/pass2_strategy.c#1897
     MIN_INTRA_LEVEL = 0.25
     INTRA_VS_INTER_THRESH = 2.0
     VERY_LOW_INTER_THRESH = 0.05
@@ -92,28 +95,28 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
             if next_iiratio > KF_II_MAX:
                 next_iiratio = KF_II_MAX
 
-            #Cumulative effect of decay in prediction quality.
+            # Cumulative effect of decay in prediction quality.
             if lnf['pcnt_inter'] > 0.85:
                 decay_accumulator = decay_accumulator * lnf['pcnt_inter']
             else:
                 decay_accumulator = decay_accumulator * ((0.85 + lnf['pcnt_inter']) / 2.0)
 
-            #Keep a running total.
+            # Keep a running total.
             boost_score += (decay_accumulator * next_iiratio)
 
-            #Test various breakout clauses.
+            # Test various breakout clauses.
             if (lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20) and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200):
                 break
             old_boost_score = boost_score
 
-        #If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
-        if (boost_score > 30.0 and (i > 3)):
+        # If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
+        if boost_score > 30.0 and (i > 3):
             is_keyframe = True
     return is_keyframe
 
 
 def find_aom_keyframes(stat_file, key_freq_min):
-    #I don't know what data format you want as output
+    # I don't know what data format you want as output
     keyframes_list = []
 
     number_of_frames = round(os.stat(stat_file).st_size / 208) - 1
@@ -127,7 +130,7 @@ def find_aom_keyframes(stat_file, key_freq_min):
             dict_list.append(p)
             frame_buf = file.read(208)
 
-    #intentionally skipping 0th frame and last 16 frames
+    # intentionally skipping 0th frame and last 16 frames
     frame_count_so_far = 1
     for i in range(1, number_of_frames - 16):
         is_keyframe = False

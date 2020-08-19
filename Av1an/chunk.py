@@ -49,20 +49,6 @@ class Chunk:
         encoder = Av1an.ENCODERS[args.encoder]
         self.pass_cmds = encoder.compose_1_pass(args, self) if args.passes == 1 else encoder.compose_2_pass(args, self)
 
-    def remove_first_pass_from_commands(self) -> None:
-        """
-        Removes the first pass command from the list of commands.
-        Used with first pass reuse
-
-        :return: None
-        """
-        # just one pass to begin with, do nothing
-        if len(self.pass_cmds) == 1:
-            return
-
-        # passes >= 2, remove the command for first pass (pass_cmds[0])
-        self.pass_cmds = self.pass_cmds[1:]
-
     def to_dict(self) -> Dict[str, Any]:
         """
         Converts this chunk to a dictionary for easy json serialization

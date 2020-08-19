@@ -163,18 +163,20 @@ def encode(chunk: Chunk, args: Args):
         if args.vmaf_target:
             target_vmaf_routine(args, chunk)
 
-        # remove first pass command if reusing
-        if args.reuse_first_pass:
-            chunk.remove_first_pass_from_commands()
-
         # if vvc, we need to create a yuv file
         if args.encoder == 'vvc':
             log(f'Creating yuv for chunk {chunk.name}\n')
             vvc_yuv_file = Vvc.to_yuv(chunk)
             log(f'Created yuv for chunk {chunk.name}\n')
 
+        # skip first pass if reusing
+        if args.reuse_first_pass and args.passes >= 2:
+            start = 2
+        else:
+            start = 1
+
         # Run all passes for this chunk
-        for current_pass in range(1, args.passes + 1):
+        for current_pass in range(start, args.passes + 1):
             tqdm_bar(args, chunk, args.encoder, args.counter, chunk_frames, args.passes, current_pass)
 
         # if vvc, we need to delete the yuv file

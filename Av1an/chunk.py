@@ -37,6 +37,7 @@ class Chunk:
         self.pass_cmds: MPCommands = []
         self.frames: int = frames
         self.output_ext: str = output_ext
+        self.vmaf_target_cq = None
 
     def generate_pass_cmds(self, args: Args) -> None:
         """

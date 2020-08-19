@@ -11,6 +11,9 @@ from tqdm import tqdm
 from .commandtypes import Command, CommandPair
 from .utils import terminate
 
+from Av1an.encoders import ENCODERS
+from Av1an.arg_parse import Args
+from Av1an.chunk import Chunk
 
 def Manager():
     """
@@ -41,17 +44,6 @@ class Counter:
 BaseManager.register('Counter', Counter)
 
 
-def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
-
-    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
-    ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
-    pipe = subprocess.Popen(command[1], stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                            stderr=STDOUT,
-                            universal_newlines=True)
-
-    return pipe
-
-
 def process_pipe(pipe):
     encoder_history = deque(maxlen=20)
     while True:
@@ -66,13 +58,6 @@ def process_pipe(pipe):
     if pipe.returncode != 0 and pipe.returncode != -2:
         print(f"\nEncoder encountered an error: {pipe.returncode}")
         print('\n'.join(encoder_history))
-
-
-def make_vvc_pipe(command: Command):
-    pipe = subprocess.Popen(command, stdout=PIPE,
-                            stderr=STDOUT,
-                            universal_newlines=True)
-    return pipe
 
 
 def match_aom_vpx(line):
@@ -148,13 +133,11 @@ def process_encoding_pipe(pipe, encoder, counter):
         print('\n'.join(encoder_history))
 
 
-def tqdm_bar(ffmpeg_gen_cmd, pass_cmd: CommandPair, encoder, counter, frame_probe_source, passes):
+def tqdm_bar(a: Args, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
     try:
 
-        if encoder in 'vvc':
-            pipe = make_vvc_pipe(pass_cmd.encode_cmd)
-        else:
-            pipe = make_pipes(ffmpeg_gen_cmd, pass_cmd)
+        enc = ENCODERS[encoder]
+        pipe = enc.make_pipes(a, c, passes, current_pass)
 
         if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc'):
             process_encoding_pipe(pipe, encoder, counter)

@@ -59,30 +59,6 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     raise ValueError(f'{reg} is not in list')
 
 
-def man_q(command: Command, q: int):
-    """Return command with new cq value"""
-
-    adjusted_command = command.copy()
-
-    if ('aomenc' in command) or ('vpxenc' in command):
-        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
-        adjusted_command[i] = f'--cq-level={q}'
-
-    elif ('x265' in command) or ('x264' in command):
-        i = list_index_of_regex(adjusted_command, r"--crf")
-        adjusted_command[i + 1] = f'{q}'
-
-    elif 'rav1e' in command:
-        i = list_index_of_regex(adjusted_command, r"--quantizer")
-        adjusted_command[i + 1] = f'{q}'
-
-    elif 'SvtAv1EncApp' in command:
-        i = list_index_of_regex(adjusted_command, r"--qp")
-        adjusted_command[i + 1] = f'{q}'
-
-    return adjusted_command
-
-
 def frame_probe_cv2(source: Path):
     video = cv2.VideoCapture(source.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))

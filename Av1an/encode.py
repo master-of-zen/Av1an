@@ -174,8 +174,8 @@ def encode(chunk: Chunk, args: Args):
             log(f'Created yuv for chunk {chunk.name}\n')
 
         # Run all passes for this chunk
-        for pass_cmd in chunk.pass_cmds:
-            tqdm_bar(chunk.ffmpeg_gen_cmd, pass_cmd, args.encoder, args.counter, chunk_frames, args.passes)
+        for current_pass in range(1, args.passes + 1):
+            tqdm_bar(args, chunk, args.encoder, args.counter, chunk_frames, args.passes, current_pass)
 
         # if vvc, we need to delete the yuv file
         if args.encoder == 'vvc':

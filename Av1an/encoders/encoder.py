@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from distutils.spawn import find_executable
+import subprocess
+from subprocess import PIPE, STDOUT
 
 from Av1an.arg_parse import Args
 from Av1an.chunk import Chunk
@@ -54,6 +56,42 @@ class Encoder(ABC):
         :return: a MPCommands object (a list of CommandPairs)
         """
         pass
+
+    @abstractmethod
+    def man_q(self, command: Command, q: int):
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+        pass
+
+    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, man_q=None, output=None):
+        """
+        reates a pipe for the given chunk with the given args
+
+        :param a: the Args
+        :param c: the Chunk
+        :param passes: the total number of passes (1 or 2)
+        :param current_pass: the current_pass
+        :param man_q: use a diffrent quality
+        :return: a Pipe attached to the encoders stdout
+        """
+        filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
+                              self.compose_2_pass(a, c, output)[current_pass - 1]
+
+        if man_q:
+            enc_cmd = self.man_q(enc_cmd, man_q)
+        elif c.vmaf_target_cq:
+            enc_cmd = self.man_q(enc_cmd, c.vmaf_target_cq)
+
+        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+        ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
+        pipe = subprocess.Popen(enc_cmd, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+                                stderr=STDOUT,
+                                universal_newlines=True)
+
+        return pipe
 
     def check_exists(self) -> bool:
         """

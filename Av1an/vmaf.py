@@ -49,7 +49,7 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
 
     # Change framerate of comparison to framerate of probe
     if vmaf_rate != 0:
-        select_frames = f"select=not(mod(n\,{vmaf_rate})),"
+        select_frames = f"select=not(mod(n\\,{vmaf_rate})),"
     else:
         select_frames = ''
 

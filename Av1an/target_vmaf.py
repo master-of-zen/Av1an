@@ -46,7 +46,7 @@ def gen_probes_names(chunk: Chunk, q):
 def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
     """Generate and return commands for probes at set Q values
     """
-    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\,{vmaf_rate}))', *ffmpeg_pipe]
+    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{vmaf_rate}))', *ffmpeg_pipe]
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 

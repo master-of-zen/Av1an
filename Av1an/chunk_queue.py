@@ -205,7 +205,7 @@ def create_select_chunk(args: Args, index: int, src_path: Path, frame_start: int
     frames = frame_end - frame_start
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
-    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', src_path.as_posix(), '-vf', f'select=between(n\,{frame_start}\,{frame_end}),setpts=PTS-STARTPTS', *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
+    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', src_path.as_posix(), '-vf', f'select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS', *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
     extension = ENCODERS[args.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 

@@ -67,7 +67,7 @@ jobs:
         if: matrix.encoder == 'x265'
         run: |
           apt-get install -y ${{ env.x265_deps }}
-          hg clone https://bitbucket.org/multicoreware/x265
+          git clone https://github.com/videolan/x265.git
           cd x265/build/linux
           cmake -G "Unix Makefiles" -DENABLE_SHARED=off ../../source
           make -j$(nproc)

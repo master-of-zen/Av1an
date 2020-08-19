@@ -15,8 +15,8 @@ class Logger():
     def log(self, info):
         """Default logging function, write to file."""
         if self.set_file:
-            with open(self.set_file, 'a') as log:
-                log.write(time.strftime('%X') + ' ' + info)
+            with open(self.set_file, 'a') as logf:
+                logf.write(time.strftime('%X') + ' ' + info)
 
 
 # Creating logger

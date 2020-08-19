@@ -86,7 +86,7 @@ def get_target_q(scores, vmaf_target):
     f = interpolate.interp1d(x, y, kind='quadratic')
     xnew = np.linspace(min(x), max(x), max(x) - min(x))
     tl = list(zip(xnew, f(xnew)))
-    q = min(tl, key=lambda x: abs(x[1] - vmaf_target))
+    q = min(tl, key=lambda l: abs(l[1] - vmaf_target))
 
     return int(q[0]), round(q[1], 3)
 
@@ -101,7 +101,7 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
 
     # Getting value closest to target
     tl = list(zip(xnew, f(xnew)))
-    vmaf_target_cq = min(tl, key=lambda x: abs(x[1] - vmaf_target))
+    vmaf_target_cq = min(tl, key=lambda l: abs(l[1] - vmaf_target))
     return vmaf_target_cq, tl, f, xnew
 
 

@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List

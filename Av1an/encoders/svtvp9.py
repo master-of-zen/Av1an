@@ -22,11 +22,15 @@ class SvtVp9(Encoder):
         :param a: the Args
         :return: a command
         """
-        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize', '50000K', '-f', 'rawvideo', '-']
+        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize',
+                '50000K', '-f', 'rawvideo', '-']
 
     def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(SvtVp9.compose_ffmpeg_raw_pipe(a), ['SvtVp9EncApp', '-i', 'stdin', '-n', f'{c.frames}', *a.video_params, '-b', c.output])
+            CommandPair(
+                SvtVp9.compose_ffmpeg_raw_pipe(a),
+                ['SvtVp9EncApp', '-i', 'stdin', '-n', f'{c.frames}', *a.video_params, '-b', c.output]
+            )
         ]
 
     def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:

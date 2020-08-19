@@ -17,11 +17,22 @@ class SvtAv1(Encoder):
 
     def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-b', c.output, '-'])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-b', c.output, '-']
+            )
         ]
 
     def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull, '-']),
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', c.output, '-'])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull,
+                 '-']
+            ),
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', c.output,
+                 '-']
+            )
         ]

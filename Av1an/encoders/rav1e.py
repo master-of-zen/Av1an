@@ -17,11 +17,20 @@ class Rav1e(Encoder):
 
     def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['rav1e', '-', *a.video_params, '--output', c.output])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['rav1e', '-', *a.video_params, '--output', c.output]
+            )
         ]
 
     def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['rav1e', '-', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull]),
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), ['rav1e', '-', '--second-pass', f'{c.fpf}.stat', *a.video_params, '--output', c.output])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['rav1e', '-', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull]
+            ),
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                ['rav1e', '-', '--second-pass', f'{c.fpf}.stat', *a.video_params, '--output', c.output]
+            )
         ]

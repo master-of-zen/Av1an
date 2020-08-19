@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 
+
 def conf(args):
     """Creation and reading of config files with saved settings"""
     if args.config:

@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 
-class Logger():
+class Logger:
     def __init__(self):
         self.set_file = False
 
@@ -15,14 +15,14 @@ class Logger():
     def log(self, info):
         """Default logging function, write to file."""
         if self.set_file:
-            with open(self.set_file, 'a') as log:
-                log.write(time.strftime('%X') + ' ' + info)
+            with open(self.set_file, 'a') as logf:
+                logf.write(time.strftime('%X') + ' ' + info)
 
 
 # Creating logger
-l = Logger()
-log_file = l.set_path
-log = l.log
+logger = Logger()
+log_file = logger.set_path
+log = logger.log
 
 
 def set_log(log_path: Path, temp):

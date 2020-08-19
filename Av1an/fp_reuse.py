@@ -61,7 +61,8 @@ def compute_eos_stats(chunk_stats: List[Dict], old_eos: Dict):
     eos = old_eos.copy()
     for key in eos.keys():
         eos[key] = sum([d[key] for d in chunk_stats])
-        # eos[key] = (old_eos[key] / old_eos['count']) * len(chunk_stats)  # TODO(n9Mtq4): I think this will work well for VBR encodes
+        # TODO(n9Mtq4): I think this will work well for VBR encodes
+        # eos[key] = (old_eos[key] / old_eos['count']) * len(chunk_stats)
     return eos
 
 

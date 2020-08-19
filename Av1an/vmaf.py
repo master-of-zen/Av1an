@@ -1,18 +1,17 @@
 #! /bin/env python
 
+import json
+import shlex
 import subprocess
 import sys
-from math import isnan
 from pathlib import Path
 from subprocess import PIPE, STDOUT
-from matplotlib import pyplot as plt
-import json
-import numpy as np
-from .bar import process_pipe
-import shlex
 
+import numpy as np
+from matplotlib import pyplot as plt
+
+from .bar import process_pipe
 from .chunk import Chunk
-from .utils import terminate
 
 
 def read_vmaf_json(file, percentile):
@@ -29,7 +28,6 @@ def read_vmaf_json(file, percentile):
 
 
 def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path = None, vmaf_rate=0):
-
     cmd = ''
     # settings model path
     if model:
@@ -49,14 +47,15 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
 
     # Change framerate of comparison to framerate of probe
     if vmaf_rate != 0:
-        select_frames = f"select=not(mod(n\,{vmaf_rate})),"
+        select_frames = f"select=not(mod(n\\,{vmaf_rate})),"
     else:
         select_frames = ''
 
     # For vmaf calculation both source and encoded segment scaled to 1080
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
 
-    cmd_in = ('ffmpeg', '-loglevel', 'info', '-y', '-thread_queue_size', '1024', '-hide_banner', '-r', '60', '-i', encoded.as_posix(), '-r', '60', '-i', '-')
+    cmd_in = ('ffmpeg', '-loglevel', 'info', '-y', '-thread_queue_size', '1024', '-hide_banner', '-r', '60', '-i',
+              encoded.as_posix(), '-r', '60', '-i', '-')
 
     filter_complex = ('-filter_complex',)
 
@@ -78,13 +77,13 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res, fl_path: Path 
 
 
 def plot_vmaf(source: Path, encoded: Path, args, model, vmaf_res):
-
     print('Calculating Vmaf...\r', end='')
 
     fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
 
     # call_vmaf takes a chunk, so make a chunk of the entire source
-    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', source.as_posix(), *args.pix_format, '-f', 'yuv4mpegpipe', '-']
+    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', source.as_posix(), *args.pix_format,
+                      '-f', 'yuv4mpegpipe', '-']
     input_chunk = Chunk(args.temp, 0, ffmpeg_gen_cmd, '', 0, 0)
 
     scores = call_vmaf(input_chunk, encoded, 0, model, vmaf_res, fl_path=fl_path)
@@ -98,7 +97,6 @@ def plot_vmaf(source: Path, encoded: Path, args, model, vmaf_res):
 
 
 def plot_vmaf_score_file(scores: Path, plot_path: Path):
-
     perc_1 = read_vmaf_json(scores, 1)
     perc_25 = read_vmaf_json(scores, 25)
     perc_75 = read_vmaf_json(scores, 75)
@@ -117,8 +115,8 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
             plt.axhline(i, color='black', linewidth=0.6)
 
     plt.plot(range(plot_size), vmafs,
-            label=f'Frames: {plot_size}\nMean:{mean}\n'
-            f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+             label=f'Frames: {plot_size}\nMean:{mean}\n'
+                   f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
     plt.ylabel('VMAF')
     plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
     plt.ylim(int(perc_1), 100)

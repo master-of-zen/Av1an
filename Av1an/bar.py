@@ -21,7 +21,7 @@ def Manager():
     return m
 
 
-class Counter():
+class Counter:
     """
     Frame Counter based on TQDM
     """
@@ -80,7 +80,7 @@ def match_aom_vpx(line):
         print('\n\nERROR IN ENCODING PROCESS\n\n', line)
         terminate()
     if 'Pass 2/2' in line or 'Pass 1/1' in line:
-        return re.search(r"frame.*?\/([^ ]+?) ", line)
+        return re.search(r"frame.*?/([^ ]+?) ", line)
 
 
 def match_rav1e(line):
@@ -118,7 +118,7 @@ def process_encoding_pipe(pipe, encoder, counter):
             if not skip_1_pass:
                 match = re.search(r"^[^\d]*(\d+)", line)
 
-        elif encoder in  ('x265'):
+        elif encoder in ('x265'):
             if not skip_1_pass and pass_1_check:
                 if 'output file' in line:
                     if 'nul' in line.lower():

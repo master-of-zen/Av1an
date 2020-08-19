@@ -1,10 +1,11 @@
 #!/bin/env python
 
+import re
 import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
+
 from .logger import log
-import re
 
 
 def frame_probe(source: Path):
@@ -26,8 +27,8 @@ def get_keyframes(file: Path):
     keyframes = []
 
     ff = ["ffmpeg", "-hide_banner", "-i", file.as_posix(),
-    "-vf", r"select=eq(pict_type\,PICT_TYPE_I)",
-    "-f", "null", "-loglevel", "debug", "-"]
+          "-vf", r"select=eq(pict_type\,PICT_TYPE_I)",
+          "-f", "null", "-loglevel", "debug", "-"]
 
     pipe = subprocess.Popen(ff, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -51,7 +52,8 @@ def extract_audio(input_vid: Path, temp, audio_params):
     audio_file = temp / 'audio.mkv'
 
     # Checking is source have audio track
-    check = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-ss', '0', '-i', input_vid, '-t', '0', '-vn', '-c:a', 'copy', '-f', 'null', '-')
+    check = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-ss', '0', '-i', input_vid, '-t', '0', '-vn',
+             '-c:a', 'copy', '-f', 'null', '-']
     is_audio_here = len(subprocess.run(check, stdout=PIPE, stderr=STDOUT).stdout) == 0
 
     # If source have audio track - process it

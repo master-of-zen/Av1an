@@ -81,6 +81,7 @@ def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]
     chunk_queue.sort(key=lambda c: c.size, reverse=True)
     return chunk_queue
 
+
 def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
     Create list of chunks using hybrid segment-select approach
@@ -103,14 +104,14 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     queue_files = [x for x in source_path.iterdir() if x.suffix == '.mkv']
     queue_files.sort(key=lambda p: p.stem)
 
-
     kf_list = list(zip(to_split, to_split[1:] + end))
     for f, (x, y) in zip(queue_files, kf_list):
-        to_add = [(f,[s[0] - x, s[1] - x]) for s in segments_list if s[0] >= x and s[1] <= y]
+        to_add = [(f, [s[0] - x, s[1] - x]) for s in segments_list if s[0] >= x and s[1] <= y]
         segments.extend(to_add)
 
-    chunk_queue = [create_select_chunk(args, index, file, *cb) for index, (file , cb) in enumerate(segments)]
+    chunk_queue = [create_select_chunk(args, index, file, *cb) for index, (file, cb) in enumerate(segments)]
     return chunk_queue
+
 
 def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
@@ -204,7 +205,9 @@ def create_select_chunk(args: Args, index: int, src_path: Path, frame_start: int
     frames = frame_end - frame_start
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
-    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', src_path.as_posix(), '-vf', f'select=between(n\,{frame_start}\,{frame_end}),setpts=PTS-STARTPTS', *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
+    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', src_path.as_posix(), '-vf',
+                      f'select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS', *args.pix_format,
+                      '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
     extension = ENCODERS[args.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
@@ -251,7 +254,8 @@ def create_chunk_from_segment(args: Args, index: int, file: Path) -> Chunk:
     :param file: the segmented file
     :return: A Chunk
     """
-    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', file.as_posix(), *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
+    ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', file.as_posix(), *args.pix_format,
+                      '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
     file_size = file.stat().st_size
     frames = frame_probe(file)
     extension = ENCODERS[args.encoder].output_extension

@@ -1,4 +1,4 @@
- #!/bin/env python
+#!/bin/env python
 
 from scenedetect.detectors import ContentDetector
 from scenedetect.scene_manager import SceneManager

@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from scipy import interpolate
 
 from .arg_parse import Args
-from .bar import make_pipes, process_pipe
+from .bar import process_pipe
 from .chunk import Chunk
 from .commandtypes import CommandPair
 from .logger import log

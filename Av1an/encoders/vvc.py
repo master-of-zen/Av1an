@@ -19,9 +19,7 @@ class Vvc(Encoder):
             output_extension='h266'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
-        if not output:
-            output = c.output
+    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
             CommandPair(
@@ -31,7 +29,7 @@ class Vvc(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         raise ValueError('VVC does not support 2 pass encoding')
 
 
@@ -50,7 +48,7 @@ class Vvc(Encoder):
 
         return adjusted_command
 
-    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, man_q=None, output=None):
+    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, output, man_q=None):
         """
         reates a pipe for the given chunk with the given args
 

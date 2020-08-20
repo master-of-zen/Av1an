@@ -36,23 +36,25 @@ class Encoder(ABC):
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
 
     @abstractmethod
-    def compose_1_pass(self, a: Args, c: Chunk) -> MPCommands:
+    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         """
         Composes the commands needed for a 1 pass encode
 
         :param a: the Args
         :param c: the Chunk
+        :param output: path for encoded output
         :return: a MPCommands object (a list of CommandPairs)
         """
         pass
 
     @abstractmethod
-    def compose_2_pass(self, a: Args, c: Chunk) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         """
         Composes the commands needed for a 2 pass encode
 
         :param a: the Args
         :param c: the Chunk
+        :param output: path for encoded output
         :return: a MPCommands object (a list of CommandPairs)
         """
         pass
@@ -66,7 +68,7 @@ class Encoder(ABC):
         :return: command with new cq value"""
         pass
 
-    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, man_q=None, output=None):
+    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, output, man_q=None):
         """
         reates a pipe for the given chunk with the given args
 
@@ -74,6 +76,7 @@ class Encoder(ABC):
         :param c: the Chunk
         :param passes: the total number of passes (1 or 2)
         :param current_pass: the current_pass
+        :param output: path for encoded output
         :param man_q: use a diffrent quality
         :return: a Pipe attached to the encoders stdout
         """

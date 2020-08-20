@@ -26,9 +26,7 @@ class SvtVp9(Encoder):
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize',
                 '50000K', '-f', 'rawvideo', '-']
 
-    def compose_1_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
-        if not output:
-            output = c.output
+    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         return [
             CommandPair(
                 SvtVp9.compose_ffmpeg_raw_pipe(a),
@@ -36,7 +34,7 @@ class SvtVp9(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         raise ValueError("SVT-VP9 doesn't support 2 pass")
 
     def man_q(self, command: Command, q: int):

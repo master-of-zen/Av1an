@@ -39,7 +39,7 @@ def gen_probes_names(chunk: Chunk, q):
 
 def probe_pipe(args: Args, chunk: Chunk, q):
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
-    pipe = ENCODERS[args.encoder].make_pipes(args, chunk, 1, 1, q, probe_name)
+    pipe = ENCODERS[args.encoder].make_pipes(args, chunk, 1, 1, probe_name, q)
 
     return pipe
 

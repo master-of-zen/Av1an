@@ -164,7 +164,6 @@ def create_vsffms2_chunk(args: Args, index: int, load_script: Path, frame_start:
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
     chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, size, frames)
-    chunk.generate_pass_cmds(args)
 
     return chunk
 
@@ -212,7 +211,6 @@ def create_select_chunk(args: Args, index: int, src_path: Path, frame_start: int
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
     chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, size, frames)
-    chunk.generate_pass_cmds(args)
 
     return chunk
 
@@ -261,6 +259,5 @@ def create_chunk_from_segment(args: Args, index: int, file: Path) -> Chunk:
     extension = ENCODERS[args.encoder].output_extension
 
     chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, file_size, frames)
-    chunk.generate_pass_cmds(args)
 
     return chunk

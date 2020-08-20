@@ -16,9 +16,7 @@ class Vpx(Encoder):
             output_extension='ivf'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
-        if not output:
-            output = c.output
+    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
@@ -26,9 +24,7 @@ class Vpx(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output=None) -> MPCommands:
-        if not output:
-            output = c.output
+    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),

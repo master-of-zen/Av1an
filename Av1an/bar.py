@@ -137,7 +137,7 @@ def tqdm_bar(a: Args, c: Chunk, encoder, counter, frame_probe_source, passes, cu
     try:
 
         enc = ENCODERS[encoder]
-        pipe = enc.make_pipes(a, c, passes, current_pass)
+        pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
 
         if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc'):
             process_encoding_pipe(pipe, encoder, counter)

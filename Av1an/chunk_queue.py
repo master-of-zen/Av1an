@@ -11,6 +11,7 @@ from .resume import read_done_data
 from .split import segment
 from .utils import terminate
 
+# Todo: make -xs work with all
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
     """

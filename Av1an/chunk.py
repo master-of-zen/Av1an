@@ -34,20 +34,9 @@ class Chunk:
         self.ffmpeg_gen_cmd: Command = ffmpeg_gen_cmd
         self.size: int = size
         self.temp: Path = temp
-        self.pass_cmds: MPCommands = []
         self.frames: int = frames
         self.output_ext: str = output_ext
         self.vmaf_target_cq = None
-
-    def generate_pass_cmds(self, args: Args) -> None:
-        """
-        Generates and sets the encoding commands for this chunk
-
-        :param args: the Args
-        :return: None
-        """
-        encoder = Av1an.ENCODERS[args.encoder]
-        self.pass_cmds = encoder.compose_1_pass(args, self) if args.passes == 1 else encoder.compose_2_pass(args, self)
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -59,7 +48,6 @@ class Chunk:
             'index': self.index,
             'ffmpeg_gen_cmd': self.ffmpeg_gen_cmd,
             'size': self.size,
-            'pass_cmds': self.pass_cmds,
             'frames': self.frames,
             'output_ext': self.output_ext,
         }
@@ -127,6 +115,4 @@ class Chunk:
         :return: A Chunk from the dictionary
         """
         chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'], d['size'], d['frames'])
-        pass_cmds = [CommandPair(f, e) for f, e in d['pass_cmds']]
-        chunk.pass_cmds = pass_cmds
         return chunk

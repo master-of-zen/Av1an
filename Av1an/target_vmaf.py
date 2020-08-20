@@ -21,8 +21,8 @@ from .encoders import ENCODERS
 
 def target_vmaf_routine(args: Args, chunk: Chunk):
     """
-    Applies target vmaf to this chunk. Determines what the cq value should be and adjusts the pass_cmds
-    to match
+    Applies target vmaf to this chunk. Determines what the cq value should be and sets the
+    vmaf_target_cq for this chunk
 
     :param args: the Args
     :param chunk: the Chunk

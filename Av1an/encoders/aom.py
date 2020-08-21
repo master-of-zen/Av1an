@@ -1,10 +1,11 @@
 import os
+import re
 
 from Av1an.arg_parse import Args
 from Av1an.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Av1an.encoders.encoder import Encoder
-from Av1an.utils import list_index_of_regex
+from Av1an.utils import list_index_of_regex, terminate
 
 
 class Aom(Encoder):
@@ -45,3 +46,15 @@ class Aom(Encoder):
         adjusted_command[i] = f'--cq-level={q}'
 
         return adjusted_command
+
+    def match_line(self, line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        if 'fatal' in line.lower():
+            print('\n\nERROR IN ENCODING PROCESS\n\n', line)
+            terminate()
+        if 'Pass 2/2' in line or 'Pass 1/1' in line:
+            return(re.search(r"frame.*?/([^ ]+?) ", line))

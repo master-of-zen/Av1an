@@ -50,3 +50,10 @@ class SvtVp9(Encoder):
         adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
+
+    def match_line(self, line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+        pass  # todo: SVT encoders are special in the way they output to console

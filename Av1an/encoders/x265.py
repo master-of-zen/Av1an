@@ -1,4 +1,5 @@
 import os
+import re
 
 from Av1an.arg_parse import Args
 from Av1an.chunk import Chunk
@@ -51,3 +52,11 @@ class X265(Encoder):
         adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
+
+    def match_line(self, line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        return(re.search(r"^(\d+)", line))

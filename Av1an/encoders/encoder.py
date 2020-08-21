@@ -68,6 +68,14 @@ class Encoder(ABC):
         :return: command with new cq value"""
         pass
 
+    @abstractmethod
+    def match_line(self, line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+        pass
+
     def make_pipes(self, a: Args, c: Chunk, passes, current_pass, output, man_q=None):
         """
         reates a pipe for the given chunk with the given args

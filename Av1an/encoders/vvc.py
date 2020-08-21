@@ -2,6 +2,7 @@ import subprocess
 from distutils.spawn import find_executable
 from pathlib import Path
 from subprocess import PIPE, STDOUT
+import re
 
 from Av1an.arg_parse import Args
 from Av1an.chunk import Chunk
@@ -47,6 +48,14 @@ class Vvc(Encoder):
         adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
+
+    def match_line(self, line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        return re.search(r"POC.*? ([^ ]+?)", line)
 
     def make_pipes(self, a: Args, c: Chunk, passes, current_pass, output, man_q=None):
         """
@@ -110,3 +119,10 @@ class Vvc(Encoder):
 
         return output
 
+    def match_line(line):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        return re.search(r"POC.*? ([^ ]+?)", line)

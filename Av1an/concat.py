@@ -103,12 +103,12 @@ def concatenate_mkvmerge(temp: Path, output):
     log('Concatenating\n')
 
     encode_files = sorted((temp / 'encode').iterdir())
-    concat = ' +'.join(f.as_posix() for f in encode_files)
+    concat = ' +'.join(shlex.quote(f.as_posix()) for f in encode_files)
 
     audio_file = temp / "audio.mkv"
     audio = audio_file.as_posix() if audio_file.exists() else ''
 
-    cmd = f' mkvmerge {concat} {audio} -o "{output}"'
+    cmd = f' mkvmerge {concat} {shlex.quote(audio)} -o {shlex.quote(output.as_posix())}'
     concat = subprocess.Popen(cmd, stdout=PIPE, universal_newlines=True, shell=True)
     output, err = concat.communicate()
     concat.wait()

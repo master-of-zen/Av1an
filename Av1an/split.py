@@ -83,7 +83,8 @@ def segment(video: Path, temp: Path, frames: List[int]):
         "-map", "0:v:0",
         "-an",
         "-c", "copy",
-        "-avoid_negative_ts", "1"
+        "-avoid_negative_ts", "1",
+        "-vsync", "0"
     ]
 
     if len(frames) > 0:

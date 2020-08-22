@@ -84,7 +84,7 @@ class Encoder(ABC):
         :param c: the Chunk
         :param passes: the total number of passes (1 or 2)
         :param current_pass: the current_pass
-        :param output: path for encoded output
+        :param output: path posix string for encoded output
         :param man_q: use a diffrent quality
         :return: a Pipe attached to the encoders stdout
         """

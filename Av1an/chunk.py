@@ -50,6 +50,7 @@ class Chunk:
             'size': self.size,
             'frames': self.frames,
             'output_ext': self.output_ext,
+            'vmaf_target_cq': self.vmaf_target_cq,
         }
 
     @property
@@ -115,4 +116,5 @@ class Chunk:
         :return: A Chunk from the dictionary
         """
         chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'], d['size'], d['frames'])
+        chunk.vmaf_target_cq = d['vmaf_target_cq']
         return chunk

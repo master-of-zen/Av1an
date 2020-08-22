@@ -60,5 +60,4 @@ class Rav1e(Encoder):
         if 'error' in line.lower():
             print('\n\nERROR IN ENCODING PROCESS\n\n', line)
             terminate()
-        else:
-            return(re.search(r"encoded.*? ([^ ]+?) ", line))
+        return(re.search(r"encoded.*? ([^ ]+?) ", line))

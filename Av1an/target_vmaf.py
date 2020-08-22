@@ -10,26 +10,25 @@ from matplotlib import pyplot as plt
 from scipy import interpolate
 
 from .arg_parse import Args
-from .bar import make_pipes, process_pipe
+from .bar import process_pipe
 from .chunk import Chunk
 from .commandtypes import CommandPair
 from .logger import log
-from .utils import man_q
 from .utils import terminate
 from .vmaf import call_vmaf, read_vmaf_json
+from .encoders import ENCODERS
 
 
 def target_vmaf_routine(args: Args, chunk: Chunk):
     """
-    Applies target vmaf to this chunk. Determines what the cq value should be and adjusts the pass_cmds
-    to match
+    Applies target vmaf to this chunk. Determines what the cq value should be and sets the
+    vmaf_target_cq for this chunk
 
     :param args: the Args
     :param chunk: the Chunk
     :return: None
     """
-    tg_cq = target_vmaf(chunk, args)
-    chunk.pass_cmds = [CommandPair(f, man_q(e, tg_cq)) for f, e in chunk.pass_cmds]
+    chunk.vmaf_target_cq = target_vmaf(chunk, args)
 
 
 def gen_probes_names(chunk: Chunk, q):
@@ -38,46 +37,11 @@ def gen_probes_names(chunk: Chunk, q):
     return chunk.fake_input_path.with_name(f'v_{q}{chunk.name}').with_suffix('.ivf')
 
 
-def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
-    """Generate and return commands for probes at set Q values
-    """
-    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{vmaf_rate}))',
-            *ffmpeg_pipe]
-
+def probe_pipe(args: Args, chunk: Chunk, q):
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
+    pipe = ENCODERS[args.encoder].make_pipes(args, chunk, 1, 1, probe_name, q)
 
-    if encoder == 'aom':
-        params = ['aomenc', '--passes=1', '--threads=8', '--end-usage=q', '--cpu-used=6', f'--cq-level={q}']
-        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    elif encoder == 'x265':
-        params = ['x265', '--log-level', '0', '--no-progress', '--y4m', '--preset', 'faster', '--crf', f'{q}']
-        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    elif encoder == 'rav1e':
-        params = ['rav1e', '-s', '10', '--tiles', '8', '--quantizer', f'{q}']
-        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    elif encoder == 'vpx':
-        params = ['vpxenc', '--passes=1', '--pass=1', '--codec=vp9', '--threads=4', '--cpu-used=9', '--end-usage=q',
-                  f'--cq-level={q}']
-        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    elif encoder == 'svt_av1':
-        params = ['SvtAv1EncApp', '-i', 'stdin', '--preset', '8', '--rc', '0', '--qp', f'{q}']
-        cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
-
-    elif encoder == 'svt_vp9':
-        params = ['SvtVp9EncApp', '-i', 'stdin', '-enc-mode', '8', '-q', f'{q}']
-        # TODO: pipe needs to output rawvideo
-        cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
-
-    elif encoder == 'x264':
-        params = ['x264', '--log-level', 'error', '--demuxer', 'y4m', '-', '--no-progress', '--preset', 'slow', '--crf',
-                  f'{q}']
-        cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    return cmd
+    return pipe
 
 
 def get_target_q(scores, vmaf_target):
@@ -129,10 +93,9 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
     plt.close()
 
 
-def vmaf_probe(chunk: Chunk, q, args):
-    cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
+def vmaf_probe(chunk: Chunk, q, args: Args):
 
-    pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
+    pipe = probe_pipe(args, chunk, q)
     process_pipe(pipe)
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res,
@@ -166,7 +129,7 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     return new_point
 
 
-def target_vmaf_search(chunk: Chunk, frames, args):
+def target_vmaf_search(chunk: Chunk, frames, args: Args):
     vmaf_cq = []
     q_list = []
     score = 0

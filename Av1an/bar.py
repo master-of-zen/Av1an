@@ -11,6 +11,9 @@ from tqdm import tqdm
 from .commandtypes import Command, CommandPair
 from .utils import terminate
 
+from Av1an.encoders import ENCODERS
+from Av1an.arg_parse import Args
+from Av1an.chunk import Chunk
 
 def Manager():
     """
@@ -41,17 +44,6 @@ class Counter:
 BaseManager.register('Counter', Counter)
 
 
-def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
-
-    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
-    ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
-    pipe = subprocess.Popen(command[1], stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                            stderr=STDOUT,
-                            universal_newlines=True)
-
-    return pipe
-
-
 def process_pipe(pipe):
     encoder_history = deque(maxlen=20)
     while True:
@@ -68,37 +60,12 @@ def process_pipe(pipe):
         print('\n'.join(encoder_history))
 
 
-def make_vvc_pipe(command: Command):
-    pipe = subprocess.Popen(command, stdout=PIPE,
-                            stderr=STDOUT,
-                            universal_newlines=True)
-    return pipe
-
-
-def match_aom_vpx(line):
-    if 'fatal' in line.lower():
-        print('\n\nERROR IN ENCODING PROCESS\n\n', line)
-        terminate()
-    if 'Pass 2/2' in line or 'Pass 1/1' in line:
-        return re.search(r"frame.*?/([^ ]+?) ", line)
-
-
-def match_rav1e(line):
-    if 'error' in line.lower():
-        print('\n\nERROR IN ENCODING PROCESS\n\n', line)
-        terminate()
-    return re.search(r"encoded.*? ([^ ]+?) ", line)
-
-
-def match_vvc(line):
-    return re.search(r"POC.*? ([^ ]+?)", line)
-
-
 def process_encoding_pipe(pipe, encoder, counter):
     encoder_history = deque(maxlen=20)
     frame = 0
     pass_1_check = True
     skip_1_pass = False
+    enc = ENCODERS[encoder]
     while True:
         line = pipe.stdout.readline().strip()
 
@@ -108,31 +75,7 @@ def process_encoding_pipe(pipe, encoder, counter):
         if len(line) == 0:
             continue
 
-        if encoder in ('aom', 'vpx'):
-            match = match_aom_vpx(line)
-
-        elif encoder == 'rav1e':
-            match = match_rav1e(line)
-
-        elif encoder in ('x264'):
-            if not skip_1_pass:
-                match = re.search(r"^[^\d]*(\d+)", line)
-
-        elif encoder in ('x265'):
-            if not skip_1_pass and pass_1_check:
-                if 'output file' in line:
-                    if 'nul' in line.lower():
-                        skip_1_pass = True
-                    else:
-                        pass_1_check = False
-            if not skip_1_pass:
-                match = re.search(r"^(\d+)", line)
-
-        elif encoder in ('vvc'):
-            match = match_vvc(line)
-            if match:
-                counter.update(1)
-                continue
+        match = enc.match_line(line)
 
         if match:
             new = int(match.group(1))
@@ -148,13 +91,11 @@ def process_encoding_pipe(pipe, encoder, counter):
         print('\n'.join(encoder_history))
 
 
-def tqdm_bar(ffmpeg_gen_cmd, pass_cmd: CommandPair, encoder, counter, frame_probe_source, passes):
+def tqdm_bar(a: Args, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
     try:
 
-        if encoder in 'vvc':
-            pipe = make_vvc_pipe(pass_cmd.encode_cmd)
-        else:
-            pipe = make_pipes(ffmpeg_gen_cmd, pass_cmd)
+        enc = ENCODERS[encoder]
+        pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
 
         if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc'):
             process_encoding_pipe(pipe, encoder, counter)

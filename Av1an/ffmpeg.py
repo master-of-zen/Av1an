@@ -52,15 +52,13 @@ def extract_audio(input_vid: Path, temp, audio_params):
     log(f'Audio processing\nParams: {" ".join(audio_params)}\n')
     audio_file = temp / 'audio.mkv'
 
-    input_vid_posix = shlex.quote(input_vid.as_posix())
-
     # Checking is source have audio track
-    check = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-ss', '0', '-i', input_vid_posix, '-t', '0',
+    check = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-ss', '0', '-i', input_vid.as_posix(), '-t', '0',
              '-vn', '-c:a', 'copy', '-f', 'null', '-']
     is_audio_here = len(subprocess.run(check, stdout=PIPE, stderr=STDOUT).stdout) == 0
 
     # If source have audio track - process it
     if is_audio_here:
-        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', input_vid_posix, '-vn', *audio_params,
-               shlex.quote(audio_file.as_posix()))
+        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', input_vid.as_posix(), '-vn', *audio_params,
+               audio_file.as_posix())
         subprocess.run(cmd)

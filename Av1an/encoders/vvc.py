@@ -118,11 +118,3 @@ class Vvc(Encoder):
         pipe.wait()
 
         return output
-
-    def match_line(line):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-
-        return re.search(r"POC.*? ([^ ]+?)", line)

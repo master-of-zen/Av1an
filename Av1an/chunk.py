@@ -36,7 +36,7 @@ class Chunk:
         self.temp: Path = temp
         self.frames: int = frames
         self.output_ext: str = output_ext
-        self.vmaf_target_cq = None
+        self.vmaf_target_cq: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """

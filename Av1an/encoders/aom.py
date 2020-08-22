@@ -37,7 +37,7 @@ class Aom(Encoder):
             )
         ]
 
-    def man_q(self, command: Command, q: int):
+    def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value"""
 
         adjusted_command = command.copy()
@@ -57,4 +57,4 @@ class Aom(Encoder):
             print('\n\nERROR IN ENCODING PROCESS\n\n', line)
             terminate()
         if 'Pass 2/2' in line or 'Pass 1/1' in line:
-            return(re.search(r"frame.*?/([^ ]+?) ", line))
+            return re.search(r"frame.*?/([^ ]+?) ", line)

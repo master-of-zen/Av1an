@@ -20,7 +20,7 @@ class Vvc(Encoder):
             output_extension='h266'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
             CommandPair(
@@ -30,11 +30,10 @@ class Vvc(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         raise ValueError('VVC does not support 2 pass encoding')
 
-
-    def man_q(self, command: Command, q: int):
+    def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
         :param command: old command
@@ -43,13 +42,12 @@ class Vvc(Encoder):
 
         adjusted_command = command.copy()
 
-
         i = list_index_of_regex(adjusted_command, r"-q")
         adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
 
-    def match_line(self, line):
+    def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
         :param line: one line of text output from the encoder
@@ -57,9 +55,9 @@ class Vvc(Encoder):
 
         return re.search(r"POC.*? ([^ ]+?)", line)
 
-    def make_pipes(self, a: Args, c: Chunk, passes, current_pass, output, man_q=None):
+    def make_pipes(self, a: Args, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
         """
-        reates a pipe for the given chunk with the given args
+        Creates a pipe for the given chunk with the given args
 
         :param a: the Args
         :param c: the Chunk
@@ -68,7 +66,6 @@ class Vvc(Encoder):
         :param man_q: use a diffrent quality
         :return: a Pipe attached to the encoders stdout
         """
-
         filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
                               self.compose_2_pass(a, c, output)[current_pass - 1]
 
@@ -81,7 +78,6 @@ class Vvc(Encoder):
                                 stderr=STDOUT,
                                 universal_newlines=True)
         return pipe
-
 
     def check_exists(self) -> bool:
         # vvc also requires a special concat executable

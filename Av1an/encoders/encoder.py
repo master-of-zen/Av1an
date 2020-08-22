@@ -36,7 +36,7 @@ class Encoder(ABC):
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
 
     @abstractmethod
-    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         """
         Composes the commands needed for a 1 pass encode
 
@@ -48,7 +48,7 @@ class Encoder(ABC):
         pass
 
     @abstractmethod
-    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         """
         Composes the commands needed for a 2 pass encode
 
@@ -60,7 +60,7 @@ class Encoder(ABC):
         pass
 
     @abstractmethod
-    def man_q(self, command: Command, q: int):
+    def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
         :param command: old command
@@ -69,7 +69,7 @@ class Encoder(ABC):
         pass
 
     @abstractmethod
-    def match_line(self, line):
+    def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
         :param line: one line of text output from the encoder
@@ -85,7 +85,7 @@ class Encoder(ABC):
         :param passes: the total number of passes (1 or 2)
         :param current_pass: the current_pass
         :param output: path posix string for encoded output
-        :param man_q: use a diffrent quality
+        :param man_q: use a different quality
         :return: a Pipe attached to the encoders stdout
         """
         filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \

@@ -26,7 +26,7 @@ class SvtVp9(Encoder):
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize',
                 '50000K', '-f', 'rawvideo', '-']
 
-    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 SvtVp9.compose_ffmpeg_raw_pipe(a),
@@ -34,10 +34,10 @@ class SvtVp9(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         raise ValueError("SVT-VP9 doesn't support 2 pass")
 
-    def man_q(self, command: Command, q: int):
+    def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
         :param command: old command
@@ -51,7 +51,7 @@ class SvtVp9(Encoder):
 
         return adjusted_command
 
-    def match_line(self, line):
+    def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
         :param line: one line of text output from the encoder

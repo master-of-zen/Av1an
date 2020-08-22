@@ -17,7 +17,7 @@ class Aom(Encoder):
             output_extension='ivf'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
@@ -25,7 +25,7 @@ class Aom(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output) -> MPCommands:
+    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
@@ -47,7 +47,7 @@ class Aom(Encoder):
 
         return adjusted_command
 
-    def match_line(self, line):
+    def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
         :param line: one line of text output from the encoder

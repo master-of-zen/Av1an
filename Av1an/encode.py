@@ -170,10 +170,7 @@ def encode(chunk: Chunk, args: Args):
             log(f'Created yuv for chunk {chunk.name}\n')
 
         # skip first pass if reusing
-        if args.reuse_first_pass and args.passes >= 2:
-            start = 2
-        else:
-            start = 1
+        start =  2 if args.reuse_first_pass and args.passes >= 2 else 1
 
         # Run all passes for this chunk
         for current_pass in range(start, args.passes + 1):

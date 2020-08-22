@@ -78,7 +78,7 @@ class Encoder(ABC):
 
     def make_pipes(self, a: Args, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
         """
-        reates a pipe for the given chunk with the given args
+        Creates a pipe for the given chunk with the given args
 
         :param a: the Args
         :param c: the Chunk

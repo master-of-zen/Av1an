@@ -96,7 +96,7 @@ With your own parameters:
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
 
-    -ch  --chunk_method     Determine way in which chunks made for encoding.
+    -cm  --chunk_method     Determine way in which chunks made for encoding.
                             ['segment', 'select', 'vs_ffms2', 'hybrid']
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50

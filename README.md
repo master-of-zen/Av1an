@@ -194,6 +194,6 @@ When installing under Windows, select the option `add Python to PATH` in the ins
 * Also:
     On Ubuntu systems packages `python3-opencv` and `libsm6` are required
 
-### I have no money
+### Support developer
 
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

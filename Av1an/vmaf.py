@@ -124,4 +124,4 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
     plt.margins(0)
 
     # Save
-    plt.savefig(plot_path, dpi=500)
+    plt.savefig(plot_path, dpi=250)

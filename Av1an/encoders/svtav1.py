@@ -47,7 +47,7 @@ class SvtAv1(Encoder):
 
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"--qp")
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
         adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command

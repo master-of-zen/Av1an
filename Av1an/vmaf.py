@@ -8,6 +8,7 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
+from math import log10
 from matplotlib import pyplot as plt
 
 from .bar import process_pipe
@@ -107,7 +108,20 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
         vmafs = [x['metrics']['vmaf'] for x in file['frames']]
         plot_size = len(vmafs)
 
-    plt.figure(figsize=(15, 4))
+    figure_width = 3 + round((4 * log10(plot_size)))
+    plt.figure(figsize=(figure_width, 5))
+
+    plt.plot([1, plot_size], [perc_1, perc_1], '-', color='red')
+    plt.annotate(f'1%: {perc_1}', xy=(0, perc_1), color='red')
+
+    plt.plot([1, plot_size], [perc_25, perc_25], ':', color='orange')
+    plt.annotate(f'25%: {perc_25}', xy=(0, perc_25), color='orange')
+
+    plt.plot([1, plot_size], [perc_75, perc_75], ':', color='green')
+    plt.annotate(f'75%: {perc_75}', xy=(0, perc_75), color='green')
+
+    plt.plot([1, plot_size], [mean, mean], ':', color='black')
+    plt.annotate(f'Mean: {mean}', xy=(0, mean), color='black')
 
     for i in range(0, 100):
         plt.axhline(i, color='grey', linewidth=0.4)

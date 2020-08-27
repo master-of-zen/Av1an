@@ -35,12 +35,10 @@ jobs:
             flags: -enc x265
           - name: workers
             flags: -w 2
-          - name: chunk segment
-            flags: --chunk_method segment
           - name: chunk hybrid
             flags: --chunk_method hybrid
           - name: chunk select
-            flags: --chunk_method segment
+            flags: --chunk_method select
           - name: video flags
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
           - name: target vmaf

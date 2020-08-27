@@ -14,6 +14,8 @@ class Rav1e(Encoder):
         super().__init__(
             encoder_bin='rav1e',
             default_args=['--tiles', '8', '--speed', '6', '--quantizer', '100'],
+            default_passes=1,
+            default_q_range=(70, 150),
             output_extension='ivf'
         )
 

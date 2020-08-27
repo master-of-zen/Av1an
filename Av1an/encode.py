@@ -9,11 +9,11 @@ import concurrent
 import concurrent.futures
 import shutil
 
+from Av1an.encoders import ENCODERS
 from .arg_parse import Args
 from .chunk import Chunk
 from .chunk_queue import load_or_gen_chunk_queue
 from .concat import concat_routine
-from .encoders.vvc import Vvc
 from .resume import write_progress_file
 from .target_vmaf import target_vmaf_routine
 from .utils import frame_probe_cv2, terminate, process_inputs
@@ -163,26 +163,19 @@ def encode(chunk: Chunk, args: Args):
         if args.vmaf_target:
             target_vmaf_routine(args, chunk)
 
-        # if vvc, we need to create a yuv file
-        if args.encoder == 'vvc':
-            log(f'Creating yuv for chunk {chunk.name}\n')
-            vvc_yuv_file = Vvc.to_yuv(chunk)
-            log(f'Created yuv for chunk {chunk.name}\n')
+        ENCODERS[args.encoder].on_before_chunk(args, chunk)
 
         # skip first pass if reusing
-        start =  2 if args.reuse_first_pass and args.passes >= 2 else 1
+        start = 2 if args.reuse_first_pass and args.passes >= 2 else 1
 
         # Run all passes for this chunk
         for current_pass in range(start, args.passes + 1):
             tqdm_bar(args, chunk, args.encoder, args.counter, chunk_frames, args.passes, current_pass)
 
-        # if vvc, we need to delete the yuv file
-        if args.encoder == 'vvc':
-            os.remove(vvc_yuv_file)
+        ENCODERS[args.encoder].on_after_chunk(args, chunk)
 
-        # get the number of encoded frames, if no check or vvc, assume it worked and encoded same number of frames
-        perform_encoded_frame_check = not (args.no_check or args.encoder == 'vvc')
-        encoded_frames = frame_check_output(chunk, chunk_frames) if perform_encoded_frame_check else chunk_frames
+        # get the number of encoded frames, if no check assume it worked and encoded same number of frames
+        encoded_frames = chunk_frames if args.no_check else frame_check_output(chunk, chunk_frames)
 
         # write this chunk as done if it encoded correctly
         if encoded_frames == chunk_frames:

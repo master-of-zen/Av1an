@@ -182,14 +182,14 @@ def target_vmaf(chunk: Chunk, args: Args):
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][0]} Vmaf: {vmaf_cq[-1][1]}\n\n")
+            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
         return next_q
 
     elif next_q == args.max_q and score > args.vmaf_target:
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][0]} Vmaf: {vmaf_cq[-1][1]}\n\n")
+            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
         return next_q
 
     # VMAF search

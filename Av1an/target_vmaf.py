@@ -45,9 +45,18 @@ def probe_pipe(args: Args, chunk: Chunk, q):
 
 
 def get_target_q(scores, vmaf_target):
+    """
+    Interpolating scores to get Q closest to target VMAF
+    Interpolation type for 2 probes changes to linear
+    """
     x = [x[1] for x in sorted(scores)]
     y = [float(x[0]) for x in sorted(scores)]
-    f = interpolate.interp1d(x, y, kind='quadratic')
+
+    if len(x) > 2:
+        interpolation = 'quadratic'
+    else:
+        interpolation = 'linear'
+    f = interpolate.interp1d(x, y, kind=interpolation)
     xnew = np.linspace(min(x), max(x), max(x) - min(x))
     tl = list(zip(xnew, f(xnew)))
     q = min(tl, key=lambda l: abs(l[1] - vmaf_target))
@@ -106,7 +115,13 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
 
 
 def get_closest(q_list, q, positive=True):
-    """Returns closest value from the list, ascending or descending
+    """
+    Returns closest value from the list, ascending or descending
+
+    :param q_list: list of q values that been already used
+    :param q:
+    :param positive: search direction, positive - only values bigger than q
+    :return: q value from list
     """
     if positive:
         q_list = [x for x in q_list if x > q]
@@ -119,7 +134,15 @@ def get_closest(q_list, q, positive=True):
 def weighted_search(num1, vmaf1, num2, vmaf2, target):
     """
     Returns weighted value closest to searched
+
+    :param num1: Q of first probe
+    :param vmaf1: VMAF of first probe
+    :param num2: Q of second probe
+    :param vmaf2: VMAF of first probe
+    :param target: VMAF target
+    :return: Q for new probe
     """
+
     dif1 = abs(target - vmaf2)
     dif2 = abs(target - vmaf1)
 
@@ -129,8 +152,9 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     return new_point
 
 
-def target_vmaf_search(chunk: Chunk, frames, args: Args):
+def target_vmaf(chunk: Chunk, args: Args):
     vmaf_cq = []
+    frames = chunk.frames
     q_list = []
     score = 0
 
@@ -155,16 +179,24 @@ def target_vmaf_search(chunk: Chunk, frames, args: Args):
     vmaf_cq.append((score, next_q))
 
     if next_q == args.min_q and score < args.vmaf_target:
-        return vmaf_cq, True
+        log(f"Chunk: {chunk.name}, Fr: {frames}\n"
+            f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
+            f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
+            f"Target Q: {vmaf_cq[-1][0]} Vmaf: {vmaf_cq[-1][1]}\n\n")
+        return next_q
 
     elif next_q == args.max_q and score > args.vmaf_target:
-        return vmaf_cq, True
+        log(f"Chunk: {chunk.name}, Fr: {frames}\n"
+            f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
+            f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
+            f"Target Q: {vmaf_cq[-1][0]} Vmaf: {vmaf_cq[-1][1]}\n\n")
+        return next_q
 
+    # VMAF search
     for _ in range(args.vmaf_steps - 2):
         new_point = weighted_search(vmaf_cq[-2][1], vmaf_cq[-2][0], vmaf_cq[-1][1], vmaf_cq[-1][0], args.vmaf_target)
         if new_point in [x[1] for x in vmaf_cq]:
-            return vmaf_cq, False
-
+            break
         last_q = new_point
 
         q_list.append(new_point)
@@ -172,43 +204,16 @@ def target_vmaf_search(chunk: Chunk, frames, args: Args):
         next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
         vmaf_cq.append((score, new_point))
 
-    return vmaf_cq, False
+    q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target)
 
+    log(f'Chunk: {chunk.name}, Fr: {frames}\n'
+        f'Q: {sorted([x[1] for x in vmaf_cq])}\n'
+        f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n'
+        f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
 
-def target_vmaf(chunk: Chunk, args: Args):
-    frames = chunk.frames
-    vmaf_cq = []
+    # Plot Probes
+    if args.vmaf_plots and len(vmaf_cq) > 3:
+        plot_probes(args, vmaf_cq, chunk, frames)
 
-    try:
-        vmaf_cq, skip = target_vmaf_search(chunk, frames, args)
-        if skip or len(vmaf_cq) == 2:
-            if vmaf_cq[-1][1] == args.max_q:
-                log(f"Chunk: {chunk.name}, Fr: {frames}\n"
-                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
-                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-                    f"Target Q: {args.max_q} Vmaf: {vmaf_cq[-1][0]}\n\n")
+    return q
 
-            else:
-                log(f"Chunk: {chunk.name}, Fr: {frames}\n"
-                    f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
-                    f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-                    f"Target Q: {args.min_q} Vmaf: {vmaf_cq[-1][0]}\n\n")
-
-            return vmaf_cq[-1][1]
-
-        q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target)
-
-        log(f'Chunk: {chunk.name}, Fr: {frames}\n'
-            f'Q: {sorted([x[1] for x in vmaf_cq])}\n'
-            f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n'
-            f'Target Q: {q} Vmaf: {q_vmaf}\n\n')
-
-        if args.vmaf_plots:
-            plot_probes(args, vmaf_cq, chunk, frames)
-
-        return q
-
-    except Exception as e:
-        _, _, exc_tb = sys.exc_info()
-        print(f'Error in vmaf_target {e} \nAt line {exc_tb.tb_lineno}')
-        terminate()

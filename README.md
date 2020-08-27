@@ -97,7 +97,7 @@ With your own parameters:
                             to get exact place where encoder will place new keyframes.
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
-                            ['segment', 'select', 'vs_ffms2', 'hybrid']
+                            ['hybrid'(default), 'select', 'vs_ffms2']
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
 

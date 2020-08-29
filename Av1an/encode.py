@@ -128,6 +128,7 @@ def startup(args: Args, chunk_queue: List[Chunk]):
     counter = Manager().Counter(total, initial)
     args.counter = counter
 
+
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
     if args.workers != 0:
@@ -140,6 +141,7 @@ def encoding_loop(args: Args, chunk_queue: List[Chunk]):
                     _, _, exc_tb = sys.exc_info()
                     print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
                     terminate()
+    args.counter.close()
 
 
 def encode(chunk: Chunk, args: Args):

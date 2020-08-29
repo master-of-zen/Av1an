@@ -11,11 +11,16 @@ from pathlib import Path
 from psutil import virtual_memory
 
 from Av1an.encoders import ENCODERS
-from .arg_parse import Args
-from .utils import terminate
+from Av1an.arg_parse import Args
+from Av1an.utils import terminate
 
 
 def set_vmaf(args):
+    """
+    Av1an setup for VMAF
+
+    :param args: the Args
+    """
     if args.vmaf_path:
         if not Path(args.vmaf_path).exists():
             print(f'No such model: {Path(args.vmaf_path).as_posix()}')
@@ -34,13 +39,19 @@ def set_vmaf(args):
 
 
 def check_exes(args: Args):
+    """
+    Checking required executables
+
+    :param args: the Args
+    """
+
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
 
     # this shouldn't happen as encoder choices are validated by argparse
     if args.encoder not in ENCODERS:
-        valid_encoder_str = ", ".join([repr(k) for k in ENCODERS.keys()])
+        valid_encoder_str = ", ".join([repr(k) for k in ENCODERS])
         print(f'Not valid encoder {args.encoder}')
         print(f'Valid encoders: {valid_encoder_str}')
         terminate()
@@ -51,6 +62,11 @@ def check_exes(args: Args):
 
 
 def setup_encoder(args: Args):
+    """
+    Settup encoder params and passes
+
+    :param args: the Args
+    """
     encoder = ENCODERS[args.encoder]
 
     # validate encoder settings
@@ -62,10 +78,15 @@ def setup_encoder(args: Args):
     if args.passes is None:
         args.passes = encoder.default_passes
 
-    args.video_params = encoder.default_args if args.video_params is None else shlex.split(args.video_params)
+    args.video_params = encoder.default_args if args.video_params is None \
+    else shlex.split(args.video_params)
 
 
 def startup_check(args: Args):
+    """
+    Performing essential checks at startup_check
+    Set constant values
+    """
     if sys.version_info < (3, 6):
         print('Python 3.6+ required')
         sys.exit()
@@ -80,7 +101,8 @@ def startup_check(args: Args):
     set_vmaf(args)
 
     if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
-        print('Reusing the first pass is only supported with the aom encoder and aom_keyframes split method.')
+        print('Reusing the first pass is only supported with \
+              the aom encoder and aom_keyframes split method.')
         terminate()
 
     setup_encoder(args)
@@ -102,7 +124,8 @@ def startup_check(args: Args):
     args.ffmpeg = shlex.split(args.ffmpeg)
 
     args.pix_format = ['-strict', '-1', '-pix_fmt', args.pix_format]
-    args.ffmpeg_pipe = [*args.ffmpeg, *args.pix_format, '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
+    args.ffmpeg_pipe = [*args.ffmpeg, *args.pix_format,
+                        '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
 
 
 def determine_resources(encoder, workers):
@@ -121,7 +144,7 @@ def determine_resources(encoder, workers):
     elif encoder in ('svt_av1', 'svt_vp9', 'x265', 'x264'):
         workers = round(min(cpu, ram)) // 8
 
-    elif encoder in ('vvc'):
+    elif encoder in 'vvc':
         workers = round(min(cpu, ram))
 
     # fix if workers round up to 0
@@ -142,9 +165,12 @@ def setup(temp: Path, resume):
     (temp / 'encode').mkdir(exist_ok=True)
 
 
-def outputs_filenames(inp: Path, out: Path, encoder):
+def outputs_filenames(args: Args):
+    """
+    Set output filename
+
+    :param args: the Args
+    """
     suffix = '.mkv'
-    if out:
-        return out.with_suffix(suffix)
-    else:
-        return Path(f'{inp.stem}_av1{suffix}')
+    args.output_file = Path(f'{args.output_file}_av1{suffix}') if args.output_file \
+                  else Path(f'{args.input.stem}_av1{suffix}')

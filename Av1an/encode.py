@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import time
 import json
-import os
 from pathlib import Path
 from typing import List
 import sys
@@ -10,21 +9,21 @@ import concurrent.futures
 import shutil
 
 from Av1an.encoders import ENCODERS
-from .arg_parse import Args
-from .chunk import Chunk
-from .chunk_queue import load_or_gen_chunk_queue
-from .concat import concat_routine
-from .resume import write_progress_file
-from .target_vmaf import target_vmaf_routine
-from .utils import frame_probe_cv2, terminate, process_inputs
-from .bar import Manager, tqdm_bar
-from .setup import determine_resources, outputs_filenames, setup
-from .logger import log, set_log
-from .config import conf
-from .ffmpeg import extract_audio, frame_probe
-from .fp_reuse import segment_first_pass
-from .split import split_routine
-from .vmaf import plot_vmaf
+from Av1an.arg_parse import Args
+from Av1an.chunk import Chunk
+from Av1an.chunk_queue import load_or_gen_chunk_queue
+from Av1an.concat import concat_routine
+from Av1an.resume import write_progress_file
+from Av1an.target_vmaf import target_vmaf_routine
+from Av1an.utils import frame_probe_cv2, terminate, process_inputs
+from Av1an.bar import Manager, tqdm_bar
+from Av1an.setup import determine_resources, outputs_filenames, setup
+from Av1an.logger import log, set_log
+from Av1an.config import conf
+from Av1an.ffmpeg import extract_audio, frame_probe
+from Av1an.fp_reuse import segment_first_pass
+from Av1an.split import split_routine
+from Av1an.vmaf import plot_vmaf
 
 
 def main_queue(args):
@@ -44,6 +43,7 @@ def main_queue(args):
                 args.output_file = None
 
             encode_file(args)
+
             print(f'Finished: {round(time.time() - tm, 1)}s\n')
     except KeyboardInterrupt:
         print('Encoding stopped')
@@ -58,7 +58,7 @@ def encode_file(args: Args):
     :return: None
     """
 
-    args.output_file = outputs_filenames(args.input, args.output_file, args.encoder)
+    outputs_filenames(args)
 
     done_path = args.temp / 'done.json'
     resuming = args.resume and done_path.exists()
@@ -134,7 +134,6 @@ def encoding_loop(args: Args, chunk_queue: List[Chunk]):
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
             future_cmd = {executor.submit(encode, cmd, args): cmd for cmd in chunk_queue}
             for future in concurrent.futures.as_completed(future_cmd):
-                future_cmd[future]
                 try:
                     future.result()
                 except Exception as exc:

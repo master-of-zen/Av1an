@@ -122,12 +122,11 @@ def startup(args: Args, chunk_queue: List[Chunk]):
         with open(done_path, 'w') as done_file:
             json.dump(d, done_file)
     clips = len(chunk_queue)
+    print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
+          f'Params: {" ".join(args.video_params)}')
     args.workers = min(args.workers, clips)
     counter = Manager().Counter(total, initial)
     args.counter = counter
-    print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
-          f'Params: {" ".join(args.video_params)}')
-
 
 def encoding_loop(args: Args, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""

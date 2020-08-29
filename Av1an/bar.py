@@ -39,6 +39,9 @@ class Counter:
             self.tqdm_bar.reset(self.left)
             self.first_update = False
         self.tqdm_bar.update(value)
+    
+    def close(self):
+        self.tqdm_bar.close()
 
 
 BaseManager.register('Counter', Counter)

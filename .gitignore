@@ -138,3 +138,4 @@ dmypy.json
 
 # VS Code
 .vscode/*
+.directory

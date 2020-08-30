@@ -86,7 +86,7 @@ class Vvc(Encoder):
 
     def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
         # vvc requires a special concat executable
-        if find_executable('vvc_concat') is not None:
+        if not find_executable('vvc_concat'):
             return False, 'vvc concatenation executable "vvc_concat" not found'
 
         # make sure there's a vvc config file

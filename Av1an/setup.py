@@ -111,11 +111,6 @@ def startup_check(args: Args):
     if args.encoder == 'vvc':
         args.no_check = True
 
-    # TODO: rav1e 2 pass is broken
-    if args.encoder == 'rav1e' and args.passes == 2:
-        print("Implicitly changing 2 pass rav1e to 1 pass\n2 pass Rav1e doesn't work")
-        args.passes = 1
-
     if args.encoder == 'svt_vp9' and args.passes == 2:
         print("Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported")
         args.passes = 1

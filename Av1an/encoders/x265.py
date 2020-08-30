@@ -31,7 +31,7 @@ class X265(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--log-level', 'error', '--pass', '1', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log',
+                ['x265', '--log-level', 'error', '--no-progress', '--pass', '1', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log',
                  '-', '-o', os.devnull]
             ),
             CommandPair(

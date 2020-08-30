@@ -31,7 +31,7 @@ class Rav1e(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['rav1e', '-', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull]
+                ['rav1e', '-', '-q', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull]
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),

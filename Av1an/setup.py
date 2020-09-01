@@ -167,5 +167,5 @@ def outputs_filenames(args: Args):
     :param args: the Args
     """
     suffix = '.mkv'
-    args.output_file = Path(f'{args.output_file}_av1{suffix}') if args.output_file \
+    args.output_file = Path(f'{args.output_file}{suffix}') if args.output_file \
                   else Path(f'{args.input.stem}_av1{suffix}')

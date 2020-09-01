@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List
+from numpy import linspace
 
 from .arg_parse import Args
 from .ffmpeg import frame_probe, get_keyframes
@@ -30,10 +31,6 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
 
     # determines split frames with pyscenedetect or aom keyframes
     split_locations = calc_split_locations(args)
-
-    # add in extra splits if needed
-    if args.extra_split:
-        split_locations = extra_splits(args.input, split_locations, args.extra_split)
 
     # write scenes for resuming later if needed
     write_scenes_to_file(split_locations, scene_file)
@@ -103,43 +100,26 @@ def segment(video: Path, temp: Path, frames: List[int]):
 
     log('Split Done\n')
 
-
-def extra_splits(video, split_locations: list, split_distance):
+def extra_splits(args: Args, split_locations: list):
     log('Applying extra splits\n')
-    # Get all keyframes of original video
-    keyframes = get_keyframes(video)
 
     split_locs_with_start = split_locations[:]
     split_locs_with_start.insert(0, 0)
 
     split_locs_with_end = split_locations[:]
-    split_locs_with_end.append(frame_probe(video))
+    split_locs_with_end.append(frame_probe(args.input))
 
     splits = list(zip(split_locs_with_start, split_locs_with_end))
     for i in splits:
-        # Getting distance between splits
         distance = (i[1] - i[0])
+        if distance > args.extra_split:
+            to_add = distance // args.extra_split 
+            new_scenes = list(linspace(i[0],i[1], to_add + 1, dtype=int, endpoint=False)[1:])  
+            split_locations.extend(new_scenes)
 
-        if distance > split_distance:
-            # Keyframes that between 2 split points
-            candidates = [k for k in keyframes if i[1] > k > i[0]]
-
-            if len(candidates) > 0:
-
-                # Getting number of splits that need to be inserted
-                to_insert = min((i[1] - i[0]) // split_distance, (len(candidates)))
-                for k in range(0, to_insert):
-
-                    # Approximation of splits position
-                    aprox_to_place = (((k + 1) * distance) // (to_insert + 1)) + i[0]
-
-                    # Getting keyframe closest to approximated
-                    key = min(candidates, key=lambda x: abs(x - aprox_to_place))
-                    split_locations.append(key)
     result = [int(x) for x in sorted(split_locations)]
-    log(f'Split distance: {split_distance}\nNew splits:{len(result)}\n')
+    log(f'Split distance: {args.extra_split}\nNew splits:{len(result)}\n')
     return result
-
 
 def calc_split_locations(args: Args) -> List[int]:
     """

@@ -22,7 +22,7 @@ from Av1an.logger import log, set_log
 from Av1an.config import conf
 from Av1an.ffmpeg import extract_audio, frame_probe
 from Av1an.fp_reuse import segment_first_pass
-from Av1an.split import split_routine
+from Av1an.split import split_routine, extra_splits
 from Av1an.vmaf import plot_vmaf
 
 
@@ -69,6 +69,10 @@ def encode_file(args: Args):
 
     # find split locations
     split_locations = split_routine(args, resuming)
+    
+    # Applying extra splits 
+    if args.extra_split:
+        split_locations = extra_splits(args, split_locations) 
 
     # create a chunk queue
     chunk_queue = load_or_gen_chunk_queue(args, resuming, split_locations)

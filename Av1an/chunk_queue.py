@@ -1,15 +1,16 @@
 import json
 from pathlib import Path
+import os
 from typing import List
 
-from .arg_parse import Args
-from .chunk import Chunk
-from .encoders import ENCODERS
-from .ffmpeg import frame_probe, get_keyframes
-from .logger import log
-from .resume import read_done_data
-from .split import segment
-from .utils import terminate
+from Av1an.arg_parse import Args
+from Av1an.chunk import Chunk
+from Av1an.encoders import ENCODERS
+from Av1an.ffmpeg import frame_probe, get_keyframes
+from Av1an.logger import log
+from Av1an.resume import read_done_data
+from Av1an.split import segment
+from Av1an.utils import terminate
 
 # Todo: make -xs work with all
 
@@ -83,6 +84,14 @@ def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]
     return chunk_queue
 
 
+def reduce_segments(scenes: List[int]) -> List[int]:
+    """Windows terminal can't handle more than ~400 segments in length."""
+    count = len(scenes)
+    interval = int(count / 400 + (count % 400 > 0))
+    scenes = scenes[::interval]
+    return scenes
+
+
 def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
     Create list of chunks using hybrid segment-select approach
@@ -92,11 +101,16 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     :return: A list of chunks
     """
     keyframes = get_keyframes(args.input)
+    
     end = [frame_probe(args.input)]
     splits = [0] + split_locations + end
 
     segments_list = list(zip(splits, splits[1:]))
     to_split = [x for x in keyframes if x in splits]
+    
+    if os.name == 'nt':
+        to_split = reduce_segments(to_split)
+    
     segments = []
 
     # Make segments

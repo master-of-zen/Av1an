@@ -107,10 +107,9 @@ With your own parameters:
                             Example: "-s scenes.csv"
 
     -xs  --extra_split      Adding extra splits if frame distance beetween splits bigger than
-                            given value. Split only on keyframes. Works with/without PySceneDetect
+                            given value. Works with/without PySceneDetect
                             Example: 1000 frames video with single scene,
-                            -xs 200 will try to add splits at keyframes
-                            that closest to 200,400,600,800.
+                            -xs 200 will add splits at 200,400,600,800.
 
 
 <h3 align="center">Target VMAF</h3>

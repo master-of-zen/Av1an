@@ -5,7 +5,7 @@ import shlex
 import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
-
+from typing import List
 from .logger import log
 
 
@@ -17,7 +17,7 @@ def frame_probe(source: Path):
     return int(matches[-1])
 
 
-def get_keyframes(file: Path):
+def get_keyframes(file: Path) -> List[int]:
     """
     Read file info and return list of all keyframes
 

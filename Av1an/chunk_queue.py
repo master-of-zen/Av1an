@@ -10,7 +10,7 @@ from Av1an.ffmpeg import frame_probe, get_keyframes
 from Av1an.logger import log
 from Av1an.resume import read_done_data
 from Av1an.split import segment
-from Av1an.utils import terminate
+from Av1an.utils import terminate, frame_probe_cv2
 
 # Todo: make -xs work with all
 
@@ -101,16 +101,17 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     :return: A list of chunks
     """
     keyframes = get_keyframes(args.input)
-    
-    end = [frame_probe(args.input)]
+
+    end = frame_probe_cv2(args.input) if frame_probe_cv2(args.input) > 1 else [frame_probe(args.input)]
+
     splits = [0] + split_locations + end
 
     segments_list = list(zip(splits, splits[1:]))
     to_split = [x for x in keyframes if x in splits]
-    
+
     if os.name == 'nt':
         to_split = reduce_segments(to_split)
-    
+
     segments = []
 
     # Make segments

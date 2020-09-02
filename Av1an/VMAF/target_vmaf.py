@@ -16,7 +16,7 @@ from Av1an.bar import process_pipe
 from Av1an.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
-from Av1an.vmaf import call_vmaf, read_vmaf_json
+from Av1an.VMAF.vmaf import call_vmaf, read_vmaf_json
 
 
 def target_vmaf_routine(args: Args, chunk: Chunk):

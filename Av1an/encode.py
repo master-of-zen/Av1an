@@ -14,7 +14,7 @@ from Av1an.chunk import Chunk
 from Av1an.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
-from Av1an.target_vmaf import target_vmaf_routine
+from Av1an.VMAF.target_vmaf import target_vmaf_routine
 from Av1an.utils import frame_probe_cv2, terminate, process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Av1an.setup import determine_resources, outputs_filenames, setup
@@ -23,7 +23,7 @@ from Av1an.config import conf
 from Av1an.ffmpeg import extract_audio, frame_probe
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine, extra_splits
-from Av1an.vmaf import plot_vmaf
+from Av1an.VMAF.vmaf import plot_vmaf
 
 
 def main_queue(args):
@@ -69,10 +69,10 @@ def encode_file(args: Args):
 
     # find split locations
     split_locations = split_routine(args, resuming)
-    
-    # Applying extra splits 
+
+    # Applying extra splits
     if args.extra_split:
-        split_locations = extra_splits(args, split_locations) 
+        split_locations = extra_splits(args, split_locations)
 
     # create a chunk queue
     chunk_queue = load_or_gen_chunk_queue(args, resuming, split_locations)

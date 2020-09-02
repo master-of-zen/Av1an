@@ -102,7 +102,7 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     """
     keyframes = get_keyframes(args.input)
 
-    end = frame_probe_cv2(args.input) if frame_probe_cv2(args.input) > 1 else [frame_probe(args.input)]
+    end = [(frame_probe_cv2(args.input)] if frame_probe_cv2(args.input) > 1 else [frame_probe(args.input)]
 
     splits = [0] + split_locations + end
 

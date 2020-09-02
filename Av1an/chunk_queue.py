@@ -122,7 +122,9 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
 
     kf_list = list(zip(to_split, to_split[1:] + end))
     for f, (x, y) in zip(queue_files, kf_list):
-        to_add = [(f, [s[0] - x, s[1] - x]) for s in segments_list if s[0] >= x and s[1] <= y]
+        to_add = [(f, [s[0] - x, s[1] - x]) for s in segments_list
+                 if s[0] >= x and s[1] <= y
+                 and s[0] - x < s[1] - x]
         segments.extend(to_add)
 
     chunk_queue = [create_select_chunk(args, index, file, *cb) for index, (file, cb) in enumerate(segments)]

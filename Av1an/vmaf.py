@@ -43,10 +43,6 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     if fl_path is None:
         fl_path = chunk.fake_input_path.with_name(encoded.stem).with_suffix('.json')
     fl = fl_path.as_posix()
-
-    # Change framerate of comparison to framerate of probe
-    select_frames = f"select=not(mod(n\\,{vmaf_rate}))," if vmaf_rate != 0 else ''
-
     # For vmaf calculation both source and encoded segment scaled to 1080
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
 
@@ -54,6 +50,9 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
               '-r', '60', '-i', encoded.as_posix(), '-r', '60', '-i', '-')
 
     filter_complex = ('-filter_complex',)
+
+    # Change framerate of comparison to framerate of probe
+    select_frames = f"select=not(mod(n\\,{vmaf_rate}))," if vmaf_rate != 0 else ''
 
     distorted = f'[0:v]{select_frames}scale={res}:flags=bicubic:\
                   force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'

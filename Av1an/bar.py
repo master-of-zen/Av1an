@@ -39,7 +39,7 @@ class Counter:
             self.tqdm_bar.reset(self.left)
             self.first_update = False
         self.tqdm_bar.update(value)
-    
+
     def close(self):
         self.tqdm_bar.close()
 
@@ -66,8 +66,6 @@ def process_pipe(pipe):
 def process_encoding_pipe(pipe, encoder, counter):
     encoder_history = deque(maxlen=20)
     frame = 0
-    pass_1_check = True
-    skip_1_pass = False
     enc = ENCODERS[encoder]
     while True:
         line = pipe.stdout.readline().strip()

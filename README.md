@@ -94,6 +94,7 @@ With your own parameters:
                             with threshold.
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
+                            (Keep in mind that speed also depends on set aomenc parameters)
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
                             ['hybrid'(default), 'select', 'vs_ffms2']

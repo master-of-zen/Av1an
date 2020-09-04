@@ -241,9 +241,19 @@ def target_vmaf(chunk: Chunk, args: Args):
         ## Formula -ln(1-args.vmaf_target/100) = vmaf_cq_deriv*cq + constant
         #cq = (-ln(1-args.vmaf_target/100) - constant)/vmaf_cq_deriv
         next_q = int(round(last_q + (-ln(1-args.vmaf_target/100)+ln(1-score/100))/vmaf_cq_deriv))
+        
+        #Clamp
+        if next_q < args.min_q:
+            next_q = args.min_q
+        if args.max_q < next_q:
+            next_q = args.max_q
 
         #Single probe cq guess
         if args.vmaf_steps == 1:
+            return next_q
+
+        #Exit to avoid divide by zero... hopefully meaning got it right first try
+        if next_q == last_q:
             return next_q
 
         #Second probe at guessed value
@@ -253,7 +263,15 @@ def target_vmaf(chunk: Chunk, args: Args):
         vmaf_cq_deriv = ((-ln(1-score_2/100))-(-ln(1-score/100)))/(next_q-last_q)
 
         #Same deal different slope
-        return int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv))
+        next_q = int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv))
+
+        #Clamp
+        if next_q < args.min_q:
+            next_q = args.min_q
+        if args.max_q < next_q:
+            next_q = args.max_q
+
+        return next_q
     
     # Branch
     if score < args.vmaf_target:

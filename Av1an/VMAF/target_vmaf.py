@@ -1,6 +1,7 @@
 #!/bin/env python
 
 from math import isnan
+from math import log as ln
 
 import subprocess
 from subprocess import STDOUT, PIPE
@@ -210,8 +211,8 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     :return: Q for new probe
     """
 
-    dif1 = abs(target - vmaf2)
-    dif2 = abs(target - vmaf1)
+    dif1 = abs(-ln(1-target/100) - (-ln(1-vmaf2/100)))
+    dif2 = abs(-ln(1-target/100) - (-ln(1-vmaf1/100)))
 
     tot = dif1 + dif2
 

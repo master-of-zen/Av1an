@@ -248,12 +248,8 @@ def target_vmaf(chunk: Chunk, args: Args):
         if args.max_q < next_q:
             next_q = args.max_q
 
-        #Single probe cq guess
-        if args.vmaf_steps == 1:
-            return next_q
-
-        #Exit to avoid divide by zero... hopefully meaning got it right first try
-        if next_q == last_q:
+        #Single probe cq guess or exit to avoid divide by zero
+        if args.vmaf_steps == 1 or next_q == last_q:
             return next_q
 
         #Second probe at guessed value

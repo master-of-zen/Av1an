@@ -253,7 +253,7 @@ def target_vmaf(chunk: Chunk, args: Args):
         vmaf_cq_deriv = ((-ln(1-score_2/100))-(-ln(1-score/100)))/(next_q-last_q)
 
         #Same deal different slope
-        return int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv
+        return int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv))
     
     # Branch
     if score < args.vmaf_target:

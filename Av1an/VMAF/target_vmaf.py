@@ -210,8 +210,8 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     :return: Q for new probe
     """
 
-    dif1 = abs(-math.log(1-target/100) - (-math.log(1-vmaf2/100))
-    dif2 = abs(-math.log(1-target/100) - (-math.log(1-vmaf1/100))
+    dif1 = abs(-math.log(1-target/100) - (-math.log(1-vmaf2/100)))
+    dif2 = abs(-math.log(1-target/100) - (-math.log(1-vmaf1/100)))
 
     tot = dif1 + dif2
 

@@ -201,7 +201,7 @@ def get_closest(q_list, q, positive=True):
 def transform_vmaf(vmaf):
     if vmaf<99.99:
         return -ln(1-vmaf/100)
-    else
+    else:
         #return -ln(1-99.99/100)
         return 9.210340371976184
 

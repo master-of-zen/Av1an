@@ -232,7 +232,29 @@ def target_vmaf(chunk: Chunk, args: Args):
 
     score = vmaf_probe(chunk, last_q, args)
     vmaf_cq.append((score, last_q))
+    
+    if args.vmaf_steps < 3:
+        #Use Euler's method with known relation between cq and vmaf
+        vmaf_cq_deriv = -0.18
+        ## Formula -ln(1-score/100) = vmaf_cq_deriv*last_q + constant
+        #constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
+        ## Formula -ln(1-args.vmaf_target/100) = vmaf_cq_deriv*cq + constant
+        #cq = (-ln(1-args.vmaf_target/100) - constant)/vmaf_cq_deriv
+        next_q = int(round(last_q + (-ln(1-args.vmaf_target/100)+ln(1-score/100))/vmaf_cq_deriv))
 
+        #Single probe cq guess
+        if args.vmaf_steps == 1:
+            return next_q
+
+        #Second probe at guessed value
+        score_2 = vmaf_probe(chunk, next_q, args)
+
+        #Calculate slope
+        vmaf_cq_deriv = ((-ln(1-score_2/100))-(-ln(1-score/100)))/(next_q-last_q)
+
+        #Same deal different slope
+        return int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv
+    
     # Branch
     if score < args.vmaf_target:
         next_q = args.min_q

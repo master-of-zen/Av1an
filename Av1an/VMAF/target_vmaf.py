@@ -240,7 +240,7 @@ def target_vmaf(chunk: Chunk, args: Args):
         #constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
         ## Formula -ln(1-args.vmaf_target/100) = vmaf_cq_deriv*cq + constant
         #cq = (-ln(1-args.vmaf_target/100) - constant)/vmaf_cq_deriv
-        next_q = int(round(last_q + (-ln(1-args.vmaf_target/100)+ln(1-score/100))/vmaf_cq_deriv))
+        next_q = int(round(last_q + (transform_vmaf(args.vmaf_target)-transform_vmaf(score))/vmaf_cq_deriv))
         
         #Clamp
         if next_q < args.min_q:
@@ -256,10 +256,10 @@ def target_vmaf(chunk: Chunk, args: Args):
         score_2 = vmaf_probe(chunk, next_q, args)
 
         #Calculate slope
-        vmaf_cq_deriv = ((-ln(1-score_2/100))-(-ln(1-score/100)))/(next_q-last_q)
+        vmaf_cq_deriv = (transform_vmaf(score_2)-transform_vmaf(score))/(next_q-last_q)
 
         #Same deal different slope
-        next_q = int(round(next_q+(-ln(1-args.vmaf_target/100)+ln(1-score_2/100))/vmaf_cq_deriv))
+        next_q = int(round(next_q+(transform_vmaf(args.vmaf_target)-transform_vmaf(score_2))/vmaf_cq_deriv))
 
         #Clamp
         if next_q < args.min_q:

@@ -198,6 +198,12 @@ def get_closest(q_list, q, positive=True):
 
     return min(q_list, key=lambda x: abs(x - q))
 
+def transform_vmaf(vmaf):
+    if vmaf<99.99:
+        return -ln(1-vmaf/100)
+    else:
+        #return -ln(1-99.99/100)
+        return 9.210340371976184
 
 def weighted_search(num1, vmaf1, num2, vmaf2, target):
     """
@@ -211,8 +217,8 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     :return: Q for new probe
     """
 
-    dif1 = abs(-ln(1-target/100) - (-ln(1-vmaf2/100)))
-    dif2 = abs(-ln(1-target/100) - (-ln(1-vmaf1/100)))
+    dif1 = abs(transform_vmaf(target) - transform_vmaf(vmaf2))
+    dif2 = abs(transform_vmaf(target) - transform_vmaf(vmaf1))
 
     tot = dif1 + dif2
 

@@ -145,7 +145,8 @@ With your own parameters:
                             vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf_path)
 
     --vmaf_steps            Number of probes for interpolation.
-                            Must be bigger than 3. Optimal is 4-6 probes. Default: 4
+                            1 and 2 probes have special cases to try to work with few data points.
+                            Optimal is 4-6 probes. Default: 4
     
     --vmaf_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
     

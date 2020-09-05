@@ -275,7 +275,13 @@ def target_vmaf(chunk: Chunk, args: Args):
             next_q = args.max_q
 
         return next_q
-    
+
+    # Initialize search boundary
+    vmaf_lower = score
+    vmaf_upper = score
+    vmaf_cq_lower = last_q
+    vmaf_cq_upper = last_q
+
     # Branch
     if score < args.vmaf_target:
         next_q = args.min_q
@@ -302,17 +308,31 @@ def target_vmaf(chunk: Chunk, args: Args):
             f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
         return next_q
 
+    # Set boundary
+    if score < args.vmaf_target:
+        vmaf_lower = score
+        vmaf_cq_lower = next_q
+    else:
+        vmaf_upper = score
+        vmaf_cq_upper = next_q
+
     # VMAF search
     for _ in range(args.vmaf_steps - 2):
-        new_point = weighted_search(vmaf_cq[-2][1], vmaf_cq[-2][0], vmaf_cq[-1][1], vmaf_cq[-1][0], args.vmaf_target)
+        new_point = weighted_search(vmaf_cq_lower, vmaf_lower, vmaf_cq_upper, vmaf_upper, args.vmaf_target)
         if new_point in [x[1] for x in vmaf_cq]:
             break
-        last_q = new_point
 
         q_list.append(new_point)
         score = vmaf_probe(chunk, new_point, args)
-        next_q = get_closest(q_list, last_q, positive=score >= args.vmaf_target)
         vmaf_cq.append((score, new_point))
+
+        # Update boundary
+        if score < args.vmaf_target:
+            vmaf_lower = score
+            vmaf_cq_lower = new_point
+        else:
+            vmaf_upper = score
+            vmaf_cq_upper = new_point
 
     q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target)
 

@@ -30,12 +30,12 @@ class SvtAv1(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull,
+                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull,
                  '-']
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', output,
+                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', output,
                  '-']
             )
         ]

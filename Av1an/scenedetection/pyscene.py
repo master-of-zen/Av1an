@@ -4,7 +4,7 @@ from scenedetect.detectors import ContentDetector
 from scenedetect.scene_manager import SceneManager
 from scenedetect.video_manager import VideoManager
 
-from .logger import log
+from Av1an.logger import log
 
 
 def pyscene(video, threshold, min_scene_len):

@@ -10,10 +10,10 @@ from subprocess import PIPE, STDOUT
 import cv2
 from tqdm import tqdm
 
-from .commandtypes import CommandPair
-from .logger import log
-from .utils import terminate
-from .ffmpeg import frame_probe
+from Av1an.commandtypes import CommandPair
+from Av1an.logger import log
+from Av1an.utils import terminate
+from Av1an.ffmpeg import frame_probe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
 # It requires an aom first-pass stats file as input. FFMPEG first-pass file is not OK. Default filename is stats.bin.
@@ -168,7 +168,7 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     """
 
     log(f'Started aom_keyframes scenedetection\nParams: {video_params}\n')
-    video = cv2.VideoCapture(video_path.as_posix())  # TODO(n9Mtq4): use a frame probe for this?
+    video = cv2.VideoCapture(video_path.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     video.release()
 

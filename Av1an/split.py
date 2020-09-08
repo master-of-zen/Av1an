@@ -9,9 +9,8 @@ from numpy import linspace
 
 from .arg_parse import Args
 from .ffmpeg import frame_probe, get_keyframes
-from .aom_kf import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS
+from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
-from .pyscene import pyscene
 from .utils import terminate
 
 
@@ -113,8 +112,8 @@ def extra_splits(args: Args, split_locations: list):
     for i in splits:
         distance = (i[1] - i[0])
         if distance > args.extra_split:
-            to_add = distance // args.extra_split 
-            new_scenes = list(linspace(i[0],i[1], to_add + 1, dtype=int, endpoint=False)[1:])  
+            to_add = distance // args.extra_split
+            new_scenes = list(linspace(i[0],i[1], to_add + 1, dtype=int, endpoint=False)[1:])
             split_locations.extend(new_scenes)
 
     result = [int(x) for x in sorted(split_locations)]

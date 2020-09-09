@@ -99,7 +99,7 @@ def arg_parsing():
     split_group.add_argument('--min_scene_len', type=int, default=None, help='Minimum number of frames in a split')
 
     # PySceneDetect split
-    split_group.add_argument('--threshold', '-tr', type=float, default=50, help='PySceneDetect Threshold')
+    split_group.add_argument('--threshold', '-tr', type=float, default=35, help='PySceneDetect Threshold')
 
     # AOM Keyframe split
     split_group.add_argument('--reuse_first_pass', help='Reuse the first pass from aom_keyframes split on the chunks',

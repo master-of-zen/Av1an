@@ -10,7 +10,11 @@ from .logger import log
 
 
 def frame_probe(source: Path):
-    """Get frame count."""
+    """
+    Get frame count.
+    Direct counting of frame count. Slow, Precise.
+    :param: source: Path to input file
+    """
     cmd = ["ffmpeg", "-hide_banner", "-i", source.as_posix(), "-map", "0:v:0", "-f", "null", "-"]
     r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
     matches = re.findall(r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))

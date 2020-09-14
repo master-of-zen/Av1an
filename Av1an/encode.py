@@ -8,13 +8,13 @@ import concurrent
 import concurrent.futures
 import shutil
 
-from Av1an.encoders import ENCODERS
+from Encoders import ENCODERS
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
-from Av1an.chunk_queue import load_or_gen_chunk_queue
+from Chunks.chunk import Chunk
+from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
-from .VMAF.target_vmaf import target_vmaf_routine
+from VMAF.target_vmaf import target_vmaf_routine
 from Av1an.utils import frame_probe_cv2, terminate, process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Av1an.setup import determine_resources, outputs_filenames, setup
@@ -23,7 +23,7 @@ from Av1an.config import conf
 from Av1an.ffmpeg import extract_audio, frame_probe
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine, extra_splits
-from .VMAF.vmaf import plot_vmaf
+from VMAF.vmaf import plot_vmaf
 
 
 def main_queue(args):

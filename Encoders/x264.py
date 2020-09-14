@@ -2,9 +2,9 @@ import os
 import re
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
-from Av1an.encoders.encoder import Encoder
+from Encoders.encoder import Encoder
 from Av1an.utils import list_index_of_regex
 
 

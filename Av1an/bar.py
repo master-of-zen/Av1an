@@ -11,9 +11,9 @@ from tqdm import tqdm
 from .commandtypes import Command, CommandPair
 from .utils import terminate
 
-from Av1an.encoders import ENCODERS
+from Encoders import ENCODERS
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 
 def Manager():
     """

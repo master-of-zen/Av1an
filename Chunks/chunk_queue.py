@@ -4,8 +4,8 @@ import os
 from typing import List
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
-from Av1an.encoders import ENCODERS
+from Chunks.chunk import Chunk
+from Encoders import ENCODERS
 from Av1an.ffmpeg import frame_probe, get_keyframes
 from Av1an.logger import log
 from Av1an.resume import read_done_data

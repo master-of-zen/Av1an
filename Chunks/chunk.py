@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from .commandtypes import Command
+from Av1an.commandtypes import Command
 
 
 class Chunk:

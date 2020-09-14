@@ -5,7 +5,7 @@ import subprocess
 from subprocess import PIPE, STDOUT
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import Command, MPCommands
 
 

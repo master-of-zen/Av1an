@@ -12,7 +12,7 @@ from math import log10
 from matplotlib import pyplot as plt
 
 from Av1an.bar import process_pipe
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 import matplotlib
 
 matplotlib.use('Agg')

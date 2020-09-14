@@ -2,20 +2,20 @@ import os
 import re
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
-from Av1an.encoders.encoder import Encoder
+from Encoders.encoder import Encoder
 from Av1an.utils import list_index_of_regex, terminate
 
 
-class Aom(Encoder):
+class Rav1e(Encoder):
 
     def __init__(self):
         super().__init__(
-            encoder_bin='aomenc',
-            default_args=['--threads=4', '--cpu-used=6', '--end-usage=q', '--cq-level=30'],
-            default_passes=2,
-            default_q_range=(25, 50),
+            encoder_bin='rav1e',
+            default_args=['--tiles', '8', '--speed', '6', '--quantizer', '100'],
+            default_passes=1,
+            default_q_range=(70, 150),
             output_extension='ivf'
         )
 
@@ -23,7 +23,7 @@ class Aom(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=1', *a.video_params, '-o', output, '-']
+                ['rav1e', '-', *a.video_params, '--output', output]
             )
         ]
 
@@ -31,21 +31,25 @@ class Aom(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}.log', '-o', os.devnull, '-']
+                ['rav1e', '-', '-q', '--first-pass', f'{c.fpf}.stat', *a.video_params, '--output', os.devnull]
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}.log', '-o', output, '-']
+                ['rav1e', '-', '--second-pass', f'{c.fpf}.stat', *a.video_params, '--output', output]
             )
         ]
 
     def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value"""
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
 
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
-        adjusted_command[i] = f'--cq-level={q}'
+        i = list_index_of_regex(adjusted_command, r"--quantizer")
+        adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
 
@@ -55,8 +59,7 @@ class Aom(Encoder):
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
 
-        if 'fatal' in line.lower():
+        if 'error' in line.lower():
             print('\n\nERROR IN ENCODING PROCESS\n\n', line)
             terminate()
-        if 'Pass 2/2' in line or 'Pass 1/1' in line:
-            return re.search(r"frame.*?/([^ ]+?) ", line)
+        return re.search(r"encoded.*? ([^ ]+?) ", line)

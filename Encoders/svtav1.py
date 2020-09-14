@@ -1,21 +1,20 @@
 import os
-import re
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
-from Av1an.encoders.encoder import Encoder
-from Av1an.utils import list_index_of_regex, terminate
+from Encoders.encoder import Encoder
+from Av1an.utils import list_index_of_regex
 
 
-class Vpx(Encoder):
+class SvtAv1(Encoder):
 
     def __init__(self):
-        super().__init__(
-            encoder_bin='vpxenc',
-            default_args=['--codec=vp9', '--threads=4', '--cpu-used=0', '--end-usage=q', '--cq-level=30'],
-            default_passes=2,
-            default_q_range=(25, 50),
+        super(SvtAv1, self).__init__(
+            encoder_bin='SvtAv1EncApp',
+            default_args=['--preset', '4', '--rc', '0', '--qp', '25'],
+            default_passes=1,
+            default_q_range=(20, 40),
             output_extension='ivf'
         )
 
@@ -23,7 +22,7 @@ class Vpx(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['vpxenc', '--passes=1', *a.video_params, '-o', output, '-']
+                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-b', output, '-']
             )
         ]
 
@@ -31,11 +30,13 @@ class Vpx(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['vpxenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}', '-o', os.devnull, '-']
+                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull,
+                 '-']
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['vpxenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}', '-o', output, '-']
+                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', output,
+                 '-']
             )
         ]
 
@@ -48,8 +49,8 @@ class Vpx(Encoder):
 
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
-        adjusted_command[i] = f'--cq-level={q}'
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
+        adjusted_command[i + 1] = f'{q}'
 
         return adjusted_command
 
@@ -58,9 +59,4 @@ class Vpx(Encoder):
 
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
-
-        if 'fatal' in line.lower():
-            print('\n\nERROR IN ENCODING PROCESS\n\n', line)
-            terminate()
-        if 'Pass 2/2' in line or 'Pass 1/1' in line:
-            return re.search(r"frame.*?/([^ ]+?) ", line)
+        pass  # todo: SVT encoders are special in the way they output to console

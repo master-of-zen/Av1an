@@ -7,9 +7,9 @@ from typing import Tuple, Optional
 import re
 
 from Av1an.arg_parse import Args
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
-from Av1an.encoders.encoder import Encoder
+from Encoders.encoder import Encoder
 from Av1an.logger import log
 from Av1an.utils import list_index_of_regex
 
@@ -71,6 +71,7 @@ class Vvc(Encoder):
         :param man_q: use a diffrent quality
         :return: a Pipe attached to the encoders stdout
         """
+        # Filter cmd not used?
         filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
                               self.compose_2_pass(a, c, output)[current_pass - 1]
 

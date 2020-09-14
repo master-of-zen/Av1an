@@ -9,7 +9,7 @@ from numpy import linspace
 
 from .arg_parse import Args
 from .ffmpeg import frame_probe, get_keyframes
-from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
+from Scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
 from .utils import terminate
 

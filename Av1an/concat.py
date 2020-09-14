@@ -110,7 +110,7 @@ def concatenate_mkvmerge(temp: Path, output):
 
     cmd = f' mkvmerge {concat} {shlex.quote(audio)} -o {shlex.quote(output.as_posix())}'
     concat = subprocess.Popen(cmd, stdout=PIPE, universal_newlines=True, shell=True)
-    output, err = concat.communicate()
+    output, _ = concat.communicate()
     concat.wait()
 
     if concat.returncode != 0:

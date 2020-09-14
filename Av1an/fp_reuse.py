@@ -3,7 +3,7 @@ import os
 import struct
 from typing import Dict, List
 
-from .scenedetection.aom_kf import fields
+from Scenedetection.aom_kf import fields
 
 
 def read_first_pass(log_path):

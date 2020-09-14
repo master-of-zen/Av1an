@@ -14,7 +14,7 @@ from scipy import interpolate
 
 from Av1an.arg_parse import Args
 from Av1an.bar import process_pipe
-from Av1an.chunk import Chunk
+from Chunks.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
 from .vmaf import call_vmaf, read_vmaf_json
@@ -239,7 +239,7 @@ def target_vmaf(chunk: Chunk, args: Args):
 
     score = vmaf_probe(chunk, last_q, args)
     vmaf_cq.append((score, last_q))
-    
+
     if args.vmaf_steps < 3:
         #Use Euler's method with known relation between cq and vmaf
         vmaf_cq_deriv = -0.18
@@ -248,7 +248,7 @@ def target_vmaf(chunk: Chunk, args: Args):
         ## Formula -ln(1-args.vmaf_target/100) = vmaf_cq_deriv*cq + constant
         #cq = (-ln(1-args.vmaf_target/100) - constant)/vmaf_cq_deriv
         next_q = int(round(last_q + (transform_vmaf(args.vmaf_target)-transform_vmaf(score))/vmaf_cq_deriv))
-        
+
         #Clamp
         if next_q < args.min_q:
             next_q = args.min_q

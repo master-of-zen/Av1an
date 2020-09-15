@@ -126,9 +126,9 @@ def startup(args: Args, chunk_queue: List[Chunk]):
         with open(done_path, 'w') as done_file:
             json.dump(d, done_file)
     clips = len(chunk_queue)
+    args.workers = min(args.workers, clips)
     print(f'\rQueue: {clips} Workers: {args.workers} Passes: {args.passes}\n'
           f'Params: {" ".join(args.video_params)}')
-    args.workers = min(args.workers, clips)
     counter = Manager().Counter(total, initial)
     args.counter = counter
 

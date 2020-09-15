@@ -160,6 +160,10 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpe
     f = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', video_path.as_posix(), *ffmpeg_pipe]
     # removed -w -h from aomenc since ffmpeg filters can change it and it can be added into video_params
     # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
+
+    # Adjust number of threads
+    video_params = re.sub(r'(--threads=.\w)', f'--threads={os.cpu_count() * 2}', video_params)
+
     e = ['aomenc', '--passes=2', '--pass=1', *video_params, f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-']
 
     return CommandPair(f, e)
@@ -170,6 +174,8 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     """
 
     log(f'Started aom_keyframes scenedetection\nParams: {video_params}\n')
+
+    # Get CV2 fast framecount
     video = cv2.VideoCapture(video_path.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     video.release()

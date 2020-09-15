@@ -17,7 +17,7 @@ from Av1an.resume import write_progress_file
 from VMAF.target_vmaf import target_vmaf_routine
 from Av1an.utils import frame_probe_cv2, terminate, process_inputs
 from Av1an.bar import Manager, tqdm_bar
-from Av1an.setup import determine_resources, outputs_filenames, setup
+from Startup.setup import determine_resources, outputs_filenames, setup
 from Av1an.logger import log, set_log
 from Av1an.config import conf
 from Av1an.ffmpeg import extract_audio, frame_probe

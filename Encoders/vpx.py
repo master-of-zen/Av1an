@@ -13,6 +13,7 @@ class Vpx(Encoder):
     def __init__(self):
         super().__init__(
             encoder_bin='vpxenc',
+            encoder_help='vpxenc --help',
             default_args=['--codec=vp9', '--threads=4', '--cpu-used=0', '--end-usage=q', '--cq-level=30'],
             default_passes=2,
             default_q_range=(25, 50),

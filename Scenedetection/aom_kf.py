@@ -105,7 +105,8 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
             boost_score += (decay_accumulator * next_iiratio)
 
             # Test various breakout clauses.
-            if (lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20) and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200):
+            if (lnf['pcnt_inter'] < 0.05) or (next_iiratio < 1.5) or (((lnf['pcnt_inter'] - lnf['pcnt_neutral']) < 0.20)
+                    and (next_iiratio < 3.0)) or ((boost_score - old_boost_score) < 3.0) or (lnf['intra_error'] < 200):
                 break
             old_boost_score = boost_score
 
@@ -116,7 +117,6 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
 
 
 def find_aom_keyframes(stat_file, key_freq_min):
-    # I don't know what data format you want as output
     keyframes_list = []
 
     number_of_frames = round(os.stat(stat_file).st_size / 208) - 1
@@ -134,7 +134,9 @@ def find_aom_keyframes(stat_file, key_freq_min):
     frame_count_so_far = 1
     for i in range(1, number_of_frames - 16):
         is_keyframe = False
-        if frame_count_so_far >= key_freq_min:  # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#2065
+
+        # https://aomedia.googlesource.com/aom/+/ce97de2724d7ffdfdbe986a14d49366936187298/av1/encoder/pass2_strategy.c#2065
+        if frame_count_so_far >= key_freq_min:
             is_keyframe = test_candidate_kf(dict_list, i, frame_count_so_far)
         if is_keyframe:
             keyframes_list.append(i)

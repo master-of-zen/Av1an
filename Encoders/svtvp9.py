@@ -12,6 +12,7 @@ class SvtVp9(Encoder):
     def __init__(self):
         super().__init__(
             encoder_bin='SvtVp9EncApp',
+            encoder_help='SvtVp9EncApp --help',
             default_args=None,
             default_passes=1,
             default_q_range=(20, 40),

@@ -19,6 +19,7 @@ class Vvc(Encoder):
     def __init__(self):
         super(Vvc, self).__init__(
             encoder_bin='vvc_encoder',
+            encoder_help='vvc_encoder --help',
             default_args=None,
             default_passes=1,
             default_q_range=(20, 50),

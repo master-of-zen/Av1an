@@ -46,6 +46,7 @@ class Args(object):
         self.resume: bool = None
         self.no_check: bool = None
         self.keep: bool = None
+        self.force: bool = None
 
         # Vmaf
         self.vmaf: bool = None
@@ -86,6 +87,7 @@ def arg_parsing():
     io_group.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
     io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
     io_group.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
+    io_group.add_argument('--force', help="Force encoding if input args seen as invalid", action='store_true')
 
     # Splitting
     split_group = parser.add_argument_group('Splitting')

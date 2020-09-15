@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from Av1an import *
-
+from Startup.setup import startup_check
 
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encoding"""

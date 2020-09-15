@@ -13,6 +13,7 @@ class Rav1e(Encoder):
     def __init__(self):
         super().__init__(
             encoder_bin='rav1e',
+            encoder_help='rav1e --fullhelp',
             default_args=['--tiles', '8', '--speed', '6', '--quantizer', '100'],
             default_passes=1,
             default_q_range=(70, 150),

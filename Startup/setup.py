@@ -9,7 +9,7 @@ from distutils.spawn import find_executable
 from pathlib import Path
 
 from psutil import virtual_memory
-
+from Startup.validate_commands import validate_inputs
 from Encoders import ENCODERS
 from Av1an.arg_parse import Args
 from Av1an.utils import terminate
@@ -49,12 +49,7 @@ def check_exes(args: Args):
         print('No ffmpeg')
         terminate()
 
-    # this shouldn't happen as encoder choices are validated by argparse
-    if args.encoder not in ENCODERS:
-        valid_encoder_str = ", ".join([repr(k) for k in ENCODERS])
-        print(f'Not valid encoder {args.encoder}')
-        print(f'Valid encoders: {valid_encoder_str}')
-        terminate()
+    validate_inputs(args)
 
     if args.chunk_method == 'vs_ffms2' and (not find_executable('vspipe')):
         print('vspipe executable not found')

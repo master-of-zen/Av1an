@@ -14,7 +14,7 @@ class Encoder(ABC):
     An abstract class used for encoders
     """
 
-    def __init__(self, encoder_bin: str, default_args: Command, default_passes: int, default_q_range: Tuple[int, int],
+    def __init__(self, encoder_bin: str, encoder_help: str, default_args: Command, default_passes: int, default_q_range: Tuple[int, int],
                  output_extension: str):
         """
         Encoder constructor
@@ -24,6 +24,7 @@ class Encoder(ABC):
         :param output_extension: the output extension (no dot)
         """
         self.encoder_bin = encoder_bin
+        self.encoder_help = encoder_help
         self.default_args = default_args
         self.default_passes = default_passes
         self.default_q_range = default_q_range

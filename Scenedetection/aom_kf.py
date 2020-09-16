@@ -162,7 +162,7 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpe
     # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
 
     # Adjust number of threads
-    video_params = re.sub(r'(--threads=.\w)', f'--threads={os.cpu_count() * 2}', ' '.join(video_params))
+    video_params = re.sub(r'(--threads=.\w)', f'--threads={os.cpu_count()}', ' '.join(video_params))
 
     e = ['aomenc', '--passes=2', '--pass=1', *video_params, f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-']
 

@@ -41,8 +41,7 @@ With your own parameters:
                             Default: aom
                             Example: -enc rav1e
 
-    -v   --video_params     Encoder settings flags (If not set, will be used default parameters.
-                            Required for SVT-AV1s)
+    -v   --video_params     Encoder settings flags (If not set, will be used default parameters.)
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding

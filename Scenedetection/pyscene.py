@@ -15,7 +15,7 @@ def pyscene(video, threshold, min_scene_len):
     if not min_scene_len:
         min_scene_len = 15
 
-    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene lenght: {min_scene_len}\n')
+    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene length: {min_scene_len}\n')
     video_manager = VideoManager([str(video)])
     scene_manager = SceneManager()
     scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=min_scene_len))

@@ -98,7 +98,7 @@ With your own parameters:
     -cm  --chunk_method     Determine way in which chunks made for encoding.
                             ['hybrid'(default), 'select', 'vs_ffms2']
 
-    -tr  --threshold        PySceneDetect threshold for scene detection Default: 50
+    -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
                             If given `0` spliting will be ignored

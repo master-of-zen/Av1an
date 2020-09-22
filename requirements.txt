@@ -1,5 +1,5 @@
 numpy
-scenedetect[opencv,progress_bar]
+scenedetect[opencv]
 opencv-python
 tqdm
 psutil

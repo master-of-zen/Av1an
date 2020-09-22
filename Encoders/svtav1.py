@@ -1,10 +1,11 @@
 import os
+import re
 
 from Av1an.arg_parse import Args
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Encoders.encoder import Encoder
-from Av1an.utils import list_index_of_regex
+from Av1an.utils import list_index_of_regex, terminate
 
 
 class SvtAv1(Encoder):
@@ -23,7 +24,7 @@ class SvtAv1(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', *a.video_params, '-b', output, '-']
+                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', *a.video_params, '-b', output, '-']
             )
         ]
 
@@ -31,13 +32,13 @@ class SvtAv1(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull,
-                 '-']
+                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', '--irefresh-type', '2', *a.video_params,
+                 '-output-stat-file', f'{c.fpf}.stat', '-b', os.devnull, '-']
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', '--irefresh-type 2', *a.video_params, '-input-stat-file', f'{c.fpf}.stat', '-b', output,
-                 '-']
+                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', '--irefresh-type', '2', *a.video_params,
+                 '-input-stat-file', f'{c.fpf}.stat', '-b', output, '-']
             )
         ]
 
@@ -60,4 +61,7 @@ class SvtAv1(Encoder):
 
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
-        pass  # todo: SVT encoders are special in the way they output to console
+        if 'error' in line.lower():
+            print('\n\nERROR IN ENCODING PROCESS\n\n', line)
+            terminate()
+        return re.search(r"Encoding frame\s+(\d+)", line)

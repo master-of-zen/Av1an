@@ -98,11 +98,12 @@ def tqdm_bar(a: Args, c: Chunk, encoder, counter, frame_probe_source, passes, cu
         enc = ENCODERS[encoder]
         pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
 
-        if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc'):
+        if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc', 'svt_av1'):
             process_encoding_pipe(pipe, encoder, counter)
 
-        if encoder in ('svt_av1', 'svt_vp9'):
+        if encoder in ('svt_vp9'):
             # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
+            # SVT-AV1 got a new output mode, but SVT-VP9 is still special
             process_pipe(pipe)
             counter.update(frame_probe_source // passes)
 

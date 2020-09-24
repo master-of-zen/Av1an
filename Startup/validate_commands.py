@@ -5,8 +5,8 @@ import sys
 from subprocess import PIPE
 from Encoders import ENCODERS
 from typing import List, Union
-
-#TODO: Suggesting on invalid arguments
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 def run_command(command: List) -> str:
     r = subprocess.run(command, stdout=PIPE, stderr=PIPE)
@@ -37,13 +37,17 @@ def match_commands(params: List, valid_options: List) -> Union[str, bool]:
     """
     invalid = []
     for pr in params:
-        if not any(opt in pr for opt in valid_options):
+        if not any(opt == pr for opt in valid_options):
             invalid.append(pr)
 
     return invalid
 
 
-def validate_inputs(args):
+def suggest_fix(wrong_arg, arg_dictionary):
+    return process.extractOne(wrong_arg, arg_dictionary)
+
+
+def get_encoder_args(args):
     help_command = ENCODERS[args.encoder].encoder_help.split()
 
     help_text = run_command(help_command)
@@ -51,18 +55,23 @@ def validate_inputs(args):
     matches = re.findall(r'\s+(-\w+|(?:--\w+(?:-\w+)*))', help_text)
     parameters = set(matches)
 
+    return parameters
+
+
+def validate_inputs(args):
     video_params = args.video_params.split() if args.video_params \
             else ENCODERS[args.encoder].default_args
 
-    # Sort arguments and params
-    valid1, valid2 = sort_params(parameters)
-    args1, args2 = sort_params(video_params)
+    video_params = [x.split('=')[0] for x in video_params if not x.isdigit()]
 
-    # Match arguments
-    invalid = match_commands(args1, valid1) + \
-              match_commands(args2, valid2)
+    parameters = get_encoder_args(args)
 
-    if len(invalid) > 0:
-        print('Invalid commands:\n',' '.join(invalid),'\nIf you sure: use --force')
+    suggested = [( x, suggest_fix(x, parameters)) for x in match_commands(video_params, parameters)]
+
+    if len(suggested) > 0:
+        print('Invalid commands:')
+        for cmd in suggested:
+            print(f"{cmd[0]} suggest: {cmd[1][0]}")
+        print('If you sure in validity of your commands: use --force')
         if not args.force:
             sys.exit(0)

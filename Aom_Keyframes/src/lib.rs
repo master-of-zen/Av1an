@@ -1,19 +1,61 @@
 #[macro_use]
 extern crate cpython;
-
+use std::fs;
+use std::path::Path;
 use cpython::{Python, PyResult};
 use std::io;
 use std::io::Write;
+
 py_module_initializer!(aom_keyframes, init_aom_keyframes, PyInit_aom_keyframes, |py, m | {
-    m.add(py, "__doc__", "This module is implemented in Rust")?;
-    m.add(py, "count_doubles", py_fn!(py, count_doubles(val: &str)))?;
+    m.add(py, "__doc__", "Aom keyframes in Rust.. for whatever reason.. rust is good, right?")?;
+    m.add(py, "read_struct", py_fn!(py, rust_aom_keyframes(val: &str)))?;
     Ok(())
 });
 
-fn count_doubles(_py: Python, val: &str) -> PyResult<u64> {
-    print!("Hello from rust\n");
-    print!("Value: {0} \nbee bop rust ", val);
-    io::stdout().flush().unwrap();
-    Ok(32u64)
+struct FrameData {
+    frame: i32,
+    weight: i32,
+    intra_error: i32,
+    frame_avg_wavelet_energy: i32,
+    coded_error: i32,
+    sr_coded_error: i32,
+    tr_coded_error: i32,
+    pcnt_inter: i32,
+    pcnt_motion: i32,
+    pcnt_second_ref: i32,
+    pcnt_third_ref: i32,
+    pcnt_neutral: i32,
+    intra_skip_pct: i32,
+    inactive_zone_rows: i32,
+    inactive_zone_cols: i32,
+    MVr: i32,
+    mvr_abs: i32,
+    MVc: i32,
+    mvc_abs: i32,
+    MVrv: i32,
+    MVcv: i32,
+    mv_in_out_count: i32,
+    new_mv_count: i32,
+    duration: i32,
+    count: i32,
+    raw_error_stdev: i32,
 }
 
+
+
+
+fn rust_aom_keyframes(_py: Python, stat_file: &str) -> PyResult<Vec<i32>>{
+    unimplemented!()
+}
+
+
+fn read_struct(stat_file: &str) -> Vec<i32> {
+
+    let stat_path = Path::new(stat_file);
+
+
+
+    unimplemented!()
+
+
+}

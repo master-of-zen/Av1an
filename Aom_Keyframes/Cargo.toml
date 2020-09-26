@@ -8,6 +8,10 @@ edition = "2018"
 name = "aom_keyframes"
 crate-type = ["dylib"]
 
+[dependencies]
+bincode = "1.3.1"
+serde = { version = "1.0.116", features =["derive"]}
+
 [dependencies.cpython]
 cpython = "0.5"
 features = ["extension-module"]

@@ -61,6 +61,7 @@ class Args(object):
         self.vmaf_plots: bool = None
         self.vmaf_rate: int = None
         self.n_threads: int = None
+        self.vmaf_filter: str = None
 
         # VVC
         self.vvc_conf: Path = None
@@ -142,5 +143,6 @@ def arg_parsing():
     tvmaf_group.add_argument('--max_q', type=int, default=None, help='Max q for target vmaf')
     tvmaf_group.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     tvmaf_group.add_argument('--vmaf_rate', type=int, default=4, help='Framerate for probes, 0 - original')
+    tvmaf_group.add_argument('--vmaf_filter', type=str, default=None, help='Filter applied to source at vmaf calcualation, use if you crop source')
 
     return Args(vars(parser.parse_args()))

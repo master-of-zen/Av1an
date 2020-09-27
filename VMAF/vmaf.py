@@ -31,7 +31,7 @@ def read_vmaf_json(file, percentile):
 
 
 def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
-              fl_path: Path = None, vmaf_rate=0):
+              fl_path: Path = None, vmaf_filter=None, vmaf_rate=0):
     cmd = ''
 
     # settings model path
@@ -43,6 +43,9 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     if fl_path is None:
         fl_path = chunk.fake_input_path.with_name(encoded.stem).with_suffix('.json')
     fl = fl_path.as_posix()
+
+    filter = vmaf_filter + ',' if vmaf_filter else ''
+
     # For vmaf calculation both source and encoded segment scaled to 1080
     # Also it's required to use -r before both files of vmaf calculation to avoid errors
 
@@ -57,7 +60,7 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     distorted = f'[0:v]{select_frames}scale={res}:flags=bicubic:\
                   force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
 
-    ref = fr'[1:v]{select_frames}scale={res}:flags=bicubic:'\
+    ref = fr'[1:v]{select_frames}{filter}scale={res}:flags=bicubic:'\
           'force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];'
 
     vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:\

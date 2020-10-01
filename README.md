@@ -27,7 +27,7 @@ With your own parameters:
 
     av1an -i input -enc aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10
     --split_method aom_keyframes --vmaf_target 95 --vmaf_path "vmaf_v0.6.1.pkl" -min_q 20 -max_q 60
-    -ff " -vf scale=-1:720 "  -a " -c:a libopus -ac 2 -b:a 192k " -s scenes.csv -log my_log -o output
+    -ff " -vf scale=-1:1080 "  -a " -c:a libopus -ac 2 -b:a 192k " -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
 

@@ -25,7 +25,7 @@ from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine, extra_splits
 from VMAF.vmaf import plot_vmaf
 
-
+# todo, saving and loading more info to the scenes data
 def main_queue(args):
     # Todo: Redo Queue
     try:

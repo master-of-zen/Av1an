@@ -61,7 +61,7 @@ def validate_inputs(args):
     video_params = args.video_params
 
     video_params = [x.split('=')[0] for x in video_params if x[0] == "-"]
-    
+
     parameters = get_encoder_args(args)
 
     suggested = [(x, suggest_fix(x, parameters)) for x in match_commands(video_params, parameters)]

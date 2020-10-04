@@ -49,8 +49,6 @@ def check_exes(args: Args):
         print('No ffmpeg')
         terminate()
 
-    validate_inputs(args)
-
     if args.chunk_method == 'vs_ffms2' and (not find_executable('vspipe')):
         print('vspipe executable not found')
         terminate()
@@ -74,7 +72,9 @@ def setup_encoder(args: Args):
         args.passes = encoder.default_passes
 
     args.video_params = encoder.default_args if args.video_params is None \
-    else shlex.split(args.video_params)
+        else shlex.split(args.video_params)
+
+    validate_inputs(args)
 
 
 def startup_check(args: Args):

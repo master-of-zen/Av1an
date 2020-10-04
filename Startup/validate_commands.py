@@ -60,7 +60,7 @@ def get_encoder_args(args):
 def validate_inputs(args):
     video_params = args.video_params
 
-    video_params = [x.split('=')[0] for x in video_params if not x.isdigit()]
+    video_params = [x.split('=')[0] for x in video_params if x[0] == "-"]
 
     parameters = get_encoder_args(args)
 

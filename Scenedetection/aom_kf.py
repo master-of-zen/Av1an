@@ -26,7 +26,7 @@ from Av1an.ffmpeg import frame_probe
 
 
 # default params for 1st pass when aom isn't the final encoder and -v won't match aom's options
-AOM_KEYFRAMES_DEFAULT_PARAMS = '--threads=12 --cpu-used=0 --end-usage=q --cq-level=40'
+AOM_KEYFRAMES_DEFAULT_PARAMS = ['--threads=12', '--cpu-used=0' ,'--end-usage=q', '--cq-level=40']
 
 
 # Fields meanings: <source root>/av1/encoder/firstpass.h
@@ -161,8 +161,10 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpe
     # removed -w -h from aomenc since ffmpeg filters can change it and it can be added into video_params
     # TODO(n9Mtq4): if an encoder other than aom is being used, video_params becomes the default so -w -h may be needed again
 
+
     # Adjust number of threads
     video_params = re.sub(r'(--threads=.\w)', f'--threads={os.cpu_count() * 3}', ' '.join(video_params))
+    video_params = re.sub(r'(--threads=[0-9]+)', f'--threads={os.cpu_count() * 3}', video_params)
     e = ['aomenc', '--passes=2', '--pass=1', *video_params.split(), f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-']
     return CommandPair(f, e)
 

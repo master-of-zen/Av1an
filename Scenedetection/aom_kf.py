@@ -163,8 +163,10 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpe
 
 
     # Adjust number of threads
-    video_params = re.sub(r'(--threads=.\w)', f'--threads={os.cpu_count() * 3}', ' '.join(video_params))
-    video_params = re.sub(r'(--threads=[0-9]+)', f'--threads={os.cpu_count() * 3}', video_params)
+    video_params = ' '.join(video_params)
+
+    video_params = re.sub(r'(--threads=[0-9]+)', f'--threads={min(32 ,os.cpu_count() * 3)}', video_params)
+
     e = ['aomenc', '--passes=2', '--pass=1', *video_params.split(), f'--fpf={stat_file.as_posix()}', '-o', os.devnull, '-']
     return CommandPair(f, e)
 

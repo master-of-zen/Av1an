@@ -34,7 +34,7 @@ With your own parameters:
     -i   --file_path        Input file(s) (relative or absolute path). Will be processed with same
                             settings.
 
-    -o   --output_file      Name/Path for output file (Default: (input file name)_av1.mkv)
+    -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
 
     -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`,`vvc`)
@@ -69,7 +69,7 @@ With your own parameters:
                             FFmpeg and audio settings.
 
     --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.
-                            Files will be a bit smaller. Recommended for x265.
+                            Use in case when concatenation fails.
 
 <h3 align="center">FFmpeg options</h3>
 

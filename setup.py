@@ -2,12 +2,13 @@ import setuptools
 
 REQUIRES = [
     'numpy',
-    'scenedetect[opencv,progress_bar]',
+    'scenedetect[opencv]',
     'opencv-python',
     'tqdm',
     'psutil',
     'scipy',
     'matplotlib',
+    'fuzzywuzzy',
 ]
 
 with open("README.md", "r") as f:
@@ -15,7 +16,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="Av1an",
-    version="1.13-5",
+    version="1.13-6",
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
     description="All-in-one encode toolkit",

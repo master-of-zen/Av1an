@@ -77,6 +77,7 @@ With your own parameters:
                             Example: -a '-c:a libopus -b:a  64k'
 
     -ff  --ffmpeg           FFmpeg options. Applied to each segment individually.
+                          (Warning: Cropping doesn't work with Target VMAF mode)
                             Example:
                             --ff " -vf scale=320:240 "
 

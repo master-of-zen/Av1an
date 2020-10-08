@@ -13,7 +13,7 @@ on:
 
 env:
   deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx
-  x265_deps: libx265-dev libnuma-dev mercurial cmake nasm
+  pip_deps: python-Levenshtein
   DEBIAN_FRONTEND: noninteractive
   temp: .temp
 
@@ -31,7 +31,6 @@ jobs:
           - name: rav1e
             flags: -enc rav1e
           - name: x265
-            encoder: x265
             flags: -enc x265
           - name: workers
             flags: -w 2
@@ -57,19 +56,12 @@ jobs:
           aomenc --help
           SvtAv1EncApp --help
           rav1e --help
+          x265 --help || true
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install --no-cache-dir -r requirements.txt 
-      - name: Install x265
-        if: matrix.encoder == 'x265'
-        run: |
-          apt-get install -y ${{ env.x265_deps }}
-          git clone https://github.com/videolan/x265.git
-          cd x265/build/linux
-          cmake -G "Unix Makefiles" -DENABLE_SHARED=off ../../source
-          make -j$(nproc)
-          make install
+          pip3 install --no-cache-dir ${{ env.pip_deps }}
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do
@@ -79,8 +71,9 @@ jobs:
       - name: Testing ${{ matrix.name }}
         run: |
           [ "${{ matrix.temp }}" != "" ] && TEMP=${{ matrix.temp }} || TEMP=${{ env.temp }}
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep ${{ matrix.flags }} -o "$TEMP"/bus_cif.mkv
-          echo ::set-env name=TEMPPATH::$TEMP
+          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "${TEMP}/bus_cif.mkv" ${{ matrix.flags }}
+          du -h "${TEMP}/bus_cif.mkv"
+          echo "TEMPPATH=$TEMP" >> $GITHUB_ENV
       - name: Upload video
         uses: actions/upload-artifact@v2
         with:

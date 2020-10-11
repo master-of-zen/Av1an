@@ -8,7 +8,8 @@ import cv2
 import numpy as np
 
 from Av1an.commandtypes import Command
-
+from Av1an.ffmpeg import frame_probe_ffmpeg
+from Av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
 
 def terminate():
     sys.exit(1)
@@ -59,7 +60,37 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     raise ValueError(f'{reg} is not in list')
 
 
+def frame_probe_fast(source: Path, is_vs: bool = False):
+    """
+    Consolidated function to retrieve the number of frames from the input quickly,
+    falls back on a slower (but accurate) frame count if a quick count cannot be found.
+
+    Handles vapoursynth input as well.
+    """
+    total = 0
+    if not is_vs:
+        total = frame_probe_cv2(source)
+
+    if is_vs or total < 1:
+        total = frame_probe(source)
+
+    return total
+
+
 def frame_probe_cv2(source: Path):
     video = cv2.VideoCapture(source.as_posix())
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    video.release()
     return total
+
+
+def frame_probe(source: Path):
+    """
+    Determines the total number of frames in a given input.
+
+    Differentiates between a Vapoursynth script and standard video
+    and delegates to vspipe or ffmpeg respectively.
+    """
+    if is_vapoursynth(source):
+        return frame_probe_vspipe(source)
+    return frame_probe_ffmpeg(source)

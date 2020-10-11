@@ -15,15 +15,16 @@ from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
 from VMAF.target_vmaf import target_vmaf_routine
-from Av1an.utils import frame_probe_cv2, terminate, process_inputs
+from Av1an.utils import frame_probe_fast, frame_probe, terminate, process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
 from Av1an.logger import log, set_log
 from Av1an.config import conf
-from Av1an.ffmpeg import extract_audio, frame_probe
+from Av1an.ffmpeg import extract_audio
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine, extra_splits
 from VMAF.vmaf import plot_vmaf
+from Av1an.vapoursynth import is_vapoursynth
 
 # todo, saving and loading more info to the scenes data
 def main_queue(args):
@@ -37,6 +38,9 @@ def main_queue(args):
         for file in args.queue:
             tm = time.time()
             args.input = file
+            is_vs = is_vapoursynth(args.input)
+            args.is_vs = is_vs
+            args.chunk_method = 'vs_ffms2' if is_vs else args.chunk_method
 
             if len(args.queue) > 1:
                 print(f'Encoding: {file}')
@@ -119,9 +123,7 @@ def startup(args: Args, chunk_queue: List[Chunk]):
         log(f'Resumed with {done} encoded clips done\n\n')
     else:
         initial = 0
-        total = frame_probe_cv2(args.input)
-        if total < 1:
-            total = frame_probe(args.input)
+        total = frame_probe_fast(args.input, args.is_vs)
         d = {'total': total, 'done': {}}
         with open(done_path, 'w') as done_file:
             json.dump(d, done_file)

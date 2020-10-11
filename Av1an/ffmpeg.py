@@ -9,10 +9,10 @@ from typing import List
 from .logger import log
 
 
-def frame_probe(source: Path):
+def frame_probe_ffmpeg(source: Path):
     """
     Get frame count.
-    Direct counting of frame count. Slow, Precise.
+    Direct counting of frame count using ffmpeg. Slow, Precise.
     :param: source: Path to input file
     """
     cmd = ["ffmpeg", "-hide_banner", "-i", source.as_posix(), "-map", "0:v:0", "-f", "null", "-"]

@@ -73,6 +73,9 @@ class Args(object):
         # Inner
         self.counter = None
 
+        # Vapoursynth
+        self.is_vs: bool = None
+
 
 def arg_parsing():
     """Command line parsing"""

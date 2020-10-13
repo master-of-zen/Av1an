@@ -8,10 +8,9 @@ from typing import List
 from numpy import linspace
 
 from .arg_parse import Args
-from .ffmpeg import frame_probe, get_keyframes
 from Scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
-from .utils import terminate
+from .utils import terminate, frame_probe
 
 
 def split_routine(args: Args, resuming: bool) -> List[int]:
@@ -147,7 +146,7 @@ def calc_split_locations(args: Args) -> List[int]:
     if args.split_method == 'pyscene':
         log(f'Starting scene detection Threshold: {args.threshold}, Min_scene_length: {args.min_scene_len}\n')
         try:
-            sc = pyscene(args.input, args.threshold, args.min_scene_len)
+            sc = pyscene(args.input, args.threshold, args.min_scene_len, args.is_vs, args.temp)
         except Exception as e:
             log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')
@@ -156,7 +155,7 @@ def calc_split_locations(args: Args) -> List[int]:
     # Splitting based on aom keyframe placement
     elif args.split_method == 'aom_keyframes':
         stat_file = args.temp / 'keyframes.log'
-        sc = aom_keyframes(args.input, stat_file, args.min_scene_len, args.ffmpeg_pipe, aom_keyframes_params)
+        sc = aom_keyframes(args.input, stat_file, args.min_scene_len, args.ffmpeg_pipe, aom_keyframes_params, args.is_vs)
     else:
         print(f'No valid split option: {args.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()

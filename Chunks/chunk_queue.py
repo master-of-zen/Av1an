@@ -6,11 +6,11 @@ from typing import List
 from Av1an.arg_parse import Args
 from Chunks.chunk import Chunk
 from Encoders import ENCODERS
-from Av1an.ffmpeg import frame_probe, get_keyframes
+from Av1an.ffmpeg import get_keyframes
 from Av1an.logger import log
 from Av1an.resume import read_done_data
 from Av1an.split import segment
-from Av1an.utils import terminate, frame_probe_cv2
+from Av1an.utils import terminate, frame_probe, frame_probe_fast
 
 # Todo: make -xs work with all
 
@@ -102,7 +102,7 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     """
     keyframes = get_keyframes(args.input)
 
-    end = [frame_probe_cv2(args.input)] if frame_probe_cv2(args.input) > 1 else [frame_probe(args.input)]
+    end = [frame_probe_fast(args.input, args.is_vs)]
 
     splits = [0] + split_locations + end
 
@@ -131,6 +131,7 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     return chunk_queue
 
 
+# TODO: Either update the name of this func, or change the docs, or create a new func just for vapoursynth
 def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[Chunk]:
     """
     Create a list of chunks using vspipe and ffms2 for frame accurate seeking
@@ -146,24 +147,28 @@ def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[C
     # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
     chunk_boundaries = zip(split_locs_fl, split_locs_fl[1:])
 
-    # create a vapoursynth script that will load the source with ffms2
-    load_script = args.temp / 'split' / 'loadscript.vpy'
     source_file = args.input.absolute().as_posix()
-    cache_file = (args.temp / 'split' / 'ffms2cache.ffindex').absolute().as_posix()
-    with open(load_script, 'w') as file:
-        file.writelines([
-            'from vapoursynth import core\n',
-            f'core.ffms2.Source("{source_file}", cachefile="{cache_file}").set_output()\n',
-        ])
+    vs_script = args.input
 
-    chunk_queue = [create_vsffms2_chunk(args, index, load_script, *cb) for index, cb in enumerate(chunk_boundaries)]
+    if not args.is_vs:
+        # create a vapoursynth script that will load the source with ffms2
+        load_script = args.temp / 'split' / 'loadscript.vpy'
+        cache_file = (args.temp / 'split' / 'ffms2cache.ffindex').absolute().as_posix()
+        with open(load_script, 'w') as file:
+            file.writelines([
+                'from vapoursynth import core\n',
+                f'core.ffms2.Source("{source_file}", cachefile="{cache_file}").set_output()\n',
+            ])
+        vs_script = load_script
+
+    chunk_queue = [create_vs_chunk(args, index, vs_script, *cb) for index, cb in enumerate(chunk_boundaries)]
 
     return chunk_queue
 
 
-def create_vsffms2_chunk(args: Args, index: int, load_script: Path, frame_start: int, frame_end: int) -> Chunk:
+def create_vs_chunk(args: Args, index: int, vs_script: Path, frame_start: int, frame_end: int) -> Chunk:
     """
-    Creates a chunk using vspipe and ffms2
+    Creates a chunk using vspipe
 
     :param args: the Args
     :param load_script: the path to the .vpy script for vspipe
@@ -177,11 +182,11 @@ def create_vsffms2_chunk(args: Args, index: int, load_script: Path, frame_start:
     frames = frame_end - frame_start
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
-    ffmpeg_gen_cmd = ['vspipe', load_script.as_posix(), '-y', '-', '-s', str(frame_start), '-e', str(frame_end)]
+    vspipe_gen_cmd = ['vspipe', vs_script.as_posix(), '-y', '-', '-s', str(frame_start), '-e', str(frame_end)]
     extension = ENCODERS[args.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
-    chunk = Chunk(args.temp, index, ffmpeg_gen_cmd, extension, size, frames)
+    chunk = Chunk(args.temp, index, vspipe_gen_cmd, extension, size, frames)
 
     return chunk
 

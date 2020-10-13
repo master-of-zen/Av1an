@@ -97,7 +97,7 @@ With your own parameters:
                             (Keep in mind that speed also depends on set aomenc parameters)
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
-                            ['hybrid'(default), 'select', 'vs_ffms2']
+                            ['hybrid'(default), 'select', 'vs_ffms2', 'vs_lsmash']
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 

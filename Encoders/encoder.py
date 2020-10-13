@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from distutils.spawn import find_executable
 from typing import Tuple, Optional
 import subprocess
-from subprocess import PIPE, STDOUT
+from subprocess import PIPE, STDOUT, DEVNULL
 
 from Av1an.arg_parse import Args
 from Chunks.chunk import Chunk
@@ -101,7 +101,7 @@ class Encoder(ABC):
         elif c.vmaf_target_cq:
             enc_cmd = self.man_q(enc_cmd, c.vmaf_target_cq)
 
-        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
         ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
         pipe = subprocess.Popen(enc_cmd, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                                 stderr=STDOUT,

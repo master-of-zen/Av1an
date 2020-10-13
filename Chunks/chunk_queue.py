@@ -75,6 +75,7 @@ def create_encoding_queue(args: Args, split_locations: List[int]) -> List[Chunk]
         'segment': create_video_queue_segment,
         'select': create_video_queue_select,
         'vs_ffms2': create_video_queue_vsffms2,
+        'vs_lsmash': create_video_queue_vslsmash,
         'hybrid': create_video_queue_hybrid
     }
     chunk_queue = chunk_method_gen[args.chunk_method](args, split_locations)
@@ -131,8 +132,19 @@ def create_video_queue_hybrid(args: Args, split_locations: List[int]) -> List[Ch
     return chunk_queue
 
 
-# TODO: Either update the name of this func, or change the docs, or create a new func just for vapoursynth
 def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[Chunk]:
+    script = "from vapoursynth import core\n" \
+             "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
+    return create_video_queue_vs(args, split_locations, script)
+
+
+def create_video_queue_vslsmash(args: Args, split_locations: List[int]) -> List[Chunk]:
+    script = "from vapoursynth import core\n" \
+             "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
+    return create_video_queue_vs(args, split_locations, script)
+
+
+def create_video_queue_vs(args: Args, split_locations: List[int], script: List[str]) -> List[Chunk]:
     """
     Create a list of chunks using vspipe and ffms2 for frame accurate seeking
 
@@ -154,11 +166,8 @@ def create_video_queue_vsffms2(args: Args, split_locations: List[int]) -> List[C
         # create a vapoursynth script that will load the source with ffms2
         load_script = args.temp / 'split' / 'loadscript.vpy'
         cache_file = (args.temp / 'split' / 'ffms2cache.ffindex').absolute().as_posix()
-        with open(load_script, 'w') as file:
-            file.writelines([
-                'from vapoursynth import core\n',
-                f'core.ffms2.Source("{source_file}", cachefile="{cache_file}").set_output()\n',
-            ])
+        with open(load_script, 'w+') as file:
+            file.write(script.format(source_file, cache_file))
         vs_script = load_script
 
     chunk_queue = [create_vs_chunk(args, index, vs_script, *cb) for index, cb in enumerate(chunk_boundaries)]

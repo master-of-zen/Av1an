@@ -49,7 +49,7 @@ def check_exes(args: Args):
         print('No ffmpeg')
         terminate()
 
-    if args.chunk_method == 'vs_ffms2' and (not find_executable('vspipe')):
+    if args.chunk_method in ['vs_ffms2', 'vs_lsmash'] and (not find_executable('vspipe')):
         print('vspipe executable not found')
         terminate()
 

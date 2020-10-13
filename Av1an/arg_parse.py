@@ -96,7 +96,7 @@ def arg_parsing():
     # Splitting
     split_group = parser.add_argument_group('Splitting')
     split_group.add_argument('--chunk_method', '-cm', type=str, default='hybrid', help='Method for creating chunks',
-                             choices=['select', 'vs_ffms2', 'hybrid'])
+                             choices=['select', 'vs_ffms2', 'vs_lsmash', 'hybrid'])
     split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
     split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
                              choices=['pyscene', 'aom_keyframes'])

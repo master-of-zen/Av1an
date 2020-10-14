@@ -150,6 +150,7 @@ def create_video_queue_vs(args: Args, split_locations: List[int], script: str) -
 
     :param args: the Args
     :param split_locations: a list of frames to split on
+    :param script: source filter script to use with vspipe (ignored with vs input)
     :return: A list of chunks
     """
     # add first frame and last frame

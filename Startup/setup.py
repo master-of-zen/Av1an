@@ -57,7 +57,7 @@ def check_exes(args: Args):
         try:
             import vapoursynth
             plugins = vapoursynth.get_core().get_plugins()
-        except:
+        except ModuleNotFoundError:
             print('Vapoursynth is not installed')
             terminate()
 

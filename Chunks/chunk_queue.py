@@ -144,7 +144,7 @@ def create_video_queue_vslsmash(args: Args, split_locations: List[int]) -> List[
     return create_video_queue_vs(args, split_locations, script)
 
 
-def create_video_queue_vs(args: Args, split_locations: List[int], script: List[str]) -> List[Chunk]:
+def create_video_queue_vs(args: Args, split_locations: List[int], script: str) -> List[Chunk]:
     """
     Create a list of chunks using vspipe and ffms2 for frame accurate seeking
 

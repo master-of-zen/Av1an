@@ -1,6 +1,6 @@
 #!/bin/env python
 
-from os import mkfifo
+import sys
 from subprocess import Popen
 
 from scenedetect.detectors import ContentDetector
@@ -11,6 +11,9 @@ from scenedetect.frame_timecode import FrameTimecode
 from Av1an.logger import log
 from Av1an.utils import frame_probe
 from Av1an.vapoursynth import compose_vapoursynth_pipe
+
+if sys.platform == "linux":
+    from os import mkfifo
 
 
 def pyscene(video, threshold, min_scene_len, is_vs, temp):
@@ -26,8 +29,12 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp):
     if is_vs:
         # Handling vapoursynth, so we need to create a named pipe to feed to VideoManager.
         # TODO: Do we clean this up after pyscenedetect has run, or leave it as part of the temp dir, where it will be cleaned up later?
-        vspipe_fifo = temp / 'vspipe.y4m'
-        mkfifo(vspipe_fifo)
+        if sys.platform == "linux":
+            vspipe_fifo = temp / 'vspipe.y4m'
+            mkfifo(vspipe_fifo)
+        else:
+            vspipe_fifo = None
+
         vspipe_cmd = compose_vapoursynth_pipe(video, vspipe_fifo)
         vspipe_process = Popen(vspipe_cmd)
 

@@ -148,6 +148,8 @@ With your own parameters:
                             1 and 2 probes have special cases to try to work with few data points.
                             Optimal is 4-6 probes. Default: 4
     
+    --vmaf_filter           Filter used for vmaf calculation
+    
     --vmaf_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
     
     --n_threads             Limit number of threads that used for vmaf calculation

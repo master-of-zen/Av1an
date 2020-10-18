@@ -24,7 +24,7 @@ class X265(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--y4m', *a.video_params, '-', '-o', output]
+                ['x265', '--y4m', '--frames', str(c.frames), *a.video_params, '-', '-o', output]
             )
         ]
 
@@ -32,12 +32,12 @@ class X265(Encoder):
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--log-level', 'error', '--no-progress', '--pass', '1', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log',
+                ['x265', '--log-level', 'error', '--no-progress', '--pass', '1', '--y4m', '--frames', str(c.frames), *a.video_params, '--stats', f'{c.fpf}.log',
                  '-', '-o', os.devnull]
             ),
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--log-level', 'error', '--pass', '2', '--y4m', *a.video_params, '--stats', f'{c.fpf}.log',
+                ['x265', '--log-level', 'error', '--pass', '2', '--y4m', '--frames', str(c.frames), *a.video_params, '--stats', f'{c.fpf}.log',
                  '-', '-o', output]
             )
         ]
@@ -62,4 +62,4 @@ class X265(Encoder):
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
 
-        return re.search(r"^(\d+)", line)
+        return re.search(r"^\[.*\]\s(\d+)\/\d+", line)

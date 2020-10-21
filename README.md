@@ -31,8 +31,7 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --file_path        Input file(s) (relative or absolute path). Will be processed with same
-                            settings.
+    -i   --file_path        Input file(s) (relative or absolute path)
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`

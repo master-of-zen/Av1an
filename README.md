@@ -172,7 +172,6 @@ With your own parameters:
 *  Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
 *  Both video and audio transcoding with FFmpeg.
 *  Logging of progress of all encoders.
-*  "Boosting" quality of dark scenes based on their brightness.
 
 ## Install
 

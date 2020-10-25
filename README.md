@@ -75,7 +75,7 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -ff  --ffmpeg           FFmpeg options video options. Applied to each encoding segment ndividually.
+    -ff  --ffmpeg           FFmpeg options video options. Applied to each encoding segment individually.
                           (Warning: Cropping doesn't work with Target VMAF mode)
                             Example:
                             --ff " -vf scale=320:240 "

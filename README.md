@@ -186,6 +186,11 @@ When installing under Windows, select the option `add Python to PATH` in the ins
   *  [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
   *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
   *  [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
+ * Optional :
+   * [Vapoursynth](http://www.vapoursynth.com/)
+   * [ffms2](https://github.com/FFMS/ffms2) 
+   * [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
+   * [mkvmerge](https://mkvtoolnix.download/)
 
 * With a package manager:
   *  [PyPI](https://pypi.org/project/Av1an/)

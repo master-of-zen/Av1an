@@ -177,7 +177,7 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
                      vmaf_rate=args.vmaf_rate)
-    score = read_vmaf_json(file, 20)
+    score = read_vmaf_json(file)
 
     return score
 

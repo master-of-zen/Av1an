@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate cpython;
 // Reading
 use std::mem::transmute;
@@ -50,7 +49,7 @@ fn main (){
 }
 
 
-fn rust_aom_keyframes(_py: Python, stat_file: &str) -> PyResult<Vec<f64>>{
+fn rust_aom_keyframes(_py: Python, stat_file: &str) -> PyResult<Vec<i64>>{
     unimplemented!();
 }
 

@@ -32,8 +32,12 @@ def read_vmaf_json(file, percentile=0):
         # Using 2 standart deviations to weight for bad frames
         mean = np.mean(vmafs)
         dev = np.std(vmafs)
+        minimum = np.min(vmafs)
+
 
         perc = mean - (2 * dev)
+
+        perc = max(perc, minimum)
 
     else:
         perc = round(np.percentile(vmafs, percentile), 2)

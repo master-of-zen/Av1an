@@ -15,6 +15,10 @@ from Av1an.utils import list_index_of_regex
 
 
 class Vvc(Encoder):
+    """
+    Redo after VVenC default and expert app have concatenation
+    """
+
 
     def __init__(self):
         super(Vvc, self).__init__(

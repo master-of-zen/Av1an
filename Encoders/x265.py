@@ -14,7 +14,7 @@ class X265(Encoder):
         super().__init__(
             encoder_bin='x265',
             encoder_help='x265 --fullhelp',
-            default_args=['-p', 'slow', '--crf', '23'],
+            default_args=['-p', 'slow', '--crf', '23', '-D', '10'],
             default_passes=1,
             default_q_range=(20, 40),
             output_extension='mkv'

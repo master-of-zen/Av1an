@@ -48,7 +48,7 @@ def vvc_concat(temp: Path, output: Path):
     output = subprocess.run(cmd, shell=True)
 
 
-def concatenate_ffmpeg(temp: Path, output, encoder: str):
+def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     """
     Uses ffmpeg to concatenate encoded segments into the final file
 
@@ -70,20 +70,20 @@ def concatenate_ffmpeg(temp: Path, output, encoder: str):
     # Add the audio file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
-        audio = ('-i', audio_file, '-c:a', 'copy', '-map', '1')
+        audio = ('-i', audio_file.as_posix(), '-c:a', 'copy', '-map', '1')
     else:
         audio = ()
 
     if encoder == 'x265':
 
         cmd = ['ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0',
-               '-i', temp / "concat", *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov', '-map', '0', '-f',
-               'mp4', output]
+               '-i', (temp / "concat").as_posix(), *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov',
+               '-map', '0', '-f', 'mp4', output.as_posix()]
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     else:
         cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
-               temp / "concat", *audio, '-c', 'copy', '-map', '0', output]
+               (temp / "concat").as_posix(), *audio, '-c', 'copy', '-map', '0', output.as_posix()]
 
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 

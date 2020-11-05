@@ -36,7 +36,8 @@ With your own parameters:
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`,`vvc`)
+    -enc --encoder          Encoder to use 
+                            (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`,`vvc`)
                             Default: aom
                             Example: -enc rav1e
 

@@ -7,7 +7,8 @@ install:
 - cmd: '"%PYTHON%\python.exe" -m pip install pyinstaller scipy matplotlib'
 
 build_script:
-- cmd: '"%PYTHON%\Scripts\pyinstaller" --onefile av1an.py'
+- cmd: '"%PYTHON%\python.exe" libAv1an/setup.py install'
+- cmd: '"%PYTHON%\Scripts\pyinstaller" --onefile Av1an/av1an.py'
 
 test: off
 

@@ -62,6 +62,7 @@ jobs:
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install --no-cache-dir -r requirements.txt 
           pip3 install --no-cache-dir ${{ env.pip_deps }}
+          python3 libAv1an/setup.py install
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do
@@ -71,7 +72,7 @@ jobs:
       - name: Testing ${{ matrix.name }}
         run: |
           [ "${{ matrix.temp }}" != "" ] && TEMP=${{ matrix.temp }} || TEMP=${{ env.temp }}
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "${TEMP}/bus_cif.mkv" ${{ matrix.flags }}
+          ./Av1an/av1an.py -i bus_cif.y4m -tr 20 --keep -o "${TEMP}/bus_cif.mkv" ${{ matrix.flags }}
           du -h "${TEMP}/bus_cif.mkv"
           echo "TEMPPATH=$TEMP" >> $GITHUB_ENV
       - name: Upload video

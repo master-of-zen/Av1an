@@ -17,7 +17,7 @@ from Av1an.bar import process_pipe
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
-from .vmaf import call_vmaf, read_vmaf_json
+from .vmaf import call_vmaf, read_weighted_vmaf
 
 
 def target_vmaf_routine(args: Args, chunk: Chunk):
@@ -177,7 +177,7 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
                      vmaf_rate=args.vmaf_rate)
-    score = read_vmaf_json(file)
+    score = read_weighted_vmaf(file)
 
     return score
 

@@ -17,16 +17,27 @@ import matplotlib
 
 matplotlib.use('Agg')
 
+def read_json(file):
+    """
+    Reads file and return dictionary of it's contents
 
-def read_vmaf_json(file, percentile=0):
+    :return: Vmaf file dictionary
+    :rtype: dict
+    """
+    with open(file, 'r') as f:
+        fl = json.load(f)
+        return fl
+
+def read_weighted_vmaf(file, percentile=0):
     """Reads vmaf file with vmaf scores in it and return N percentile score from it.
 
     :return: N percentile score
     :rtype: float
     """
-    with open(file, 'r') as f:
-        file = json.load(f)
-        vmafs = [x['metrics']['vmaf'] for x in file['frames']]
+
+    jsn = read_json(file)
+
+    vmafs = [x['metrics']['vmaf'] for x in jsn['frames']]
 
     if percentile == 0:
         # Using 2 standart deviations to weight for bad frames
@@ -124,10 +135,10 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
     Read vmaf json and plot VMAF values for each frame
     """
 
-    perc_1 = read_vmaf_json(scores, 1)
-    perc_25 = read_vmaf_json(scores, 25)
-    perc_75 = read_vmaf_json(scores, 75)
-    mean = read_vmaf_json(scores, 50)
+    perc_1 = read_weighted_vmaf(scores, 1)
+    perc_25 = read_weighted_vmaf(scores, 25)
+    perc_75 = read_weighted_vmaf(scores, 75)
+    mean = read_weighted_vmaf(scores, 50)
 
     with open(scores) as f:
         file = json.load(f)

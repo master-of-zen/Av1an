@@ -14,16 +14,27 @@ from libAv1an.LibAv1an.run_cmd import process_pipe
 from libAv1an.Chunks.chunk import Chunk
 from libAv1an.LibAv1an.callbacks import Callbacks
 
+def read_json(file):
+    """
+    Reads file and return dictionary of it's contents
 
-def read_vmaf_json(file, percentile=0):
+    :return: Vmaf file dictionary
+    :rtype: dict
+    """
+    with open(file, 'r') as f:
+        fl = json.load(f)
+        return fl
+
+def read_weighted_vmaf(file, percentile=0):
     """Reads vmaf file with vmaf scores in it and return N percentile score from it.
 
     :return: N percentile score
     :rtype: float
     """
-    with open(file, 'r') as f:
-        file = json.load(f)
-        vmafs = [x['metrics']['vmaf'] for x in file['frames']]
+
+    jsn = read_json(file)
+
+    vmafs = [x['metrics']['vmaf'] for x in jsn['frames']]
 
     if percentile == 0:
         # Using 2 standart deviations to weight for bad frames

@@ -13,7 +13,7 @@ from libAv1an.LibAv1an.run_cmd import process_pipe
 from libAv1an.Chunks.chunk import Chunk
 from libAv1an.LibAv1an.commandtypes import CommandPair, Command
 from libAv1an.LibAv1an.callbacks import Callbacks
-from libAv1an.VMAF.vmaf import call_vmaf, read_vmaf_json
+from libAv1an.VMAF.vmaf import call_vmaf, read_weighted_vmaf
 
 
 def target_vmaf_routine(args: Args, chunk: Chunk, cb: Callbacks):
@@ -149,7 +149,7 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
                      vmaf_rate=args.vmaf_rate)
-    score = read_vmaf_json(file)
+    score = read_weighted_vmaf(file)
 
     return score
 

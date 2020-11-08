@@ -8,7 +8,7 @@ from libAv1an.VMAF.target_vmaf import interpolate_data
 from libAv1an.LibAv1an.callbacks import Callbacks
 from Av1an.bar import new_tqdm_bar, svt_vp9_bar, update_tqdm_bar, start_counter, end_counter
 from Av1an.logger import *
-from libAv1an.VMAF.vmaf import read_vmaf_json
+from libAv1an.VMAF.vmaf import read_weighted_vmaf
 from libAv1an.LibAv1an.args import Args
 import json
 
@@ -37,10 +37,10 @@ def plot_vmaf_score_file(scores: Path, plot_path: Path):
     Read vmaf json and plot VMAF values for each frame
     """
 
-    perc_1 = read_vmaf_json(scores, 1)
-    perc_25 = read_vmaf_json(scores, 25)
-    perc_75 = read_vmaf_json(scores, 75)
-    mean = read_vmaf_json(scores, 50)
+    perc_1 = read_weighted_vmaf(scores, 1)
+    perc_25 = read_weighted_vmaf(scores, 25)
+    perc_75 = read_weighted_vmaf(scores, 75)
+    mean = read_weighted_vmaf(scores, 50)
 
     with open(scores) as f:
         file = json.load(f)

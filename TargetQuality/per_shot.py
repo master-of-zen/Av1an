@@ -17,19 +17,19 @@ from Av1an.bar import process_pipe
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
-from .vmaf import call_vmaf, read_weighted_vmaf
+from VMAF import call_vmaf, read_weighted_vmaf
 
 
-def target_vmaf_routine(args: Args, chunk: Chunk):
+def per_shot_target_quality_routine(args: Args, chunk: Chunk):
     """
-    Applies target vmaf to this chunk. Determines what the cq value should be and sets the
-    vmaf_target_cq for this chunk
+    Applies per_shot_target_quality to this chunk. Determines what the cq value should be and sets the
+    per_shot_target_quality_cq for this chunk
 
     :param args: the Args
     :param chunk: the Chunk
     :return: None
     """
-    chunk.vmaf_target_cq = target_vmaf(chunk, args)
+    chunk.per_shot_target_quality_cq = per_shot_target_quality(chunk, args)
 
 
 def gen_probes_names(chunk: Chunk, q):
@@ -38,7 +38,7 @@ def gen_probes_names(chunk: Chunk, q):
     return chunk.fake_input_path.with_name(f'v_{q}{chunk.name}').with_suffix('.ivf')
 
 
-def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
+def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPair:
     """
     Generate and return commands for probes at set Q values
     These are specifically not the commands that are generated
@@ -46,7 +46,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, vmaf_rate) -> CommandPair:
     should be faster than the actual encoding commands.
     These should not be moved into encoder classes at this point.
     """
-    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{vmaf_rate}))',
+    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{probing_rate}))',
             *ffmpeg_pipe]
 
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
@@ -102,7 +102,7 @@ def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
     return pipe
 
 
-def get_target_q(scores, vmaf_target):
+def get_target_q(scores, target_quality):
     """
     Interpolating scores to get Q closest to target VMAF
     Interpolation type for 2 probes changes to linear
@@ -117,12 +117,12 @@ def get_target_q(scores, vmaf_target):
     f = interpolate.interp1d(x, y, kind=interpolation)
     xnew = np.linspace(min(x), max(x), max(x) - min(x))
     tl = list(zip(xnew, f(xnew)))
-    q = min(tl, key=lambda l: abs(l[1] - vmaf_target))
+    q = min(tl, key=lambda l: abs(l[1] - target_quality))
 
     return int(q[0]), round(q[1], 3)
 
 
-def interpolate_data(vmaf_cq: list, vmaf_target):
+def interpolate_data(vmaf_cq: list, target_quality):
     x = [x[1] for x in sorted(vmaf_cq)]
     y = [float(x[0]) for x in sorted(vmaf_cq)]
 
@@ -132,8 +132,8 @@ def interpolate_data(vmaf_cq: list, vmaf_target):
 
     # Getting value closest to target
     tl = list(zip(xnew, f(xnew)))
-    vmaf_target_cq = min(tl, key=lambda l: abs(l[1] - vmaf_target))
-    return vmaf_target_cq, tl, f, xnew
+    target_quality_cq = min(tl, key=lambda l: abs(l[1] - target_quality))
+    return target_quality_cq, tl, f, xnew
 
 
 def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
@@ -142,7 +142,7 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
     x = [x[1] for x in sorted(vmaf_cq)]
     y = [float(x[0]) for x in sorted(vmaf_cq)]
 
-    cq, tl, f, xnew = interpolate_data(vmaf_cq, args.vmaf_target)
+    cq, tl, f, xnew = interpolate_data(vmaf_cq, args.target_quality)
     matplotlib.use('agg')
     plt.ioff()
     plt.plot(xnew, f(xnew), color='tab:blue', alpha=1)
@@ -171,12 +171,12 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
     """
 
 
-    cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.vmaf_rate)
+    cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.probing_rate)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
     process_pipe(pipe)
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
-                     vmaf_rate=args.vmaf_rate)
+                     vmaf_rate=args.probing_rate)
     score = read_weighted_vmaf(file)
 
     return score
@@ -226,7 +226,7 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     return new_point
 
 
-def target_vmaf(chunk: Chunk, args: Args):
+def per_shot_target_quality(chunk: Chunk, args: Args):
     vmaf_cq = []
     frames = chunk.frames
     q_list = []
@@ -240,14 +240,14 @@ def target_vmaf(chunk: Chunk, args: Args):
     score = vmaf_probe(chunk, last_q, args)
     vmaf_cq.append((score, last_q))
 
-    if args.vmaf_steps < 3:
+    if args.probes < 3:
         #Use Euler's method with known relation between cq and vmaf
         vmaf_cq_deriv = -0.18
         ## Formula -ln(1-score/100) = vmaf_cq_deriv*last_q + constant
         #constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
         ## Formula -ln(1-args.vmaf_target/100) = vmaf_cq_deriv*cq + constant
         #cq = (-ln(1-args.vmaf_target/100) - constant)/vmaf_cq_deriv
-        next_q = int(round(last_q + (transform_vmaf(args.vmaf_target)-transform_vmaf(score))/vmaf_cq_deriv))
+        next_q = int(round(last_q + (transform_vmaf(args.target_quality) - transform_vmaf(score))/vmaf_cq_deriv))
 
         #Clamp
         if next_q < args.min_q:
@@ -256,17 +256,17 @@ def target_vmaf(chunk: Chunk, args: Args):
             next_q = args.max_q
 
         #Single probe cq guess or exit to avoid divide by zero
-        if args.vmaf_steps == 1 or next_q == last_q:
+        if args.probes == 1 or next_q == last_q:
             return next_q
 
         #Second probe at guessed value
         score_2 = vmaf_probe(chunk, next_q, args)
 
         #Calculate slope
-        vmaf_cq_deriv = (transform_vmaf(score_2)-transform_vmaf(score))/(next_q-last_q)
+        vmaf_cq_deriv = (transform_vmaf(score_2) - transform_vmaf(score)) / (next_q-last_q)
 
         #Same deal different slope
-        next_q = int(round(next_q+(transform_vmaf(args.vmaf_target)-transform_vmaf(score_2))/vmaf_cq_deriv))
+        next_q = int(round(next_q+(transform_vmaf(args.target_quality)-transform_vmaf(score_2))/vmaf_cq_deriv))
 
         #Clamp
         if next_q < args.min_q:
@@ -283,7 +283,7 @@ def target_vmaf(chunk: Chunk, args: Args):
     vmaf_cq_upper = last_q
 
     # Branch
-    if score < args.vmaf_target:
+    if score < args.target_quality:
         next_q = args.min_q
         q_list.append(args.min_q)
     else:
@@ -294,14 +294,14 @@ def target_vmaf(chunk: Chunk, args: Args):
     score = vmaf_probe(chunk, next_q, args)
     vmaf_cq.append((score, next_q))
 
-    if next_q == args.min_q and score < args.vmaf_target:
+    if next_q == args.min_q and score < args.target_quality:
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
             f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
         return next_q
 
-    elif next_q == args.max_q and score > args.vmaf_target:
+    elif next_q == args.max_q and score > args.target_quality:
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
@@ -309,7 +309,7 @@ def target_vmaf(chunk: Chunk, args: Args):
         return next_q
 
     # Set boundary
-    if score < args.vmaf_target:
+    if score < args.target_quality:
         vmaf_lower = score
         vmaf_cq_lower = next_q
     else:
@@ -317,8 +317,8 @@ def target_vmaf(chunk: Chunk, args: Args):
         vmaf_cq_upper = next_q
 
     # VMAF search
-    for _ in range(args.vmaf_steps - 2):
-        new_point = weighted_search(vmaf_cq_lower, vmaf_lower, vmaf_cq_upper, vmaf_upper, args.vmaf_target)
+    for _ in range(args.probes - 2):
+        new_point = weighted_search(vmaf_cq_lower, vmaf_lower, vmaf_cq_upper, vmaf_upper, args.target_quality)
         if new_point in [x[1] for x in vmaf_cq]:
             break
 
@@ -327,14 +327,14 @@ def target_vmaf(chunk: Chunk, args: Args):
         vmaf_cq.append((score, new_point))
 
         # Update boundary
-        if score < args.vmaf_target:
+        if score < args.target_quality:
             vmaf_lower = score
             vmaf_cq_lower = new_point
         else:
             vmaf_upper = score
             vmaf_cq_upper = new_point
 
-    q, q_vmaf = get_target_q(vmaf_cq, args.vmaf_target)
+    q, q_vmaf = get_target_q(vmaf_cq, args.target_quality)
 
     log(f'Chunk: {chunk.name}, Fr: {frames}\n'
         f'Q: {sorted([x[1] for x in vmaf_cq])}\n'

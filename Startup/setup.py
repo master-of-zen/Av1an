@@ -15,7 +15,7 @@ from Av1an.arg_parse import Args
 from Av1an.utils import terminate
 
 
-def set_vmaf(args):
+def set_target_quality(args):
     """
     Av1an setup for VMAF
 
@@ -26,8 +26,8 @@ def set_vmaf(args):
             print(f'No such model: {Path(args.vmaf_path).as_posix()}')
             terminate()
 
-    if args.vmaf_steps < 4:
-        print('Target vmaf require more than 3 probes/steps')
+    if args.probes < 4:
+        print('Target quality with less than 4 probes is experimental')
         terminate()
 
     encoder = ENCODERS[args.encoder]
@@ -109,7 +109,7 @@ def startup_check(args: Args):
 
     check_exes(args)
 
-    set_vmaf(args)
+    set_target_quality(args)
 
     if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
         print('Reusing the first pass is only supported with \

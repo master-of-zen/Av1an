@@ -54,12 +54,12 @@ class Args(object):
         self.vmaf_res: str = None
 
         # Target Vmaf
-        self.vmaf_target: int = None
-        self.vmaf_steps: int = None
+        self.target_quality: int = None
+        self.probes: int = None
         self.min_q: int = None
         self.max_q: int = None
         self.vmaf_plots: bool = None
-        self.vmaf_rate: int = None
+        self.probing_rate: int = None
         self.n_threads: int = None
         self.vmaf_filter: str = None
 
@@ -138,14 +138,14 @@ def arg_parsing():
     vmaf_group.add_argument('--vmaf_res', type=str, default="1920x1080", help='Resolution used in vmaf calculation')
     vmaf_group.add_argument('--n_threads', type=int, default=None, help='Threads for vmaf calculation')
 
-    # Target Vmaf
-    tvmaf_group = parser.add_argument_group('Target VMAF')
-    tvmaf_group.add_argument('--vmaf_target', type=float, help='Value of Vmaf to target')
-    tvmaf_group.add_argument('--vmaf_steps', type=int, default=4, help='Steps between min and max qp for target vmaf')
-    tvmaf_group.add_argument('--min_q', type=int, default=None, help='Min q for target vmaf')
-    tvmaf_group.add_argument('--max_q', type=int, default=None, help='Max q for target vmaf')
-    tvmaf_group.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
-    tvmaf_group.add_argument('--vmaf_rate', type=int, default=4, help='Framerate for probes, 0 - original')
-    tvmaf_group.add_argument('--vmaf_filter', type=str, default=None, help='Filter applied to source at vmaf calcualation, use if you crop source')
+    # Target Quality
+    tq_group = parser.add_argument_group('Target Quality')
+    tq_group.add_argument('--target_quality', type=float, help='Value of Vmaf to target')
+    tq_group.add_argument('--probes', type=int, default=4, help='Number of probes to make for target_quality')
+    tq_group.add_argument('--min_q', type=int, default=None, help='Min q for target_quality')
+    tq_group.add_argument('--max_q', type=int, default=None, help='Max q for target_quality')
+    tq_group.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
+    tq_group.add_argument('--probing_rate', type=int, default=4, help='Framerate for probes, 0 - original')
+    tq_group.add_argument('--vmaf_filter', type=str, default=None, help='Filter applied to source at vmaf calcualation, use if you crop source')
 
     return Args(vars(parser.parse_args()))

@@ -14,7 +14,7 @@ from Chunks.chunk import Chunk
 from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
-from VMAF.target_vmaf import target_vmaf_routine
+from TargetQuality import per_shot_target_quality_routine
 from Av1an.utils import frame_probe_fast, frame_probe, terminate, process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
@@ -166,8 +166,8 @@ def encode(chunk: Chunk, args: Args):
         log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
 
         # Target Vmaf Mode
-        if args.vmaf_target:
-            target_vmaf_routine(args, chunk)
+        if args.target_quality:
+            per_shot_target_quality_routine(args, chunk)
 
         ENCODERS[args.encoder].on_before_chunk(args, chunk)
 

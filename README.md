@@ -36,7 +36,7 @@ With your own parameters:
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use 
+    -enc --encoder          Encoder to use
                             (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`,`vvc`)
                             Default: aom
                             Example: -enc rav1e
@@ -45,11 +45,11 @@ With your own parameters:
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1, 
+                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1,
                             VPX: 2, x265: 1, x264: 1, VVC:1)
 
     -w   --workers          Override number of workers.
-                                
+
     --resume                If encode was stopped/quit resumes encode with saving all progress
                             Resuming automatically skips scenedetection, audio encoding/copy,
                             spliting, so resuming only possible after actuall encoding is started.
@@ -64,7 +64,7 @@ With your own parameters:
     -log --logging          Path to .log file(By default created in temp folder)
 
     --temp                  Set path for temporally folders. Default: .temp
-    
+
     -cfg                    Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
@@ -113,23 +113,24 @@ With your own parameters:
                             -xs 200 will add splits at 200,400,600,800.
 
 
-<h3 align="center">Target VMAF</h3>
- 
- 
-    --vmaf_target           Vmaf value to target. Supported for all encoders(Exception:VVC).
+<h3 align="center">Target Quality</h3>
+
+
+    --targe_quality         Quality value to target. Counted as VMAF score.
+                            Supported for all encoders(Exception:VVC).
                             Best works in range 85-97.
                             When using this mode specify full encoding options.
                             Encoding options must include quantizer based mode,
                             and some quantizer option provided. (This value got replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
-                            
+
     --min_q, --max_q        Min,Max Q values limits for Target VMAF
                             If not set by user, encoder default will be used.
-                            
+
     --vmaf                  Calculate vmaf after encode is done.
                             showing vmaf values for all frames,
                             mean, 1,25,75 percentile.
-                            
+
     --vmaf_plots            Make plots for target_vmaf search decisions
                             (Exception: early skips)
                             Saved in temp folder
@@ -140,20 +141,20 @@ With your own parameters:
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if vmaf calculation doesn't work by default)
 
-    --vmaf_res              Resolution scaling for vmaf calculation, 
+    --vmaf_res              Resolution scaling for vmaf calculation,
                             vmaf_v0.6.1.pkl is 1920x1080 (by default),
                             vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf_path)
 
-    --vmaf_steps            Number of probes for interpolation.
+    --probes                Number of probes for interpolation.
                             1 and 2 probes have special cases to try to work with few data points.
                             Optimal is 4-6 probes. Default: 4
-    
+
     --vmaf_filter           Filter used for vmaf calculation. Passed format is filter_complex.
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
                             `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`
-    
-    --vmaf_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
-    
+
+    --probe_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
+
     --n_threads             Limit number of threads that used for vmaf calculation
                             Example: --n_threads 12
                             (Required if VMAF calculation gives error on high core counts)
@@ -189,7 +190,7 @@ When installing under Windows, select the option `add Python to PATH` in the ins
   *  [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
  * Optional :
    * [Vapoursynth](http://www.vapoursynth.com/)
-   * [ffms2](https://github.com/FFMS/ffms2) 
+   * [ffms2](https://github.com/FFMS/ffms2)
    * [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
    * [mkvmerge](https://mkvtoolnix.download/)
 

@@ -26,7 +26,7 @@ Example with default parameters:
 With your own parameters:
 
     av1an -i input -enc aom -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --split_method aom_keyframes --vmaf_target 95 --vmaf_path "vmaf_v0.6.1.pkl" -min_q 20 -max_q 60
+    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl" -min_q 20 -max_q 60
     -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k" -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
@@ -77,7 +77,8 @@ With your own parameters:
                             Example: -a '-c:a libopus -b:a  64k'
 
     -ff  --ffmpeg           FFmpeg options video options. Applied to each encoding segment individually.
-                          (Warning: Cropping doesn't work with Target VMAF mode)
+                            (Warning: Cropping doesn't work with Target VMAF mode without
+                            specifying it in --vmaf_filter)
                             Example:
                             --ff " -vf scale=320:240 "
 
@@ -167,7 +168,7 @@ With your own parameters:
 
 *  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 *  Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
-*  Target VMAF mode. Targeting end result visual quality.
+*  Target Quality mode. Targeting end result visual quality.
 *  Resuming encoding without loss of encoded progress.
 *  Simple and clean console look.
 *  Automatic detection of the number of workers the host can handle.

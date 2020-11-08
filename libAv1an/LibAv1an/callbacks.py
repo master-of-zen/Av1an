@@ -1,6 +1,9 @@
 
 class Callbacks(object):
     def __init__(self):
+        # All callbacks pass back the name as their first argument if assigned a name. this is done so that
+        # a program can distinguish between callbacks it registers.
+        #
         # log - Called when logging is requested - str: message to log
         #
         # newtask - Called whenever task changes
@@ -25,19 +28,22 @@ class Callbacks(object):
                               'logready': {}, 'startencode': {}, 'endencode': {}, 'svtvp9update': {},
                               'plotvmaffile': {}}
 
-    def subscribe(self, hook, function: classmethod, funcname=""):
-        if len(funcname) > 0:
-            self.subscriptions[hook][funcname] = function
+    def subscribe(self, hook, function: classmethod, name=""):
+        if len(name) > 0:
+            self.subscriptions[hook][name] = [function, name]
         else:
             self.subscriptions[hook][function.__name__] = function
 
-    def unsubscribe(self, hook, function: classmethod, funcname=""):
-        if len(funcname) > 0:
-            del(self.subscriptions[hook][funcname])
+    def unsubscribe(self, hook, function: classmethod, name=""):
+        if len(name) > 0:
+            del(self.subscriptions[hook][name])
         else:
             del(self.subscriptions[hook][function.__name__])
 
     def run_callback(self, hook, *args):
         for key in self.subscriptions[hook]:
-            self.subscriptions[hook][key](*args)
-
+            v = self.subscriptions[hook][key]
+            if isinstance(v, list):
+                v[0](v[1], *args)
+            else:
+                v(*args)

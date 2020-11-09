@@ -95,11 +95,10 @@ class Encoder(ABC):
         """
         filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
                               self.compose_2_pass(a, c, output)[current_pass - 1]
-
         if man_q:
             enc_cmd = self.man_q(enc_cmd, man_q)
-        elif c.vmaf_target_cq:
-            enc_cmd = self.man_q(enc_cmd, c.vmaf_target_cq)
+        elif c.per_shot_target_quality_cq:
+            enc_cmd = self.man_q(enc_cmd, c.per_shot_target_quality_cq)
 
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
         ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)

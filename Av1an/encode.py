@@ -165,7 +165,7 @@ def encode(chunk: Chunk, args: Args):
 
         log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
 
-        # Target Vmaf Mode
+        # Target Quality Mode
         if args.target_quality:
             per_shot_target_quality_routine(args, chunk)
 

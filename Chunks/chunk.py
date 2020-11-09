@@ -34,7 +34,7 @@ class Chunk:
         self.temp: Path = temp
         self.frames: int = frames
         self.output_ext: str = output_ext
-        self.vmaf_target_cq: Optional[int] = None
+        self.per_shot_target_quality_cq: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -48,7 +48,7 @@ class Chunk:
             'size': self.size,
             'frames': self.frames,
             'output_ext': self.output_ext,
-            'vmaf_target_cq': self.vmaf_target_cq,
+            'per_shot_target_quality_cq': self.per_shot_target_quality_cq,
         }
 
     @property
@@ -114,5 +114,5 @@ class Chunk:
         :return: A Chunk from the dictionary
         """
         chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'], d['size'], d['frames'])
-        chunk.vmaf_target_cq = d['vmaf_target_cq']
+        chunk.per_shot_target_quality_cq = d['per_shot_target_quality_cq']
         return chunk

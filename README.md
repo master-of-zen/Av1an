@@ -117,7 +117,8 @@ With your own parameters:
 <h3 align="center">Target Quality</h3>
 
 
-    --target_quality         Quality value to target. Counted as VMAF score.
+    --target_quality        Quality value to target.
+                            VMAF used as substructure for algorithms.
                             Supported for all encoders(Exception:VVC).
                             Best works in range 85-97.
                             When using this mode specify full encoding options.

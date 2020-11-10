@@ -20,4 +20,5 @@ def per_frame_target_quality_routine(args: Args, chunk: Chunk):
     chunk.per_frame_target_quality_cq = per_frame_target_quality(chunk, args)
 
 
-def
+de per_frame_target_quality(chunk, args):
+    return None

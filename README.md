@@ -169,7 +169,7 @@ With your own parameters:
 
 *  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
 *  Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
-*  Target Quality mode. Targeting end result visual quality.
+*  Target Quality mode. Targeting end result reference visual quality. VMAF used as substructure
 *  Resuming encoding without loss of encoded progress.
 *  Simple and clean console look.
 *  Automatic detection of the number of workers the host can handle.

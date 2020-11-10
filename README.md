@@ -31,7 +31,7 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --file_path        Input file(s) (relative or absolute path)
+    -i   --input            Input file(s) (relative or absolute path)
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
@@ -50,7 +50,7 @@ With your own parameters:
 
     -w   --workers          Override number of workers.
 
-    --resume                If encode was stopped/quit resumes encode with saving all progress
+    -r   --resume           If encode was stopped/quit resumes encode with saving all progress
                             Resuming automatically skips scenedetection, audio encoding/copy,
                             spliting, so resuming only possible after actuall encoding is started.
                             /.temp folder must be presented for resume.
@@ -65,7 +65,7 @@ With your own parameters:
 
     --temp                  Set path for temporally folders. Default: .temp
 
-    -cfg                    Save/Read config file with encoder, encoder parameters,
+    -cfg --config           Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
 
     --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.

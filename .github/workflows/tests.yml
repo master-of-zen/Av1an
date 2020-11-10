@@ -41,7 +41,7 @@ jobs:
           - name: video flags
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
           - name: target vmaf
-            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --vmaf_target 95
+            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --target_quality 95
           - name: extra splits
             flags: -xs 10
           - name: split method

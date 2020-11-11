@@ -141,6 +141,7 @@ def arg_parsing():
     # Target Quality
     tq_group = parser.add_argument_group('Target Quality')
     tq_group.add_argument('--target_quality', type=float, help='Value of Vmaf to target')
+    tq_group.add_argument('--target_quality_method', type=str, default='per_frame', help='Method selection for target quality')
     tq_group.add_argument('--probes', type=int, default=4, help='Number of probes to make for target_quality')
     tq_group.add_argument('--min_q', type=int, default=None, help='Min q for target_quality')
     tq_group.add_argument('--max_q', type=int, default=None, help='Max q for target_quality')

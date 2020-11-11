@@ -24,7 +24,7 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp):
     if not min_scene_len:
         min_scene_len = 15
 
-    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene lenght: {min_scene_len}, Is Vapoursynth input: {is_vs}\n')
+    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene length: {min_scene_len}\n Is Vapoursynth input: {is_vs}\n')
 
     if is_vs:
         # Handling vapoursynth, so we need to create a named pipe to feed to VideoManager.

@@ -129,7 +129,7 @@ def arg_parsing():
     ffmpeg_group = parser.add_argument_group('FFmpeg')
     ffmpeg_group.add_argument('--ffmpeg', '-ff', type=str, default='', help='FFmpeg commands')
     ffmpeg_group.add_argument('--audio_params', '-a', type=str, default='-c:a copy', help='FFmpeg audio settings')
-    ffmpeg_group.add_argument('--pix_format', '-fmt', type=str, default='yuv420p', help='FFmpeg pixel format')
+    ffmpeg_group.add_argument('--pix_format', '-fmt', type=str, default='yuv420p10le', help='FFmpeg pixel format')
 
     # Vmaf
     vmaf_group = parser.add_argument_group('VMAF')

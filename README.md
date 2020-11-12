@@ -83,8 +83,7 @@ With your own parameters:
                             --ff " -vf scale=320:240 "
 
     -fmt --pix_format       Setting custom pixel/bit format for piping
-                            (Default: 'yuv420p')
-                            Example for 10 bit source: 'yuv420p10le'
+                            (Default: 'yuv420p10le')
                             Based on encoder, options should be adjusted accordingly.
 
 <h3 align="center">Segmenting</h3>

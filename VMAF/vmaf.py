@@ -42,19 +42,14 @@ def read_weighted_vmaf(file, percentile=0):
     if percentile == 0:
         # Using 2 standart deviations to weight for bad frames
         mean = np.mean(vmafs)
-        dev = np.std(vmafs)
         minimum = np.min(vmafs)
-
-
-        perc = mean - (2 * dev)
-
-        perc = max(perc, minimum)
+        score = (mean * 1/3) + (minimum * 2/3)
 
     else:
-        perc = round(np.percentile(vmafs, percentile), 2)
+        score = round(np.percentile(vmafs, percentile), 2)
 
 
-    return perc
+    return score
 
 
 def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,

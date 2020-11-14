@@ -125,14 +125,12 @@ With your own parameters:
                             and some quantizer option provided. (This value got replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
 
-    --min_q, --max_q        Min,Max Q values limits for Target VMAF
-                            If not set by user, encoder default will be used.
+    --min_q, --max_q        Min,Max Q values limits
+                            If not set by user, default for encoder range will be used.
 
-    --vmaf                  Calculate vmaf after encode is done.
-                            showing vmaf values for all frames,
-                            mean, 1,25,75 percentile.
+    --vmaf                  Calculate vmaf after encode is done and make a plot.
 
-    --vmaf_plots            Make plots for target_vmaf search decisions
+    --vmaf_plots            Make plots for target quality search decisions
                             (Exception: early skips)
                             Saved in temp folder
 

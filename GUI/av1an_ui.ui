@@ -34,7 +34,7 @@
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_3">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
       <item>
        <layout class="QHBoxLayout" name="ButtonSelect" stretch="1,0,1,0,1,0,1">
         <property name="leftMargin">
@@ -50,9 +50,9 @@
          <number>10</number>
         </property>
         <item>
-         <widget class="QPushButton" name="pushButton_4">
+         <widget class="QPushButton" name="Input_Button">
           <property name="text">
-           <string>PushButton</string>
+           <string>Input</string>
           </property>
          </widget>
         </item>
@@ -70,9 +70,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="Video_Settings_Button">
           <property name="text">
-           <string>PushButton</string>
+           <string>Generic Settings</string>
           </property>
          </widget>
         </item>
@@ -90,9 +90,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="Encoder_Button">
           <property name="text">
-           <string>PushButton</string>
+           <string>Encoder</string>
           </property>
          </widget>
         </item>
@@ -110,9 +110,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="OutputButton">
           <property name="text">
-           <string>PushButton</string>
+           <string>Output</string>
           </property>
          </widget>
         </item>
@@ -125,6 +125,9 @@
           <width>800</width>
           <height>400</height>
          </size>
+        </property>
+        <property name="currentIndex">
+         <number>1</number>
         </property>
         <widget class="QWidget" name="page">
          <property name="sizePolicy">
@@ -185,7 +188,96 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QWidget" name="widget" native="true"/>
+           <widget class="QWidget" name="gen_set_wid" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QPushButton" name="pushButton_4">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>200</width>
+                 <height>200</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>30</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>GENERAL SETTINGS</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_3">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QWidget" name="widget_2" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <item>
+              <widget class="QPushButton" name="pushButton_3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>200</width>
+                 <height>200</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>30</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>Encoder Stuff</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_4">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="pushButton">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>200</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>30</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>OUTPUT STUFF</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -232,9 +324,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_5">
+         <widget class="QPushButton" name="StartStop">
           <property name="text">
-           <string>PushButton</string>
+           <string>Start</string>
           </property>
          </widget>
         </item>
@@ -246,5 +338,22 @@
   </widget>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>Video_Settings_Button</sender>
+   <signal>clicked()</signal>
+   <receiver>gen_set_wid</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>371</x>
+     <y>34</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>479</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

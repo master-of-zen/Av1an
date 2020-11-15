@@ -21,17 +21,23 @@ jobs:
   validate:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    container: registry.gitlab.com/luigi311/av1-docker:latest
+    container: registry.gitlab.com/luigi311/encoders-docker:latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: baseline
             flags: ""
+          - name: svt_av1
+            flags: -enc svt_av1
           - name: rav1e
             flags: -enc rav1e
           - name: x265
             flags: -enc x265
+          - name: x264
+            flags: -enc x264
+          - name: vpx
+            flags: -enc vpx
           - name: workers
             flags: -w 2
           - name: chunk hybrid

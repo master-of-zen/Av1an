@@ -102,7 +102,7 @@ def arg_parsing():
                              choices=['pyscene', 'aom_keyframes'])
     split_group.add_argument('--extra_split', '-xs', type=int, default=0,
                              help='Number of frames after which make split')
-    split_group.add_argument('--min_scene_len', type=int, default=None, help='Minimum number of frames in a split')
+    split_group.add_argument('--min_scene_len', type=int, default=120, help='Minimum number of frames in a split')
 
     # PySceneDetect split
     split_group.add_argument('--threshold', '-tr', type=float, default=35, help='PySceneDetect Threshold')

@@ -152,7 +152,7 @@ With your own parameters:
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
                             `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`
 
-    --probe_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
+    --probing_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
 
     --n_threads             Limit number of threads that used for vmaf calculation
                             Example: --n_threads 12

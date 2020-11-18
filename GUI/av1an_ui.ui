@@ -127,7 +127,7 @@
          </size>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="page">
          <property name="sizePolicy">
@@ -338,22 +338,5 @@
   </widget>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>Video_Settings_Button</sender>
-   <signal>clicked()</signal>
-   <receiver>gen_set_wid</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>371</x>
-     <y>34</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>479</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

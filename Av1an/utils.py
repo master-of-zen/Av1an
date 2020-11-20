@@ -6,31 +6,26 @@ from typing import List
 from pathlib import Path
 import cv2
 import numpy as np
+import hashlib
 
 from Av1an.commandtypes import Command
 from Av1an.ffmpeg import frame_probe_ffmpeg
 from Av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
 
+
 def terminate():
     sys.exit(1)
 
 
-def process_inputs(inputs):
-    # Check input file for being valid
-    if not inputs:
-        print('No input file')
-        terminate()
+def hash_path(s: str) -> int:
+    """
+    Return hash of full path to file
+    :param s: string
+    """
+    assert type(s) == str
 
-    if inputs[0].is_dir():
-        inputs = [x for x in inputs[0].iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
 
-    valid = np.array([i.exists() for i in inputs])
-
-    if not all(valid):
-        print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
-        terminate()
-
-    return inputs
+    return str(hashlib.sha3_512(s.encode()).hexdigest())[-8:]
 
 
 def get_cq(command):

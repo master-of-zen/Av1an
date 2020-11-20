@@ -20,6 +20,26 @@ def transform_vmaf(vmaf):
         return 9.210340371976184
 
 
+def adapt_probing_rate(rate, frames):
+    """
+    Change probing rate depending on amount of frames in scene.
+    Ensure that low frame count scenes get decent amount of probes
+
+    :param rate: given rate of probing
+    :param frames: amount of frames in scene
+    :return: new probing rate
+    """
+
+    if frames < 20:
+        return 1
+    elif frames < 40:
+        return min(rate, 2)
+    elif frames < 120:
+        return min(rate, 3)
+    else:
+        return rate
+
+
 def get_target_q(scores, target_quality):
     """
     Interpolating scores to get Q closest to target
@@ -133,7 +153,7 @@ def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
     return pipe
 
 
-def vmaf_probe(chunk: Chunk, q, args: Args):
+def vmaf_probe(chunk: Chunk, q,  args: Args, probing_rate):
     """
     Make encoding probe to get VMAF that Q returns
 
@@ -143,12 +163,12 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
     :return : path to json file with vmaf scores
     """
 
-    cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.probing_rate)
+    cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, probing_rate)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
     process_pipe(pipe)
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
-                     vmaf_rate=args.probing_rate)
+                     vmaf_rate=probing_rate)
     return file
 
 

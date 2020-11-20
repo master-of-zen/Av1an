@@ -33,7 +33,6 @@ class Args(object):
         self.video_params: Command = None
         self.encoder: str = None
         self.workers: int = None
-        self.config = None
 
         # FFmpeg params
         self.ffmpeg_pipe: Command = None
@@ -102,10 +101,10 @@ def arg_parsing():
                              choices=['pyscene', 'aom_keyframes'])
     split_group.add_argument('--extra_split', '-xs', type=int, default=0,
                              help='Number of frames after which make split')
-    split_group.add_argument('--min_scene_len', type=int, default=120, help='Minimum number of frames in a split')
 
     # PySceneDetect split
     split_group.add_argument('--threshold', '-tr', type=float, default=35, help='PySceneDetect Threshold')
+    split_group.add_argument('--min_scene_len', type=int, default=120, help='Minimum number of frames in a split')
 
     # AOM Keyframe split
     split_group.add_argument('--reuse_first_pass', help='Reuse the first pass from aom_keyframes split on the chunks',
@@ -118,8 +117,6 @@ def arg_parsing():
     encode_group.add_argument('--encoder', '-enc', type=str, default='aom', help='Choosing encoder',
                               choices=['aom', 'svt_av1', 'svt_vp9', 'rav1e', 'vpx', 'x265', 'x264', 'vvc'])
     encode_group.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
-    encode_group.add_argument('-cfg', '--config', type=Path, help='Parameters file. Save/Read: '
-                                                                  'Video, Audio, Encoder, FFmpeg parameteres')
     encode_group.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
 
     # VVC
@@ -154,4 +151,4 @@ def arg_parsing():
         parser.print_help()
         exit()
 
-    return Args(vars(parser.parse_args()))
+    return arg

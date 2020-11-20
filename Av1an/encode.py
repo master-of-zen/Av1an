@@ -20,7 +20,6 @@ from Startup.file_validation import process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
 from Av1an.logger import log, set_log
-from Av1an.config import conf
 from Av1an.ffmpeg import extract_audio
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine, extra_splits
@@ -31,7 +30,6 @@ from Av1an.vapoursynth import is_vapoursynth
 def main_queue(args):
     # Todo: Redo Queue
     try:
-        conf(args)
         tm = time.time()
 
         args.queue = process_inputs(args.input)

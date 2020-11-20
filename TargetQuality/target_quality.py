@@ -107,7 +107,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
-        params = ['rav1e', '-s', '10', '--tiles', '8', '--quantizer', f'{q}']
+        params = ['rav1e', '-y', '-s', '10', '--tiles', '8', '--quantizer', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':

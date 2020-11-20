@@ -148,5 +148,10 @@ def arg_parsing():
     tq_group.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     tq_group.add_argument('--probing_rate', type=int, default=4, help='Framerate for probes, 0 - original')
     tq_group.add_argument('--vmaf_filter', type=str, default=None, help='Filter applied to source at vmaf calcualation, use if you crop source')
+    arg = Args(vars(parser.parse_args()))
+
+    if arg.input == None:
+        parser.print_help()
+        exit()
 
     return Args(vars(parser.parse_args()))

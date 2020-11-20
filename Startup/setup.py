@@ -12,7 +12,7 @@ from psutil import virtual_memory
 from Startup.validate_commands import validate_inputs
 from Encoders import ENCODERS
 from Av1an.arg_parse import Args
-from Av1an.utils import terminate
+from Av1an.utils import terminate, hash_path
 
 
 def set_target_quality(args):
@@ -160,15 +160,29 @@ def determine_resources(encoder, workers):
     return workers
 
 
-def setup(temp: Path, resume):
+def setup(args):
     """Creating temporally folders when needed."""
-    # Make temporal directories, and remove them if already presented
-    if not resume:
-        if temp.is_dir():
-            shutil.rmtree(temp)
 
-    (temp / 'split').mkdir(parents=True, exist_ok=True)
-    (temp / 'encode').mkdir(exist_ok=True)
+    if args.temp:
+        args.temp = Path(str(args.temp))
+    else:
+        args.temp = Path('.' + str(hash_path(str(args.input))))
+
+    # Checking is resume possible
+    done_path = args.temp / 'done.json'
+    args.resume = args.resume and done_path.exists()
+
+
+    # Make temporal directories, and remove them if already presented
+
+    # Path('.temp'),
+
+    if not args.resume:
+        if args.temp.is_dir():
+            shutil.rmtree(args.temp)
+
+    (args.temp / 'split').mkdir(parents=True, exist_ok=True)
+    (args.temp / 'encode').mkdir(exist_ok=True)
 
 
 def outputs_filenames(args: Args):

@@ -15,7 +15,8 @@ from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
 from TargetQuality import per_shot_target_quality_routine
-from Av1an.utils import frame_probe_fast, frame_probe, terminate, process_inputs
+from Av1an.utils import frame_probe_fast, frame_probe, terminate
+from Startup.file_validation import process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
 from Av1an.logger import log, set_log
@@ -64,25 +65,22 @@ def encode_file(args: Args):
 
     outputs_filenames(args)
 
-    done_path = args.temp / 'done.json'
-    resuming = args.resume and done_path.exists()
-
-    # set up temp dir and logging
-    setup(args.temp, args.resume)
+        # set up temp dir and logging
+    setup(args)
     set_log(args.logging, args.temp)
 
     # find split locations
-    split_locations = split_routine(args, resuming)
+    split_locations = split_routine(args, args.resume)
 
     # Applying extra splits
     if args.extra_split:
         split_locations = extra_splits(args, split_locations)
 
     # create a chunk queue
-    chunk_queue = load_or_gen_chunk_queue(args, resuming, split_locations)
+    chunk_queue = load_or_gen_chunk_queue(args, args.resume, split_locations)
 
     # things that need to be done only the first time
-    if not resuming:
+    if not args.resume:
 
         extract_audio(args.input, args.temp, args.audio_params)
 

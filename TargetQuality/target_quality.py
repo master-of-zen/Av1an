@@ -36,8 +36,12 @@ def adapt_probing_rate(rate, frames):
         return min(rate, 2)
     elif frames < 120:
         return min(rate, 3)
-    else:
-        return rate
+    elif frames < 240:
+        return min(rate, 4)
+    elif frames > 240:
+        return max(rate, 5)
+    elif frames > 480:
+        return 10
 
 
 def get_target_q(scores, target_quality):

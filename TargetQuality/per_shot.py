@@ -5,8 +5,9 @@ from math import log as ln
 
 import subprocess
 from subprocess import STDOUT, PIPE
-from .target_quality import make_pipes, vmaf_probe, transform_vmaf, weighted_search
+from .target_quality import make_pipes, vmaf_probe, transform_vmaf, weighted_search, get_target_q
 from Av1an.arg_parse import Args
+from VMAF import read_weighted_vmaf
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -30,26 +31,6 @@ def per_shot_target_quality_routine(args: Args, chunk: Chunk):
     :return: None
     """
     chunk.per_shot_target_quality_cq = per_shot_target_quality(chunk, args)
-
-
-def get_target_q(scores, target_quality):
-    """
-    Interpolating scores to get Q closest to target
-    Interpolation type for 2 probes changes to linear
-    """
-    x = [x[1] for x in sorted(scores)]
-    y = [float(x[0]) for x in sorted(scores)]
-
-    if len(x) > 2:
-        interpolation = 'quadratic'
-    else:
-        interpolation = 'linear'
-    f = interpolate.interp1d(x, y, kind=interpolation)
-    xnew = np.linspace(min(x), max(x), max(x) - min(x))
-    tl = list(zip(xnew, f(xnew)))
-    q = min(tl, key=lambda l: abs(l[1] - target_quality))
-
-    return int(q[0]), round(q[1], 3)
 
 
 def interpolate_data(vmaf_cq: list, target_quality):
@@ -101,7 +82,7 @@ def per_shot_target_quality(chunk: Chunk, args: Args):
     q_list.append(middle_point)
     last_q = middle_point
 
-    score = vmaf_probe(chunk, last_q, args)
+    score = read_weighted_vmaf(vmaf_probe(chunk, last_q, args))
     vmaf_cq.append((score, last_q))
 
     if args.probes < 3:
@@ -124,7 +105,7 @@ def per_shot_target_quality(chunk: Chunk, args: Args):
             return next_q
 
         #Second probe at guessed value
-        score_2 = vmaf_probe(chunk, next_q, args)
+        score_2 = read_weighted_vmaf(vmaf_probe(chunk, next_q, args))
 
         #Calculate slope
         vmaf_cq_deriv = (transform_vmaf(score_2) - transform_vmaf(score)) / (next_q-last_q)
@@ -155,21 +136,21 @@ def per_shot_target_quality(chunk: Chunk, args: Args):
         q_list.append(args.max_q)
 
     # Edge case check
-    score = vmaf_probe(chunk, next_q, args)
+    score = read_weighted_vmaf(vmaf_probe(chunk, next_q, args))
     vmaf_cq.append((score, next_q))
 
     if next_q == args.min_q and score < args.target_quality:
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
+            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {round(vmaf_cq[-1][0], 2)}\n\n")
         return next_q
 
     elif next_q == args.max_q and score > args.target_quality:
         log(f"Chunk: {chunk.name}, Fr: {frames}\n"
             f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
             f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {vmaf_cq[-1][0]}\n\n")
+            f"Target Q: {vmaf_cq[-1][1]} Vmaf: {round(vmaf_cq[-1][0], 2)}\n\n")
         return next_q
 
     # Set boundary
@@ -187,7 +168,7 @@ def per_shot_target_quality(chunk: Chunk, args: Args):
             break
 
         q_list.append(new_point)
-        score = vmaf_probe(chunk, new_point, args)
+        score = read_weighted_vmaf(vmaf_probe(chunk, new_point, args))
         vmaf_cq.append((score, new_point))
 
         # Update boundary

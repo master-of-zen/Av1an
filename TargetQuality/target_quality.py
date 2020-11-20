@@ -8,7 +8,8 @@ from Chunks.chunk import Chunk
 from math import isnan
 from math import log as ln
 from Av1an.bar import process_pipe
-
+import numpy as np
+from scipy import interpolate
 
 
 def transform_vmaf(vmaf):
@@ -17,6 +18,27 @@ def transform_vmaf(vmaf):
     else:
         #return -ln(1-99.99/100)
         return 9.210340371976184
+
+
+def get_target_q(scores, target_quality):
+    """
+    Interpolating scores to get Q closest to target
+    Interpolation type for 2 probes changes to linear
+    """
+    x = [x[1] for x in sorted(scores)]
+    y = [float(x[0]) for x in sorted(scores)]
+
+    if len(x) > 2:
+        interpolation = 'quadratic'
+    else:
+        interpolation = 'linear'
+    f = interpolate.interp1d(x, y, kind=interpolation)
+    xnew = np.linspace(min(x), max(x), max(x) - min(x))
+    tl = list(zip(xnew, f(xnew)))
+    q = min(tl, key=lambda l: abs(l[1] - target_quality))
+
+    return int(q[0]), round(q[1], 3)
+
 
 
 def weighted_search(num1, vmaf1, num2, vmaf2, target):
@@ -118,9 +140,8 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
     :param chunk: the Chunk
     :param q: Value to make probe
     :param args: the Args
-    :return :
+    :return : path to json file with vmaf scores
     """
-
 
     cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, args.probing_rate)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
@@ -128,9 +149,7 @@ def vmaf_probe(chunk: Chunk, q, args: Args):
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
                      vmaf_rate=args.probing_rate)
-    score = read_weighted_vmaf(file)
-
-    return score
+    return file
 
 
 def get_closest(q_list, q, positive=True):

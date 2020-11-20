@@ -49,7 +49,7 @@ def read_weighted_vmaf(file, percentile=0):
         score = round(np.percentile(vmafs, percentile), 2)
 
 
-    return score
+    return round(score, 2)
 
 
 def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,

@@ -84,7 +84,7 @@ def arg_parsing():
     # Input/Output/Temp
     io_group = parser.add_argument_group('Input and Output')
     io_group.add_argument('--input', '-i', nargs='+', type=Path, help='Input File')
-    io_group.add_argument('--temp', type=Path, default=Path('.temp'), help='Set temp folder path')
+    io_group.add_argument('--temp', type=Path, default=None, help='Set temp folder path')
     io_group.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
     io_group.add_argument('--mkvmerge', help='Use mkvmerge instead of ffmpeg to concatenate', action='store_true')
 

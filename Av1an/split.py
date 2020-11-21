@@ -33,6 +33,10 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
     # write scenes for resuming later if needed
     write_scenes_to_file(split_locations, scene_file)
 
+    # Applying extra splits
+    if args.extra_split:
+        split_locations = extra_splits(args, split_locations)
+
     return split_locations
 
 

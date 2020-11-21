@@ -70,10 +70,6 @@ def encode_file(args: Args):
     # find split locations
     split_locations = split_routine(args, args.resume)
 
-    # Applying extra splits
-    if args.extra_split:
-        split_locations = extra_splits(args, split_locations)
-
     # create a chunk queue
     chunk_queue = load_or_gen_chunk_queue(args, args.resume, split_locations)
 

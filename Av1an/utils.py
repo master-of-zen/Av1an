@@ -59,18 +59,18 @@ def get_total_frame_count(args):
     """
     Get total frame count of input file, returning total_frames from args if already exists
     """
-    if args.total_frames > 0:
-        return args.total_frames
+    if args.frames > 0:
+        return args.frames
     else:
         total = frame_probe_fast(args.input, args.is_vs)
-        args.total_frames = total
-        return args.total_frames
+        args.frames = total
+        return args.frames
 
 def set_total_frame_count(args, frame_count):
     """
     Setting total frame count for file
     """
-    args.total_frames = frame_count
+    args.frames = frame_count
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):

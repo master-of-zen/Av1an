@@ -76,7 +76,7 @@ class Args(object):
         # Vapoursynth
         self.is_vs: bool = None
 
-        self.total_frames: int = 0
+        self.frames: int = 0
 
 
 def arg_parsing():

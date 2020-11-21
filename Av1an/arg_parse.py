@@ -66,6 +66,7 @@ class Args(object):
         self.vvc_conf: Path = None
         self.video_dimensions = (None, None)
         self.video_framerate = None
+
         for key in initial_data:
             setattr(self, key, initial_data[key])
 
@@ -74,6 +75,8 @@ class Args(object):
 
         # Vapoursynth
         self.is_vs: bool = None
+
+        self.total_frames: int = 0
 
 
 def arg_parsing():

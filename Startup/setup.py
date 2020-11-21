@@ -13,6 +13,7 @@ from Startup.validate_commands import validate_inputs
 from Encoders import ENCODERS
 from Av1an.arg_parse import Args
 from Av1an.utils import terminate, hash_path
+from Av1an.logger import log
 
 
 def set_target_quality(args):
@@ -36,6 +37,29 @@ def set_target_quality(args):
         args.min_q, _ = encoder.default_q_range
     if args.max_q is None:
         _, args.max_q = encoder.default_q_range
+
+
+def select_best_chunking_method(args: Args):
+
+    if args.chunk_method == None:
+        if not find_executable('vspipe'):
+            args.chunk_method = 'hybrid'
+            log('Set Chunking Method: Hybrid')
+        else:
+            try:
+                import vapoursynth
+                plugins = vapoursynth.get_core().get_plugins()
+            except:
+                log('Vapoursynth not installed but vspipe reachable\n' +
+                        'Fallback to Hybrid\n')
+                args.chunk_method = 'hybrid'
+
+            if 'systems.innocent.lsmas' in plugins:
+                log('Set Chunking Method: L-SMASH\n')
+                args.chunk_method = 'vs_lsmash'
+            elif 'com.vapoursynth.ffms2' in plugins:
+                log('Set Chunking Method: FFMS2\n')
+                args.chunk_method = 'vs_ffms2'
 
 
 def check_exes(args: Args):
@@ -106,6 +130,8 @@ def startup_check(args: Args):
             os.system("stty sane")
 
         atexit.register(restore_term)
+
+    select_best_chunking_method(args)
 
     check_exes(args)
 

@@ -15,7 +15,6 @@ env:
   deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx
   pip_deps: python-Levenshtein
   DEBIAN_FRONTEND: noninteractive
-  temp: .temp
 
 jobs:
   validate:
@@ -52,9 +51,8 @@ jobs:
             flags: -xs 10
           - name: split method
             flags: --split_method aom_keyframes
-          - name: temp
+          - name: change temp
             flags: --temp temporary
-            temp: "temporary"
     steps:
       - uses: actions/checkout@v2
       - name: Validate encoders
@@ -76,12 +74,6 @@ jobs:
           tar xf video.tar.gz
       - name: Testing ${{ matrix.name }}
         run: |
-          [ "${{ matrix.temp }}" != "" ] && TEMP=${{ matrix.temp }} || TEMP=${{ env.temp }}
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "${TEMP}/bus_cif.mkv" ${{ matrix.flags }}
-          du -h "${TEMP}/bus_cif.mkv"
-          echo "TEMPPATH=$TEMP" >> $GITHUB_ENV
-      - name: Upload video
-        uses: actions/upload-artifact@v2
-        with:
-          name: "${{ matrix.name }}"
-          path: "${{ env.TEMPPATH }}"
+          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          du -h bus_cif.mkv
+          ls -a

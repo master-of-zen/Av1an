@@ -24,20 +24,36 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
     """
     scene_file = args.temp / 'scenes.txt'
 
-    # if resuming, we already have the split file, so just read that
+    # if resuming, we already have the split file, so just read that and return
     if resuming:
-        return read_scenes_from_file(scene_file)
+        scenes =  read_scenes_from_file(scene_file)
+        return scenes
 
-    # determines split frames with pyscenedetect or aom keyframes
-    split_locations = calc_split_locations(args)
+    # Run scenedetection or skip
+    if args.scenes == '0':
+        log('Skipping scene detection\n')
+        scenes = []
+
+    # Read saved scenes:
+    elif args.scenes and Path(args.scenes).exists():
+        log('Using Saved Scenes\n')
+        scenes = read_scenes_from_file(Path(args.scenes))
+
+    else:
+        # determines split frames with pyscenedetect or aom keyframes
+        scenes = calc_split_locations(args)
+        if args.scenes and Path(args.scenes).exists():
+            write_scenes_to_file(scenes, Path(args.scenes))
+
+    # Write internal scenes
+    write_scenes_to_file(scenes, scene_file)
 
     # Applying extra splits
     if args.extra_split:
-        split_locations = extra_splits(args, split_locations)
+        scenes = extra_splits(args, scenes)
 
     # write scenes for resuming later if needed
-    write_scenes_to_file(split_locations, scene_file)
-    return split_locations
+    return scenes
 
 
 def write_scenes_to_file(scenes: List[int], scene_path: Path):
@@ -132,18 +148,7 @@ def calc_split_locations(args: Args) -> List[int]:
     # inherit video params from aom encode unless we are using a different encoder, then use defaults
     aom_keyframes_params = args.video_params if (args.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
 
-    if args.scenes == '0':
-        log('Skipping scene detection\n')
-        return []
-
     sc = []
-
-    if args.scenes:
-        args.scenes = Path(args.scenes)
-        if args.scenes.exists():
-            # Read stats from CSV file opened in read mode:
-            log('Using Saved Scenes\n')
-            return read_scenes_from_file(args.scenes)
 
     # Splitting using PySceneDetect
     if args.split_method == 'pyscene':

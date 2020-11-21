@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import json
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List
@@ -30,13 +31,12 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
     # determines split frames with pyscenedetect or aom keyframes
     split_locations = calc_split_locations(args)
 
-    # write scenes for resuming later if needed
-    write_scenes_to_file(split_locations, scene_file)
-
     # Applying extra splits
     if args.extra_split:
         split_locations = extra_splits(args, split_locations)
 
+    # write scenes for resuming later if needed
+    write_scenes_to_file(split_locations, scene_file)
     return split_locations
 
 
@@ -49,8 +49,8 @@ def write_scenes_to_file(scenes: List[int], scene_path: Path):
     :return: None
     """
     with open(scene_path, 'w') as scene_file:
-        scene_file.write(','.join([str(x) for x in scenes]))
-
+        data = {'scenes': scenes }
+        json.dump(data, scene_file)
 
 def read_scenes_from_file(scene_path: Path) -> List[int]:
     """
@@ -60,9 +60,8 @@ def read_scenes_from_file(scene_path: Path) -> List[int]:
     :return: a list of frames to split on
     """
     with open(scene_path, 'r') as scene_file:
-        scenes = scene_file.readline().strip().split(',')
-        return [int(scene) for scene in scenes]
-
+        data = json.load(scene_file)
+        return data['scenes']
 
 def segment(video: Path, temp: Path, frames: List[int]):
     """

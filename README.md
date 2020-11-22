@@ -182,6 +182,7 @@ With your own parameters:
   *  [Install Python3](https://www.python.org/downloads/) <br>
 When installing under Windows, select the option `add Python to PATH` in the installer
   *  [Install FFmpeg](https://ffmpeg.org/download.html)
+  * Recommended to install vapoursynth with lsmash for faster and better processing
 * Encoder of choice:
   *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
   *  [Install rav1e](https://github.com/xiph/rav1e)

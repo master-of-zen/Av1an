@@ -12,7 +12,6 @@ from Av1an.resume import read_done_data
 from Av1an.split import segment
 from Av1an.utils import terminate, frame_probe, frame_probe_fast
 
-# Todo: make -xs work with all
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
     """

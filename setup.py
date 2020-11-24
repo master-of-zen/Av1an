@@ -20,7 +20,7 @@ setuptools.setup(
     version="3",
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
-    description="All-in-one encode toolkit",
+    description="Cross-platform command-line AV1 / VP9 / HEVC / H264 / VVC encoding framework with per scene quality encoding",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/master-of-zen/Av1an",

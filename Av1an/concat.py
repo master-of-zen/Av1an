@@ -70,7 +70,7 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     # Add the audio file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
-        audio = ('-i', audio_file.as_posix(), '-c:a', 'copy', '-map', '1')
+        audio = ('-i', audio_file.as_posix(), '-c', 'copy', '-map', '1')
     else:
         audio = ()
 

@@ -63,6 +63,6 @@ def extract_audio(input_vid: Path, temp, audio_params):
 
     # If source have audio track - process it
     if is_audio_here:
-        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', input_vid.as_posix(),
-               '-vn', '-sn', '-dn', *audio_params, audio_file.as_posix())
+        cmd = ('ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', input_vid.as_posix(), '-map_metadata', '0',
+               '-map', '0', '-c', 'copy', '-vn', *audio_params, audio_file.as_posix())
         subprocess.run(cmd)

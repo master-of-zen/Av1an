@@ -81,16 +81,16 @@ def check_exes(project: Project):
         try:
             import vapoursynth
             plugins = vapoursynth.get_core().get_plugins()
+
+            if project.chunk_method == 'vs_lsmash' and "systems.innocent.lsmas" not in plugins:
+                print('lsmas is not installed')
+                terminate()
+
+            if project.chunk_method == 'vs_ffms2' and "com.vapoursynth.ffms2" not in plugins:
+                print('ffms2 is not installed')
+                terminate()
         except ModuleNotFoundError:
             print('Vapoursynth is not installed')
-            terminate()
-
-        if args.chunk_method == 'vs_lsmash' and "systems.innocent.lsmas" not in plugins:
-            print('lsmas is not installed')
-            terminate()
-
-        if args.chunk_method == 'vs_ffms2' and "com.vapoursynth.ffms2" not in plugins:
-            print('ffms2 is not installed')
             terminate()
 
 

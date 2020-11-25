@@ -15,7 +15,7 @@ class SvtVp9(Encoder):
             encoder_help='SvtVp9EncApp --help',
             default_args=None,
             default_passes=1,
-            default_q_range=(20, 40),
+            default_q_range=(20, 50),
             output_extension='ivf'
         )
 

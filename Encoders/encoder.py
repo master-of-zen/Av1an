@@ -14,8 +14,8 @@ class Encoder(ABC):
     An abstract class used for encoders
     """
 
-    def __init__(self, encoder_bin: str, encoder_help: str, default_args: Command, default_passes: int, default_q_range: Tuple[int, int],
-                 output_extension: str):
+    def __init__(self, encoder_bin: str, encoder_help: str, default_args: Command, default_passes: int,
+                 default_q_range: Tuple[int, int], output_extension: str):
         """
         Encoder constructor
 
@@ -110,8 +110,8 @@ class Encoder(ABC):
 
     def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         """
-        Determines if the encoder is properly set up. Checkes to make sure executable exists and project are all compatible
-        with this encoder.
+        Determines if the encoder is properly set up. Checkes to make sure executable exists and project are all
+        compatible with this encoder.
         :param project: the Project
         :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
         """

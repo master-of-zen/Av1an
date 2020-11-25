@@ -14,9 +14,9 @@ class Aom(Encoder):
         super().__init__(
             encoder_bin='aomenc',
             encoder_help='aomenc --help',
-            default_args=['--threads=4', '--cpu-used=6', '--end-usage=q', '--cq-level=30'],
+            default_args=['--threads=8', '--cpu-used=6', '--end-usage=q', '--cq-level=30'],
             default_passes=2,
-            default_q_range=(25, 50),
+            default_q_range=(20, 55),
             output_extension='ivf'
         )
 

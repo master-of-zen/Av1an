@@ -16,7 +16,7 @@ class Rav1e(Encoder):
             encoder_help='rav1e --fullhelp',
             default_args=['--tiles', '8', '--speed', '6', '--quantizer', '100'],
             default_passes=1,
-            default_q_range=(70, 150),
+            default_q_range=(50, 170),
             output_extension='ivf'
         )
 

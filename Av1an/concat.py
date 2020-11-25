@@ -6,25 +6,25 @@ import sys
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from Av1an.logger import log
 from Av1an.utils import terminate
 
 
-def concat_routine(args: Args):
+def concat_routine(project: Project):
     """
-    Runs the concatenation routine with args
+    Runs the concatenation routine with project
 
-    :param args: the Args
+    :param project: the Project
     :return: None
     """
     try:
-        if args.encoder == 'vvc':
-            vvc_concat(args.temp, args.output_file.with_suffix('.h266'))
-        elif args.mkvmerge:
-            concatenate_mkvmerge(args.temp, args.output_file)
+        if project.encoder == 'vvc':
+            vvc_concat(project.temp, project.output_file.with_suffix('.h266'))
+        elif project.mkvmerge:
+            concatenate_mkvmerge(project.temp, project.output_file)
         else:
-            concatenate_ffmpeg(args.temp, args.output_file, args.encoder)
+            concatenate_ffmpeg(project.temp, project.output_file, project.encoder)
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         print(f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')

@@ -6,7 +6,7 @@ from subprocess import PIPE, STDOUT
 from typing import Tuple, Optional
 import re
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Encoders.encoder import Encoder
@@ -30,7 +30,7 @@ class Vvc(Encoder):
             output_extension='h266'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
             CommandPair(
@@ -40,7 +40,7 @@ class Vvc(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         raise ValueError('VVC does not support 2 pass encoding')
 
     def man_q(self, command: Command, q: int) -> Command:
@@ -65,11 +65,11 @@ class Vvc(Encoder):
 
         return re.search(r"POC.*? ([^ ]+?)", line)
 
-    def make_pipes(self, a: Args, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
+    def make_pipes(self, a: Project, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
         """
-        Creates a pipe for the given chunk with the given args
+        Creates a pipe for the given chunk with the given project
 
-        :param a: the Args
+        :param a: the Project
         :param c: the Chunk
         :param passes: the total number of passes (1 or 2)
         :param current_pass: the current_pass
@@ -90,17 +90,17 @@ class Vvc(Encoder):
                                 universal_newlines=True)
         return pipe
 
-    def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
+    def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         # vvc requires a special concat executable
         if not find_executable('vvc_concat'):
             return False, 'vvc concatenation executable "vvc_concat" not found'
 
         # make sure there's a vvc config file
-        if args.vvc_conf is None:
+        if project.vvc_conf is None:
             return False, 'Conf file for vvc required'
 
         # vvc requires video information that av1an can't provide
-        if args.video_params is None:
+        if project.video_params is None:
             return False, 'VVC requires:\n' \
                           ' -wdt X - video width\n' \
                           ' -hgt X - video height\n' \
@@ -108,20 +108,20 @@ class Vvc(Encoder):
                           ' -q X   - quantizer\n' \
                           'Example: -wdt 640 -hgt 360 -fr 23.98 -q 30'
 
-        return super().is_valid(args)
+        return super().is_valid(project)
 
-    def on_before_chunk(self, args: Args, chunk: Chunk) -> None:
+    def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
         # vvc requires a yuv files as input, make it here
         log(f'Creating yuv for chunk {chunk.name}\n')
         Vvc.to_yuv(chunk)
         log(f'Created yuv for chunk {chunk.name}\n')
-        super().on_before_chunk(args, chunk)
+        super().on_before_chunk(project, chunk)
 
-    def on_after_chunk(self, args: Args, chunk: Chunk) -> None:
+    def on_after_chunk(self, project: Project, chunk: Chunk) -> None:
         # delete the yuv file for this chunk
         yuv_path = Vvc.get_yuv_file_path(chunk)
         os.remove(yuv_path)
-        super().on_after_chunk(args, chunk)
+        super().on_after_chunk(project, chunk)
 
     @staticmethod
     def get_yuv_file_path(chunk: Chunk) -> Path:

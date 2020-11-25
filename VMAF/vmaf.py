@@ -17,6 +17,7 @@ import matplotlib
 
 matplotlib.use('Agg')
 
+
 def read_json(file):
     """
     Reads file and return dictionary of it's contents
@@ -27,6 +28,7 @@ def read_json(file):
     with open(file, 'r') as f:
         fl = json.load(f)
         return fl
+
 
 def read_weighted_vmaf(file, percentile=0):
     """Reads vmaf file with vmaf scores in it and return N percentile score from it.
@@ -47,7 +49,6 @@ def read_weighted_vmaf(file, percentile=0):
 
     else:
         score = round(np.percentile(vmafs, percentile), 2)
-
 
     return round(score, 2)
 

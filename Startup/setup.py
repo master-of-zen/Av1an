@@ -11,39 +11,39 @@ from pathlib import Path
 from psutil import virtual_memory
 from Startup.validate_commands import validate_inputs
 from Encoders import ENCODERS
-from Av1an.arg_parse import Args
+from Projects import Project
 from Av1an.utils import terminate, hash_path
 from Av1an.logger import log
 
 
-def set_target_quality(args):
+def set_target_quality(project):
     """
     Av1an setup for VMAF
 
-    :param args: the Args
+    :param project: the Project
     """
-    if args.vmaf_path:
-        if not Path(args.vmaf_path).exists():
-            print(f'No such model: {Path(args.vmaf_path).as_posix()}')
+    if project.vmaf_path:
+        if not Path(project.vmaf_path).exists():
+            print(f'No such model: {Path(project.vmaf_path).as_posix()}')
             terminate()
 
-    if args.probes < 4:
+    if project.probes < 4:
         print('Target quality with less than 4 probes is experimental')
         terminate()
 
-    encoder = ENCODERS[args.encoder]
+    encoder = ENCODERS[project.encoder]
 
-    if args.min_q is None:
-        args.min_q, _ = encoder.default_q_range
-    if args.max_q is None:
-        _, args.max_q = encoder.default_q_range
+    if project.min_q is None:
+        project.min_q, _ = encoder.default_q_range
+    if project.max_q is None:
+        _, project.max_q = encoder.default_q_range
 
 
-def select_best_chunking_method(args: Args):
+def select_best_chunking_method(project: Project):
 
-    if args.chunk_method == None:
+    if project.chunk_method == None:
         if not find_executable('vspipe'):
-            args.chunk_method = 'hybrid'
+            project.chunk_method = 'hybrid'
             log('Set Chunking Method: Hybrid')
         else:
             try:
@@ -52,28 +52,28 @@ def select_best_chunking_method(args: Args):
             except:
                 log('Vapoursynth not installed but vspipe reachable\n' +
                         'Fallback to Hybrid\n')
-                args.chunk_method = 'hybrid'
+                project.chunk_method = 'hybrid'
 
             if 'systems.innocent.lsmas' in plugins:
                 log('Set Chunking Method: L-SMASH\n')
-                args.chunk_method = 'vs_lsmash'
+                project.chunk_method = 'vs_lsmash'
             elif 'com.vapoursynth.ffms2' in plugins:
                 log('Set Chunking Method: FFMS2\n')
-                args.chunk_method = 'vs_ffms2'
+                project.chunk_method = 'vs_ffms2'
 
 
-def check_exes(args: Args):
+def check_exes(project: Project):
     """
     Checking required executables
 
-    :param args: the Args
+    :param project: the Project
     """
 
     if not find_executable('ffmpeg'):
         print('No ffmpeg')
         terminate()
 
-    if args.chunk_method in ['vs_ffms2', 'vs_lsmash']:
+    if project.chunk_method in ['vs_ffms2', 'vs_lsmash']:
         if not find_executable('vspipe'):
             print('vspipe executable not found')
             terminate()
@@ -94,30 +94,30 @@ def check_exes(args: Args):
             terminate()
 
 
-def setup_encoder(args: Args):
+def setup_encoder(project: Project):
     """
-    Settup encoder params and passes
+    Setup encoder params and passes
 
-    :param args: the Args
+    :param project: the Project
     """
-    encoder = ENCODERS[args.encoder]
+    encoder = ENCODERS[project.encoder]
 
     # validate encoder settings
-    settings_valid, error_msg = encoder.is_valid(args)
+    settings_valid, error_msg = encoder.is_valid(project)
     if not settings_valid:
         print(error_msg)
         terminate()
 
-    if args.passes is None:
-        args.passes = encoder.default_passes
+    if project.passes is None:
+        project.passes = encoder.default_passes
 
-    args.video_params = encoder.default_args if args.video_params is None \
-        else shlex.split(args.video_params)
+    project.video_params = encoder.default_args if project.video_params is None \
+        else shlex.split(project.video_params)
 
-    validate_inputs(args)
+    validate_inputs(project)
 
 
-def startup_check(args: Args):
+def startup_check(project: Project):
     """
     Performing essential checks at startup_check
     Set constant values
@@ -131,32 +131,32 @@ def startup_check(args: Args):
 
         atexit.register(restore_term)
 
-    select_best_chunking_method(args)
+    select_best_chunking_method(project)
 
-    check_exes(args)
+    check_exes(project)
 
-    set_target_quality(args)
+    set_target_quality(project)
 
-    if args.reuse_first_pass and args.encoder != 'aom' and args.split_method != 'aom_keyframes':
+    if project.reuse_first_pass and project.encoder != 'aom' and project.split_method != 'aom_keyframes':
         print('Reusing the first pass is only supported with \
               the aom encoder and aom_keyframes split method.')
         terminate()
 
-    setup_encoder(args)
+    setup_encoder(project)
 
     # No check because vvc
-    if args.encoder == 'vvc':
-        args.no_check = True
+    if project.encoder == 'vvc':
+        project.no_check = True
 
-    if args.encoder == 'svt_vp9' and args.passes == 2:
+    if project.encoder == 'svt_vp9' and project.passes == 2:
         print("Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported")
-        args.passes = 1
+        project.passes = 1
 
-    args.audio_params = shlex.split(args.audio_params)
-    args.ffmpeg = shlex.split(args.ffmpeg)
+    project.audio_params = shlex.split(project.audio_params)
+    project.ffmpeg = shlex.split(project.ffmpeg)
 
-    args.pix_format = ['-strict', '-1', '-pix_fmt', args.pix_format]
-    args.ffmpeg_pipe = [*args.ffmpeg, *args.pix_format,
+    project.pix_format = ['-strict', '-1', '-pix_fmt', project.pix_format]
+    project.ffmpeg_pipe = [*project.ffmpeg, *project.pix_format,
                         '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
 
 
@@ -186,37 +186,37 @@ def determine_resources(encoder, workers):
     return workers
 
 
-def setup(args):
+def setup(project):
     """Creating temporally folders when needed."""
 
-    if args.temp:
-        args.temp = Path(str(args.temp))
+    if project.temp:
+        project.temp = Path(str(project.temp))
     else:
-        args.temp = Path('.' + str(hash_path(str(args.input))))
+        project.temp = Path('.' + str(hash_path(str(project.input))))
 
     # Checking is resume possible
-    done_path = args.temp / 'done.json'
-    args.resume = args.resume and done_path.exists()
+    done_path = project.temp / 'done.json'
+    project.resume = project.resume and done_path.exists()
 
 
     # Make temporal directories, and remove them if already presented
 
     # Path('.temp'),
 
-    if not args.resume:
-        if args.temp.is_dir():
-            shutil.rmtree(args.temp)
+    if not project.resume:
+        if project.temp.is_dir():
+            shutil.rmtree(project.temp)
 
-    (args.temp / 'split').mkdir(parents=True, exist_ok=True)
-    (args.temp / 'encode').mkdir(exist_ok=True)
+    (project.temp / 'split').mkdir(parents=True, exist_ok=True)
+    (project.temp / 'encode').mkdir(exist_ok=True)
 
 
-def outputs_filenames(args: Args):
+def outputs_filenames(project: Project):
     """
     Set output filename
 
-    :param args: the Args
+    :param project: the Project
     """
     suffix = '.mkv'
-    args.output_file = Path(args.output_file).with_suffix(suffix) if args.output_file \
-        else Path(f'{args.input.stem}_{args.encoder}{suffix}')
+    project.output_file = Path(project.output_file).with_suffix(suffix) if project.output_file \
+        else Path(f'{project.input.stem}_{project.encoder}{suffix}')

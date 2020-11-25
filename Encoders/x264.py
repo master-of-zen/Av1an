@@ -1,7 +1,7 @@
 import os
 import re
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Encoders.encoder import Encoder
@@ -20,7 +20,7 @@ class X264(Encoder):
             output_extension='mkv'
         )
 
-    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
@@ -29,7 +29,7 @@ class X264(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),

@@ -24,7 +24,6 @@ def hash_path(s: str) -> int:
     """
     assert type(s) == str
 
-
     return str(hashlib.sha3_512(s.encode()).hexdigest())[-8:]
 
 
@@ -55,22 +54,23 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     raise ValueError(f'{reg} is not in list')
 
 
-def get_total_frame_count(args):
+def get_total_frame_count(project):
     """
-    Get total frame count of input file, returning total_frames from args if already exists
+    Get total frame count of input file, returning total_frames from project if already exists
     """
-    if args.frames > 0:
-        return args.frames
+    if project.frames > 0:
+        return project.frames
     else:
-        total = frame_probe_fast(args.input, args.is_vs)
-        args.frames = total
-        return args.frames
+        total = frame_probe_fast(project.input, project.is_vs)
+        project.frames = total
+        return project.frames
 
-def set_total_frame_count(args, frame_count):
+
+def set_total_frame_count(project, frame_count):
     """
     Setting total frame count for file
     """
-    args.frames = frame_count
+    project.frames = frame_count
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):

@@ -6,7 +6,7 @@ from math import log as ln
 import subprocess
 from subprocess import STDOUT, PIPE
 from .target_quality import make_pipes, vmaf_probe, transform_vmaf, weighted_search, get_target_q, adapt_probing_rate
-from Av1an.arg_parse import Args
+from Projects import Project
 from VMAF import read_weighted_vmaf
 
 import matplotlib
@@ -21,12 +21,12 @@ from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
 
 
-def per_shot_target_quality_routine(args: Args, chunk: Chunk):
+def per_shot_target_quality_routine(args: Project, chunk: Chunk):
     """
     Applies per_shot_target_quality to this chunk. Determines what the cq value should be and sets the
     per_shot_target_quality_cq for this chunk
 
-    :param args: the Args
+    :param args: the Project
     :param chunk: the Chunk
     :return: None
     """
@@ -71,7 +71,7 @@ def plot_probes(args, vmaf_cq, chunk: Chunk, frames):
     plt.close()
 
 
-def per_shot_target_quality(chunk: Chunk, args: Args):
+def per_shot_target_quality(chunk: Chunk, args: Project):
     vmaf_cq = []
     frames = chunk.frames
 

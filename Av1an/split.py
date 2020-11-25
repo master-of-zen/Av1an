@@ -8,21 +8,21 @@ from subprocess import PIPE, STDOUT
 from typing import List
 from numpy import linspace
 
-from .arg_parse import Args
+from Projects import Project
 from Scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
 from .utils import terminate, frame_probe
 
 
-def split_routine(args: Args, resuming: bool) -> List[int]:
+def split_routine(project: Project, resuming: bool) -> List[int]:
     """
     Performs the split routine. Runs pyscenedetect/aom keyframes and adds in extra splits if needed
 
-    :param args: the Args
+    :param project: the Project
     :param resuming: if the encode is being resumed
     :return: A list of frames to split on
     """
-    scene_file = args.temp / 'scenes.txt'
+    scene_file = project.temp / 'scenes.txt'
 
     # if resuming, we already have the split file, so just read that and return
     if resuming:
@@ -30,27 +30,27 @@ def split_routine(args: Args, resuming: bool) -> List[int]:
         return scenes
 
     # Run scenedetection or skip
-    if args.scenes == '0':
+    if project.scenes == '0':
         log('Skipping scene detection\n')
         scenes = []
 
     # Read saved scenes:
-    elif args.scenes and Path(args.scenes).exists():
+    elif project.scenes and Path(project.scenes).exists():
         log('Using Saved Scenes\n')
-        scenes = read_scenes_from_file(Path(args.scenes))
+        scenes = read_scenes_from_file(Path(project.scenes))
 
     else:
         # determines split frames with pyscenedetect or aom keyframes
-        scenes = calc_split_locations(args)
-        if args.scenes and Path(args.scenes).exists():
-            write_scenes_to_file(scenes, Path(args.scenes))
+        scenes = calc_split_locations(project)
+        if project.scenes and Path(project.scenes).exists():
+            write_scenes_to_file(scenes, Path(project.scenes))
 
     # Write internal scenes
     write_scenes_to_file(scenes, scene_file)
 
     # Applying extra splits
-    if args.extra_split:
-        scenes = extra_splits(args, scenes)
+    if project.extra_split:
+        scenes = extra_splits(project, scenes)
 
     # write scenes for resuming later if needed
     return scenes
@@ -117,60 +117,60 @@ def segment(video: Path, temp: Path, frames: List[int]):
 
     log('Split Done\n')
 
-def extra_splits(args: Args, split_locations: list):
+def extra_splits(project: Project, split_locations: list):
     log('Applying extra splits\n')
 
     split_locs_with_start = split_locations[:]
     split_locs_with_start.insert(0, 0)
 
     split_locs_with_end = split_locations[:]
-    split_locs_with_end.append(frame_probe(args.input))
+    split_locs_with_end.append(frame_probe(project.input))
 
     splits = list(zip(split_locs_with_start, split_locs_with_end))
     for i in splits:
         distance = (i[1] - i[0])
-        if distance > args.extra_split:
-            to_add = distance // args.extra_split
+        if distance > project.extra_split:
+            to_add = distance // project.extra_split
             new_scenes = list(linspace(i[0],i[1], to_add + 1, dtype=int, endpoint=False)[1:])
             split_locations.extend(new_scenes)
 
     result = [int(x) for x in sorted(split_locations)]
-    log(f'Split distance: {args.extra_split}\nNew splits:{len(result)}\n')
+    log(f'Split distance: {project.extra_split}\nNew splits:{len(result)}\n')
     return result
 
-def calc_split_locations(args: Args) -> List[int]:
+def calc_split_locations(project: Project) -> List[int]:
     """
     Determines a list of frame numbers to split on with pyscenedetect or aom keyframes
 
-    :param args: the Args
+    :param project: the Project
     :return: A list of frame numbers
     """
     # inherit video params from aom encode unless we are using a different encoder, then use defaults
-    aom_keyframes_params = args.video_params if (args.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
+    aom_keyframes_params = project.video_params if (project.encoder == 'aom') else AOM_KEYFRAMES_DEFAULT_PARAMS
 
     sc = []
 
     # Splitting using PySceneDetect
-    if args.split_method == 'pyscene':
-        log(f'Starting scene detection Threshold: {args.threshold}, Min_scene_length: {args.min_scene_len}\n')
+    if project.split_method == 'pyscene':
+        log(f'Starting scene detection Threshold: {project.threshold}, Min_scene_length: {project.min_scene_len}\n')
         try:
-            sc = pyscene(args.input, args.threshold, args.min_scene_len, args.is_vs, args.temp)
+            sc = pyscene(project.input, project.threshold, project.min_scene_len, project.is_vs, project.temp)
         except Exception as e:
             log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')
             terminate()
 
     # Splitting based on aom keyframe placement
-    elif args.split_method == 'aom_keyframes':
-        stat_file = args.temp / 'keyframes.log'
-        sc = aom_keyframes(args.input, stat_file, args.min_scene_len, args.ffmpeg_pipe, aom_keyframes_params, args.is_vs)
+    elif project.split_method == 'aom_keyframes':
+        stat_file = project.temp / 'keyframes.log'
+        sc = aom_keyframes(project.input, stat_file, project.min_scene_len, project.ffmpeg_pipe, aom_keyframes_params, project.is_vs)
     else:
-        print(f'No valid split option: {args.split_method}\nValid options: "pyscene", "aom_keyframes"')
+        print(f'No valid split option: {project.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()
 
     # Write scenes to file
 
-    if args.scenes:
-        write_scenes_to_file(sc, args.scenes)
+    if project.scenes:
+        write_scenes_to_file(sc, project.scenes)
 
     return sc

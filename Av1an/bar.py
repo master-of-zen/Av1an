@@ -12,8 +12,9 @@ from .commandtypes import Command, CommandPair
 from .utils import terminate
 
 from Encoders import ENCODERS
-from Av1an.arg_parse import Args
+from Projects import Project
 from Chunks.chunk import Chunk
+
 
 def Manager():
     """
@@ -92,7 +93,7 @@ def process_encoding_pipe(pipe, encoder, counter):
         print('\n'.join(encoder_history))
 
 
-def tqdm_bar(a: Args, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
+def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
     try:
 
         enc = ENCODERS[encoder]

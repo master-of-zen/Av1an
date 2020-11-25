@@ -1,6 +1,6 @@
 from typing import Tuple, Optional
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import MPCommands, CommandPair, Command
 from Encoders.encoder import Encoder
@@ -20,18 +20,18 @@ class SvtVp9(Encoder):
         )
 
     @staticmethod
-    def compose_ffmpeg_raw_pipe(a: Args) -> Command:
+    def compose_ffmpeg_raw_pipe(a: Project) -> Command:
         """
         Compose a rawvideo ffmpeg pipe for svt-vp9
         SVT-VP9 requires rawvideo, so we can't use arg.ffmpeg_pipe
 
-        :param a: the Args
+        :param a: the Project
         :return: a command
         """
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize',
                 '50000K', '-f', 'rawvideo', '-']
 
-    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 SvtVp9.compose_ffmpeg_raw_pipe(a),
@@ -39,13 +39,13 @@ class SvtVp9(Encoder):
             )
         ]
 
-    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         raise ValueError("SVT-VP9 doesn't support 2 pass")
 
-    def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
-        if args.video_params is None:
+    def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
+        if project.video_params is None:
             return False, 'SVT-VP9 requires: -w, -h, and -fps/-fps-num/-fps-denom'
-        return super().is_valid(args)
+        return super().is_valid(project)
 
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value

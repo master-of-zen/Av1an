@@ -4,7 +4,7 @@ from typing import Tuple, Optional
 import subprocess
 from subprocess import PIPE, STDOUT, DEVNULL
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import Command, MPCommands
 
@@ -31,21 +31,21 @@ class Encoder(ABC):
         self.output_extension = output_extension
 
     @staticmethod
-    def compose_ffmpeg_pipe(a: Args) -> Command:
+    def compose_ffmpeg_pipe(a: Project) -> Command:
         """
         Creates an ffmpeg pipe command for the args
 
-        :param a: the Args
+        :param a: the Project
         :return: an ffmpeg command that will pipe into the encoder
         """
         return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
 
     @abstractmethod
-    def compose_1_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         """
         Composes the commands needed for a 1 pass encode
 
-        :param a: the Args
+        :param a: the Project
         :param c: the Chunk
         :param output: path for encoded output
         :return: a MPCommands object (a list of CommandPairs)
@@ -53,11 +53,11 @@ class Encoder(ABC):
         pass
 
     @abstractmethod
-    def compose_2_pass(self, a: Args, c: Chunk, output: str) -> MPCommands:
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         """
         Composes the commands needed for a 2 pass encode
 
-        :param a: the Args
+        :param a: the Project
         :param c: the Chunk
         :param output: path for encoded output
         :return: a MPCommands object (a list of CommandPairs)
@@ -81,11 +81,11 @@ class Encoder(ABC):
         :return: match object from re.search matching the number of encoded frames"""
         pass
 
-    def make_pipes(self, a: Args, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
+    def make_pipes(self, a: Project, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
         """
         Creates a pipe for the given chunk with the given args
 
-        :param a: the Args
+        :param a: the Project
         :param c: the Chunk
         :param passes: the total number of passes (1 or 2)
         :param current_pass: the current_pass
@@ -108,11 +108,11 @@ class Encoder(ABC):
 
         return pipe
 
-    def is_valid(self, args: Args) -> Tuple[bool, Optional[str]]:
+    def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         """
-        Determines if the encoder is properly set up. Checkes to make sure executable exists and args are all compatible
+        Determines if the encoder is properly set up. Checkes to make sure executable exists and project are all compatible
         with this encoder.
-        :param args: the Args
+        :param project: the Project
         :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
         """
         if not self.check_exists():
@@ -126,19 +126,19 @@ class Encoder(ABC):
         """
         return find_executable(self.encoder_bin) is not None
 
-    def on_before_chunk(self, args: Args, chunk: Chunk) -> None:
+    def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
         """
         An event that is called before the encoding passes of a chunk starts
-        :param args: the Args
+        :param project: the Project
         :param chunk: the chunk
         :return: None
         """
         pass
 
-    def on_after_chunk(self, args: Args, chunk: Chunk) -> None:
+    def on_after_chunk(self, project: Project, chunk: Chunk) -> None:
         """
         An event that is called after the encoding passes of a chunk completes
-        :param args: the Args
+        :param project: the Project
         :param chunk: the chunk
         :return: None
         """

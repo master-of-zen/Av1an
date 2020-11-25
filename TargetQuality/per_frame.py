@@ -1,5 +1,5 @@
 #/bin/env python
-from Av1an.arg_parse import Args
+from Projects import Project
 from Av1an.bar import process_pipe
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
@@ -9,12 +9,12 @@ from VMAF import read_json
 from .target_quality import gen_probes_names
 
 
-def per_frame_target_quality_routine(args: Args, chunk: Chunk):
+def per_frame_target_quality_routine(args: Project, chunk: Chunk):
     """
     Applies per_shot_target_quality to this chunk. Determines what the cq value should be and sets the
     per_shot_target_quality_cq for this chunk
 
-    :param args: the Args
+    :param args: the Project
     :param chunk: the Chunk
     :return: None
     """

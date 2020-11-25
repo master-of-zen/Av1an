@@ -2,7 +2,7 @@ import subprocess
 from subprocess import STDOUT, PIPE
 from Av1an.commandtypes import CommandPair, Command
 
-from Av1an.arg_parse import Args
+from Projects import Project
 from VMAF import call_vmaf, read_weighted_vmaf
 from Chunks.chunk import Chunk
 from math import isnan
@@ -157,13 +157,13 @@ def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
     return pipe
 
 
-def vmaf_probe(chunk: Chunk, q,  args: Args, probing_rate):
+def vmaf_probe(chunk: Chunk, q,  args: Project, probing_rate):
     """
     Make encoding probe to get VMAF that Q returns
 
     :param chunk: the Chunk
     :param q: Value to make probe
-    :param args: the Args
+    :param args: the Project
     :return : path to json file with vmaf scores
     """
 

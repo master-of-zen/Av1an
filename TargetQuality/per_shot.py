@@ -5,9 +5,9 @@ from math import log as ln
 
 import subprocess
 from subprocess import STDOUT, PIPE
-from .target_quality import make_pipes, vmaf_probe, transform_vmaf, weighted_search, get_target_q, adapt_probing_rate
+from .target_quality import vmaf_probe, transform_vmaf, weighted_search, get_target_q, \
+    adapt_probing_rate, read_weighted_vmaf
 from Projects import Project
-from VMAF import read_weighted_vmaf
 
 import matplotlib
 from matplotlib import pyplot as plt

@@ -30,29 +30,6 @@ def read_json(file):
         return fl
 
 
-def read_weighted_vmaf(file, percentile=0):
-    """Reads vmaf file with vmaf scores in it and return N percentile score from it.
-
-    :return: N percentile score
-    :rtype: float
-    """
-
-    jsn = read_json(file)
-
-    vmafs = [x['metrics']['vmaf'] for x in jsn['frames']]
-
-    if percentile == 0:
-        # Using 2 standart deviations to weight for bad frames
-        mean = np.mean(vmafs)
-        minimum = np.min(vmafs)
-        score = (mean * 1/3) + (minimum * 2/3)
-
-    else:
-        score = round(np.percentile(vmafs, percentile), 2)
-
-    return round(score, 2)
-
-
 def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
               fl_path: Path = None, vmaf_filter=None, vmaf_rate=0):
     cmd = ''

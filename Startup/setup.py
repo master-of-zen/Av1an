@@ -41,18 +41,13 @@ def set_target_quality(project):
 
 def select_best_chunking_method(project: Project):
 
-    if project.chunk_method == None:
-        if not find_executable('vspipe'):
-            project.chunk_method = 'hybrid'
-            log('Set Chunking Method: Hybrid')
-        else:
-            try:
-                import vapoursynth
-                plugins = vapoursynth.get_core().get_plugins()
-            except:
-                log('Vapoursynth not installed but vspipe reachable\n' +
-                        'Fallback to Hybrid\n')
-                project.chunk_method = 'hybrid'
+    if not find_executable('vspipe'):
+        project.chunk_method = 'hybrid'
+        log('Set Chunking Method: Hybrid')
+    else:
+        try:
+            import vapoursynth
+            plugins = vapoursynth.get_core().get_plugins()
 
             if 'systems.innocent.lsmas' in plugins:
                 log('Set Chunking Method: L-SMASH\n')
@@ -60,6 +55,10 @@ def select_best_chunking_method(project: Project):
             elif 'com.vapoursynth.ffms2' in plugins:
                 log('Set Chunking Method: FFMS2\n')
                 project.chunk_method = 'vs_ffms2'
+        except:
+            log('Vapoursynth not installed but vspipe reachable\n' +
+                'Fallback to Hybrid\n')
+            project.chunk_method = 'hybrid'
 
 
 def check_exes(project: Project):
@@ -130,8 +129,8 @@ def startup_check(project: Project):
             os.system("stty sane")
 
         atexit.register(restore_term)
-
-    select_best_chunking_method(project)
+    if not project.chunk_method:
+        select_best_chunking_method(project)
 
     check_exes(project)
 
@@ -197,11 +196,6 @@ def setup(project):
     # Checking is resume possible
     done_path = project.temp / 'done.json'
     project.resume = project.resume and done_path.exists()
-
-
-    # Make temporal directories, and remove them if already presented
-
-    # Path('.temp'),
 
     if not project.resume:
         if project.temp.is_dir():

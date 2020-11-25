@@ -51,8 +51,8 @@ def get_percentile(scores, percent):
     c = ceil(k)
     if f == c:
         return key(scores[int(k)])
-    d0 = key(scores[int(f)]) * (c-k)
-    d1 = key(scores[int(c)]) * (k-f)
+    d0 = (scores[int(f)]) * (c-k)
+    d1 = (scores[int(c)]) * (k-f)
     return d0+d1
 
 

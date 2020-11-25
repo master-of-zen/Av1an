@@ -5,7 +5,7 @@ from Projects import Project
 
 
 def arg_parsing():
-    """Command line parsing"""
+    """Command line parsing and setting default variables"""
     parser = argparse.ArgumentParser()
 
     # Input/Output/Temp
@@ -32,7 +32,7 @@ def arg_parsing():
 
     # PySceneDetect split
     split_group.add_argument('--threshold', '-tr', type=float, default=35, help='PySceneDetect Threshold')
-    split_group.add_argument('--min_scene_len', type=int, default=120, help='Minimum number of frames in a split')
+    split_group.add_argument('--min_scene_len', type=int, default=60, help='Minimum number of frames in a split')
 
     # AOM Keyframe split
     split_group.add_argument('--reuse_first_pass', help='Reuse the first pass from aom_keyframes split on the chunks',
@@ -66,13 +66,15 @@ def arg_parsing():
     # Target Quality
     tq_group = parser.add_argument_group('Target Quality')
     tq_group.add_argument('--target_quality', type=float, help='Value of Vmaf to target')
-    tq_group.add_argument('--target_quality_method', type=str, default='per_frame', help='Method selection for target quality')
+    tq_group.add_argument('--target_quality_method', type=str, default='per_frame',
+                          help='Method selection for target quality')
     tq_group.add_argument('--probes', type=int, default=4, help='Number of probes to make for target_quality')
     tq_group.add_argument('--min_q', type=int, default=None, help='Min q for target_quality')
     tq_group.add_argument('--max_q', type=int, default=None, help='Max q for target_quality')
     tq_group.add_argument('--vmaf_plots', help='Make plots of probes in temp folder', action='store_true')
     tq_group.add_argument('--probing_rate', type=int, default=4, help='Framerate for probes, 0 - original')
-    tq_group.add_argument('--vmaf_filter', type=str, default=None, help='Filter applied to source at vmaf calcualation, use if you crop source')
+    tq_group.add_argument('--vmaf_filter', type=str, default=None,
+                          help='Filter applied to source at vmaf calcualation, use if you crop source')
 
     # Initialize project with initial values
 

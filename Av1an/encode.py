@@ -26,7 +26,7 @@ from Av1an.split import split_routine
 from VMAF.vmaf import plot_vmaf
 from Av1an.vapoursynth import is_vapoursynth
 
-# todo, saving and loading more info to the scenes data
+
 def main_queue(project):
     # Todo: Redo Queue
     try:
@@ -62,8 +62,6 @@ def encode_file(project: Project):
     """
 
     outputs_filenames(project)
-
-        # set up temp dir and logging
     setup(project)
     set_log(project.logging, project.temp)
 
@@ -95,6 +93,7 @@ def encode_file(project: Project):
     # Delete temp folders
     if not project.keep:
         shutil.rmtree(project.temp)
+
 
 def startup(project: Project, chunk_queue: List[Chunk]):
     """

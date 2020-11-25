@@ -15,9 +15,11 @@ REQUIRES = [
 with open("README.md", "r") as f:
     long_description = f.read()
 
+version = "4"
+
 setuptools.setup(
     name="Av1an",
-    version="3",
+    version=version,
     author="Master_Of_Zen",
     author_email="master_of_zen@protonmail.com",
     description="Cross-platform command-line AV1 / VP9 / HEVC / H264 / VVC encoding framework with per scene quality encoding",

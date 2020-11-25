@@ -76,6 +76,9 @@ def arg_parsing():
     tq_group.add_argument('--vmaf_filter', type=str, default=None,
                           help='Filter applied to source at vmaf calcualation, use if you crop source')
 
+    # Misc
+    misc_group = parser.add_argument_group('Misc')
+    misc_group.add_argument('--version', action='version', version=f'Av1an version: {4}')
     # Initialize project with initial values
 
     proj = Project(vars(parser.parse_args()))
@@ -83,5 +86,6 @@ def arg_parsing():
     if not proj.input:
         parser.print_help()
         exit()
+
 
     return proj

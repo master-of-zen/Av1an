@@ -24,11 +24,11 @@ def set_target_quality(project):
     """
     if project.vmaf_path:
         if not Path(project.vmaf_path).exists():
-            print(f'No such model: {Path(project.vmaf_path).as_posix()}')
+            print(f"No model with this path: {Path(project.vmaf_path).as_posix()}")
             terminate()
 
     if project.probes < 4:
-        print('Target quality with less than 4 probes is experimental')
+        print('Target quality with less than 4 probes is experimental and not recommended')
         terminate()
 
     encoder = ENCODERS[project.encoder]

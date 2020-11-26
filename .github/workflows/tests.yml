@@ -46,6 +46,8 @@ jobs:
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
           - name: target quality
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --target_quality 95
+          - name: vmaf
+            flags: --vmaf
           - name: extra splits
             flags: -xs 10
           - name: split method
@@ -74,4 +76,4 @@ jobs:
         run: |
           ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
-          ls -a
+          tree -a

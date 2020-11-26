@@ -63,8 +63,7 @@ jobs:
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
-          pip3 install --no-cache-dir -r requirements.txt 
-          pip3 install --no-cache-dir ${{ env.pip_deps }}
+          pip3 install --no-cache-dir -r requirements.txt
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do

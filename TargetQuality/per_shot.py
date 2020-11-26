@@ -5,9 +5,6 @@ from math import log as ln
 
 import subprocess
 from subprocess import STDOUT, PIPE
-from .target_quality import vmaf_probe, transform_vmaf, weighted_search, get_target_q, \
-    adapt_probing_rate, read_weighted_vmaf
-from Projects import Project
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -15,6 +12,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy import interpolate
 
+from .target_quality import vmaf_probe, weighted_search, get_target_q, \
+    adapt_probing_rate
+from VMAF import read_weighted_vmaf, transform_vmaf
+from Projects import Project
 from Av1an.bar import process_pipe
 from Chunks.chunk import Chunk
 from Av1an.commandtypes import CommandPair, Command
@@ -198,4 +199,3 @@ def per_shot_target_quality(chunk: Chunk, args: Project):
         plot_probes(args, vmaf_cq, chunk, frames)
 
     return q
-

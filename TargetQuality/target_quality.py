@@ -1,59 +1,14 @@
 import subprocess
 from subprocess import STDOUT, PIPE
-from Av1an.commandtypes import CommandPair, Command
-from Projects import Project
-from VMAF import call_vmaf, read_json
-from Chunks.chunk import Chunk
-from math import log as ln
-from math import ceil, floor
-from Av1an.bar import process_pipe
+
 import numpy as np
 from scipy import interpolate
 
-
-def transform_vmaf(vmaf):
-    if vmaf<99.99:
-        return -ln(1-vmaf/100)
-    else:
-        # return -ln(1-99.99/100)
-        return 9.210340371976184
-
-
-def read_weighted_vmaf(file, percentile=0):
-    """Reads vmaf file with vmaf scores in it and return N percentile score from it.
-
-    :return: N percentile score
-    :rtype: float
-    """
-
-    jsn = read_json(file)
-
-    vmafs = sorted([x['metrics']['vmaf'] for x in jsn['frames']])
-
-    percentile = percentile if percentile != 0 else 0.25
-    score = get_percentile(vmafs, percentile)
-
-    return round(score, 2)
-
-
-def get_percentile(scores, percent):
-    """
-    Find the percentile of a list of values.
-    :param scores: - is a list of values. Note N MUST BE already sorted.
-    :param percent: - a float value from 0.0 to 1.0.
-    :return: - the percentile of the values
-    """
-    scores = sorted(scores)
-    key = lambda x: x
-
-    k = (len(scores)-1) * percent
-    f = floor(k)
-    c = ceil(k)
-    if f == c:
-        return key(scores[int(k)])
-    d0 = (scores[int(f)]) * (c-k)
-    d1 = (scores[int(c)]) * (k-f)
-    return d0+d1
+from Av1an.commandtypes import CommandPair, Command
+from Projects import Project
+from VMAF import call_vmaf, read_json, transform_vmaf
+from Chunks.chunk import Chunk
+from Av1an.bar import process_pipe
 
 
 def adapt_probing_rate(rate, frames):
@@ -225,7 +180,3 @@ def get_closest(q_list, q, positive=True):
         q_list = [x for x in q_list if x < q]
 
     return min(q_list, key=lambda x: abs(x - q))
-
-
-
-

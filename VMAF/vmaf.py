@@ -4,16 +4,19 @@ import json
 import shlex
 import subprocess
 import sys
+
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
-from math import log10
+from math import log10, ceil, floor
+from math import log as ln
+
+import matplotlib
 from matplotlib import pyplot as plt
 
 from Av1an.bar import process_pipe
 from Chunks.chunk import Chunk
-import matplotlib
 
 matplotlib.use('Agg')
 
@@ -76,6 +79,52 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     process_pipe(pipe)
 
     return fl_path
+
+
+def get_percentile(scores, percent):
+    """
+    Find the percentile of a list of values.
+    :param scores: - is a list of values. Note N MUST BE already sorted.
+    :param percent: - a float value from 0.0 to 1.0.
+    :return: - the percentile of the values
+    """
+    scores = sorted(scores)
+    key = lambda x: x
+
+    k = (len(scores)-1) * percent
+    f = floor(k)
+    c = ceil(k)
+    if f == c:
+        return key(scores[int(k)])
+
+    d0 = (scores[int(f)]) * (c-k)
+    d1 = (scores[int(c)]) * (k-f)
+    return d0+d1
+
+
+def transform_vmaf(vmaf):
+    if vmaf<99.99:
+        return -ln(1-vmaf/100)
+    else:
+        # return -ln(1-99.99/100)
+        return 9.210340371976184
+
+
+def read_weighted_vmaf(file, percentile=0):
+    """Reads vmaf file with vmaf scores in it and return N percentile score from it.
+
+    :return: N percentile score
+    :rtype: float
+    """
+
+    jsn = read_json(file)
+
+    vmafs = sorted([x['metrics']['vmaf'] for x in jsn['frames']])
+
+    percentile = percentile if percentile != 0 else 0.25
+    score = get_percentile(vmafs, percentile)
+
+    return round(score, 2)
 
 
 def plot_vmaf(source: Path, encoded: Path, args, model, vmaf_res):

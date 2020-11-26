@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx
+  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx tree
   DEBIAN_FRONTEND: noninteractive
 
 jobs:

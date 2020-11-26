@@ -48,6 +48,8 @@ jobs:
             flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --target_quality 95
           - name: vmaf
             flags: --vmaf
+          - name: vmaf plot
+            flags: --vmaf_plots
           - name: extra splits
             flags: -xs 10
           - name: split method

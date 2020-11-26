@@ -8,8 +8,6 @@ REQUIRES = [
     'psutil',
     'scipy',
     'matplotlib',
-    'fuzzywuzzy',
-    'python-Levenshtein',
 ]
 
 with open("README.md", "r") as f:

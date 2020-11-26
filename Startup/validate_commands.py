@@ -4,7 +4,7 @@ import sys
 from subprocess import PIPE
 from Encoders import ENCODERS
 from typing import List, Union
-from fuzzywuzzy import process
+from difflib import SequenceMatcher
 
 
 def run_command(command: List) -> str:
@@ -43,7 +43,10 @@ def match_commands(params: List, valid_options: List) -> Union[str, bool]:
 
 
 def suggest_fix(wrong_arg, arg_dictionary):
-    return process.extractOne(wrong_arg, arg_dictionary)
+    arg_dictionary = list(arg_dictionary)
+    scores = [(SequenceMatcher(None, wrong_arg, b).ratio(), b)
+              for b in arg_dictionary]
+    return max(scores, key=lambda x: x[0])[1]
 
 
 def get_encoder_args(args):
@@ -64,12 +67,13 @@ def validate_inputs(args):
 
     parameters = get_encoder_args(args)
 
-    suggested = [(x, suggest_fix(x, parameters)) for x in match_commands(video_params, parameters)]
+    suggested = [(x, suggest_fix(x, parameters))
+                 for x in match_commands(video_params, parameters)]
 
     if len(suggested) > 0:
         print('WARNING: Invalid params:')
         for cmd in suggested:
-            print(f"'{cmd[0]}' isn't a valid param for {args.encoder}. Did you mean '{cmd[1][0]}'?")
+            print(f"'{cmd[0]}' isn't a valid param for {args.encoder}. Did you mean '{cmd[1]}'?")
         if not args.force:
             print('To continue anyway, run Av1an with --force')
             sys.exit(1)

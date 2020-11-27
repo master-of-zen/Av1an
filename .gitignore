@@ -140,3 +140,5 @@ dmypy.json
 .vscode/*
 .directory
 Upload.sh
+
+*.backup

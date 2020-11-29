@@ -48,7 +48,7 @@ class Counter:
 BaseManager.register('Counter', Counter)
 
 
-def process_pipe(pipe):
+def process_pipe(pipe, chunk: Chunk):
     encoder_history = deque(maxlen=20)
     while True:
         line = pipe.stdout.readline().strip()
@@ -60,11 +60,12 @@ def process_pipe(pipe):
             encoder_history.append(line)
 
     if pipe.returncode != 0 and pipe.returncode != -2:
-        print(f"\nEncoder encountered an error: {pipe.returncode}")
+        print(f"\n:: Encoder encountered an error: {pipe.returncode}")
+        print(f"\n:: Chunk: {chunk.index}")
         print('\n'.join(encoder_history))
 
 
-def process_encoding_pipe(pipe, encoder, counter):
+def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk):
     encoder_history = deque(maxlen=20)
     frame = 0
     enc = ENCODERS[encoder]
@@ -89,7 +90,9 @@ def process_encoding_pipe(pipe, encoder, counter):
             encoder_history.append(line)
 
     if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
-        print(f"\nEncoder encountered an error: {pipe.returncode}")
+
+        print(f"\n:: Encoder encountered an error: {pipe.returncode}")
+        print(f"\n:: Chunk: {chunk.index}")
         print('\n'.join(encoder_history))
 
 
@@ -100,14 +103,13 @@ def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source, passes,
         pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
 
         if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc', 'svt_av1'):
-            process_encoding_pipe(pipe, encoder, counter)
+            process_encoding_pipe(pipe, encoder, counter, c)
 
         if encoder in ('svt_vp9'):
-            # SVT-AV1 developer: SVT-AV1 is special in the way it outputs to console
-            # SVT-AV1 got a new output mode, but SVT-VP9 is still special
-            process_pipe(pipe)
+            # SVT-VP9 is special
+            process_pipe(pipe, c)
             counter.update(frame_probe_source // passes)
 
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
-        print(f'Error at encode {e}\nAt line {exc_tb.tb_lineno}')
+        print(f'\n:: Error at encode {e}\nAt line {exc_tb.tb_lineno}')

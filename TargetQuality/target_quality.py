@@ -158,7 +158,7 @@ def vmaf_probe(chunk: Chunk, q,  args: Project, probing_rate):
 
     cmd = probe_cmd(chunk, q, args.ffmpeg_pipe, args.encoder, probing_rate)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-    process_pipe(pipe)
+    process_pipe(pipe, chunk)
 
     file = call_vmaf(chunk, gen_probes_names(chunk, q), args.n_threads, args.vmaf_path, args.vmaf_res, vmaf_filter=args.vmaf_filter,
                      vmaf_rate=probing_rate)

@@ -76,7 +76,7 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout,
                             stdout=PIPE, stderr=STDOUT, universal_newlines=True)
-    process_pipe(pipe)
+    process_pipe(pipe, chunk)
 
     return fl_path
 

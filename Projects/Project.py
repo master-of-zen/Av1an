@@ -1,7 +1,7 @@
 
 from pathlib import Path
 from Av1an.commandtypes import Command
-
+from Av1an.utils import frame_probe_fast
 
 class Project(object):
 
@@ -74,5 +74,21 @@ class Project(object):
         for key in initial_data:
             setattr(self, key, initial_data[key])
 
+    def get_frames(self):
+        """
+        Get total frame count of input file, returning total_frames from project if already exists
+        """
+        if self.frames > 0:
+            return self.frames
+        else:
+            total = frame_probe_fast(self.input, self.is_vs)
+            self.frames = total
+            return self.frames
+
+    def set_frames(self, frame_count: int):
+        """
+        Setting total frame count for project
+        """
+        self.frames = frame_count
 
 

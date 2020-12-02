@@ -54,25 +54,6 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     raise ValueError(f'{reg} is not in list')
 
 
-def get_total_frame_count(project):
-    """
-    Get total frame count of input file, returning total_frames from project if already exists
-    """
-    if project.frames > 0:
-        return project.frames
-    else:
-        total = frame_probe_fast(project.input, project.is_vs)
-        project.frames = total
-        return project.frames
-
-
-def set_total_frame_count(project, frame_count):
-    """
-    Setting total frame count for file
-    """
-    project.frames = frame_count
-
-
 def frame_probe_fast(source: Path, is_vs: bool = False):
     """
     Consolidated function to retrieve the number of frames from the input quickly,

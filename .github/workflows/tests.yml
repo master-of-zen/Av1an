@@ -26,6 +26,8 @@ jobs:
         include:
           - name: baseline
             flags: ""
+          - name: scenes
+            flags: -s scenes.json
           - name: svt_av1
             flags: -enc svt_av1
           - name: rav1e

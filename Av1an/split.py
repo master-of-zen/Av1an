@@ -26,7 +26,8 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
     # if resuming, we already have the split file, so just read that and return
     if resuming:
-        scenes =  read_scenes_from_file(scene_file)
+        scenes, frames =  read_scenes_from_file(scene_file)
+        project.set_frames(frames)
         return scenes
 
     # Run scenedetection or skip
@@ -37,16 +38,17 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     # Read saved scenes:
     elif project.scenes and Path(project.scenes).exists():
         log('Using Saved Scenes\n')
-        scenes = read_scenes_from_file(Path(project.scenes))
+        scenes, frames = read_scenes_from_file(Path(project.scenes))
+        project.set_frames(frames)
 
     else:
         # determines split frames with pyscenedetect or aom keyframes
         scenes = calc_split_locations(project)
         if project.scenes and Path(project.scenes).exists():
-            write_scenes_to_file(scenes, Path(project.scenes))
+            write_scenes_to_file(scenes, project.get_frames(), Path(project.scenes))
 
     # Write internal scenes
-    write_scenes_to_file(scenes, scene_file)
+    write_scenes_to_file(scenes, project.get_frames(), scene_file)
 
     # Applying extra splits
     if project.extra_split:
@@ -56,7 +58,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     return scenes
 
 
-def write_scenes_to_file(scenes: List[int], scene_path: Path):
+def write_scenes_to_file(scenes: List[int], frames: int, scene_path: Path):
     """
     Writes a list of scenes to the a file
 
@@ -65,7 +67,7 @@ def write_scenes_to_file(scenes: List[int], scene_path: Path):
     :return: None
     """
     with open(scene_path, 'w') as scene_file:
-        data = {'scenes': scenes }
+        data = {'scenes': scenes, 'frames': frames }
         json.dump(data, scene_file)
 
 def read_scenes_from_file(scene_path: Path) -> List[int]:
@@ -77,7 +79,7 @@ def read_scenes_from_file(scene_path: Path) -> List[int]:
     """
     with open(scene_path, 'r') as scene_file:
         data = json.load(scene_file)
-        return data['scenes']
+        return data['scenes'], data['frames']
 
 def segment(video: Path, temp: Path, frames: List[int]):
     """
@@ -171,6 +173,6 @@ def calc_split_locations(project: Project) -> List[int]:
     # Write scenes to file
 
     if project.scenes:
-        write_scenes_to_file(sc, project.scenes)
+        write_scenes_to_file(sc, project.get_frames(), project.scenes)
 
     return sc

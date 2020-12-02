@@ -15,7 +15,7 @@ from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
 from TargetQuality import per_shot_target_quality_routine
-from Av1an.utils import frame_probe_fast, frame_probe, terminate, set_total_frame_count, get_total_frame_count
+from Av1an.utils import frame_probe_fast, frame_probe, terminate
 from Startup.file_validation import process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
@@ -107,7 +107,7 @@ def startup(project: Project, chunk_queue: List[Chunk]):
         with open(done_path) as done_file:
             data = json.load(done_file)
 
-        set_total_frame_count(project,data['frames'])
+        project.set_frames(data['frames'])
         done = len(data['done'])
         initial = sum(data['done'].values())
         log(f'Resumed with {done} encoded clips done\n\n')
@@ -121,7 +121,7 @@ def startup(project: Project, chunk_queue: List[Chunk]):
     project.workers = min(project.workers, clips)
     print(f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
           f'Params: {" ".join(project.video_params)}')
-    counter = Manager().Counter(get_total_frame_count(project), initial)
+    counter = Manager().Counter(project.get_frames(), initial)
     project.counter = counter
 
 

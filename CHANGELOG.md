@@ -14,4 +14,5 @@
 - Target Quality settings balanced
 - Target Quality score calculation fixed and improved
 - Default extra_splits set to 240 frames.
-- Extraction and Concatenation to copy all streams
+- Extraction and Concatenation to copy all streams.
+- Scenes file to save total frame count, faster restart/start up with scenes file.

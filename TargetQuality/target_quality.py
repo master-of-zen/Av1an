@@ -90,8 +90,8 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
     if encoder == 'aom':
-        params = ['aomenc', '--passes=1', '--threads=8',
-                  '--end-usage=q', '--cpu-used=6', f'--cq-level={q}']
+        params = ['aomenc', '--passes=1', '--threads=24',
+                  '--end-usage=q', '--cpu-used=6', '--tile-columns=2', '--tile-rows=1', f'--cq-level={q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'x265':
@@ -100,7 +100,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
-        params = ['rav1e', '-y', '-s', '10', '--tiles', '8', '--quantizer', f'{q}']
+        params = ['rav1e', '-y', '-s', '10', '--tiles', '32', '--quantizer', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':

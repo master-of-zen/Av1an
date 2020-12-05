@@ -14,6 +14,7 @@ from Encoders import ENCODERS
 from Projects import Project
 from Av1an.utils import terminate, hash_path
 from Av1an.logger import log
+from Av1an.vapoursynth import is_vapoursynth
 
 
 def set_target_quality(project):
@@ -129,8 +130,14 @@ def startup_check(project: Project):
             os.system("stty sane")
 
         atexit.register(restore_term)
+
     if not project.chunk_method:
         select_best_chunking_method(project)
+
+    # project.is_vs = is_vapoursynth(project.input)
+
+    if project.is_vs:
+        project.chunk_method = 'vs_ffms2'
 
     check_exes(project)
 
@@ -170,13 +177,13 @@ def determine_resources(encoder, workers):
     ram = round(virtual_memory().total / 2 ** 30)
 
     if encoder in ('aom', 'rav1e', 'vpx'):
-        workers = round(min(cpu / 2, ram / 1.5))
+        workers = round(min(cpu / 3, ram / 1.5))
 
     elif encoder in ('svt_av1', 'svt_vp9', 'x265', 'x264'):
         workers = round(min(cpu, ram)) // 8
 
     elif encoder in 'vvc':
-        workers = round(min(cpu, ram))
+        workers = round(min(cpu, ram)) // 4
 
     # fix if workers round up to 0
     if workers == 0:

@@ -70,6 +70,7 @@ def write_scenes_to_file(scenes: List[int], frames: int, scene_path: Path):
         data = {'scenes': scenes, 'frames': frames }
         json.dump(data, scene_file)
 
+
 def read_scenes_from_file(scene_path: Path) -> List[int]:
     """
     Reads a list of split locations from a file
@@ -80,6 +81,7 @@ def read_scenes_from_file(scene_path: Path) -> List[int]:
     with open(scene_path, 'r') as scene_file:
         data = json.load(scene_file)
         return data['scenes'], data['frames']
+
 
 def segment(video: Path, temp: Path, frames: List[int]):
     """

@@ -16,7 +16,6 @@ from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
 from TargetQuality import per_shot_target_quality_routine
 from Av1an.utils import frame_probe_fast, frame_probe, terminate
-from Startup.file_validation import process_inputs
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, outputs_filenames, setup
 from Av1an.logger import log, set_log
@@ -24,33 +23,6 @@ from Av1an.ffmpeg import extract_audio
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine
 from VMAF.vmaf import plot_vmaf
-from Av1an.vapoursynth import is_vapoursynth
-
-
-def main_queue(project):
-    # Todo: Redo Queue
-    try:
-        tm = time.time()
-
-        project.queue = process_inputs(project.input)
-
-        for file in project.queue:
-            tm = time.time()
-            project.input = file
-            is_vs = is_vapoursynth(project.input)
-            project.is_vs = is_vs
-            project.chunk_method = 'vs_ffms2' if is_vs else project.chunk_method
-
-            if len(project.queue) > 1:
-                print(f'Encoding: {file}')
-                project.output_file = None
-
-            encode_file(project)
-
-            print(f'Finished: {round(time.time() - tm, 1)}s\n')
-    except KeyboardInterrupt:
-        print('Encoding stopped')
-        sys.exit()
 
 
 def encode_file(project: Project):

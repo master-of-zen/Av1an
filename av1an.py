@@ -2,6 +2,7 @@
 
 from Av1an import *
 from Startup.setup import startup_check
+from Managers import Manager
 
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encoding"""
@@ -11,7 +12,11 @@ class Av1an:
     def main_thread(self):
         """Main."""
         startup_check(self.args)
-        main_queue(self.args)
+
+        manager = Manager.Main(self.args)
+
+        manager.run()
+        # main_queue(self.args)
 
 
 def main():

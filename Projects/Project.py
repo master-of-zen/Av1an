@@ -91,4 +91,12 @@ class Project(object):
         """
         self.frames = frame_count
 
+    def outputs_filenames(self):
+        """
+        Set output filename
 
+        :param project: the Project
+        """
+        suffix = '.mkv'
+        self.output_file = Path(self.output_file).with_suffix(suffix) if self.output_file \
+            else Path(f'{self.input.stem}_{self.encoder}{suffix}')

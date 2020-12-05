@@ -78,7 +78,7 @@ def arg_parsing():
 
     # Misc
     misc_group = parser.add_argument_group('Misc')
-    misc_group.add_argument('--version', action='version', version=f'Av1an version: {4}')
+    misc_group.add_argument('--version', action='version', version=f'Av1an version: {4.3}')
     # Initialize project with initial values
 
     proj = Project(vars(parser.parse_args()))

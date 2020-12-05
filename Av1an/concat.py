@@ -64,10 +64,9 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     with open(temp / "concat", 'w') as f:
 
         encode_files = sorted((temp / 'encode').iterdir())
-        # Replace all the ' with '/'' so ffmpeg can read the path correctly
-        f.writelines(f'file {shlex.quote(str(file.absolute()))}\n' for file in encode_files)
+        f.writelines(f'file {shlex.quote("file:"+str(file.absolute()))}\n' for file in encode_files)
 
-    # Add the audio file if one was extracted from the input
+    # Add the audio/subtitles/else file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
         audio = ('-i', audio_file.as_posix(), '-c', 'copy', '-map', '1')

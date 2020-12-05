@@ -34,7 +34,7 @@ class Main:
             proj.outputs_filenames()
 
             if proj.output_file.exists() and len(self.projects) > 1:
-                print(f":: Skipping file {proj.input}\n:: Outputfile {proj.output_file} exists")
+                print(f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists")
 
                 if i+1 < len(self.projects):
                     print()
@@ -44,7 +44,7 @@ class Main:
                 tm = time.time()
 
                 if len(self.projects) > 1:
-                    print(f":: Encoding file {proj.input.name()}")
+                    print(f":: Encoding file {proj.input.name}")
 
                 encode_file(proj)
 

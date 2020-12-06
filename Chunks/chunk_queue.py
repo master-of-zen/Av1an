@@ -84,14 +84,6 @@ def create_encoding_queue(project: Project, split_locations: List[int]) -> List[
     return chunk_queue
 
 
-def reduce_segments(scenes: List[int]) -> List[int]:
-    """Windows terminal can't handle more than ~400 segments in length."""
-    count = len(scenes)
-    interval = int(count / 400 + (count % 400 > 0))
-    scenes = scenes[::interval]
-    return scenes
-
-
 def create_video_queue_hybrid(project: Project, split_locations: List[int]) -> List[Chunk]:
     """
     Create list of chunks using hybrid segment-select approach
@@ -108,10 +100,6 @@ def create_video_queue_hybrid(project: Project, split_locations: List[int]) -> L
 
     segments_list = list(zip(splits, splits[1:]))
     to_split = [x for x in keyframes if x in splits]
-
-    if os.name == 'nt':
-        to_split = reduce_segments(to_split)
-
     segments = []
 
     # Make segments

@@ -17,7 +17,7 @@ from Av1an.resume import write_progress_file
 from TargetQuality import per_shot_target_quality_routine
 from Av1an.utils import frame_probe_fast, frame_probe, terminate
 from Av1an.bar import Manager, tqdm_bar
-from Startup.setup import determine_resources, outputs_filenames, setup
+from Startup.setup import determine_resources, setup
 from Av1an.logger import log, set_log
 from Av1an.ffmpeg import extract_audio
 from Av1an.fp_reuse import segment_first_pass
@@ -33,7 +33,6 @@ def encode_file(project: Project):
     :return: None
     """
 
-    outputs_filenames(project)
     setup(project)
     set_log(project.logging, project.temp)
 

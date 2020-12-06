@@ -7,7 +7,8 @@ from Managers import Manager
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encoding"""
     def __init__(self):
-        self.args = arg_parsing()
+        parser = Args()
+        self.args = parser.get_project()
 
     def main_thread(self):
         """Main."""

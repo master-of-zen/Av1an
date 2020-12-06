@@ -212,12 +212,4 @@ def setup(project):
     (project.temp / 'encode').mkdir(exist_ok=True)
 
 
-def outputs_filenames(project: Project):
-    """
-    Set output filename
 
-    :param project: the Project
-    """
-    suffix = '.mkv'
-    project.output_file = Path(project.output_file).with_suffix(suffix) if project.output_file \
-        else Path(f'{project.input.stem}_{project.encoder}{suffix}')

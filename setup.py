@@ -13,7 +13,7 @@ REQUIRES = [
 with open("README.md", "r") as f:
     long_description = f.read()
 
-version = "4.3"
+version = "4.4"
 
 setuptools.setup(
     name="Av1an",

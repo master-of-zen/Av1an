@@ -16,4 +16,6 @@
 - Default extra_splits set to 240 frames.
 - Extraction and Concatenation to copy all streams.
 - Scenes file to save total frame count, faster restart/start up with scenes file.
-- Fix concat on windows with ffmpeg
+- Fix concat on windows with ffmpeg.
+- Revorked args to classes.
+- Skip files in queue if they already encoded.

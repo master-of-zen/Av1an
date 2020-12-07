@@ -96,7 +96,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
 
     elif encoder == 'x265':
         params = ['x265', '--log-level', '0', '--no-progress',
-                  '--y4m', '--preset', 'medium', '--crf', f'{q}']
+                  '--y4m', '--preset', 'fast', '--crf', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
@@ -122,7 +122,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
 
     elif encoder == 'x264':
         params = ['x264', '--log-level', 'error', '--demuxer', 'y4m',
-                  '-', '--no-progress', '--preset', 'slow', '--crf',
+                  '-', '--no-progress', '--preset', 'medium', '--crf',
                   f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 

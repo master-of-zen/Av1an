@@ -21,18 +21,16 @@ def adapt_probing_rate(rate, frames):
     :return: new probing rate
     """
 
-    if frames < 20:
-        return 1
-    elif frames < 40:
-        return min(rate, 2)
-    elif frames < 120:
-        return min(rate, 3)
-    elif frames < 240:
+    if frames < 40:
         return min(rate, 4)
+    elif frames < 120:
+        return min(rate, 8)
+    elif frames < 240:
+        return min(rate, 16)
     elif frames > 240:
-        return max(rate, 5)
+        return max(rate, 32)
     elif frames > 480:
-        return 10
+        return 64
 
 
 def get_target_q(scores, target_quality):

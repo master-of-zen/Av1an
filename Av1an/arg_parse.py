@@ -68,7 +68,6 @@ class Args:
         io_group.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
         io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         io_group.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
-        io_group.add_argument('--force', help="Force encoding if input args seen as invalid", action='store_true')
 
         # Splitting
         split_group = parser.add_argument_group('Splitting')
@@ -96,6 +95,7 @@ class Args:
                                   choices=['aom', 'svt_av1', 'svt_vp9', 'rav1e', 'vpx', 'x265', 'x264', 'vvc'])
         encode_group.add_argument('--workers', '-w', type=int, default=0, help='Number of workers')
         encode_group.add_argument('--no_check', '-n', help='Do not check encodings', action='store_true')
+        encode_group.add_argument('--force', help="Force encoding if input args seen as invalid", action='store_true')
 
         # VVC
         encode_group.add_argument('--vvc_conf', type=Path, default=None, help='Path to VVC confing file')

@@ -25,25 +25,22 @@ class Args:
 
         self.project = Project(self.parsed)
 
+        if self.project.config:
+            self.save_load_project_file()
+
         return self.project
 
-    def get_defaults(self):
+    def get_defaults(self) -> dict:
         """
-        Get default values specified in
+        Get dictionary of default values specified in arg_parsing()
         """
         return vars(self.parser.parse_args([]))
 
-    def get_unique(self):
-        """
-        Return difference in default and new dictionaries
-        """
-        return
-
-    def get_difference(self):
+    def get_difference(self) -> dict:
         """
         Return difference of defaults and new
         """
-        return [x for x in self.parsed.items() if x not in self.defaults.items()]
+        return dict([x for x in self.parsed.items() if x not in self.defaults.items()])
 
     def parse(self):
         """
@@ -53,6 +50,21 @@ class Args:
         if not self.parsed['input']:
             self.parser.print_help()
             sys.exit()
+
+    def save_load_project_file(self):
+        """
+        Saves current/Loads given project file, loads saved project first and when overwrites only unique values from current parse
+        """
+        cfg_path = Path(self.project.config)
+
+        if cfg_path.exists():
+
+            new = self.get_difference()
+            self.project.load_project_from_file(self.project.config)
+            self.project.load_project(new)
+
+        else:
+            self.project.save_project_to_file(self.project.config)
 
     def arg_parsing(self):
         """Command line parsing and setting default variables"""
@@ -68,6 +80,7 @@ class Args:
         io_group.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
         io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         io_group.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
+        io_group.add_argument('--config', '-c', type=str, default=None, help="Path to config file, create if doesn't exists")
 
         # Splitting
         split_group = parser.add_argument_group('Splitting')

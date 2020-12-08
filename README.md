@@ -53,7 +53,7 @@ With your own parameters:
     -r   --resume           If encode was stopped/quit resumes encode with saving all progress
                             Resuming automatically skips scenedetection, audio encoding/copy,
                             spliting, so resuming only possible after actuall encoding is started.
-                            /.temp folder must be presented for resume.
+                            temp folder must be presented for resume.
 
     --no_check              Skip checking numbers of frames for source and encoded chunks.
                             Needed if framerate changes to avoid console spam.
@@ -70,7 +70,12 @@ With your own parameters:
 
     --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.
                             Use in case when concatenation fails.
-
+    
+    -c  --config            Save config file with given name if doesn't exists.
+                            Reads config file with that name. 
+                            Options provided to cli overwrite config values.
+                            All options excepth in/out/vmaf/log/temp/config paths are saved.
+                            
 <h3 align="center">FFmpeg options</h3>
 
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)

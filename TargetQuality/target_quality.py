@@ -22,13 +22,13 @@ def adapt_probing_rate(rate, frames):
     """
 
     if frames < 40:
-        return min(rate, 4)
+        return 4
     elif frames < 120:
-        return min(rate, 8)
+        return 8
     elif frames < 240:
-        return min(rate, 16)
+        return 16
     elif frames > 240:
-        return max(rate, 32)
+        return 32
     elif frames > 480:
         return 64
 

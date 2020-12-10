@@ -1,7 +1,6 @@
 #!/bin/env python
 
 import re
-import shlex
 import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT

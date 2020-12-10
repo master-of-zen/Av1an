@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Lock
 
 
-doneFileLock = Lock()
+done_file_lock = Lock()
 
 
 def read_done_data(temp: Path):
@@ -14,13 +14,13 @@ def read_done_data(temp: Path):
     :return: json data
     """
     try:
-        doneFileLock.acquire()
+        done_file_lock.acquire()
         done_path = temp / 'done.json'
         with open(done_path) as done_file:
             data = json.load(done_file)
     finally:
-        if doneFileLock.locked():
-            doneFileLock.release()
+        if done_file_lock.locked():
+            done_file_lock.release()
     return data
 
 
@@ -34,12 +34,12 @@ def write_progress_file(progress_file: Path, chunk, encoded_frames: int):
     :return: None
     """
     try:
-        doneFileLock.acquire()
+        done_file_lock.acquire()
         with progress_file.open() as f:
             d = json.load(f)
         d['done'][chunk.name] = encoded_frames
         with progress_file.open('w') as f:
             json.dump(d, f)
     finally:
-        if doneFileLock.locked():
-            doneFileLock.release()
+        if done_file_lock.locked():
+            done_file_lock.release()

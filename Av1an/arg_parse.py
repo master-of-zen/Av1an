@@ -144,4 +144,3 @@ class Args:
         misc_group.add_argument('--version', action='version', version=f'Av1an version: {4.3}')
         # Initialize project with initial values
         return parser
-

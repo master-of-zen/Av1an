@@ -1,15 +1,12 @@
 #!/bin/env python
 
-import re
-import subprocess
 import sys
 from collections import deque
 from multiprocessing.managers import BaseManager
-from subprocess import PIPE, STDOUT
+from subprocess import STDOUT
 from tqdm import tqdm
 
-from .commandtypes import Command, CommandPair
-from .utils import terminate
+from .commandtypes import CommandPair
 
 from Encoders import ENCODERS
 from Projects import Project

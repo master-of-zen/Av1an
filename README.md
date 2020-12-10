@@ -70,12 +70,12 @@ With your own parameters:
 
     --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.
                             Use in case when concatenation fails.
-    
+
     -c  --config            Save config file with given name if doesn't exists.
-                            Reads config file with that name. 
+                            Reads config file with that name.
                             Options provided to cli overwrite config values.
                             All options excepth in/out/vmaf/log/temp/config paths are saved.
-                            
+
 <h3 align="center">FFmpeg options</h3>
 
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
@@ -103,8 +103,8 @@ With your own parameters:
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
                             By default selected best one avalable.
-                            vs_lsmash > vs_ffms2 > hybrid
-                            ['hybrid'(default), 'select', 'vs_ffms2', 'vs_lsmash'(Recomended To Install)]
+                            vs_ffms2 > vs_lsmash > hybrid
+                            ['hybrid'(default), 'select', 'vs_ffms2'(Recomended To Install), 'vs_lsmash']
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 

@@ -50,12 +50,14 @@ def select_best_chunking_method(project: Project):
             import vapoursynth
             plugins = vapoursynth.get_core().get_plugins()
 
-            if 'systems.innocent.lsmas' in plugins:
-                log('Set Chunking Method: L-SMASH\n')
-                project.chunk_method = 'vs_lsmash'
-            elif 'com.vapoursynth.ffms2' in plugins:
+            if 'com.vapoursynth.ffms2' in plugins:
                 log('Set Chunking Method: FFMS2\n')
                 project.chunk_method = 'vs_ffms2'
+
+            elif 'systems.innocent.lsmas' in plugins:
+                log('Set Chunking Method: L-SMASH\n')
+                project.chunk_method = 'vs_lsmash'
+
         except:
             log('Vapoursynth not installed but vspipe reachable\n' +
                 'Fallback to Hybrid\n')

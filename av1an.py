@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from Av1an import *
+from Av1an.arg_parse import Args
 from Startup.setup import startup_check
 from Managers import Manager
 

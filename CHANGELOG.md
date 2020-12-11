@@ -19,3 +19,4 @@
 - Fix concat on windows with ffmpeg.
 - Revorked args to classes.
 - Skip files in queue if they already encoded.
+- Default chunk method to ffms2.

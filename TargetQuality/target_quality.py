@@ -134,7 +134,6 @@ def gen_probes_names(chunk: Chunk, q):
 
 
 def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
-
     ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
     ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(command[1], stdin=ffmpeg_pipe.stdout, stdout=PIPE,
@@ -146,7 +145,7 @@ def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
 
 def vmaf_probe(chunk: Chunk, q,  args: Project, probing_rate):
     """
-    Make encoding probe to get VMAF that Q returns
+    Calculates vmaf and returns path to json file
 
     :param chunk: the Chunk
     :param q: Value to make probe

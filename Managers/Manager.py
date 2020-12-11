@@ -36,6 +36,7 @@ class Main:
             if proj.output_file.exists() and len(self.projects) > 1:
                 print(f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists")
 
+                # Don't print new line on last project to console
                 if i+1 < len(self.projects):
                     print()
 

@@ -14,7 +14,7 @@ from Chunks.chunk import Chunk
 from Chunks.chunk_queue import load_or_gen_chunk_queue
 from Av1an.concat import concat_routine
 from Av1an.resume import write_progress_file
-from TargetQuality import per_shot_target_quality_routine
+from TargetQuality import per_shot_target_quality_routine, per_frame_target_quality_routine
 from Av1an.utils import frame_probe_fast, frame_probe, terminate
 from Av1an.bar import Manager, tqdm_bar
 from Startup.setup import determine_resources, setup
@@ -128,7 +128,10 @@ def encode(chunk: Chunk, project: Project):
 
         # Target Quality Mode
         if project.target_quality:
-            per_shot_target_quality_routine(project, chunk)
+            if project.target_quality_method == 'per_shot':
+                per_shot_target_quality_routine(project, chunk)
+            if project.target_quality_method == 'per_frame':
+                per_frame_target_quality_routine(project, chunk)
 
         ENCODERS[project.encoder].on_before_chunk(project, chunk)
 

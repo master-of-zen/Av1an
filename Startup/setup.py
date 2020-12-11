@@ -19,7 +19,7 @@ from Av1an.vapoursynth import is_vapoursynth
 
 def set_target_quality(project):
     """
-    Av1an setup for VMAF
+    Av1an setup for target_quality
 
     :param project: the Project
     """
@@ -34,8 +34,15 @@ def set_target_quality(project):
 
     encoder = ENCODERS[project.encoder]
 
+    if project.encoder not in ('x265', 'svt_av1') and project.target_quality_method == 'per_frame':
+        print(f":: Per frame Target Quality is not supported for selected encoder\n:: Supported encoders: x265, svt_av1")
+        exit()
+
+    # setting range for q values
     if project.min_q is None:
         project.min_q, _ = encoder.default_q_range
+        assert project.min_q > 1
+
     if project.max_q is None:
         _, project.max_q = encoder.default_q_range
 

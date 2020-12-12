@@ -87,7 +87,7 @@ def add_probes_to_frame_list(frame_list, q_list, vmafs):
 
 def per_frame_target_quality(chunk, project):
     frames = chunk.frames
-    #pp = pprint.PrettyPrinter(indent=4).pprint
+    pp = pprint.PrettyPrinter(indent=4).pprint
     # First q value to make probe at
     middle_point = (project.min_q + project.max_q) // 2
     frame_list = [{'frame_number': x, 'probes': []} for x in range(frames)]
@@ -104,9 +104,22 @@ def per_frame_target_quality(chunk, project):
         vmafs = per_frame_probe(q_list, 1, chunk, project)
         frame_list = add_probes_to_frame_list(frame_list, q_list, vmafs)
 
-    #pp(frame_list)
+        print(get_square_error([x['probes'][-1][1] for x in frame_list] ,project.target_quality))
+    pp(frame_list)
     exit()
 
+
+def get_square_error(ls, target):
+
+    total = 0
+
+    for i in ls:
+        dif = i - target
+        total += dif ** 2
+
+    mse = total / len(ls)
+
+    return mse
 
 def gen_border_probes_q(frame_list, min_q, max_q, target):
     q_list = []
@@ -142,6 +155,7 @@ def search(q1, v1, q2, v2, target):
 
 def gen_next_q(frame_list, chunk, project):
     q_list = []
+
 
     for probe in frame_list:
         p1, p2 = probe['probes'][-2:]

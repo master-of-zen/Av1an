@@ -20,3 +20,4 @@
 - Revorked args to classes.
 - Skip files in queue if they already encoded.
 - Default chunk method to ffms2.
+- Per frame target quality for SVT-AV1

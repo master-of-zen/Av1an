@@ -92,6 +92,7 @@ def startup(project: Project, chunk_queue: List[Chunk]):
     project.workers = min(project.workers, clips)
     print(f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
           f'Params: {" ".join(project.video_params)}')
+
     counter = Manager().Counter(project.get_frames(), initial)
     project.counter = counter
 
@@ -119,45 +120,40 @@ def encode(chunk: Chunk, project: Project):
     :param project: The cli project
     :return: None
     """
-    try:
-        st_time = time.time()
+    st_time = time.time()
 
-        chunk_frames = chunk.frames
+    chunk_frames = chunk.frames
 
-        log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
+    log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
 
-        # Target Quality Mode
-        if project.target_quality:
-            if project.target_quality_method == 'per_shot':
-                per_shot_target_quality_routine(project, chunk)
-            if project.target_quality_method == 'per_frame':
-                per_frame_target_quality_routine(project, chunk)
+    # Target Quality Mode
+    if project.target_quality:
+        if project.target_quality_method == 'per_shot':
+            per_shot_target_quality_routine(project, chunk)
+        if project.target_quality_method == 'per_frame':
+            per_frame_target_quality_routine(project, chunk)
 
-        ENCODERS[project.encoder].on_before_chunk(project, chunk)
+    ENCODERS[project.encoder].on_before_chunk(project, chunk)
 
-        # skip first pass if reusing
-        start = 2 if project.reuse_first_pass and project.passes >= 2 else 1
+    # skip first pass if reusing
+    start = 2 if project.reuse_first_pass and project.passes >= 2 else 1
 
-        # Run all passes for this chunk
-        for current_pass in range(start, project.passes + 1):
-            tqdm_bar(project, chunk, project.encoder, project.counter, chunk_frames, project.passes, current_pass)
+    # Run all passes for this chunk
+    for current_pass in range(start, project.passes + 1):
+        tqdm_bar(project, chunk, project.encoder, project.counter, chunk_frames, project.passes, current_pass)
 
-        ENCODERS[project.encoder].on_after_chunk(project, chunk)
+    ENCODERS[project.encoder].on_after_chunk(project, chunk)
 
-        # get the number of encoded frames, if no check assume it worked and encoded same number of frames
-        encoded_frames = chunk_frames if project.no_check else frame_check_output(chunk, chunk_frames)
+    # get the number of encoded frames, if no check assume it worked and encoded same number of frames
+    encoded_frames = chunk_frames if project.no_check else frame_check_output(chunk, chunk_frames)
 
-        # write this chunk as done if it encoded correctly
-        if encoded_frames == chunk_frames:
-            write_progress_file(Path(project.temp / 'done.json'), chunk, encoded_frames)
+    # write this chunk as done if it encoded correctly
+    if encoded_frames == chunk_frames:
+        write_progress_file(Path(project.temp / 'done.json'), chunk, encoded_frames)
 
-        enc_time = round(time.time() - st_time, 2)
-        log(f'Done: {chunk.name} Fr: {encoded_frames}\n'
-            f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
-
-    except Exception as e:
-        _, _, exc_tb = sys.exc_info()
-        print(f'Error in encoding loop {e}\nAt line {exc_tb.tb_lineno}')
+    enc_time = round(time.time() - st_time, 2)
+    log(f'Done: {chunk.name} Fr: {encoded_frames}\n'
+        f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
 
 
 def frame_check_output(chunk: Chunk, expected_frames: int) -> int:

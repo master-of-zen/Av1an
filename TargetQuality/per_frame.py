@@ -7,7 +7,9 @@ from Av1an.commandtypes import CommandPair, Command
 from Av1an.logger import log
 from VMAF import call_vmaf, read_weighted_vmaf, read_json
 from .target_quality import gen_probes_names, make_pipes, vmaf_probe, weighted_search
+from scipy import interpolate
 import pprint
+import numpy as np
 
 def per_frame_target_quality_routine(project: Project, chunk: Chunk):
     """
@@ -18,7 +20,7 @@ def per_frame_target_quality_routine(project: Project, chunk: Chunk):
     :param chunk: the Chunk
     :return: None
     """
-    chunk.per_frame_target_quality_cq = per_frame_target_quality(chunk, project)
+    chunk.per_frame_target_quality_q_list = per_frame_target_quality(chunk, project)
 
 
 def make_q_file(q_list, chunk):
@@ -28,7 +30,6 @@ def make_q_file(q_list, chunk):
 
         for x in q_list:
             text += str(x) + '\n'
-
         fl.write(text)
     return qfile
 
@@ -66,7 +67,7 @@ def per_frame_probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, qp_
 
 
 def per_frame_probe(q_list, q, chunk, project):
-    qfile = make_q_file(q_list, chunk)
+    qfile = chunk.make_q_file(q_list)
     cmd = per_frame_probe_cmd(chunk, q, project.ffmpeg_pipe, project.encoder, 1, qfile)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
     process_pipe(pipe, chunk)
@@ -85,53 +86,64 @@ def add_probes_to_frame_list(frame_list, q_list, vmafs):
     return frame_list
 
 
+
 def per_frame_target_quality(chunk, project):
     frames = chunk.frames
-    pp = pprint.PrettyPrinter(indent=4).pprint
-    # First q value to make probe at
-    middle_point = (project.min_q + project.max_q) // 2
     frame_list = [{'frame_number': x, 'probes': []} for x in range(frames)]
 
-    # Initial q list
-    for i in range(project.probes):
-        if i == 0:
-            q_list = [ middle_point for x in range(frames)]
-        elif i == 1:
-            q_list = gen_border_probes_q(frame_list, project.min_q, project.max_q, project.target_quality)
-        else:
-            q_list = gen_next_q(frame_list, chunk, project)
-
+    for _ in range(project.probes):
+        q_list = gen_next_q(frame_list, chunk, project)
         vmafs = per_frame_probe(q_list, 1, chunk, project)
         frame_list = add_probes_to_frame_list(frame_list, q_list, vmafs)
+        mse = round(get_square_error([x['probes'][-1][1] for x in frame_list] ,project.target_quality), 2)
+        # print(':: MSE:', mse)
 
-        print(get_square_error([x['probes'][-1][1] for x in frame_list] ,project.target_quality))
-    pp(frame_list)
-    exit()
+        if mse < 1.0:
+            return q_list
+
+    return q_list
 
 
 def get_square_error(ls, target):
-
     total = 0
-
     for i in ls:
         dif = i - target
         total += dif ** 2
-
     mse = total / len(ls)
-
     return mse
 
-def gen_border_probes_q(frame_list, min_q, max_q, target):
+
+def gen_next_q(frame_list, chunk, project):
     q_list = []
 
-    for probe in frame_list:
+    probes = len(frame_list[0]['probes'])
 
-        if probe['probes'][0][1] < target:
-            q_list.append(min_q)
-        else:
-            q_list.append(max_q)
+    if probes == 0:
+        return [project.min_q] * len(frame_list)
+    elif probes == 1:
+        return [project.max_q] * len(frame_list)
+    else:
+        for probe in frame_list:
 
-    return q_list
+            x = [x[0] for x in probe['probes']]
+            y = [x[1] for x in probe['probes']]
+
+            if probes > 2:
+                if len(x) != len(set(x)):
+                    q_list.append(probe['probes'][-1][0])
+                    continue
+
+            interpolation = 'quadratic' if probes > 2 else 'linear'
+
+            f = interpolate.interp1d(x, y, kind=interpolation)
+            xnew = np.linspace(min(x), max(x), max(x) - min(x))
+            tl = list(zip(xnew, f(xnew)))
+            q = min(tl, key=lambda l: abs(l[1] - project.target_quality))
+
+            q_list.append(int(round(q[0])))
+
+        return q_list
+
 
 def search(q1, v1, q2, v2, target):
 
@@ -150,18 +162,6 @@ def search(q1, v1, q2, v2, target):
 
     new_point = int(round(q1 * (dif1 / tot) + (q2 * (dif2 / tot))))
     return new_point
-
-
-
-def gen_next_q(frame_list, chunk, project):
-    q_list = []
-
-
-    for probe in frame_list:
-        p1, p2 = probe['probes'][-2:]
-        q_list.append(search(p1[0],p1[1],p2[0],p2[1], project.target_quality))
-
-    return q_list
 
 
 """

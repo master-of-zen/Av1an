@@ -34,7 +34,8 @@ class Chunk:
         self.temp: Path = temp
         self.frames: int = frames
         self.output_ext: str = output_ext
-        self.per_shot_target_quality_cq: Optional[int] = None
+        self.per_shot_target_quality_cq = None
+        self.per_frame_target_quality_q_list = None
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -116,3 +117,17 @@ class Chunk:
         chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'], d['size'], d['frames'])
         chunk.per_shot_target_quality_cq = d['per_shot_target_quality_cq']
         return chunk
+
+    def make_q_file(self, q_list):
+        qfile = self.fake_input_path.with_name(f'q_file_{self.name}').with_suffix('.txt')
+        with open(qfile, 'w') as fl:
+            text = ''
+
+            for x in q_list:
+                text += str(x) + '\n'
+
+            fl.write(text)
+        return qfile
+
+
+

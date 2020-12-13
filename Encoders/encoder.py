@@ -81,6 +81,9 @@ class Encoder(ABC):
         :return: match object from re.search matching the number of encoded frames"""
         pass
 
+    def mod_command(self, command, chunk):
+        pass
+
     def make_pipes(self, a: Project, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
         """
         Creates a pipe for the given chunk with the given args
@@ -99,6 +102,9 @@ class Encoder(ABC):
             enc_cmd = self.man_q(enc_cmd, man_q)
         elif c.per_shot_target_quality_cq:
             enc_cmd = self.man_q(enc_cmd, c.per_shot_target_quality_cq)
+
+        elif c.per_frame_target_quality_q_list:
+            enc_cmd = self.mod_command(enc_cmd, c)
 
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
         ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)

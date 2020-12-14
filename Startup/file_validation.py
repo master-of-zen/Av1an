@@ -8,16 +8,19 @@ def process_inputs(inputs):
         print('No input file')
         exit()
 
-    if inputs[0].is_dir():
-        inputs = [x for x in inputs[0].iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
+    input_list = []
 
-    valid = np.array([i.exists() for i in inputs])
+    for item in inputs:
+        if item.is_dir():
+            new_inputs = [x for x in item.iterdir() if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")]
+            input_list.extend(new_inputs)
+        else:
+            input_list.append(item)
+
+    valid = np.array([i.exists() for i in input_list])
 
     if not all(valid):
-        print(f'File(s) do not exist: {", ".join([str(inputs[i]) for i in np.where(not valid)[0]])}')
+        print(f'File(s) do not exist: {", ".join([str(input_list[i]) for i in np.where(not valid)[0]])}')
         exit()
 
-    return inputs
-
-
-
+    return input_list

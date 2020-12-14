@@ -31,8 +31,6 @@ class Main:
         Run encoding in queue or single file
         """
         for i, proj in enumerate(self.projects):
-            proj.outputs_filenames()
-
             if proj.output_file.exists() and len(self.projects) > 1:
                 print(f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists")
 

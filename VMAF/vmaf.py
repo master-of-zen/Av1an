@@ -1,4 +1,4 @@
-#! /bin/env python
+#!/bin/env python
 
 import json
 import shlex
@@ -60,14 +60,11 @@ def call_vmaf(chunk: Chunk, encoded: Path, n_threads, model, res,
     # Change framerate of comparison to framerate of probe
     select_frames = f"select=not(mod(n\\,{vmaf_rate}))," if vmaf_rate != 0 else ''
 
-    distorted = f'[0:v]{select_frames}scale={res}:flags=bicubic:\
-                  force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
+    distorted = f'[0:v]{select_frames}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];'
 
-    ref = fr'[1:v]{select_frames}{filter}scale={res}:flags=bicubic:'\
-          'force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];'
+    ref = fr'[1:v]{select_frames}{filter}scale={res}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];'
 
-    vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:\
-                    log_path={shlex.quote(fl)}{mod}{n_threads}"
+    vmaf_filter = f"[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={shlex.quote(fl)}{mod}{n_threads}"
 
     cmd_out = ('-f', 'null', '-')
 

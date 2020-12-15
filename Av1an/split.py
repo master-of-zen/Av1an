@@ -44,8 +44,6 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     else:
         # determines split frames with pyscenedetect or aom keyframes
         scenes = calc_split_locations(project)
-        if project.scenes and Path(project.scenes).exists():
-            write_scenes_to_file(scenes, project.get_frames(), Path(project.scenes))
 
     # Write internal scenes
     write_scenes_to_file(scenes, project.get_frames(), scene_file)
@@ -171,10 +169,5 @@ def calc_split_locations(project: Project) -> List[int]:
     else:
         print(f'No valid split option: {project.split_method}\nValid options: "pyscene", "aom_keyframes"')
         terminate()
-
-    # Write scenes to file
-
-    if project.scenes:
-        write_scenes_to_file(sc, project.get_frames(), project.scenes)
 
     return sc

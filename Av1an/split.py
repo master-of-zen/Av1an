@@ -31,12 +31,12 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
         return scenes
 
     # Run scenedetection or skip
-    if project.scenes == '0':
+    if project.split_method == '0':
         log('Skipping scene detection\n')
         scenes = []
 
     # Read saved scenes:
-    elif project.scenes and Path(project.scenes).exists():
+    if project.scenes and Path(project.scenes).exists():
         log('Using Saved Scenes\n')
         scenes, frames = read_scenes_from_file(Path(project.scenes))
         project.set_frames(frames)

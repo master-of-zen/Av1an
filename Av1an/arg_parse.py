@@ -88,7 +88,7 @@ class Args:
                                  choices=['select', 'vs_ffms2', 'vs_lsmash', 'hybrid'])
         split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
-                                 choices=['pyscene', 'aom_keyframes'])
+                                 choices=['none', 'pyscene', 'aom_keyframes'])
         split_group.add_argument('--extra_split', '-xs', type=int, default=240,
                                  help='Number of frames after which make split')
 

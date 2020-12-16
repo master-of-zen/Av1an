@@ -94,12 +94,13 @@ With your own parameters:
 <h3 align="center">Segmenting</h3>
 
     --split_method          Method used for generating splits.(Default: PySceneDetect)
-                            Options: `pyscene`, `aom_keyframes`
+                            Options: `pyscene`, `aom_keyframes`, `none`
                             `pyscene` - PyScenedetect, content based scenedetection
                             with threshold.
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
                             (Keep in mind that speed also depends on set aomenc parameters)
+                            `none` -  skips scenedetection.
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
                             By default selected best one avalable.
@@ -109,7 +110,6 @@ With your own parameters:
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
-                            If given `0` spliting will be ignored
                             If file not exist, new will be generated in current folder
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"

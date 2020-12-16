@@ -168,9 +168,6 @@ def calc_split_locations(project: Project) -> List[int]:
     elif project.split_method == 'aom_keyframes':
         stat_file = project.temp / 'keyframes.log'
         sc = aom_keyframes(project.input, stat_file, project.min_scene_len, project.ffmpeg_pipe, aom_keyframes_params, project.is_vs)
-    else:
-        print(f'No valid split option: {project.split_method}\nValid options: "pyscene", "aom_keyframes"')
-        terminate()
 
     # Write scenes to file
 

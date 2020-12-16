@@ -31,7 +31,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
         return scenes
 
     # Run scenedetection or skip
-    if project.split_method == '0':
+    if project.split_method == 'none':
         log('Skipping scene detection\n')
         scenes = []
 

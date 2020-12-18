@@ -76,6 +76,9 @@ With your own parameters:
                             Options provided to cli overwrite config values.
                             All options excepth in/out/vmaf/log/temp/config paths are saved.
 
+    --webm                  Outputs webm file.
+                            Use only if you're sure source video and audio is compatible.
+
 <h3 align="center">FFmpeg options</h3>
 
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)

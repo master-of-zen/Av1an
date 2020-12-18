@@ -81,6 +81,7 @@ class Args:
         io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         io_group.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
         io_group.add_argument('--config', '-c', type=str, default=None, help="Path to config file, create if doesn't exists")
+        io_group.add_argument('--webm', default=False, action='store_true', help="Output to webm")
 
         # Splitting
         split_group = parser.add_argument_group('Splitting')

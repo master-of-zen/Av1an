@@ -18,6 +18,7 @@ class Project(object):
         self.output_file: Path = None
         self.mkvmerge: bool = None
         self.config = None
+        self.webm = None
 
         # Splitting
         self.chunk_method: str = None
@@ -105,7 +106,11 @@ class Project(object):
 
         :param project: the Project
         """
-        suffix = '.mkv'
+        if self.webm:
+            suffix = '.webm'
+        else:
+            suffix = '.mkv'
+
         self.output_file = Path(self.output_file).with_suffix(suffix) if self.output_file \
             else Path(f'{self.input.stem}_{self.encoder}{suffix}')
 

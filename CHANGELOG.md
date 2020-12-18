@@ -22,3 +22,4 @@
 - Default chunk method to ffms2.
 - Per frame target quality for SVT-AV1
 - Added none split method option
+- Added webm output

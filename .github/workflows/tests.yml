@@ -23,40 +23,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        enc: [aom, rav1e, svt_av1, svt_vp9, vpx, x265, x264]
+        test: [baseline, scenes, workers, chunk_hybrid, chunk_select, target_quality, vmaf, vmaf_plots, extra_splits, split_aom_keyframes]
         include:
-          - name: baseline
+          - test: baseline
             flags: ""
-          - name: scenes
+          - test: scenes
             flags: -s scenes.json
-          - name: svt_av1
-            flags: -enc svt_av1
-          - name: rav1e
-            flags: -enc rav1e
-          - name: x265
-            flags: -enc x265
-          - name: x264
-            flags: -enc x264
-          - name: vpx
-            flags: -enc vpx
-          - name: workers
+          - test: workers
             flags: -w 2
-          - name: chunk hybrid
+          - test: chunk_hybrid
             flags: --chunk_method hybrid
-          - name: chunk select
+          - test: chunk_select
             flags: --chunk_method select
-          - name: video flags
-            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
-          - name: target quality
-            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --target_quality 95
-          - name: vmaf
+          - test: target_quality
+            flags: --target_quality 95
+          - test: vmaf
             flags: --vmaf
-          - name: vmaf plot
+          - test: vmaf_plots
             flags: --vmaf_plots
-          - name: extra splits
+          - test: extra_splits
             flags: -xs 10
-          - name: split method
+          - test: split_aom_keyframes
             flags: --split_method aom_keyframes
-          - name: change temp
+          - test: video_settings
+            enc: aom
+            flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
+          - test: temp
+            enc: aom
             flags: --temp temporary
     steps:
       - uses: actions/checkout@v2
@@ -78,6 +72,6 @@ jobs:
           tar xf video.tar.gz
       - name: Testing ${{ matrix.name }}
         run: |
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          ./av1an.py -i bus_cif.y4m -enc ${{ matrix.enc }} -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a

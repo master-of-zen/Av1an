@@ -17,47 +17,47 @@ env:
 
 jobs:
   validate:
-    name: ${{ matrix.enc }} ${{ matrix.test }}
+    name: ${{ matrix.name }} ${{ matrix.enc }} 
     runs-on: ubuntu-latest
     container: registry.gitlab.com/luigi311/encoders-docker:latest
     strategy:
       fail-fast: false
       matrix:
         enc: [aom, rav1e, svt_av1, vpx, x265, x264]
-        test: [baseline, target_quality]
+        name: [baseline, target_quality]
         include:
-          - test: baseline
+          - name: baseline
             flags: ""
-          - test: target_quality
+          - name: target_quality
             flags: --target_quality 95
-          - test: chunk_hybrid
+          - name: chunk_hybrid
             enc: aom
             flags: --chunk_method hybrid
-          - test: chunk_select
+          - name: chunk_select
             enc: aom
             flags: --chunk_method select
-          - test: scenes
+          - name: scenes
             enc: aom
             flags: -s scenes.json
-          - test: workers
+          - name: workers
             enc: aom
             flags: -w 2
-          - test: vmaf
+          - name: vmaf
             enc: aom
             flags: --vmaf
-          - test: vmaf_plots
+          - name: vmaf_plots
             enc: aom
             flags: --vmaf_plots
-          - test: extra_splits
+          - name: extra_splits
             enc: aom
             flags: -xs 10
-          - test: split_aom_keyframes
+          - name: split_aom_keyframes
             enc: aom
             flags: --split_method aom_keyframes
-          - test: video_settings
+          - name: video_settings
             enc: aom
             flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
-          - test: temp
+          - name: temp
             enc: aom
             flags: --temp temporary
     steps:

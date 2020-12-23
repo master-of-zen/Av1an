@@ -2,6 +2,8 @@ import subprocess
 from subprocess import STDOUT, PIPE
 
 import numpy as np
+import re
+import pprint
 from scipy import interpolate
 
 from Av1an.commandtypes import CommandPair, Command
@@ -9,6 +11,50 @@ from Projects import Project
 from VMAF import call_vmaf, read_json, transform_vmaf
 from Chunks.chunk import Chunk
 from Av1an.bar import process_pipe
+
+
+def get_scene_scores(chunk, ffmpeg_pipe):
+    """
+    Run ffmpeg scenedetection filter to get average amount of motion in scene
+    """
+
+    pipecmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *ffmpeg_pipe]
+
+    params = "scenedetect --input - detect-content".split()
+
+    #params = ['ffmpeg', '-hide_banner', '-i', '-', '-vf', 'hqdn3d=4:4:3:3,scale=\'min(960,iw)\':-1,select=\'gte(scene,0)\',metadata=print', '-f', 'null', '-']
+    cmd = CommandPair(pipecmd, [*params])
+    pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
+
+    history = []
+
+    while True:
+        line = pipe.stdout.readline().strip()
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+        if len(line) == 0:
+            continue
+        if line:
+            history.append(line)
+
+    if pipe.returncode != 0 and pipe.returncode != -2:
+        print(f"\n:: Encoder in getting scene score {pipe.returncode}")
+        print(f"\n:: Chunk: {chunk.index}")
+        print('\n'.join(history))
+
+    pp = pprint.PrettyPrinter(indent=2).pprint
+
+    scores = [x for x in history if 'score' in x]
+
+    results = []
+    for x in scores:
+        matches = re.findall(r"=\s*([\S\s]+)", x)
+        var = float(matches[-1])
+        if var < 0.3:
+            results.append(var)
+
+    result = (round(np.average(results), 4))
+
 
 
 def adapt_probing_rate(rate, frames):

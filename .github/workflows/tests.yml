@@ -17,7 +17,7 @@ env:
 
 jobs:
   validate:
-    name: ${{ matrix.name }}
+    name: ${{ matrix.enc }} ${{ matrix.test }}
     runs-on: ubuntu-latest
     container: registry.gitlab.com/luigi311/encoders-docker:latest
     strategy:

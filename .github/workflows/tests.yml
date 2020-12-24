@@ -17,46 +17,48 @@ env:
 
 jobs:
   validate:
-    name: ${{ matrix.name }}
+    name: ${{ matrix.name }} ${{ matrix.enc }} 
     runs-on: ubuntu-latest
     container: registry.gitlab.com/luigi311/encoders-docker:latest
     strategy:
       fail-fast: false
       matrix:
+        enc: [aom, rav1e, svt_av1, vpx, x265, x264]
+        name: [baseline, target_quality]
         include:
           - name: baseline
             flags: ""
-          - name: scenes
-            flags: -s scenes.json
-          - name: svt_av1
-            flags: -enc svt_av1
-          - name: rav1e
-            flags: -enc rav1e
-          - name: x265
-            flags: -enc x265
-          - name: x264
-            flags: -enc x264
-          - name: vpx
-            flags: -enc vpx
-          - name: workers
-            flags: -w 2
-          - name: chunk hybrid
+          - name: target_quality
+            flags: --target_quality 95
+          - name: chunk_hybrid
+            enc: aom
             flags: --chunk_method hybrid
-          - name: chunk select
+          - name: chunk_select
+            enc: aom
             flags: --chunk_method select
-          - name: video flags
-            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 "
-          - name: target quality
-            flags: -v " --threads=2 --cpu-used=6 --end-usage=q --cq-level=30 " --target_quality 95
+          - name: scenes
+            enc: aom
+            flags: -s scenes.json
+          - name: workers
+            enc: aom
+            flags: -w 2
           - name: vmaf
+            enc: aom
             flags: --vmaf
-          - name: vmaf plot
+          - name: vmaf_plots
+            enc: aom
             flags: --vmaf_plots
-          - name: extra splits
+          - name: extra_splits
+            enc: aom
             flags: -xs 10
-          - name: split method
+          - name: split_aom_keyframes
+            enc: aom
             flags: --split_method aom_keyframes
-          - name: change temp
+          - name: video_settings
+            enc: aom
+            flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
+          - name: temp
+            enc: aom
             flags: --temp temporary
     steps:
       - uses: actions/checkout@v2
@@ -78,6 +80,6 @@ jobs:
           tar xf video.tar.gz
       - name: Testing ${{ matrix.name }}
         run: |
-          ./av1an.py -i bus_cif.y4m -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          ./av1an.py -i bus_cif.y4m -enc ${{ matrix.enc }} -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a

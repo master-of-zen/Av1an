@@ -23,3 +23,5 @@
 - Per frame target quality for SVT-AV1
 - Added none split method option
 - Added webm output
+- Refactored VMAF and Target Quality
+- VMAF is now separate, ready for import module

@@ -9,6 +9,7 @@ import concurrent.futures
 import shutil
 
 from Encoders import ENCODERS
+from vmaf import VMAF
 from Projects import  Project
 from Chunks.chunk import Chunk
 from Chunks.chunk_queue import load_or_gen_chunk_queue
@@ -22,7 +23,6 @@ from Av1an.logger import log, set_log
 from Av1an.ffmpeg import extract_audio
 from Av1an.fp_reuse import segment_first_pass
 from Av1an.split import split_routine
-from VMAF.vmaf import plot_vmaf
 
 
 def encode_file(project: Project):
@@ -59,7 +59,8 @@ def encode_file(project: Project):
     concat_routine(project)
 
     if project.vmaf or project.vmaf_plots:
-        plot_vmaf(project.input, project.output_file, project, project.vmaf_path, project.vmaf_res)
+        vmaf = VMAF()
+        vmaf.plot_vmaf(project.input, project.output_file, project)
 
     # Delete temp folders
     if not project.keep:

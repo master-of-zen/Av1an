@@ -107,6 +107,25 @@ def transform_vmaf(vmaf):
         return 9.210340371976184
 
 
+def read_vmaf_with_motion_compensation(file, percentile=0):
+    """Reads vmaf file with vmaf scores in it and return N percentile score from it.
+
+    :return: N percentile score
+    :rtype: float
+    """
+
+    jsn = read_json(file)
+
+    vmafs = sorted([x['metrics']['vmaf'] for x in jsn['frames']])
+    motion = np.average([x['metrics']['motion2'] for x in jsn['frames']])
+    print(round(motion, 1))
+    percentile = percentile if percentile != 0 else 0.25
+    score = get_percentile(vmafs, percentile)
+
+    return round(score, 2)
+
+
+
 def read_weighted_vmaf(file, percentile=0):
     """Reads vmaf file with vmaf scores in it and return N percentile score from it.
 

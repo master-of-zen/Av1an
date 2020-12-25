@@ -1,7 +1,7 @@
 from typing import Tuple, Optional
 
 from project import Project
-from chunk.chunk import Chunk
+from chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from encoder.encoder import Encoder
 from av1an.utils import list_index_of_regex

@@ -5,7 +5,7 @@ import subprocess
 from subprocess import PIPE, STDOUT, DEVNULL
 
 from project import Project
-from chunk.chunk import Chunk
+from chunk import Chunk
 from av1an.commandtypes import Command, MPCommands
 
 

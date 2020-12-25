@@ -12,7 +12,7 @@ from vmaf import VMAF
 from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from project import Project
-from chunk.chunk import Chunk
+from chunk import Chunk
 from av1an.bar import process_pipe
 import matplotlib
 from matplotlib import pyplot as plt

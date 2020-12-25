@@ -10,7 +10,7 @@ from .commandtypes import CommandPair
 
 from encoder import ENCODERS
 from project import Project
-from chunk.chunk import Chunk
+from chunk import Chunk
 
 
 def Manager():

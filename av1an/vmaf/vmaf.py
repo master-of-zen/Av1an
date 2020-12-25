@@ -51,7 +51,6 @@ class VMAF:
 
         print(cmd)
 
-
     def call_vmaf(self, chunk: Chunk, encoded: Path, vmaf_rate: int = None, fl_path: Path = None):
         """
         Runs vmaf for Av1an
@@ -134,7 +133,6 @@ class VMAF:
 
         return round(score, 2)
 
-
     @staticmethod
     def read_weighted_vmaf(file, percentile=0):
         """Reads vmaf file with vmaf scores in it and return N percentile score from it.
@@ -151,7 +149,6 @@ class VMAF:
         score = VMAF.get_percentile(vmafs, percentile)
 
         return round(score, 2)
-
 
     def plot_vmaf(self, source: Path, encoded: Path, args):
         """

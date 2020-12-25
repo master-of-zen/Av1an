@@ -150,6 +150,47 @@ class VMAF:
 
         return round(score, 2)
 
+
+    def get_vmaf_file(self, source: Path, encoded: Path):
+        """
+        Running vmaf on 2 files and returning file
+        """
+        
+        if not all((type(source) == Path, type(encoded) == Path)):
+            source = Path(source)
+            encoded = Path(encoded)
+
+        fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
+
+        # call_vmaf takes a chunk, so make a chunk of the entire source
+        ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
+                          source.as_posix(), '-f', 'yuv4mpegpipe', '-']
+
+        input_chunk = Chunk('', 0, ffmpeg_gen_cmd, '', 0, 0)
+
+        scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
+        return scores
+
+    def get_vmaf_json(self, source: Path, encoded: Path):
+        """
+        Returning dictionary from vmaf json
+        """
+        fl = self.get_vmaf_file(source, encoded)
+        js = self.read_json(fl)
+        return js
+
+
+    def get_vmaf_score(self, source: Path, encoded: Path, percentile=50):
+        """
+        Returning calculated vmaf score
+        Posible to set percentile, default 50
+
+        :rtype: float
+        """
+        js = self.get_vmaf_json(source, encoded)
+        score = np.average([x['metrics']['vmaf'] for x in js['frames']])
+        return score
+
     def plot_vmaf(self, source: Path, encoded: Path, args):
         """
         Making VMAF plot after encode is done

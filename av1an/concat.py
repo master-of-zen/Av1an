@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
-from Projects import Project
+from project import Project
 from av1an.logger import log
 from av1an.utils import terminate
 

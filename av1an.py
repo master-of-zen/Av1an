@@ -2,7 +2,6 @@
 
 from av1an import Args
 from manager import Manager
-from vmaf import VMAF
 from startup.setup import startup_check
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ import concurrent
 import concurrent.futures
 import shutil
 
-from Encoders import ENCODERS
+from encoder import ENCODERS
 from vmaf import VMAF
 from project import  Project
 from chunk.chunk import Chunk

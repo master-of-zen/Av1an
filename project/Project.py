@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 from psutil import virtual_memory
+from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast,  hash_path, terminate
@@ -212,3 +213,57 @@ class Project(object):
             print(f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
             log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
+    
+    def select_best_chunking_method(self):
+        """
+        Selecting best chunking method based on available methods
+        """
+        if not find_executable('vspipe'):
+            self.chunk_method = 'hybrid'
+            log('Set Chunking Method: Hybrid')
+        else:
+            try:
+                import vapoursynth
+                plugins = vapoursynth.get_core().get_plugins()
+
+                if 'com.vapoursynth.ffms2' in plugins:
+                    log('Set Chunking Method: FFMS2\n')
+                    self.chunk_method = 'vs_ffms2'
+
+                elif 'systems.innocent.lsmas' in plugins:
+                    log('Set Chunking Method: L-SMASH\n')
+                    self.chunk_method = 'vs_lsmash'
+
+            except:
+                log('Vapoursynth not installed but vspipe reachable\n' +
+                    'Fallback to Hybrid\n')
+                self.chunk_method = 'hybrid'
+    
+    def check_exes(self):
+        """
+        Checking required executables
+        """
+
+        if not find_executable('ffmpeg'):
+            print('No ffmpeg')
+            terminate()
+
+        if self.chunk_method in ['vs_ffms2', 'vs_lsmash']:
+            if not find_executable('vspipe'):
+                print('vspipe executable not found')
+                terminate()
+
+            try:
+                import vapoursynth
+                plugins = vapoursynth.get_core().get_plugins()
+
+                if self.chunk_method == 'vs_lsmash' and "systems.innocent.lsmas" not in plugins:
+                    print('lsmas is not installed')
+                    terminate()
+
+                if self.chunk_method == 'vs_ffms2' and "com.vapoursynth.ffms2" not in plugins:
+                    print('ffms2 is not installed')
+                    terminate()
+            except ModuleNotFoundError:
+                print('Vapoursynth is not installed')
+                terminate()

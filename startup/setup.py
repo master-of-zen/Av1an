@@ -5,7 +5,7 @@ import os
 import shlex
 import shutil
 import sys
-from distutils.spawn import find_executable
+
 from pathlib import Path
 
 from startup.validate_commands import validate_inputs
@@ -46,62 +46,6 @@ def set_target_quality(project):
         _, project.max_q = encoder.default_q_range
 
 
-def select_best_chunking_method(project: Project):
-
-    if not find_executable('vspipe'):
-        project.chunk_method = 'hybrid'
-        log('Set Chunking Method: Hybrid')
-    else:
-        try:
-            import vapoursynth
-            plugins = vapoursynth.get_core().get_plugins()
-
-            if 'com.vapoursynth.ffms2' in plugins:
-                log('Set Chunking Method: FFMS2\n')
-                project.chunk_method = 'vs_ffms2'
-
-            elif 'systems.innocent.lsmas' in plugins:
-                log('Set Chunking Method: L-SMASH\n')
-                project.chunk_method = 'vs_lsmash'
-
-        except:
-            log('Vapoursynth not installed but vspipe reachable\n' +
-                'Fallback to Hybrid\n')
-            project.chunk_method = 'hybrid'
-
-
-def check_exes(project: Project):
-    """
-    Checking required executables
-
-    :param project: the Project
-    """
-
-    if not find_executable('ffmpeg'):
-        print('No ffmpeg')
-        terminate()
-
-    if project.chunk_method in ['vs_ffms2', 'vs_lsmash']:
-        if not find_executable('vspipe'):
-            print('vspipe executable not found')
-            terminate()
-
-        try:
-            import vapoursynth
-            plugins = vapoursynth.get_core().get_plugins()
-
-            if project.chunk_method == 'vs_lsmash' and "systems.innocent.lsmas" not in plugins:
-                print('lsmas is not installed')
-                terminate()
-
-            if project.chunk_method == 'vs_ffms2' and "com.vapoursynth.ffms2" not in plugins:
-                print('ffms2 is not installed')
-                terminate()
-        except ModuleNotFoundError:
-            print('Vapoursynth is not installed')
-            terminate()
-
-
 def setup_encoder(project: Project):
     """
     Setup encoder params and passes
@@ -139,14 +83,14 @@ def startup_check(project: Project):
         atexit.register(restore_term)
 
     if not project.chunk_method:
-        select_best_chunking_method(project)
+        project.select_best_chunking_method()
 
     # project.is_vs = is_vapoursynth(project.input)
 
     if project.is_vs:
         project.chunk_method = 'vs_ffms2'
 
-    check_exes(project)
+    project.check_exes()
 
     set_target_quality(project)
 

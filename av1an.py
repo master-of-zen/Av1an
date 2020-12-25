@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from Av1an.arg_parse import Args
-from Startup.setup import startup_check
-from Managers import Manager
+from av1an.arg_parse import Args
+from startup.setup import startup_check
+from manager import Manager
 
 class Av1an:
     """Av1an - Python framework for AV1, VP9, VP8 encoding"""

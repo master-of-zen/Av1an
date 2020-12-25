@@ -25,3 +25,5 @@
 - Added webm output
 - Refactored VMAF and Target Quality
 - VMAF is now separate, ready for import module
+- Changed Target Quality probing rate
+- Refactored module structure/names

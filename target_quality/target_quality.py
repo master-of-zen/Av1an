@@ -9,11 +9,11 @@ import pprint
 from scipy import interpolate
 
 from vmaf import VMAF
-from Av1an.logger import log
-from Av1an.commandtypes import CommandPair, Command
-from Projects import Project
-from Chunks.chunk import Chunk
-from Av1an.bar import process_pipe
+from av1an.logger import log
+from av1an.commandtypes import CommandPair, Command
+from project import Project
+from chunk.chunk import Chunk
+from av1an.bar import process_pipe
 import matplotlib
 from matplotlib import pyplot as plt
 

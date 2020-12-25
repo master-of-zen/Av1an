@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
 
-from av1an.arg_parse import Args
-from startup.setup import startup_check
+from av1an import Args
 from manager import Manager
-
-class Av1an:
-    """Av1an - Python framework for AV1, VP9, VP8 encoding"""
-    def __init__(self):
-        parser = Args()
-        self.args = parser.get_project()
-
-    def main_thread(self):
-        """Main."""
-        startup_check(self.args)
-
-        manager = Manager.Main(self.args)
-
-        manager.run()
-        # main_queue(self.args)
-
-
-def main():
-    Av1an().main_thread()
-
+from vmaf import VMAF
+from startup.setup import startup_check
 
 if __name__ == '__main__':
-    main()
+    parser = Args()
+    project = parser.get_project()
+    startup_check(project)
+    manager = Manager.Main(project)
+    manager.run()

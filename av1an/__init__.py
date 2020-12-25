@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 
 import vmaf
-import argparse
+from .arg_parse import Args

@@ -1,8 +1,8 @@
 import sys
 import time
-from startup.file_validation import process_inputs
+from av1an.startup.file_validation import process_inputs
 from pathlib import Path
-from project.Project import Project
+from av1an.project.Project import Project
 from av1an.encode import encode_file
 
 class Main:

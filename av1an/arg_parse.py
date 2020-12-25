@@ -2,7 +2,7 @@
 import argparse
 import sys
 from pathlib import Path
-from project import Project
+from .project import Project
 
 class Args:
     """

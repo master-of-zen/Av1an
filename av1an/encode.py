@@ -8,13 +8,13 @@ import concurrent
 import concurrent.futures
 import shutil
 
-from encoder import ENCODERS
-from vmaf import VMAF
-from project import  Project
-from chunk import Chunk
-from chunk.chunk_queue import load_or_gen_chunk_queue
+from .encoder import ENCODERS
+from .vmaf import VMAF
+from .project import  Project
+from .chunk import Chunk
+from .chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.resume import write_progress_file
-from target_quality import per_shot_target_quality_routine, per_frame_target_quality_routine
+from .target_quality import per_shot_target_quality_routine, per_frame_target_quality_routine
 from av1an.utils import frame_probe_fast, frame_probe, terminate
 from av1an.bar import Manager, tqdm_bar
 from av1an.logger import log, set_log

@@ -7,10 +7,9 @@ from subprocess import STDOUT
 from tqdm import tqdm
 
 from .commandtypes import CommandPair
-
-from encoder import ENCODERS
-from project import Project
-from chunk import Chunk
+from .encoder import ENCODERS
+from .project import Project
+from .chunk import Chunk
 
 
 def Manager():

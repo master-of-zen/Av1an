@@ -3,9 +3,9 @@ from pathlib import Path
 import os
 from typing import List
 
-from project import Project
-from chunk import Chunk
-from encoder import ENCODERS
+from av1an.project import Project
+from av1an.chunk import Chunk
+from av1an.encoder import ENCODERS
 from av1an.ffmpeg import get_keyframes
 from av1an.logger import log
 from av1an.resume import read_done_data

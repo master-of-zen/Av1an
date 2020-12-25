@@ -8,8 +8,8 @@ from subprocess import PIPE, STDOUT
 from typing import List
 from numpy import linspace
 
-from project import Project
-from scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
+from .project import Project
+from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
 from .utils import terminate, frame_probe
 

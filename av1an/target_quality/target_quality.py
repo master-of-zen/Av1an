@@ -8,11 +8,11 @@ import re
 import pprint
 from scipy import interpolate
 
-from vmaf import VMAF
+from av1an.vmaf import VMAF
 from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
-from project import Project
-from chunk import Chunk
+from av1an.project import Project
+from av1an.chunk import Chunk
 from av1an.bar import process_pipe
 import matplotlib
 from matplotlib import pyplot as plt

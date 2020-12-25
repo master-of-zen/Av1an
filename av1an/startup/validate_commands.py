@@ -2,7 +2,7 @@ import re
 import subprocess
 import sys
 from subprocess import PIPE
-from encoder import ENCODERS
+from av1an.encoder import ENCODERS
 from typing import List, Union
 from difflib import SequenceMatcher
 

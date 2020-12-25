@@ -27,3 +27,6 @@
 - VMAF is now separate, ready for import module
 - Changed Target Quality probing rate
 - Refactored module structure/names
+
+### 5
+- Added vmaf validation on each time when VMAF initialized

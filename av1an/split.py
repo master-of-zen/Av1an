@@ -129,7 +129,7 @@ def extra_splits(project: Project, split_locations: list):
     split_locs_with_start.insert(0, 0)
 
     split_locs_with_end = split_locations[:]
-    split_locs_with_end.append(frame_probe(project.input))
+    split_locs_with_end.append(project.get_frames())
 
     splits = list(zip(split_locs_with_start, split_locs_with_end))
     for i in splits:

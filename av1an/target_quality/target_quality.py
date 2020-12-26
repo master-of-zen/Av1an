@@ -82,6 +82,13 @@ def adapt_probing_rate(rate, frames):
     :return: new probing rate
     """
 
+    #Todo: Make it depend on amount of motion in scene
+
+    #For current moment 4 for everything
+
+    if frames > 0:
+        return 4
+
     if frames < 40:
         return 4
     elif frames < 120:

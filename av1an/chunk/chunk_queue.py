@@ -10,7 +10,7 @@ from av1an.ffmpeg import get_keyframes
 from av1an.logger import log
 from av1an.resume import read_done_data
 from av1an.split import segment
-from av1an.utils import terminate, frame_probe, frame_probe_fast
+from av1an.utils import terminate
 
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
@@ -94,7 +94,7 @@ def create_video_queue_hybrid(project: Project, split_locations: List[int]) -> L
     """
     keyframes = get_keyframes(project.input)
 
-    end = [frame_probe_fast(project.input, project.is_vs)]
+    end = [project.get_frames()]
 
     splits = [0] + split_locations + end
 
@@ -141,7 +141,7 @@ def create_video_queue_vs(project: Project, split_locations: List[int], script: 
     :return: A list of chunks
     """
     # add first frame and last frame
-    last_frame = frame_probe(project.input)
+    last_frame = project.get_frames()
     split_locs_fl = [0] + split_locations + [last_frame]
 
     # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
@@ -197,7 +197,7 @@ def create_video_queue_select(project: Project, split_locations: List[int]) -> L
     :return: A list of chunks
     """
     # add first frame and last frame
-    last_frame = frame_probe(project.input)
+    last_frame =  project.get_frames()
     split_locs_fl = [0] + split_locations + [last_frame]
 
     # pair up adjacent members of this list ex: [0, 10, 20, 30] -> [(0, 10), (10, 20), (20, 30)]
@@ -275,7 +275,7 @@ def create_chunk_from_segment(project: Project, index: int, file: Path) -> Chunk
     ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', file.as_posix(), *project.pix_format,
                       '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
     file_size = file.stat().st_size
-    frames = frame_probe(file)
+    frames =  project.get_frames()
     extension = ENCODERS[project.encoder].output_extension
 
     chunk = Chunk(project.temp, index, ffmpeg_gen_cmd, extension, file_size, frames)

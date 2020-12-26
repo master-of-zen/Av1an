@@ -121,6 +121,7 @@ def segment(video: Path, temp: Path, frames: List[int]):
 
     log('Split Done\n')
 
+
 def extra_splits(project: Project, split_locations: list):
     log('Applying extra splits\n')
 
@@ -141,6 +142,7 @@ def extra_splits(project: Project, split_locations: list):
     result = [int(x) for x in sorted(split_locations)]
     log(f'Split distance: {project.extra_split}\nNew splits:{len(result)}\n')
     return result
+
 
 def calc_split_locations(project: Project) -> List[int]:
     """

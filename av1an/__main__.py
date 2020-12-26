@@ -1,7 +1,6 @@
 from .arg_parse import Args
 from .manager import Manager
 from .startup.setup import startup_check
-
 def main():
     """
     Running Av1an CLI

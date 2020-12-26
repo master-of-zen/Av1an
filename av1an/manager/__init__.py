@@ -1,1 +1,1 @@
- 
+from .Manager import Main

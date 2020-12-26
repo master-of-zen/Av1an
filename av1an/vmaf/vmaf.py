@@ -182,7 +182,6 @@ class VMAF:
 
         return round(score, 2)
 
-
     def get_vmaf_file(self, source: Path, encoded: Path):
         """
         Running vmaf on 2 files and returning file
@@ -210,7 +209,6 @@ class VMAF:
         fl = self.get_vmaf_file(source, encoded)
         js = self.read_json(fl)
         return js
-
 
     def get_vmaf_score(self, source: Path, encoded: Path, percentile=50):
         """

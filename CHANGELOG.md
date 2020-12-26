@@ -30,3 +30,4 @@
 
 ### 5
 - Added vmaf validation on each time when VMAF initialized
+- Fix running not required frame probe

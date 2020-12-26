@@ -66,11 +66,6 @@ def encode_file(project: Project):
 
 
 def startup(project: Project, chunk_queue: List[Chunk]):
-    """
-    If resuming, open done file and get file properties from there
-    else get file properties and
-
-    """
     done_path = project.temp / 'done.json'
     if project.resume and done_path.exists():
         log('Resuming...\n')
@@ -83,7 +78,7 @@ def startup(project: Project, chunk_queue: List[Chunk]):
         log(f'Resumed with {done} encoded clips done\n\n')
     else:
         initial = 0
-        total = frame_probe_fast(project.input, project.is_vs)
+        total = project.get_frames()
         d = {'frames': total, 'done': {}}
         with open(done_path, 'w') as done_file:
             json.dump(d, done_file)
@@ -98,16 +93,15 @@ def startup(project: Project, chunk_queue: List[Chunk]):
 
 def encoding_loop(project: Project, chunk_queue: List[Chunk]):
     """Creating process pool for encoders, creating progress bar."""
-    if project.workers != 0:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=project.workers) as executor:
-            future_cmd = {executor.submit(encode, cmd, project): cmd for cmd in chunk_queue}
-            for future in concurrent.futures.as_completed(future_cmd):
-                try:
-                    future.result()
-                except Exception as exc:
-                    _, _, exc_tb = sys.exc_info()
-                    print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
-                    terminate()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=project.workers) as executor:
+        future_cmd = {executor.submit(encode, cmd, project): cmd for cmd in chunk_queue}
+        for future in concurrent.futures.as_completed(future_cmd):
+            try:
+                future.result()
+            except Exception as exc:
+                _, _, exc_tb = sys.exc_info()
+                print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
+                terminate()
     project.counter.close()
 
 

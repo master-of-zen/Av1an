@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from av1an.commandtypes import Command
 
@@ -128,6 +128,3 @@ class Chunk:
 
             fl.write(text)
         return qfile
-
-
-

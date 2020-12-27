@@ -2,13 +2,10 @@ import os
 import platform
 import shlex
 import subprocess
-import sys
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
-from .project import Project
 from av1an.logger import log
-from av1an.utils import terminate
 
 
 def vvc_concat(temp: Path, output: Path):

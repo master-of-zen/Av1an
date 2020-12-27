@@ -29,6 +29,7 @@ def per_shot_target_quality_routine(project: Project, chunk: Chunk):
     """
     chunk.per_shot_target_quality_cq = per_shot_target_quality(chunk, project)
 
+
 def get_scene_scores(chunk, ffmpeg_pipe):
     """
     Run ffmpeg scenedetection filter to get average amount of motion in scene

@@ -187,7 +187,7 @@ class VMAF:
         Running vmaf on 2 files and returning file
         """
 
-        if not all((type(source) == Path, type(encoded) == Path)):
+        if not all((isinstance(source, Path), isinstance(encoded,Path))):
             source = Path(source)
             encoded = Path(encoded)
 

@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-import os
 from typing import List
 
 from av1an.project import Project

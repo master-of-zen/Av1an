@@ -27,6 +27,7 @@ from av1an.target_quality import (per_frame_target_quality_routine,
 from av1an.utils import frame_probe, frame_probe_fast, terminate
 from av1an.vmaf import VMAF
 from tqdm import tqdm
+from .Counter import Manager, BaseManager, Counter
 
 
 class Main:
@@ -74,7 +75,6 @@ class Main:
             except KeyboardInterrupt:
                 print('Encoding stopped')
                 sys.exit()
-
 
 
 class EncodingManager:
@@ -145,7 +145,7 @@ class EncodingManager:
         project.workers = min(project.workers, clips)
         print(f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
                 f'Params: {" ".join(project.video_params)}')
-
+        BaseManager.register('Counter', Counter)
         counter = Manager().Counter(project.get_frames(), initial)
         project.counter = counter
 
@@ -212,48 +212,6 @@ class EncodingManager:
         if actual_frames != expected_frames:
             print(f':: Chunk #{chunk.name}: {actual_frames}/{expected_frames} fr')
         return actual_frames
-
-class PipeProcessor:
-
-    def __init__(self):
-        self.data = None
-
-
-
-def Manager():
-    """
-    Thread save manager for frame counter
-    """
-    m = BaseManager()
-    m.start()
-    return m
-
-
-class Counter:
-    """
-    Frame Counter
-    """
-    def __init__(self, total, initial, tqdm=True):
-        self.first_update = True
-        self.initial = initial
-        self.left = total - initial
-
-        if tqdm:
-            self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
-
-        BaseManager.register('Counter', Counter)
-
-    def update(self, value):
-        if self.first_update:
-            self.tqdm_bar.reset(self.left)
-            self.first_update = False
-        self.tqdm_bar.update(value)
-
-    def close(self):
-        self.tqdm_bar.close()
-
-
-
 
 
 def process_pipe(pipe, chunk: Chunk):

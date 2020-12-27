@@ -1,47 +1,16 @@
 import sys
-
-from av1an.encoder import ENCODERS
 from collections import deque
+
 from av1an.chunk import Chunk
+from av1an.encoder import ENCODERS
 from av1an.project import Project
 
 
-import sys
-from collections import deque
-from multiprocessing.managers import BaseManager
-from tqdm import tqdm
 
-def Manager():
-    """
-    Thread save manager for frame counter
-    """
-    m = BaseManager()
-    m.start()
-    return m
+class PipeProcessor:
 
-
-class Counter:
-    """
-    Frame Counter based on TQDM
-    """
-    def __init__(self, total, initial):
-        self.first_update = True
-        self.initial = initial
-        self.left = total - initial
-        self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
-
-    def update(self, value):
-        if self.first_update:
-            self.tqdm_bar.reset(self.left)
-            self.first_update = False
-        self.tqdm_bar.update(value)
-
-    def close(self):
-        self.tqdm_bar.close()
-
-
-BaseManager.register('Counter', Counter)
-
+    def __init__(self):
+        self.data = None
 
 
 def process_pipe(pipe, chunk: Chunk):

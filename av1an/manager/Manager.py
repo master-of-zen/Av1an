@@ -78,10 +78,6 @@ class Main:
                 sys.exit()
 
 
-
-
-
-
 class EncodingManager:
 
     def __init__(self):
@@ -209,7 +205,7 @@ class EncodingManager:
             write_progress_file(Path(project.temp / 'done.json'), chunk, encoded_frames)
 
         enc_time = round(time.time() - st_time, 2)
-        log(f'Done: {chunk.name} Fr: {encoded_frames}\n'
+        log(f'Done: {chunk.name} Fr: {encoded_frames}/{chunk_frames}\n'
             f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
 
     def frame_check_output(self, chunk: Chunk, expected_frames: int) -> int:

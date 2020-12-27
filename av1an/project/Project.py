@@ -152,8 +152,6 @@ class Project(object):
 
     def determine_workers(self):
         """Returns number of workers that machine can handle with selected encoder."""
-
-        # If set by user, skip
         if self.workers:
             return self.workers
 

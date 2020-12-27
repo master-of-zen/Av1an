@@ -6,13 +6,6 @@ from av1an.encoder import ENCODERS
 from av1an.project import Project
 
 
-
-class PipeProcessor:
-
-    def __init__(self):
-        self.data = None
-
-
 def process_pipe(pipe, chunk: Chunk):
     encoder_history = deque(maxlen=20)
     while True:

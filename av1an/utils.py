@@ -63,18 +63,13 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
     """
     total = 0
     if not is_vs:
-        total = frame_probe_cv2(source)
+        video = cv2.VideoCapture(source.as_posix())
+        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        video.release()
 
     if is_vs or total < 1:
         total = frame_probe(source)
 
-    return total
-
-
-def frame_probe_cv2(source: Path):
-    video = cv2.VideoCapture(source.as_posix())
-    total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    video.release()
     return total
 
 

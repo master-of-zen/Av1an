@@ -174,7 +174,7 @@ class Project(object):
             workers = 1
 
         self.workers = workers
-    
+
     def setup(self):
         """Creating temporally folders when needed."""
 
@@ -193,7 +193,7 @@ class Project(object):
 
         (self.temp / 'split').mkdir(parents=True, exist_ok=True)
         (self.temp / 'encode').mkdir(exist_ok=True)
-    
+
     def concat_routine(self):
         """
         Runs the concatenation routine with project
@@ -213,7 +213,7 @@ class Project(object):
             print(f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
             log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
-    
+
     def select_best_chunking_method(self):
         """
         Selecting best chunking method based on available methods
@@ -238,7 +238,7 @@ class Project(object):
                 log('Vapoursynth not installed but vspipe reachable\n' +
                     'Fallback to Hybrid\n')
                 self.chunk_method = 'hybrid'
-    
+
     def check_exes(self):
         """
         Checking required executables

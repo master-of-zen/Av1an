@@ -13,7 +13,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.project import Project
 from av1an.chunk import Chunk
-from av1an.bar import process_pipe
+from av1an.manager.Pipes import process_pipe
 import matplotlib
 from matplotlib import pyplot as plt
 

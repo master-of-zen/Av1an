@@ -16,7 +16,7 @@ from math import log as ln
 import matplotlib
 from matplotlib import pyplot as plt
 
-from av1an.bar import process_pipe
+from av1an.manager.Pipes import process_pipe
 from av1an.chunk import Chunk
 
 matplotlib.use('Agg')

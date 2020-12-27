@@ -1,16 +1,15 @@
-#!/bin/env python
+import sys
+
+from av1an.encoder import ENCODERS
+from collections import deque
+from av1an.chunk import Chunk
+from av1an.project import Project
+
 
 import sys
 from collections import deque
 from multiprocessing.managers import BaseManager
-from subprocess import STDOUT
 from tqdm import tqdm
-
-from .commandtypes import CommandPair
-from .encoder import ENCODERS
-from .project import Project
-from .chunk import Chunk
-
 
 def Manager():
     """
@@ -42,6 +41,7 @@ class Counter:
 
 
 BaseManager.register('Counter', Counter)
+
 
 
 def process_pipe(pipe, chunk: Chunk):

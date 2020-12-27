@@ -27,11 +27,13 @@ log = logger.log
 
 def set_log(log_path: Path, temp):
     """Setting logging file location"""
+
     if log_path:
         log_path = Path(log_path)
         if log_path.suffix == '':
             log_path = log_path.with_suffix('.log')
         log_file(log_path)
+
     else:
         log_file(temp / 'log.log')
 

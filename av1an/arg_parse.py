@@ -8,7 +8,6 @@ class Args:
     """
     Class responsible for arg parsing
     Creation of original project file
-    #TODO: validating/creating difference of different args
     """
     def __init__(self):
         self.parser = self.arg_parsing()

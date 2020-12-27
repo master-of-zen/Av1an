@@ -78,6 +78,10 @@ class Main:
                 sys.exit()
 
 
+
+
+
+
 class EncodingManager:
 
     def __init__(self):
@@ -213,4 +217,3 @@ class EncodingManager:
         if actual_frames != expected_frames:
             print(f':: Chunk #{chunk.name}: {actual_frames}/{expected_frames} fr')
         return actual_frames
-

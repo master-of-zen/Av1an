@@ -4,12 +4,15 @@ import json
 import shutil
 import sys
 import time
+from collections import deque
+from multiprocessing.managers import BaseManager
 from pathlib import Path
+from subprocess import STDOUT
 from typing import List
 
-from av1an.bar import Manager, tqdm_bar
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
+from av1an.commandtypes import CommandPair
 from av1an.encoder import ENCODERS
 from av1an.ffmpeg import extract_audio
 from av1an.fp_reuse import segment_first_pass
@@ -23,6 +26,7 @@ from av1an.target_quality import (per_frame_target_quality_routine,
                                   per_shot_target_quality_routine)
 from av1an.utils import frame_probe, frame_probe_fast, terminate
 from av1an.vmaf import VMAF
+from tqdm import tqdm
 
 
 class Main:
@@ -77,6 +81,7 @@ class EncodingManager:
 
     def __init__(self):
         self.workers = None
+        self.vmaf = None
 
     def encode_file(self, project: Project):
         """
@@ -112,8 +117,8 @@ class EncodingManager:
         project.concat_routine()
 
         if project.vmaf or project.vmaf_plots:
-            vmaf = VMAF()
-            vmaf.plot_vmaf(project.input, project.output_file, project)
+            self.vmaf = VMAF()
+            self.vmaf.plot_vmaf(project.input, project.output_file, project)
 
         # Delete temp folders
         if not project.keep:
@@ -145,7 +150,9 @@ class EncodingManager:
         project.counter = counter
 
     def encoding_loop(self, project: Project, chunk_queue: List[Chunk]):
-        """Creating process pool for encoders, creating progress bar."""
+        """
+        Creating process pool for encoders, creating progress bar
+        """
         with concurrent.futures.ThreadPoolExecutor(max_workers=project.workers) as executor:
             future_cmd = {executor.submit(self.encode, cmd, project): cmd for cmd in chunk_queue}
             for future in concurrent.futures.as_completed(future_cmd):
@@ -205,3 +212,112 @@ class EncodingManager:
         if actual_frames != expected_frames:
             print(f':: Chunk #{chunk.name}: {actual_frames}/{expected_frames} fr')
         return actual_frames
+
+class PipeProcessor:
+
+    def __init__(self):
+        self.data = None
+
+
+
+def Manager():
+    """
+    Thread save manager for frame counter
+    """
+    m = BaseManager()
+    m.start()
+    return m
+
+
+class Counter:
+    """
+    Frame Counter
+    """
+    def __init__(self, total, initial, tqdm=True):
+        self.first_update = True
+        self.initial = initial
+        self.left = total - initial
+
+        if tqdm:
+            self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
+
+        BaseManager.register('Counter', Counter)
+
+    def update(self, value):
+        if self.first_update:
+            self.tqdm_bar.reset(self.left)
+            self.first_update = False
+        self.tqdm_bar.update(value)
+
+    def close(self):
+        self.tqdm_bar.close()
+
+
+
+
+
+def process_pipe(pipe, chunk: Chunk):
+    encoder_history = deque(maxlen=20)
+    while True:
+        line = pipe.stdout.readline().strip()
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+        if len(line) == 0:
+            continue
+        if line:
+            encoder_history.append(line)
+
+    if pipe.returncode != 0 and pipe.returncode != -2:
+        print(f"\n:: Encoder encountered an error: {pipe.returncode}")
+        print(f"\n:: Chunk: {chunk.index}")
+        print('\n'.join(encoder_history))
+
+
+def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk):
+    encoder_history = deque(maxlen=20)
+    frame = 0
+    enc = ENCODERS[encoder]
+    while True:
+        line = pipe.stdout.readline().strip()
+
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+
+        if len(line) == 0:
+            continue
+
+        match = enc.match_line(line)
+
+        if match:
+            new = int(match.group(1))
+            if new > frame:
+                counter.update(new - frame)
+                frame = new
+
+        if line:
+            encoder_history.append(line)
+
+    if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
+
+        print(f"\n:: Encoder encountered an error: {pipe.returncode}")
+        print(f"\n:: Chunk: {chunk.index}")
+        print('\n'.join(encoder_history))
+
+
+def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
+    try:
+
+        enc = ENCODERS[encoder]
+        pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
+
+        if encoder in ('aom', 'vpx', 'rav1e', 'x265', 'x264', 'vvc', 'svt_av1'):
+            process_encoding_pipe(pipe, encoder, counter, c)
+
+        if encoder in ('svt_vp9'):
+            # SVT-VP9 is special
+            process_pipe(pipe, c)
+            counter.update(frame_probe_source // passes)
+
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        print(f'\n:: Error at encode {e}\nAt line {exc_tb.tb_lineno}')

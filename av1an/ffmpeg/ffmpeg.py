@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List
-from .logger import log
+from av1an.logger import log
 
 
 def frame_probe_ffmpeg(source: Path):

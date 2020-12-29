@@ -17,6 +17,7 @@ from av1an.manager.Pipes import process_pipe
 import matplotlib
 from matplotlib import pyplot as plt
 
+# TODO: rework to class, account for dark scenes/banding
 
 def per_shot_target_quality_routine(project: Project, chunk: Chunk):
     """

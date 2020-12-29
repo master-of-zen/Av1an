@@ -13,6 +13,7 @@ from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 from .logger import log
 from .utils import terminate, frame_probe
 
+# TODO: organize to single segmenting/splitting module
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
     """

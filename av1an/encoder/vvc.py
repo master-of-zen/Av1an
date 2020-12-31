@@ -26,7 +26,7 @@ class Vvc(Encoder):
             encoder_help='vvc_encoder --help',
             default_args=None,
             default_passes=1,
-            default_q_range=(20, 50),
+            default_q_range=(15, 35),
             output_extension='h266'
         )
 

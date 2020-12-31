@@ -16,7 +16,7 @@ class X265(Encoder):
             encoder_help='x265 --fullhelp',
             default_args=['-p', 'slow', '--crf', '25', '-D', '10'],
             default_passes=1,
-            default_q_range=(20, 40),
+            default_q_range=(15, 35),
             output_extension='mkv'
         )
 

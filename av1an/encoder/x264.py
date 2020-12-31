@@ -16,7 +16,7 @@ class X264(Encoder):
             encoder_help='x264 --fullhelp',
             default_args=['--preset', 'slow', '--crf', '25'],
             default_passes=1,
-            default_q_range=(20, 40),
+            default_q_range=(15, 35),
             output_extension='mkv'
         )
 

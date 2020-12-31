@@ -16,7 +16,7 @@ class Aom(Encoder):
             encoder_help='aomenc --help',
             default_args=['--threads=8', '--cpu-used=6', '--end-usage=q', '--cq-level=30', '--tile-columns=2', '--tile-rows=1'],
             default_passes=2,
-            default_q_range=(20, 55),
+            default_q_range=(15, 35),
             output_extension='ivf'
         )
 

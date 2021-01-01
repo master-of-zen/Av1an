@@ -118,7 +118,7 @@ class EncodingManager:
         project.concat_routine()
 
         if project.vmaf or project.vmaf_plots:
-            self.vmaf = VMAF()
+            self.vmaf = VMAF(n_threads=project.n_threads, model=project.vmaf_path, res=project.vmaf_res, vmaf_filter=project.vmaf_filter)
             self.vmaf.plot_vmaf(project.input, project.output_file, project)
 
         # Delete temp folders

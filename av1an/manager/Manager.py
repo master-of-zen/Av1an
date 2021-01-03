@@ -4,27 +4,23 @@ import json
 import shutil
 import sys
 import time
-from collections import deque
 from multiprocessing.managers import BaseManager
 from pathlib import Path
-from subprocess import STDOUT
 from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
-from av1an.commandtypes import CommandPair
 from av1an.encoder import ENCODERS
 from av1an.ffmpeg import extract_audio
 from av1an.fp_reuse import segment_first_pass
 from av1an.logger import log, set_log
-from av1an.project import Project
 from av1an.project.Project import Project
 from av1an.resume import write_progress_file
 from av1an.split import split_routine
 from av1an.startup.file_validation import process_inputs
 from av1an.target_quality import (per_frame_target_quality_routine,
                                   per_shot_target_quality_routine)
-from av1an.utils import frame_probe, frame_probe_fast, terminate
+from av1an.utils import frame_probe, terminate
 from av1an.vmaf import VMAF
 
 from .Counter import BaseManager, Counter, Manager

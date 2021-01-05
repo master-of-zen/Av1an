@@ -26,7 +26,7 @@ from av1an.vapoursynth import compose_vapoursynth_pipe
 
 
 # default params for 1st pass when aom isn't the final encoder and -v won't match aom's options
-AOM_KEYFRAMES_DEFAULT_PARAMS = ['--threads=12', '--cpu-used=0' ,'--end-usage=q', '--tile-columns=3', '--tile-rows=2', '--cq-level=40']
+AOM_KEYFRAMES_DEFAULT_PARAMS = ['--threads=64', '--cpu-used=6' ,'--end-usage=q', '--tile-columns=2', '--tile-rows=1', '--cq-level=40']
 
 
 # Fields meanings: <source root>/av1/encoder/firstpass.h

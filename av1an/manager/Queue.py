@@ -25,6 +25,7 @@ class Queue:
         self.queue = []
         self.project = project
         self.thread_executor = concurrent.futures.ThreadPoolExecutor()
+        self.status = 'Ok'
 
     def is_empty(self):
         return self.queue == []
@@ -66,7 +67,7 @@ class Queue:
 
                 chunk_frames = chunk.frames
 
-                log(f'Enc: {chunk.name}, {chunk_frames} fr\n\n')
+                log(f'Enc: {chunk.index}, {chunk_frames} fr\n\n')
 
                 # Target Quality Mode
                 if self.project.target_quality:
@@ -94,25 +95,25 @@ class Queue:
                     write_progress_file(Path(self.project.temp / 'done.json'), chunk, encoded_frames)
 
                 enc_time = round(time.time() - st_time, 2)
-                log(f'Done: {chunk.name} Fr: {encoded_frames}/{chunk_frames}\n'
+                log(f'Done: {chunk.index} Fr: {encoded_frames}/{chunk_frames}\n'
                     f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
                 return
 
             except Exception as e:
-                msg = f':: Chunk #{chunk.name} crashed with:\n:: Exception: {type(e)}\n {e}\n:: Restarting chunk\n'
-                log(msg)
-                print('\n', msg)
+                msg = f':: Chunk #{chunk.index} crashed with:\n:: Exception: {type(e)}\n {e}\n:: Restarting chunk\n'
+                log(msg + '\n')
+                print(msg)
                 restart_count += 1
 
-        msg = f':: Chunk {chunk.name} failed more than 3 times, exiting the program'
+        msg = f'::FATAL::\n::Chunk #{chunk.index} failed more than 3 times, shutting down thread\n\n'
         log(msg)
         print(msg)
-        sys.exit(1)
+        self.status = 'FATAL'
 
     def frame_check_output(self, chunk: Chunk, expected_frames: int, last_chunk=False) -> int:
         actual_frames = frame_probe(chunk.output_path)
         if actual_frames != expected_frames:
-            msg = f':: Chunk #{chunk.name}: {actual_frames}/{expected_frames} fr'
+            msg = f':: Chunk #{chunk.index}: {actual_frames}/{expected_frames} fr'
             log(msg)
             print(msg)
         return actual_frames

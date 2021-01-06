@@ -107,6 +107,12 @@ class EncodingManager:
         queue = Queue(project, chunk_queue)
         queue.encoding_loop()
 
+        if queue.status.lower() == 'fatal':
+            msg = '::FATAL:: Encoding process encountered fatal error, shutting down\n'
+            print('\n', msg)
+            log(msg)
+            sys.exit(1)
+
         # concat
         project.concat_routine()
 

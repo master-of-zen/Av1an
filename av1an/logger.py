@@ -8,15 +8,23 @@ from pathlib import Path
 class Logger:
     def __init__(self):
         self.set_file = False
+        self.buffer = ''
 
     def set_path(self, file):
         self.set_file = Path(file)
 
     def log(self, info):
         """Default logging function, write to file."""
+        if self.set_file and self.buffer:
+            with open(self.set_file, 'a') as logf:
+                logf.write(self.buffer)
+                self.buffer = None
+
         if self.set_file:
             with open(self.set_file, 'a') as logf:
                 logf.write(time.strftime('%X') + ' ' + info)
+        else:
+            self.buffer += time.strftime('%X') + ' ' + info
 
 
 # Creating logger

@@ -52,6 +52,7 @@ def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk):
         print(f"\n:: Encoder encountered an error: {pipe.returncode}")
         print(f"\n:: Chunk: {chunk.index}")
         print('\n'.join(encoder_history))
+        raise Exception('Error in encoding process')
 
 
 def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):

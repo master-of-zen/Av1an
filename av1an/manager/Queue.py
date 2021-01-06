@@ -60,7 +60,7 @@ class Queue:
         """
         restart_count = 0
 
-        if restart_count < 3:
+        while restart_count < 3:
             try:
                 st_time = time.time()
 
@@ -96,17 +96,18 @@ class Queue:
                 enc_time = round(time.time() - st_time, 2)
                 log(f'Done: {chunk.name} Fr: {encoded_frames}/{chunk_frames}\n'
                     f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
+                return
 
             except Exception as e:
                 msg = f':: Chunk #{chunk.name} crashed with:\n:: Exception: {type(e)}\n {e}\n:: Restarting chunk\n'
                 log(msg)
                 print('\n', msg)
                 restart_count += 1
-        else:
-            msg = f':: Chunk {chunk.name} failed more than 3 times, exiting the program'
-            log(msg)
-            print(msg)
-            sys.exit(1)
+
+        msg = f':: Chunk {chunk.name} failed more than 3 times, exiting the program'
+        log(msg)
+        print(msg)
+        sys.exit(1)
 
     def frame_check_output(self, chunk: Chunk, expected_frames: int, last_chunk=False) -> int:
         actual_frames = frame_probe(chunk.output_path)

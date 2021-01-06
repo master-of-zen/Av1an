@@ -56,7 +56,6 @@ class Queue:
         Encodes a chunk. If chunk fails, restarts it limited amount of times
 
         :param chunk: The chunk to encode
-        :param project: The cli project
         :return: None
         """
         restart_count = 0
@@ -97,11 +96,11 @@ class Queue:
                 enc_time = round(time.time() - st_time, 2)
                 log(f'Done: {chunk.name} Fr: {encoded_frames}/{chunk_frames}\n'
                     f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
+
             except Exception as e:
-                msg = ':: Chunk #' + chunk.name + ' crashed with:\n' + type(e) + '\n' + e + \
-                '\n:: Restarting chunk'
+                msg = f':: Chunk #{chunk.name} crashed with:\n:: Exception: {type(e)}\n {e}\n:: Restarting chunk\n'
                 log(msg)
-                print(msg)
+                print('\n', msg)
                 restart_count += 1
         else:
             msg = f':: Chunk {chunk.name} failed more than 3 times, exiting the program'

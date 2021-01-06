@@ -17,7 +17,7 @@ class Vpx(Encoder):
             default_args=['--codec=vp9', '-b', '10', '--profile=2', '--threads=4', '--cpu-used=0', '--end-usage=q',
                           '--cq-level=30', '--row-mt=1'],
             default_passes=2,
-            default_q_range=(15, 35),
+            default_q_range=(15, 55),
             output_extension='ivf'
         )
 

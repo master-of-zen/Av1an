@@ -16,7 +16,7 @@ class SvtAv1(Encoder):
             encoder_help='SvtAv1EncApp --help',
             default_args=['--preset', '4', '--rc', '0', '--qp', '25'],
             default_passes=1,
-            default_q_range=(15, 35),
+            default_q_range=(15, 50),
             output_extension='ivf'
         )
 

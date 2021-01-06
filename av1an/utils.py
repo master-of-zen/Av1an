@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import hashlib
 
+
 from av1an.commandtypes import Command
 from av1an.ffmpeg import frame_probe_ffmpeg
 from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
@@ -63,10 +64,13 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
     """
     total = 0
     if not is_vs:
-        video = cv2.VideoCapture(source.as_posix())
-        total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        video.release()
-
+        try:
+            from vapoursynth import core
+            total = core.lsmas.LWLibavSource(source.as_posix(), cache=False)
+        except ImportError:
+            video = cv2.VideoCapture(source.as_posix())
+            total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+            video.release()
     if is_vs or total < 1:
         total = frame_probe(source)
 
@@ -82,4 +86,5 @@ def frame_probe(source: Path):
     """
     if is_vapoursynth(source):
         return frame_probe_vspipe(source)
+
     return frame_probe_ffmpeg(source)

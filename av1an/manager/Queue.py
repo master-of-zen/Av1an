@@ -27,18 +27,6 @@ class Queue:
         self.thread_executor = concurrent.futures.ThreadPoolExecutor()
         self.status = 'Ok'
 
-    def is_empty(self):
-        return self.queue == []
-
-    def enqueue(self, chunk):
-        self.queue.insert(0,chunk)
-
-    def dequeue(self):
-        return self.queue.pop()
-
-    def size(self):
-        return len(self.queue)
-
     def encoding_loop(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.project.workers) as executor:
             future_cmd = {executor.submit(self.encode_chunk, cmd): cmd for cmd in self.chunk_queue}
@@ -54,7 +42,8 @@ class Queue:
 
     def encode_chunk(self, chunk: Chunk):
         """
-        Encodes a chunk. If chunk fails, restarts it limited amount of times
+        Encodes a chunk. If chunk fails, restarts it limited amount of times.
+        Return if executed just fine, sets status fatal for queue if failed
 
         :param chunk: The chunk to encode
         :return: None

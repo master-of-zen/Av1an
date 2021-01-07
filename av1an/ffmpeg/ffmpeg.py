@@ -7,7 +7,7 @@ from subprocess import PIPE, STDOUT
 from typing import List
 from av1an.logger import log
 
-# TODO: redo to module
+# TODO: redo to module, add ffmpeg scenedetection for fallback
 
 def frame_probe_ffmpeg(source: Path):
     """

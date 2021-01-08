@@ -66,7 +66,7 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
     if not is_vs:
         try:
             from vapoursynth import core
-            total = core.lsmas.LWLibavSource(source.as_posix(), cache=False)
+            total = core.lsmas.LWLibavSource(source.as_posix(), cache=False).num_frames
         except ImportError:
             video = cv2.VideoCapture(source.as_posix())
             total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))

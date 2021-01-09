@@ -3,10 +3,14 @@
 import sys
 from subprocess import Popen
 
-from scenedetect.detectors import ContentDetector
-from scenedetect.scene_manager import SceneManager
-from scenedetect.video_manager import VideoManager
-from scenedetect.frame_timecode import FrameTimecode
+scenedetect = 1
+try:
+    from scenedetect.detectors import ContentDetector
+    from scenedetect.scene_manager import SceneManager
+    from scenedetect.video_manager import VideoManager
+    from scenedetect.frame_timecode import FrameTimecode
+except ImportError:
+    scenedetect = 0
 
 from av1an.logger import log
 from av1an.utils import frame_probe
@@ -16,13 +20,17 @@ if sys.platform == "linux":
     from os import mkfifo
 
 
-def pyscene(video, threshold, min_scene_len, is_vs, temp):
+def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
     """
     Running PySceneDetect detection on source video for segmenting.
     Optimal threshold settings 15-50
     """
     if not min_scene_len:
         min_scene_len = 15
+
+    if scenedetect == 0:
+        log(f'Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use')
+        return []
 
     log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene length: {min_scene_len}\n Is Vapoursynth input: {is_vs}\n')
 
@@ -57,7 +65,7 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp):
     # Start video_manager.
     video_manager.start()
 
-    scene_manager.detect_scenes(frame_source=video_manager, show_progress=True)
+    scene_manager.detect_scenes(frame_source=video_manager, show_progress=(not quiet))
 
     # If fed using a vspipe process, ensure that vspipe has finished.
     if is_vs:

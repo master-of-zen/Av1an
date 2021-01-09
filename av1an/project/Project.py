@@ -53,6 +53,7 @@ class Project(object):
         self.pix_format: Command = None
 
         # Misc
+        self.quiet = False
         self.logging = None
         self.resume: bool = None
         self.no_check: bool = None

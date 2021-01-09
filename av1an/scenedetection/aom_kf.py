@@ -8,7 +8,11 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import cv2
-from tqdm import tqdm
+has_tqdm = 1
+try:
+    from tqdm import tqdm
+except ImportError:
+    has_tqdm = 0
 
 from av1an.commandtypes import CommandPair
 from av1an.logger import log
@@ -179,7 +183,7 @@ def compose_aomsplit_first_pass_command(video_path: Path, stat_file: Path, ffmpe
     return CommandPair(f, e)
 
 
-def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video_params, is_vs):
+def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video_params, is_vs, quiet):
     """[Get frame numbers for splits from aomenc 1 pass stat file]
     """
 
@@ -189,7 +193,9 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
 
     f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params, is_vs)
 
-    tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
+    tqdm_bar = None
+    if not quiet and has_tqdm:
+        tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 
     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
     pipe = subprocess.Popen(e, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
@@ -206,6 +212,9 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
 
         if line:
             encoder_history.append(line)
+
+        if quiet or not has_tqdm:
+            continue
 
         match = re.search(r"frame.*?/([^ ]+?) ", line)
         if match:

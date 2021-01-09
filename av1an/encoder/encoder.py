@@ -107,7 +107,7 @@ class Encoder(ABC):
             enc_cmd = self.mod_command(enc_cmd, c)
 
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
-        ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
+        ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=DEVNULL)
         pipe = subprocess.Popen(enc_cmd, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)

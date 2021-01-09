@@ -155,8 +155,8 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
     if encoder == 'aom':
-        params = ['aomenc', '--passes=1', '--threads=24',
-                  '--end-usage=q', '--cpu-used=6', '--tile-columns=2', '--tile-rows=1', f'--cq-level={q}']
+        params = ['aomenc', '--passes=1', '--threads=12',
+                  '--end-usage=q', '-b', '8', '--cpu-used=6', f'--cq-level={q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'x265':

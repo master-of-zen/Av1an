@@ -1,5 +1,4 @@
 import subprocess
-from subprocess import STDOUT, PIPE, DEVNULL
 
 from math import isnan
 from math import log as ln
@@ -202,10 +201,20 @@ def gen_probes_names(chunk: Chunk, q):
 
 
 def make_pipes(ffmpeg_gen_cmd: Command, command: CommandPair):
-    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
-    ffmpeg_pipe = subprocess.Popen(command[0], stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=DEVNULL)
-    pipe = subprocess.Popen(command[1], stdin=ffmpeg_pipe.stdout, stdout=PIPE,
-                            stderr=STDOUT,
+
+    ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT)
+
+    ffmpeg_pipe = subprocess.Popen(command[0],
+                                    stdin=ffmpeg_gen_pipe.stdout,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+
+    pipe = subprocess.Popen(command[1],
+                            stdin=ffmpeg_pipe.stdout,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
                             universal_newlines=True)
 
     return pipe

@@ -111,9 +111,15 @@ class VMAF:
 
         cmd = (*cmd_in, *filter_complex, distorted + ref + vmaf_filter, *cmd_out)
 
-        ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout,
-                                stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+        ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd,
+        stdout=PIPE,
+        stderr=STDOUT)
+
+        pipe = subprocess.Popen(cmd,
+                                stdin=ffmpeg_gen_pipe.stdout,
+                                stdout=PIPE,
+                                stderr=STDOUT,
+                                universal_newlines=True)
         process_pipe(pipe, chunk)
 
         return fl_path

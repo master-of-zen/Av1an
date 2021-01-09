@@ -41,7 +41,7 @@ class VMAF:
         else:
             add = ''
 
-        cmd = f' ffmpeg -hide_banner -filter_complex testsrc=duration=1:size=28x16:rate=1[B];testsrc=duration=1:size=28x16:rate=1[A];[B][A]libvmaf{add} -t 1  -f null - '.split()
+        cmd = f' ffmpeg -hide_banner -filter_complex testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{add} -t 1  -f null - '.split()
 
         pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
 

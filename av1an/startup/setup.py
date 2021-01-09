@@ -113,5 +113,4 @@ def startup_check(project: Project):
     project.ffmpeg = shlex.split(project.ffmpeg)
 
     project.pix_format = ['-strict', '-1', '-pix_fmt', project.pix_format]
-    project.ffmpeg_pipe = [*project.ffmpeg, *project.pix_format,
-                        '-bufsize', '50000K', '-f', 'yuv4mpegpipe', '-']
+    project.ffmpeg_pipe = [*project.ffmpeg, *project.pix_format,'-f', 'yuv4mpegpipe', '-']

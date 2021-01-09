@@ -28,8 +28,7 @@ class SvtVp9(Encoder):
         :param a: the Project
         :return: a command
         """
-        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format, '-bufsize',
-                '50000K', '-f', 'rawvideo', '-']
+        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format,'-f', 'rawvideo', '-']
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [

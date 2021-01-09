@@ -224,13 +224,13 @@ class Project(object):
                 import vapoursynth
                 plugins = vapoursynth.get_core().get_plugins()
 
-                if 'com.vapoursynth.ffms2' in plugins:
-                    log('Set Chunking Method: FFMS2\n')
-                    self.chunk_method = 'vs_ffms2'
-
-                elif 'systems.innocent.lsmas' in plugins:
+                if 'systems.innocent.lsmas' in plugins:
                     log('Set Chunking Method: L-SMASH\n')
                     self.chunk_method = 'vs_lsmash'
+
+                elif 'com.vapoursynth.ffms2' in plugins:
+                    log('Set Chunking Method: FFMS2\n')
+                    self.chunk_method = 'vs_ffms2'
 
             except:
                 log('Vapoursynth not installed but vspipe reachable\n' +

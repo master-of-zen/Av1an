@@ -1,10 +1,7 @@
-### 2
-- Target VMAF renamed to Target Quality
-- Changed Algo for Target Quality score calculation
-
-### 3
-- Default pix format to be yuv420p10le
-- Default scene change interval to be 120 frames
+### 5
+- Added vmaf validation on each time when VMAF initialized
+- Fix running not required frame probe
+- Chunk restarting
 
 ### 4
 - Refactored Args to Project class
@@ -28,6 +25,10 @@
 - Changed Target Quality probing rate
 - Refactored module structure/names
 
-### 5
-- Added vmaf validation on each time when VMAF initialized
-- Fix running not required frame probe
+### 3
+- Default pix format to be yuv420p10le
+- Default scene change interval to be 120 frames
+
+### 2
+- Target VMAF renamed to Target Quality
+- Changed Algo for Target Quality score calculation

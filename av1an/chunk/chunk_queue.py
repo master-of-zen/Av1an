@@ -225,7 +225,7 @@ def create_select_chunk(project: Project, index: int, src_path: Path, frame_star
 
     ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', src_path.as_posix(), '-vf',
                       f'select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS', *project.pix_format,
-                      '-f', 'yuv4mpegpipe', '-']
+                      '-color_range', '0', '-f', 'yuv4mpegpipe', '-']
     extension = ENCODERS[project.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
@@ -272,7 +272,7 @@ def create_chunk_from_segment(project: Project, index: int, file: Path) -> Chunk
     :return: A Chunk
     """
     ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', file.as_posix(), *project.pix_format,
-                      '-f', 'yuv4mpegpipe', '-']
+                      '-color_range', '0','-f', 'yuv4mpegpipe', '-']
     file_size = file.stat().st_size
     frames =  project.get_frames()
     extension = ENCODERS[project.encoder].output_extension

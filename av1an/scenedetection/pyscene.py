@@ -3,14 +3,13 @@
 import sys
 from subprocess import Popen
 
-scenedetect = True
 try:
     from scenedetect.detectors import ContentDetector
     from scenedetect.scene_manager import SceneManager
     from scenedetect.video_manager import VideoManager
     from scenedetect.frame_timecode import FrameTimecode
 except ImportError:
-    scenedetect = False
+    ContentDetector = None
 
 from av1an.logger import log
 from av1an.utils import frame_probe
@@ -28,7 +27,7 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
     if not min_scene_len:
         min_scene_len = 15
 
-    if not scenedetect:
+    if ContentDetector is None:
         log(f'Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use')
         return []
 

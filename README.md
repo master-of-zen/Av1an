@@ -61,6 +61,8 @@ With your own parameters:
 
     --keep                  Not deleting temprally folders after encode finished.
 
+    -q --quiet              Do not print tqdm to terminal.
+
     -log --logging          Path to .log file(By default created in temp folder)
 
     --temp                  Set path for temporally folders. Default: .temp
@@ -103,7 +105,10 @@ With your own parameters:
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
                             (Keep in mind that speed also depends on set aomenc parameters)
-                            `none` -  skips scenedetection.
+                            `ffmpeg` - Uses ffmpeg built in content based scene detection
+                            with threshold. Slower and less precise than pyscene but requires
+                            fewer dependencies.
+                            `none` -  skips scenedetection. Useful for splitting by time
 
     -cm  --chunk_method     Determine way in which chunks made for encoding.
                             By default selected best one avalable.
@@ -118,7 +123,8 @@ With your own parameters:
                             Example: "-s scenes.csv"
 
     -xs  --extra_split      Adding extra splits if frame distance beetween splits bigger than
-                            given value. Works with/without PySceneDetect
+                            given value. Pair with none for time based splitting or with any
+                            other splitting method to break up massive scenes.
                             Example: 1000 frames video with single scene,
                             -xs 200 will add splits at 200,400,600,800.
 

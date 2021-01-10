@@ -76,6 +76,7 @@ class Args:
         io_group.add_argument('--output_file', '-o', type=Path, default=None, help='Specify output file')
         io_group.add_argument('--mkvmerge', help='Use mkvmerge instead of ffmpeg to concatenate', action='store_true')
 
+        io_group.add_argument('--quiet', '-q', help='Disable printing tqdm and scenedetect data to terminal', action='store_true')
         io_group.add_argument('--logging', '-log', type=str, default=None, help='Enable logging')
         io_group.add_argument('--resume', '-r', help='Resuming previous session', action='store_true')
         io_group.add_argument('--keep', help='Keep temporally folder after encode', action='store_true')
@@ -88,7 +89,7 @@ class Args:
                                  choices=['select', 'vs_ffms2', 'vs_lsmash', 'hybrid'])
         split_group.add_argument('--scenes', '-s', type=str, default=None, help='File location for scenes')
         split_group.add_argument('--split_method', type=str, default='pyscene', help='Specify splitting method',
-                                 choices=['none', 'pyscene', 'aom_keyframes'])
+                                 choices=['none', 'pyscene', 'aom_keyframes', 'ffmpeg'])
         split_group.add_argument('--extra_split', '-xs', type=int, default=240,
                                  help='Number of frames after which make split')
 

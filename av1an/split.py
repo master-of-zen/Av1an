@@ -9,7 +9,7 @@ from typing import List
 from numpy import linspace
 
 from .project import Project
-from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
+from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
 from .logger import log
 from .utils import terminate, frame_probe
 
@@ -161,7 +161,7 @@ def calc_split_locations(project: Project) -> List[int]:
     if project.split_method == 'pyscene':
         log(f'Starting scene detection Threshold: {project.threshold}, Min_scene_length: {project.min_scene_len}\n')
         try:
-            sc = pyscene(project.input, project.threshold, project.min_scene_len, project.is_vs, project.temp)
+            sc = pyscene(project.input, project.threshold, project.min_scene_len, project.is_vs, project.temp, project.quiet)
         except Exception as e:
             log(f'Error in PySceneDetect: {e}\n')
             print(f'Error in PySceneDetect{e}\n')
@@ -170,7 +170,10 @@ def calc_split_locations(project: Project) -> List[int]:
     # Splitting based on aom keyframe placement
     elif project.split_method == 'aom_keyframes':
         stat_file = project.temp / 'keyframes.log'
-        sc = aom_keyframes(project.input, stat_file, project.min_scene_len, project.ffmpeg_pipe, aom_keyframes_params, project.is_vs)
+        sc = aom_keyframes(project.input, stat_file, project.min_scene_len, project.ffmpeg_pipe, aom_keyframes_params, project.is_vs, project.quiet)
+
+    elif project.split_method == 'ffmpeg':
+        sc = ffmpeg(project.input, project.threshold, project.min_scene_len, project.get_frames(), project.is_vs, project.temp)
 
     # Write scenes to file
 

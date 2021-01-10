@@ -1,5 +1,9 @@
 from multiprocessing.managers import BaseManager
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
+
 
 def Manager():
     """
@@ -19,7 +23,7 @@ class Counter:
         self.initial = initial
         self.left = total - initial
         self.current = 0
-        self.use_tqdm = use_tqdm
+        self.use_tqdm = (use_tqdm and tqdm is not None)
         if use_tqdm:
             self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
 
@@ -33,7 +37,8 @@ class Counter:
             self.current += value
 
     def close(self):
-        self.tqdm_bar.close()
+        if self.use_tqdm:
+            self.tqdm_bar.close()
 
     def get_frames(self):
         return self.current

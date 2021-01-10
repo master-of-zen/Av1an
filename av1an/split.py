@@ -173,7 +173,7 @@ def calc_split_locations(project: Project) -> List[int]:
         sc = aom_keyframes(project.input, stat_file, project.min_scene_len, project.ffmpeg_pipe, aom_keyframes_params, project.is_vs, project.quiet)
 
     elif project.split_method == 'ffmpeg':
-        sc = ffmpeg(project.input, project.threshold, project.is_vs, project.temp)
+        sc = ffmpeg(project.input, project.threshold, project.min_scene_len, project.get_frames(), project.is_vs, project.temp)
 
     # Write scenes to file
 

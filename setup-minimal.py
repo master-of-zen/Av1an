@@ -4,7 +4,6 @@ REQUIRES = [
     'numpy',
     'psutil',
     'scipy',
-    'matplotlib',
 ]
 
 with open("README.md", "r") as f:

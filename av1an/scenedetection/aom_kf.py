@@ -8,11 +8,10 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import cv2
-has_tqdm = 1
 try:
     from tqdm import tqdm
 except ImportError:
-    has_tqdm = 0
+    tqdm = None
 
 from av1an.commandtypes import CommandPair
 from av1an.logger import log
@@ -194,7 +193,7 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
     f, e = compose_aomsplit_first_pass_command(video_path, stat_file, ffmpeg_pipe, video_params, is_vs)
 
     tqdm_bar = None
-    if not quiet and has_tqdm:
+    if not quiet and tqdm is not None:
         tqdm_bar = tqdm(total=total, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.2)
 
     ffmpeg_pipe = subprocess.Popen(f, stdout=PIPE, stderr=STDOUT)
@@ -213,7 +212,7 @@ def aom_keyframes(video_path: Path, stat_file, min_scene_len, ffmpeg_pipe, video
         if line:
             encoder_history.append(line)
 
-        if quiet or not has_tqdm:
+        if quiet or tqdm is None:
             continue
 
         match = re.search(r"frame.*?/([^ ]+?) ", line)

@@ -13,8 +13,12 @@ from av1an.commandtypes import CommandPair, Command
 from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
-import matplotlib
-from matplotlib import pyplot as plt
+try:
+    import matplotlib
+    from matplotlib import pyplot as plt
+except ImportError:
+    matplotlib = None
+    plt = None
 
 # TODO: rework to class, account for dark scenes/banding
 
@@ -270,6 +274,9 @@ def interpolate_data(vmaf_cq: list, target_quality):
 
 
 def plot_probes(project, vmaf_cq, chunk: Chunk, frames):
+    if plt is None:
+        log(f'Matplotlib is not installed or could not be loaded. Unable to plot probes.')
+        return
     # Saving plot of vmaf calculation
 
     x = [x[1] for x in sorted(vmaf_cq)]

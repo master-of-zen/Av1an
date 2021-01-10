@@ -1,9 +1,8 @@
 from multiprocessing.managers import BaseManager
-has_tqdm = 1
 try:
     from tqdm import tqdm
 except ImportError:
-    has_tqdm = 0
+    tqdm = None
 
 
 def Manager():
@@ -24,7 +23,7 @@ class Counter:
         self.initial = initial
         self.left = total - initial
         self.current = 0
-        self.use_tqdm = (use_tqdm and has_tqdm)
+        self.use_tqdm = (use_tqdm and tqdm is not None)
         if use_tqdm:
             self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
 

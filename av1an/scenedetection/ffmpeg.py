@@ -12,8 +12,9 @@ if sys.platform == "linux":
 
 def ffmpeg(video, threshold, is_vs, temp):
     """
-    Running PySceneDetect detection on source video for segmenting.
-    Optimal threshold settings 15-50
+    Running FFMPEG detection on source video for segmenting.
+    Usually the optimal threshold is 0.1 - 0.3 but it can vary a lot
+    based on your source content.
     """
 
     log(f'Starting FFMPEG detection:\nThreshold: {threshold}, Is Vapoursynth input: {is_vs}\n')
@@ -29,7 +30,7 @@ def ffmpeg(video, threshold, is_vs, temp):
         vspipe_cmd = compose_vapoursynth_pipe(video, vspipe_fifo)
         vspipe_process = Popen(vspipe_cmd)
 
-    finfo = "showinfo,select=gt(scene\\," + str(threshold) + "),select=eq(key\\,1),showinfo"
+    finfo = "showinfo,select=gt(scene\\," + str(threshold) + "),showinfo"
     ffmpeg_cmd = ["ffmpeg", "-i", str(vspipe_fifo if is_vs else video.as_posix()), "-hide_banner", "-loglevel", "32",
                   "-filter_complex", finfo, "-an", "-f", "null", "-"]
     pipe = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

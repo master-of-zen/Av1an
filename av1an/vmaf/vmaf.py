@@ -13,13 +13,18 @@ import numpy as np
 from math import log10, ceil, floor
 from math import log as ln
 
-import matplotlib
-from matplotlib import pyplot as plt
+from av1an.logger import log
+
+try:
+    import matplotlib
+    from matplotlib import pyplot as plt
+    matplotlib.use('Agg')
+except ImportError:
+    matplotlib = None
+    plt = None
 
 from av1an.manager.Pipes import process_pipe
 from av1an.chunk import Chunk
-
-matplotlib.use('Agg')
 
 
 class VMAF:
@@ -255,6 +260,9 @@ class VMAF:
         """
         Read vmaf json and plot VMAF values for each frame
         """
+        if plt is None:
+            log(f'Matplotlib is not installed or could not be loaded, aborting plot_vmaf')
+            return
 
         perc_1 = self.read_weighted_vmaf(scores, 0.01)
         perc_25 = self.read_weighted_vmaf(scores, 0.25)

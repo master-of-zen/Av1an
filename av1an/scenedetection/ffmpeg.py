@@ -39,7 +39,6 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
     while True:
         line = pipe.stderr.readline().strip()
         if len(line) == 0 and pipe.poll() is not None:
-            print(pipe.poll())
             break
         if len(line) == 0:
             continue
@@ -53,39 +52,24 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
                         scenes += [last_frame]
                     else:
                         last_frame = frame_num
-
-    # If fed using a vspipe process, ensure that vspipe has finished.
     if is_vs:
         vspipe_process.wait()
 
-    # General purpose min_scene_len implementation that works if "scenes" are sorted from smallest
-    # to largest.
-
-    # First add the first and last frame so you can test if those are too close
     scenes = [0] + scenes + [total_frames]
     index = 1
 
     while index < len(scenes):
-        # Check if this current split is too close to the previous split
         if scenes[index] < (scenes[index - 1] + min_scene_len):
-            # if so remove the current split and then recheck if index < len(scenes)
             scenes.pop(index)
         else:
             index = index + 1
 
-    # Remove the first and last splits. the first split will always be at frame 0 which is bad
-    # and the last split will either be the last frame of video, or the actual last split.
-    # if it's the last frame of video it should be removed
-    # and if it's the last split it means that the last frame of video was too close to that
-    # last split and thus the duration of the last split was too small and should have been removed
     if len(scenes) > 2:
         scenes.pop(0)
         scenes.pop(len(scenes) - 1)
     else:
-        # Will only occur if literally all possible splits were removed for the min_scene_len
         return []
 
-    # Remove 0 from list
     if len(scenes) > 0 and scenes[0] == 0:
         scenes.remove(0)
     log(f'Found split points: {len(scenes)}\n')

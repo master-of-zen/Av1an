@@ -48,12 +48,14 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
             continue
 
         if 'frame' in line:
-            if match := re.findall(r':(\d+)', line):
+            match = re.findall(r':(\d+)', line)
+            if match:
                 frame = int(match[0])
                 continue
 
         if 'score' in line:
-            if matches := re.findall(r"=\s*([\S\s]+)", line):
+            matches = re.findall(r"=\s*([\S\s]+)", line)
+            if matches:
                 score = float(matches[-1]) * 100
                 if score > threshold and frame - max(scenes, default=0) > min_scene_len:
                     scenes.append(frame)

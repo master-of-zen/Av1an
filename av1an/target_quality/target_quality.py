@@ -165,11 +165,11 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads) ->
 
     elif encoder == 'x265':
         params = ['x265', '--log-level', '0', '--no-progress',
-                  '--y4m', '--preset', 'fast', '--crf', f'{q}']
+                  '--y4m', '--frame-threads', f'{n_threads}', '--preset', 'fast', '--crf', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
-        params = ['rav1e', '-y', '-s', '10', '--tiles', '32', '--quantizer', f'{q}']
+        params = ['rav1e', '-y', '-s', '10', '--threads', f'{n_threads}', '--tiles', '32', '--quantizer', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':
@@ -179,19 +179,19 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads) ->
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'svt_av1':
-        params = ['SvtAv1EncApp', '-i', 'stdin',
+        params = ['SvtAv1EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
                   '--preset', '8', '--rc', '0', '--qp', f'{q}']
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'svt_vp9':
-        params = ['SvtVp9EncApp', '-i', 'stdin',
+        params = ['SvtVp9EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
                   '-enc-mode', '8', '-q', f'{q}']
         # TODO: pipe needs to output rawvideo
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'x264':
         params = ['x264', '--log-level', 'error', '--demuxer', 'y4m',
-                  '-', '--no-progress', '--preset', 'medium', '--crf',
+                  '-', '--no-progress', '--threads', f'{n_threads}', '--preset', 'medium', '--crf',
                   f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 

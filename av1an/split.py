@@ -176,7 +176,6 @@ def calc_split_locations(project: Project) -> List[int]:
         sc = ffmpeg(project.input, project.threshold, project.min_scene_len, project.get_frames(), project.is_vs, project.temp)
 
     # Write scenes to file
-
     if project.scenes:
         write_scenes_to_file(sc, project.get_frames(), project.scenes)
 

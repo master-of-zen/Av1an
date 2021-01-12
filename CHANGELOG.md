@@ -2,6 +2,9 @@
 - Added vmaf validation on each time when VMAF initialized
 - Fix running not required frame probe
 - Chunk restarting
+- Fixed ffmpeg segmenting
+- `color_range 0` by default for pipes
+- aomenc target quality probes to be 8 bit
 
 ### 4
 - Refactored Args to Project class

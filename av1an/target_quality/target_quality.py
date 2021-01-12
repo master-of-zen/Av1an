@@ -145,7 +145,7 @@ def weighted_search(num1, vmaf1, num2, vmaf2, target):
     return new_point
 
 
-def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPair:
+def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads) -> CommandPair:
     """
     Generate and return commands for probes at set Q values
     These are specifically not the commands that are generated
@@ -159,39 +159,39 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate) -> CommandPai
     probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
 
     if encoder == 'aom':
-        params = ['aomenc', '--passes=1', '--threads=12',
+        params = ['aomenc', '--passes=1', f'--threads={n_threads}', '--tile-columns=1',
                   '--end-usage=q', '-b', '8', '--cpu-used=6', f'--cq-level={q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'x265':
         params = ['x265', '--log-level', '0', '--no-progress',
-                  '--y4m', '--preset', 'fast', '--crf', f'{q}']
+                  '--y4m', '--frame-threads', f'{n_threads}', '--preset', 'fast', '--crf', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'rav1e':
-        params = ['rav1e', '-y', '-s', '10', '--tiles', '32', '--quantizer', f'{q}']
+        params = ['rav1e', '-y', '-s', '10', '--threads', f'{n_threads}', '--tiles', '32', '--quantizer', f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'vpx':
         params = ['vpxenc', '-b', '10', '--profile=2','--passes=1', '--pass=1', '--codec=vp9',
-                  '--threads=8', '--cpu-used=9', '--end-usage=q',
+                  f'--threads={n_threads}', '--cpu-used=9', '--end-usage=q',
                   f'--cq-level={q}', '--row-mt=1']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
     elif encoder == 'svt_av1':
-        params = ['SvtAv1EncApp', '-i', 'stdin',
+        params = ['SvtAv1EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
                   '--preset', '8', '--rc', '0', '--qp', f'{q}']
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'svt_vp9':
-        params = ['SvtVp9EncApp', '-i', 'stdin',
+        params = ['SvtVp9EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
                   '-enc-mode', '8', '-q', f'{q}']
         # TODO: pipe needs to output rawvideo
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 
     elif encoder == 'x264':
         params = ['x264', '--log-level', 'error', '--demuxer', 'y4m',
-                  '-', '--no-progress', '--preset', 'medium', '--crf',
+                  '-', '--no-progress', '--threads', f'{n_threads}', '--preset', 'medium', '--crf',
                   f'{q}']
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
@@ -231,10 +231,12 @@ def vmaf_probe(chunk: Chunk, q,  project: Project, probing_rate):
     :param chunk: the Chunk
     :param q: Value to make probe
     :param project: the Project
+    :param probing_rate: 1 out of every N frames should be encoded for analysis
     :return : path to json file with vmaf scores
     """
 
-    cmd = probe_cmd(chunk, q, project.ffmpeg_pipe, project.encoder, probing_rate)
+    n_threads = project.n_threads if project.n_threads else 12
+    cmd = probe_cmd(chunk, q, project.ffmpeg_pipe, project.encoder, probing_rate, n_threads)
     pipe = make_pipes(chunk.ffmpeg_gen_cmd, cmd)
     process_pipe(pipe, chunk)
     vm = VMAF(n_threads=project.n_threads, model=project.vmaf_path, res=project.vmaf_res, vmaf_filter=project.vmaf_filter)

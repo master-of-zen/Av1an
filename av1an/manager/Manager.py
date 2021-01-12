@@ -148,6 +148,6 @@ class EncodingManager:
         print(f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
                 f'Params: {" ".join(project.video_params)}')
         BaseManager.register('Counter', Counter)
-        counter = Manager().Counter(project.get_frames(), self.initial_frames)
+        counter = Manager().Counter(project.get_frames(), self.initial_frames, not project.quiet)
         project.counter = counter
 

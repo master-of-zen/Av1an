@@ -197,6 +197,7 @@ With your own parameters:
 ## Install
 
 * Prerequisites:
+  *  [Windows Prebuilds](https://ci.appveyor.com/project/master-of-zen/av1an/build/artifacts)
   *  [Install Python3](https://www.python.org/downloads/) <br>
 When installing under Windows, select the option `add Python to PATH` in the installer
   *  [Install FFmpeg](https://ffmpeg.org/download.html)

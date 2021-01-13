@@ -11,10 +11,11 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 | -------------| -------------|
 | --help | Show usage options and exit |
 | --end-usage=arg | Rate control mode (vbr, cbr(default), cq, q) |
-| --cpu-used=arg | CPU Used (0....6) Good mode, (5..9) realtime mode 1(default)|
+| --cpu-used=arg | CPU Used (0..6) Good mode, (5..9) realtime mode 1(default)|
 | --cq-level=arg | Constant/Constrained Quality level, used in Q/CQ modes |
 | --target-bitrate=arg | Bitrate (kbps) |
 | --bit-depth=arg |  Bit depth (8, 10, 12) |
+| --lag-in-frames=arg | Amount of lag in frames (0..35) 19(default) | 
 | --tile-columns=arg | Number of tile columns to use, log2 (number to power of 2) |
 | --tile-rows=arg | Number of tile rows to use, log2  (number to power of 2)|
 | --threads=arg | Allowed number of threads to use|

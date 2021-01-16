@@ -11,7 +11,7 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 | -------------| -------------|
 | --help | Show usage options and exit |
 | --end-usage=arg | Rate control mode (vbr, cbr(default), cq, q) |
-| --cpu-used=arg | CPU Used (0....6) Good mode, (5..9) realtime mode 1(default)|
+| --cpu-used=arg | CPU Used (0..6) Good mode, (5..9) realtime mode 1(default)|
 | --cq-level=arg | Constant/Constrained Quality level, used in Q/CQ modes |
 | --target-bitrate=arg | Bitrate (kbps) |
 | --bit-depth=arg |  Bit depth (8, 10, 12) |
@@ -35,7 +35,6 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 | --transfer-characteristics=arg | Transfer characteristics (CICP) of input content(unspecified, bt709, bt470m, bt470bg, bt601, smpte240, lin, log100, log100sq10, iec61966, bt1361, srgb, bt2020-10bit, bt2020-12bit, smpte2084, hlg, smpte428. Leave at default unless you have HDR content or your source's transfer characteristics are different; in that case, set it to whatever your content is.
 | --matrix-coefficients=arg | Matrix coefficients (CICP) of input content: identity, bt709, unspecified, fcc73, bt470bg, bt601, smpte240, ycgco, bt2020ncl, bt2020cl, smpte2085, chromncl, chromcl, ictcp. Leave at default unless you have HDR content or your source's matrix coefficients information is different; in that case, set it to whatever your content is.
 
-                                          
 ### Examples of settings
 
 ##### Constant quality:

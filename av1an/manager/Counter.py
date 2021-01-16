@@ -23,7 +23,7 @@ class Counter:
         self.initial = initial
         self.left = total - initial
         self.current = 0
-        self.use_tqdm = (use_tqdm and tqdm is not None)
+        self.use_tqdm = (use_tqdm and (tqdm is not None))
         if use_tqdm:
             self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
 

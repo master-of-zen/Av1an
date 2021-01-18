@@ -1,6 +1,6 @@
 FROM archlinux:base-devel
 
-ENV MPLCONFIGDIR="/videos"
+ENV MPLCONFIGDIR="/home/app_user/"
 
 # Fix keyring
 RUN rm -fr /etc/pacman.d/gnupg && \
@@ -20,7 +20,7 @@ USER app_user
 RUN sudo pacman -Syu --noprogressbar --noconfirm
 
 # Install requirements
-RUN sudo pacman -S --noprogressbar --noconfirm opencv git cmake yasm doxygen python python-pip go 
+RUN sudo pacman -S --noprogressbar --noconfirm opencv opencv-samples hdf5 qt5-base git cmake yasm doxygen python python-pip go 
 
 # Install x265 and x264
 RUN sudo pacman -S --noprogressbar --noconfirm x265 x264
@@ -74,8 +74,7 @@ RUN yes | makepkg -sri
 # Install av1an
 COPY . /home/app_user/Av1an
 WORKDIR /home/app_user/Av1an
-RUN sudo python setup.py install && \
-    sudo ln av1an.py /usr/local/bin/av1an
+RUN sudo python setup.py install
 
 # Change permissions
 RUN sudo chmod 777 -R /home/app_user
@@ -83,4 +82,4 @@ RUN sudo chmod 777 -R /home/app_user
 VOLUME ["/videos"]
 WORKDIR /videos
 
-ENTRYPOINT [ "/usr/local/bin/av1an" ]
+ENTRYPOINT [ "/home/app_user/Av1an/av1an.py" ]

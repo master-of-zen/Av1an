@@ -55,7 +55,7 @@ RUN git clone https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM.git /home/app
     mkdir -p /home/app_user/VTM/build
 WORKDIR /home/app_user/VTM/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(NPROC) && \
+    make -j$(nproc) && \
     sudo ln -s ../bin/EncoderAppStatic /usr/local/bin/vvc_encoder
 
 # Install makemkv vapoursynth

@@ -101,9 +101,8 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
-          context: .
-          file: ${{ env.GITHUB_WORKSPACE }}/Dockerfile
           push: true
-          tags: av1an:latest
+          tags: luigi311/av1an:latest
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+

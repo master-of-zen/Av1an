@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 from typing import List
+from subprocess import Popen, DEVNULL
+from shlex import split
 
 from av1an.project import Project
 from av1an.chunk import Chunk
@@ -126,7 +128,7 @@ def create_video_queue_vsffms2(project: Project, split_locations: List[int]) -> 
 
 def create_video_queue_vslsmash(project: Project, split_locations: List[int]) -> List[Chunk]:
     script = "from vapoursynth import core\n" \
-             "core.lsmas.LWLibavSource(\"{}\").set_output()"
+             "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
     return create_video_queue_vs(project, split_locations, script)
 
 
@@ -152,10 +154,17 @@ def create_video_queue_vs(project: Project, split_locations: List[int], script: 
     if not project.is_vs:
         # create a vapoursynth script that will load the source with ffms2
         load_script = project.temp / 'split' / 'loadscript.vpy'
-        cache_file = (project.temp / 'split' / 'ffms2cache.ffindex').absolute().as_posix()
+        if project.chunk_method == 'vs_ffms2':
+            cache_file = (project.temp / 'split' / 'cache.ffindex').resolve().as_posix()
+        else:
+            cache_file = (project.temp / 'split' / 'cache.lwi').resolve().as_posix()
         with open(load_script, 'w+') as file:
             file.write(script.format(source_file, cache_file))
+
+        cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
+        Popen(split(cache_generation), stdout=DEVNULL, stderr=DEVNULL).wait()
         vs_script = load_script
+        print(vs_script)
 
     chunk_queue = [create_vs_chunk(project, index, vs_script, *cb) for index, cb in enumerate(chunk_boundaries)]
 

@@ -162,7 +162,7 @@ def create_video_queue_vs(project: Project, split_locations: List[int], script: 
             file.write(script.format(source_file, cache_file))
 
         cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
-        Popen(split(cache_generation), stdout=DEVNULL, stderr=DEVNULL).wait()
+        d = Popen(split(cache_generation), stdout=DEVNULL, stderr=DEVNULL).wait()
         vs_script = load_script
 
     chunk_queue = [create_vs_chunk(project, index, vs_script, *cb) for index, cb in enumerate(chunk_boundaries)]

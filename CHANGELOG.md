@@ -1,4 +1,5 @@
 ### 5
+- Fixed fatal errors with ffms2/lsmash
 - Added vmaf validation on each time when VMAF initialized
 - Fix running not required frame probe
 - Chunk restarting

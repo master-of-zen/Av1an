@@ -127,6 +127,8 @@ def create_video_queue_vsffms2(project: Project, split_locations: List[int]) -> 
 
 
 def create_video_queue_vslsmash(project: Project, split_locations: List[int]) -> List[Chunk]:
+
+
     script = "from vapoursynth import core\n" \
              "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
     return create_video_queue_vs(project, split_locations, script)

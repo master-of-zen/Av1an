@@ -12,7 +12,7 @@ from av1an.logger import log
 from av1an.resume import read_done_data
 from av1an.split import segment
 from av1an.utils import terminate
-
+from av1an.vapoursynth import create_vs_file
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
     """
@@ -121,20 +121,14 @@ def create_video_queue_hybrid(project: Project, split_locations: List[int]) -> L
 
 
 def create_video_queue_vsffms2(project: Project, split_locations: List[int]) -> List[Chunk]:
-    script = "from vapoursynth import core\n" \
-             "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
-    return create_video_queue_vs(project, split_locations, script)
+    return create_video_queue_vs(project, split_locations)
 
 
 def create_video_queue_vslsmash(project: Project, split_locations: List[int]) -> List[Chunk]:
+    return create_video_queue_vs(project, split_locations)
 
 
-    script = "from vapoursynth import core\n" \
-             "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
-    return create_video_queue_vs(project, split_locations, script)
-
-
-def create_video_queue_vs(project: Project, split_locations: List[int], script: str) -> List[Chunk]:
+def create_video_queue_vs(project: Project, split_locations: List[int]) -> List[Chunk]:
     """
     Create a list of chunks using vspipe and ffms2 for frame accurate seeking
 
@@ -151,21 +145,10 @@ def create_video_queue_vs(project: Project, split_locations: List[int], script: 
     chunk_boundaries = zip(split_locs_fl, split_locs_fl[1:])
 
     source_file = project.input.absolute().as_posix()
-    vs_script = project.input
-
-    if not project.is_vs:
-        # create a vapoursynth script that will load the source with ffms2
-        load_script = project.temp / 'split' / 'loadscript.vpy'
-        if project.chunk_method == 'vs_ffms2':
-            cache_file = (project.temp / 'split' / 'cache.ffindex').resolve().as_posix()
-        else:
-            cache_file = (project.temp / 'split' / 'cache.lwi').resolve().as_posix()
-        with open(load_script, 'w+') as file:
-            file.write(script.format(source_file, cache_file))
-
-        cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
-        d = Popen(split(cache_generation), stdout=DEVNULL, stderr=DEVNULL).wait()
-        vs_script = load_script
+    if project.is_vs:
+        vs_script = project.input
+    else:
+        vs_script = create_vs_file(project.temp, source_file, project.chunk_method)
 
     chunk_queue = [create_vs_chunk(project, index, vs_script, *cb) for index, cb in enumerate(chunk_boundaries)]
 

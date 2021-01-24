@@ -178,7 +178,7 @@ def create_vs_chunk(project: Project, index: int, vs_script: Path, frame_start: 
     frames = frame_end - frame_start
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
-    vspipe_gen_cmd = ['vspipe', vs_script.as_posix(), '-y', '-', '-s', str(frame_start), '-e', str(frame_end)]
+    vspipe_gen_cmd = ['vspipe', '-i', vs_script.as_posix(), '-y', '-', '-s', str(frame_start), '-e', str(frame_end)]
     extension = ENCODERS[project.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 

@@ -9,7 +9,7 @@ from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast,  hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
-
+import inspect
 class Project(object):
 
     def __init__(self, initial_data):
@@ -95,12 +95,19 @@ class Project(object):
         """
         Get total frame count of input file, returning total_frames from project if already exists
         """
+        # TODO: Unify get frames with vs pipe cache generation
+
         if self.frames > 0:
             return self.frames
-        else:
-            total = frame_probe_fast(self.input, self.is_vs)
-            self.frames = total
-            return self.frames
+
+        """
+            script = "from vapoursynth import core\n" \
+            "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
+        """
+
+        total = frame_probe_fast(self.input, self.is_vs)
+        self.frames = total
+        return self.frames
 
     def set_frames(self, frame_count: int):
         """

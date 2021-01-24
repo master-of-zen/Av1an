@@ -9,6 +9,7 @@ from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast,  hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
+from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
 import inspect
 class Project(object):
 
@@ -100,13 +101,17 @@ class Project(object):
         if self.frames > 0:
             return self.frames
 
-        """
-            script = "from vapoursynth import core\n" \
-            "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
-        """
+        if self.chunk_method in ('vs_ffms2','vs_lsmash'):
+            vs = create_vs_file(self.temp, self.input, self.chunk_method)
+            fr = frame_probe_vspipe(vs)
+            if fr > 0:
+                self.frames = fr
+                return fr
 
         total = frame_probe_fast(self.input, self.is_vs)
+
         self.frames = total
+
         return self.frames
 
     def set_frames(self, frame_count: int):

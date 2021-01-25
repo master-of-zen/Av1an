@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from distutils.spawn import find_executable
 from typing import Tuple, Optional
 import subprocess
-from subprocess import PIPE, STDOUT, DEVNULL
-
+from subprocess import PIPE, STDOUT
 from av1an.project import Project
 from chunk import Chunk
 from av1an.commandtypes import Command, MPCommands

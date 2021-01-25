@@ -10,7 +10,8 @@ from av1an.utils import frame_probe_fast,  hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-import inspect
+
+
 class Project(object):
 
     def __init__(self, initial_data):
@@ -245,8 +246,8 @@ class Project(object):
                     log('Set Chunking Method: FFMS2\n')
                     self.chunk_method = 'vs_ffms2'
 
-            except:
-                log('Vapoursynth not installed but vspipe reachable\n' +
+            except Exception as e:
+                log(f'Vapoursynth not installed but vspipe reachable\nError:{e}' +
                     'Fallback to Hybrid\n')
                 self.chunk_method = 'hybrid'
 

@@ -2,8 +2,6 @@ import time
 import sys
 import concurrent
 import concurrent.futures
-from collections import deque
-from av1an.project.Project import Project
 from typing import List
 from av1an.target_quality import (per_frame_target_quality_routine,
                                   per_shot_target_quality_routine)
@@ -11,7 +9,7 @@ from av1an.encoder import ENCODERS
 from av1an.utils import frame_probe, terminate
 from av1an.resume import write_progress_file
 from av1an.chunk import Chunk
-from av1an.logger import log, set_log
+from av1an.logger import log
 from pathlib import Path
 from .Pipes import tqdm_bar
 

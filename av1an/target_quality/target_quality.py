@@ -1,7 +1,6 @@
 import subprocess
 
 from math import isnan
-from math import log as ln
 import numpy as np
 import re
 import pprint

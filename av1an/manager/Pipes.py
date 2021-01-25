@@ -1,4 +1,3 @@
-import sys
 from collections import deque
 
 from av1an.chunk import Chunk

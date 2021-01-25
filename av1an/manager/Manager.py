@@ -12,7 +12,6 @@ from av1an.ffmpeg import extract_audio
 from av1an.fp_reuse import segment_first_pass
 from av1an.logger import log, set_log
 from av1an.project.Project import Project
-from av1an.resume import write_progress_file
 from av1an.split import split_routine
 from av1an.startup.file_validation import process_inputs
 

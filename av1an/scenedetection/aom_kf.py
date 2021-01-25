@@ -15,7 +15,7 @@ except ImportError:
 
 from av1an.commandtypes import CommandPair
 from av1an.logger import log
-from av1an.utils import terminate, frame_probe, frame_probe_fast
+from av1an.utils import terminate, frame_probe_fast
 from av1an.vapoursynth import compose_vapoursynth_pipe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.

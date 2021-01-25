@@ -1,9 +1,8 @@
 import re
-import subprocess
 from subprocess import PIPE
 from pathlib import Path
 from shlex import split
-from subprocess import run, Popen, DEVNULL
+from subprocess import run, Popen
 
 VS_EXTENSIONS = ['.vpy', '.py']
 
@@ -23,7 +22,7 @@ def frame_probe_vspipe(source: Path):
     frames = int(matches[-1])
     return frames
 
-def create_vs_file(temp, input, chunk_method):
+def create_vs_file(temp, source, chunk_method):
     """
     Creates vs pipe file or returns file if it exists
     """
@@ -43,7 +42,7 @@ def create_vs_file(temp, input, chunk_method):
         "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
 
     with open(load_script, 'w+') as file:
-            file.write(script.format(input.resolve().as_posix(), cache_file))
+            file.write(script.format(source.resolve().as_posix(), cache_file))
 
     cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
     d = Popen(split(cache_generation), stdout=PIPE, stderr=PIPE).wait()

@@ -31,7 +31,7 @@ RUN git clone https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM.git /home/app
     mkdir -p /home/app_user/VTM/build
 WORKDIR /home/app_user/VTM/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc) && \
+    make -j"$(nproc)" && \
     ln -s ../bin/EncoderAppStatic /usr/local/bin/vvc_encoder
 
 USER app_user
@@ -79,7 +79,7 @@ WORKDIR /home/app_user/Av1an
 RUN python setup.py install
 
 # Change permissions
-RUN chown app_user:app_user -R /home/app_user
+RUN chmod 777 -R /home/app_user
 
 USER app_user
 

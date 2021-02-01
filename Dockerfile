@@ -14,16 +14,27 @@ RUN useradd app_user --system --shell /usr/bin/nologin --create-home && \
 # Speed up compile
 RUN sed -i 's,^#MAKEFLAGS=.*,MAKEFLAGS="-j$(nproc)",g' /etc/makepkg.conf
 
-USER app_user
-
 # Recommended to update entire base image due to rolling release
-RUN sudo pacman -Syu --noprogressbar --noconfirm
+RUN pacman -Syu --noprogressbar --noconfirm
 
 # Install requirements
-RUN sudo pacman -S --noprogressbar --noconfirm opencv opencv-samples hdf5 qt5-base git cmake yasm doxygen python python-pip go 
+RUN pacman -S --noprogressbar --noconfirm opencv opencv-samples hdf5 qt5-base git cmake yasm doxygen python python-pip go dpkg wget
 
 # Install x265 and x264
-RUN sudo pacman -S --noprogressbar --noconfirm x265 x264
+RUN pacman -S --noprogressbar --noconfirm x265 x264
+
+# Install makemkv vapoursynth
+RUN pacman -S --noprogressbar --noconfirm mkvtoolnix-cli vapoursynth
+
+# Install VTM
+RUN git clone https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM.git /home/app_user/VTM && \
+    mkdir -p /home/app_user/VTM/build
+WORKDIR /home/app_user/VTM/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j"$(nproc)" && \
+    ln -s ../bin/EncoderAppStatic /usr/local/bin/vvc_encoder
+
+USER app_user
 
 # Install aomenc
 RUN git clone https://aur.archlinux.org/aom-git.git /home/app_user/aom-git
@@ -50,17 +61,6 @@ RUN git clone https://aur.archlinux.org/libvpx-full-git.git /home/app_user/libvp
 WORKDIR /home/app_user/libvpx-full-git
 RUN yes | makepkg -sri
 
-# Install VTM
-RUN git clone https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM.git /home/app_user/VTM && \
-    mkdir -p /home/app_user/VTM/build
-WORKDIR /home/app_user/VTM/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc) && \
-    sudo ln -s ../bin/EncoderAppStatic /usr/local/bin/vvc_encoder
-
-# Install makemkv vapoursynth
-RUN sudo pacman -S --noprogressbar --noconfirm mkvtoolnix-cli vapoursynth
-
 # Install ffms2
 RUN git clone https://aur.archlinux.org/ffms2-git.git /home/app_user/ffms2-git
 WORKDIR /home/app_user/ffms2-git
@@ -71,13 +71,17 @@ RUN git clone https://aur.archlinux.org/vapoursynth-plugin-lsmashsource-git.git 
 WORKDIR /home/app_user/vapoursynth-plugin-lsmashsource-git
 RUN yes | makepkg -sri
 
+USER root
+
 # Install av1an
 COPY . /home/app_user/Av1an
 WORKDIR /home/app_user/Av1an
-RUN sudo python setup.py install
+RUN python setup.py install
 
 # Change permissions
-RUN sudo chmod 777 -R /home/app_user
+RUN chmod 777 -R /home/app_user
+
+USER app_user
 
 VOLUME ["/videos"]
 WORKDIR /videos

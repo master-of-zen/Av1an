@@ -83,7 +83,7 @@ def startup_check(project: Project):
     if not project.chunk_method:
         project.select_best_chunking_method()
 
-    # project.is_vs = is_vapoursynth(project.input)
+    project.is_vs = is_vapoursynth(project.input)
 
     if project.is_vs:
         project.chunk_method = 'vs_ffms2'

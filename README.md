@@ -128,9 +128,7 @@ With your own parameters:
                             Example: 1000 frames video with single scene,
                             -xs 200 will add splits at 200,400,600,800.
 
-
 <h3 align="center">Target Quality</h3>
-
 
     --target_quality        Quality value to target.
                             VMAF used as substructure for algorithms.
@@ -178,52 +176,68 @@ With your own parameters:
                             Example: --n_threads 12
                             (Required if VMAF calculation gives error on high core counts)
 
-
-
 <h2 align="center">Main Features</h2>
 
 **Spliting video by scenes for parallel encoding** because AV1 encoders are currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
-*  [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
-*  Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
-*  Target Quality mode. Targeting end result reference visual quality. VMAF used as substructure
-*  Resuming encoding without loss of encoded progress.
-*  Simple and clean console look.
-*  Automatic detection of the number of workers the host can handle.
-*  Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
-*  Both video and audio transcoding with FFmpeg.
-*  Logging of progress of all encoders.
+- [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+- Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
+- Target Quality mode. Targeting end result reference visual quality. VMAF used as substructure
+- Resuming encoding without loss of encoded progress.
+- Simple and clean console look.
+- Automatic detection of the number of workers the host can handle.
+- Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
+- Both video and audio transcoding with FFmpeg.
+- Logging of progress of all encoders.
 
 ## Install
 
-* Prerequisites:
-  *  [Windows Prebuilds](https://ci.appveyor.com/project/master-of-zen/av1an/build/artifacts)
-  *  [Install Python3](https://www.python.org/downloads/) <br>
-When installing under Windows, select the option `add Python to PATH` in the installer
-  *  [Install FFmpeg](https://ffmpeg.org/download.html)
-  * Recommended to install vapoursynth with lsmash for faster and better processing
-* Encoder of choice:
-  *  [Install AOMENC](https://aomedia.googlesource.com/aom/)
-  *  [Install rav1e](https://github.com/xiph/rav1e)
-  *  [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)
-  *  [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
-  *  [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
-  *  [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
- * Optional :
-   * [Vapoursynth](http://www.vapoursynth.com/)
-   * [ffms2](https://github.com/FFMS/ffms2)
-   * [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
-   * [mkvmerge](https://mkvtoolnix.download/)
+- Prerequisites:
+  - [Windows Prebuilds](https://ci.appveyor.com/project/master-of-zen/av1an/build/artifacts)
+  - [Install Python3](https://www.python.org/downloads/) <br>
+    When installing under Windows, select the option `add Python to PATH` in the installer
+  - [Install FFmpeg](https://ffmpeg.org/download.html)
+  - Recommended to install vapoursynth with lsmash for faster and better processing
+- Encoder of choice:
+  - [Install AOMENC](https://aomedia.googlesource.com/aom/)
+  - [Install rav1e](https://github.com/xiph/rav1e)
+  - [Install SVT-AV1](https://github.com/OpenVisualCloud/SVT-AV1)
+  - [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
+  - [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
+  - [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
+- Optional :
 
-* With a package manager:
-  *  [PyPI](https://pypi.org/project/Av1an/)
-  *  [AUR](https://aur.archlinux.org/packages/python-av1an/)
+  - [Vapoursynth](http://www.vapoursynth.com/)
+  - [ffms2](https://github.com/FFMS/ffms2)
+  - [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
+  - [mkvmerge](https://mkvtoolnix.download/)
 
-* Manually:
-  *  Clone Repo or Download from Releases
-  *  `python setup.py install`
-* Also:
-    On Ubuntu systems packages `python3-opencv` and `libsm6` are required
+- With a package manager:
+
+  - [PyPI](https://pypi.org/project/Av1an/)
+  - [AUR](https://aur.archlinux.org/packages/python-av1an/)
+
+- Manually:
+  - Clone Repo or Download from Releases
+  - `python setup.py install`
+- Also:
+  On Ubuntu systems packages `python3-opencv` and `libsm6` are required
+
+## Docker
+Docker can be ran with the following command if you are in the current directory
+```bash
+docker run -v $(pwd):/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
+```
+Docker can also be built by using
+```bash
+docker build -t "av1an" .
+```
+To specify a different directory to use you would replace $(pwd) with the directory
+```bash
+docker run -v /c/Users/masterofzen/Videos:/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
+```
+
+The --user flag is require to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
 
 ### Support developer
 

@@ -12,6 +12,7 @@ from av1an.encoder import ENCODERS
 from av1an.project import Project
 from av1an.utils import terminate
 from av1an.logger import log
+from av1an.vapoursynth import is_vapoursynth
 
 
 def set_target_quality(project):
@@ -22,17 +23,25 @@ def set_target_quality(project):
     """
     if project.vmaf_path:
         if not Path(project.vmaf_path).exists():
-            print(f"No model with this path: {Path(project.vmaf_path).as_posix()}")
+            print(
+                f"No model with this path: {Path(project.vmaf_path).as_posix()}"
+            )
             terminate()
 
     if project.probes < 4:
-        print('Target quality with less than 4 probes is experimental and not recommended')
+        print(
+            'Target quality with less than 4 probes is experimental and not recommended'
+        )
         terminate()
 
     encoder = ENCODERS[project.encoder]
 
-    if project.encoder not in ('x265', 'svt_av1') and project.target_quality_method == 'per_frame':
-        print(f":: Per frame Target Quality is not supported for selected encoder\n:: Supported encoders: x265, svt_av1")
+    if project.encoder not in (
+            'x265',
+            'svt_av1') and project.target_quality_method == 'per_frame':
+        print(
+            f":: Per frame Target Quality is not supported for selected encoder\n:: Supported encoders: x265, svt_av1"
+        )
         exit()
 
     # setting range for q values
@@ -75,6 +84,7 @@ def startup_check(project: Project):
         print('Python 3.6+ required')
         sys.exit()
     if sys.platform == 'linux':
+
         def restore_term():
             os.system("stty sane")
 
@@ -104,11 +114,16 @@ def startup_check(project: Project):
         project.no_check = True
 
     if project.encoder == 'svt_vp9' and project.passes == 2:
-        print("Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported")
+        print(
+            "Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported"
+        )
         project.passes = 1
 
     project.audio_params = shlex.split(project.audio_params)
     project.ffmpeg = shlex.split(project.ffmpeg)
 
     project.pix_format = ['-strict', '-1', '-pix_fmt', project.pix_format]
-    project.ffmpeg_pipe = [*project.ffmpeg, *project.pix_format,'-color_range', '0', '-f', 'yuv4mpegpipe', '-']
+    project.ffmpeg_pipe = [
+        *project.ffmpeg, *project.pix_format, '-color_range', '0', '-f',
+        'yuv4mpegpipe', '-'
+    ]

@@ -1,7 +1,6 @@
 import os
 from typing import Union, List, NamedTuple
 
-
 Command = List[Union[str, os.PathLike]]
 """
 A command as a list of strings or paths. Can be passed to subprocess.Popen

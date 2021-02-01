@@ -9,7 +9,6 @@ from av1an.utils import list_index_of_regex
 
 
 class X265(Encoder):
-
     def __init__(self):
         super().__init__(
             encoder_bin='x265',
@@ -17,29 +16,30 @@ class X265(Encoder):
             default_args=['-p', 'slow', '--crf', '25', '-D', '10'],
             default_passes=1,
             default_q_range=(15, 35),
-            output_extension='mkv'
-        )
+            output_extension='mkv')
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--y4m', '--frames', str(c.frames), *a.video_params, '-', '-o', output]
-            )
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'x265', '--y4m', '--frames',
+                str(c.frames), *a.video_params, '-', '-o', output
+            ])
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--log-level', 'error', '--no-progress', '--pass', '1', '--y4m', '--frames', str(c.frames),
-                 *a.video_params, '--stats', f'{c.fpf}.log', '-', '-o', os.devnull]
-            ),
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['x265', '--log-level', 'error', '--pass', '2', '--y4m', '--frames', str(c.frames), *a.video_params,
-                 '--stats', f'{c.fpf}.log', '-', '-o', output]
-            )
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'x265', '--log-level', 'error', '--no-progress', '--pass', '1',
+                '--y4m', '--frames',
+                str(c.frames), *a.video_params, '--stats', f'{c.fpf}.log', '-',
+                '-o', os.devnull
+            ]),
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'x265', '--log-level', 'error', '--pass', '2', '--y4m',
+                '--frames',
+                str(c.frames), *a.video_params, '--stats', f'{c.fpf}.log', '-',
+                '-o', output
+            ])
         ]
 
     def man_q(self, command: Command, q: int) -> Command:

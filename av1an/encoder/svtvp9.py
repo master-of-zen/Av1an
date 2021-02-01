@@ -8,16 +8,13 @@ from av1an.utils import list_index_of_regex
 
 
 class SvtVp9(Encoder):
-
     def __init__(self):
-        super().__init__(
-            encoder_bin='SvtVp9EncApp',
-            encoder_help='SvtVp9EncApp --help',
-            default_args=None,
-            default_passes=1,
-            default_q_range=(15, 55),
-            output_extension='ivf'
-        )
+        super().__init__(encoder_bin='SvtVp9EncApp',
+                         encoder_help='SvtVp9EncApp --help',
+                         default_args=None,
+                         default_passes=1,
+                         default_q_range=(15, 55),
+                         output_extension='ivf')
 
     @staticmethod
     def compose_ffmpeg_raw_pipe(a: Project) -> Command:
@@ -28,14 +25,17 @@ class SvtVp9(Encoder):
         :param a: the Project
         :return: a command
         """
-        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg, *a.pix_format,'-f', 'rawvideo', '-']
+        return [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
+            *a.ffmpeg, *a.pix_format, '-f', 'rawvideo', '-'
+        ]
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                SvtVp9.compose_ffmpeg_raw_pipe(a),
-                ['SvtVp9EncApp', '-i', 'stdin', '-n', f'{c.frames}', *a.video_params, '-b', output]
-            )
+            CommandPair(SvtVp9.compose_ffmpeg_raw_pipe(a), [
+                'SvtVp9EncApp', '-i', 'stdin', '-n', f'{c.frames}',
+                *a.video_params, '-b', output
+            ])
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:

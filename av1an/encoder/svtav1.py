@@ -9,7 +9,6 @@ from av1an.utils import list_index_of_regex, terminate
 
 
 class SvtAv1(Encoder):
-
     def __init__(self):
         super(SvtAv1, self).__init__(
             encoder_bin='SvtAv1EncApp',
@@ -17,31 +16,29 @@ class SvtAv1(Encoder):
             default_args=['--preset', '4', '--rc', '0', '--qp', '25'],
             default_passes=1,
             default_q_range=(15, 50),
-            output_extension='ivf'
-        )
+            output_extension='ivf')
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', *a.video_params, '-b', output, '-']
-            )
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'SvtAv1EncApp', '-i', 'stdin', '--progress', '2',
+                *a.video_params, '-b', output, '-'
+            ])
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', '--irefresh-type', '2', *a.video_params,
-                 '--pass', '1', '--stats', f'{c.fpf}.stat', '-b', os.devnull, '-']
-            ),
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['SvtAv1EncApp', '-i', 'stdin', '--progress', '2', '--irefresh-type', '2', *a.video_params,
-                 '--pass', '2', '--stats', f'{c.fpf}.stat', '-b', output, '-']
-            )
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'SvtAv1EncApp', '-i', 'stdin', '--progress', '2',
+                '--irefresh-type', '2', *a.video_params, '--pass', '1',
+                '--stats', f'{c.fpf}.stat', '-b', os.devnull, '-'
+            ]),
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'SvtAv1EncApp', '-i', 'stdin', '--progress', '2',
+                '--irefresh-type', '2', *a.video_params, '--pass', '2',
+                '--stats', f'{c.fpf}.stat', '-b', output, '-'
+            ])
         ]
-
 
     def mod_command(self, command, chunk) -> Command:
         """Return new command with q_file
@@ -55,11 +52,10 @@ class SvtAv1(Encoder):
 
         qp_file = chunk.make_q_file(chunk.per_frame_target_quality_q_list)
 
-        new = ['--use-q-file','1', '--qpfile', f'{qp_file.as_posix()}']
-        new_cmd = adjusted_command[:i] + new + adjusted_command[i+2:]
+        new = ['--use-q-file', '1', '--qpfile', f'{qp_file.as_posix()}']
+        new_cmd = adjusted_command[:i] + new + adjusted_command[i + 2:]
 
         return new_cmd
-
 
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value

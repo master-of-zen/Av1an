@@ -23,7 +23,6 @@ from .Queue import Queue
 
 
 class Main:
-
     def __init__(self, args):
         self.file_queue: list[Path] = []
         self.args = args
@@ -42,17 +41,18 @@ class Main:
             queue.append(project)
         return queue
 
-
     def run(self):
         """
         Run encoding in queue or single file
         """
         for i, proj in enumerate(self.projects):
             if proj.output_file.exists() and len(self.projects) > 1:
-                print(f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists")
+                print(
+                    f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists"
+                )
 
                 # Don't print new line on last project to console
-                if i+1 < len(self.projects):
+                if i + 1 < len(self.projects):
                     print()
 
                 continue
@@ -70,7 +70,6 @@ class Main:
 
 
 class EncodingManager:
-
     def __init__(self):
         self.workers = None
         self.vmaf = None
@@ -91,7 +90,8 @@ class EncodingManager:
         split_locations = split_routine(project, project.resume)
 
         # create a chunk queue
-        chunk_queue = load_or_gen_chunk_queue(project, project.resume, split_locations)
+        chunk_queue = load_or_gen_chunk_queue(project, project.resume,
+                                              split_locations)
 
         self.done_file(project, chunk_queue)
         if not project.resume:
@@ -116,7 +116,10 @@ class EncodingManager:
         project.concat_routine()
 
         if project.vmaf or project.vmaf_plots:
-            self.vmaf = VMAF(n_threads=project.n_threads, model=project.vmaf_path, res=project.vmaf_res, vmaf_filter=project.vmaf_filter)
+            self.vmaf = VMAF(n_threads=project.n_threads,
+                             model=project.vmaf_path,
+                             res=project.vmaf_res,
+                             vmaf_filter=project.vmaf_filter)
             self.vmaf.plot_vmaf(project.input, project.output_file, project)
 
         # Delete temp folders
@@ -144,9 +147,10 @@ class EncodingManager:
     def startup(self, project: Project, chunk_queue: List[Chunk]):
         clips = len(chunk_queue)
         project.workers = min(project.workers, clips)
-        print(f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
-                f'Params: {" ".join(project.video_params)}')
+        print(
+            f'\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n'
+            f'Params: {" ".join(project.video_params)}')
         BaseManager.register('Counter', Counter)
-        counter = Manager().Counter(project.get_frames(), self.initial_frames, not project.quiet)
+        counter = Manager().Counter(project.get_frames(), self.initial_frames,
+                                    not project.quiet)
         project.counter = counter
-

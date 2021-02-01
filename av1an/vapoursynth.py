@@ -18,9 +18,11 @@ def frame_probe_vspipe(source: Path):
     """
     cmd = f"vspipe -i {source.as_posix()}  -"
     r = run(split(cmd), capture_output=True)
-    matches = re.findall(r"Frames:\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
+    matches = re.findall(r"Frames:\s*([0-9]+)\s",
+                         r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     frames = int(matches[-1])
     return frames
+
 
 def create_vs_file(temp, source, chunk_method):
     """
@@ -42,7 +44,7 @@ def create_vs_file(temp, source, chunk_method):
         "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
 
     with open(load_script, 'w+') as file:
-            file.write(script.format(source.resolve().as_posix(), cache_file))
+        file.write(script.format(source.resolve().as_posix(), cache_file))
 
     cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
     d = Popen(split(cache_generation), stdout=PIPE, stderr=PIPE).wait()
@@ -50,6 +52,9 @@ def create_vs_file(temp, source, chunk_method):
     return load_script
 
 
-
 def compose_vapoursynth_pipe(source: Path, fifo: Path = None):
-    return ["vspipe", "-y", source.as_posix(), fifo.as_posix() if fifo else "-"]
+    return [
+        "vspipe", "-y",
+        source.as_posix(),
+        fifo.as_posix() if fifo else "-"
+    ]

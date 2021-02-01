@@ -28,7 +28,6 @@ from av1an.chunk import Chunk
 
 
 class VMAF:
-
     def __init__(self, n_threads=0, model=None, res=None, vmaf_filter=None):
         self.n_threads = f':n_threads={n_threads}' if n_threads else ''
         self.model = f":model_path={model}" if model else ''
@@ -46,9 +45,13 @@ class VMAF:
         else:
             add = ''
 
-        cmd = f' ffmpeg -hide_banner -filter_complex testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{add} -t 1  -f null - '.split()
+        cmd = f' ffmpeg -hide_banner -filter_complex testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{add} -t 1  -f null - '.split(
+        )
 
-        pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+        pipe = subprocess.Popen(cmd,
+                                stdout=PIPE,
+                                stderr=STDOUT,
+                                universal_newlines=True)
 
         encoder_history = deque(maxlen=30)
 
@@ -83,25 +86,33 @@ class VMAF:
         Runs vmaf_motion filter on chunk and returns average score
         """
 
-        cmd = ['ffmpeg', '-loglevel', 'error', '-y', '-hide_banner', '-r', '60', '-i',
-              '-', '-vf', 'vmafmotion', '-f', 'null', '-']
+        cmd = [
+            'ffmpeg', '-loglevel', 'error', '-y', '-hide_banner', '-r', '60',
+            '-i', '-', '-vf', 'vmafmotion', '-f', 'null', '-'
+        ]
 
         print(cmd)
 
-    def call_vmaf(self, chunk: Chunk, encoded: Path, vmaf_rate: int = None, fl_path: Path = None):
+    def call_vmaf(self,
+                  chunk: Chunk,
+                  encoded: Path,
+                  vmaf_rate: int = None,
+                  fl_path: Path = None):
         """
         Runs vmaf for Av1an
         """
         cmd = ''
 
         if fl_path is None:
-            fl_path = chunk.fake_input_path.with_name(encoded.stem).with_suffix('.json')
+            fl_path = chunk.fake_input_path.with_name(
+                encoded.stem).with_suffix('.json')
         fl = fl_path.as_posix()
 
-        cmd_in = ('ffmpeg', '-loglevel', 'error', '-y', '-thread_queue_size', '1024', '-hide_banner',
-                  '-r', '60', '-i', encoded.as_posix(), '-r', '60', '-i', '-')
+        cmd_in = ('ffmpeg', '-loglevel', 'error', '-y', '-thread_queue_size',
+                  '1024', '-hide_banner', '-r', '60', '-i', encoded.as_posix(),
+                  '-r', '60', '-i', '-')
 
-        filter_complex = ('-filter_complex',)
+        filter_complex = ('-filter_complex', )
 
         # Change framerate of comparison to framerate of probe
         select_frames = f"select=not(mod(n\\,{vmaf_rate}))," if vmaf_rate else ''
@@ -114,11 +125,12 @@ class VMAF:
 
         cmd_out = ('-f', 'null', '-')
 
-        cmd = (*cmd_in, *filter_complex, distorted + ref + vmaf_filter, *cmd_out)
+        cmd = (*cmd_in, *filter_complex, distorted + ref + vmaf_filter,
+               *cmd_out)
 
         ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd,
-        stdout=PIPE,
-        stderr=STDOUT)
+                                           stdout=PIPE,
+                                           stderr=STDOUT)
 
         pipe = subprocess.Popen(cmd,
                                 stdin=ffmpeg_gen_pipe.stdout,
@@ -140,20 +152,20 @@ class VMAF:
         scores = sorted(scores)
         key = lambda x: x
 
-        k = (len(scores)-1) * percent
+        k = (len(scores) - 1) * percent
         f = floor(k)
         c = ceil(k)
         if f == c:
             return key(scores[int(k)])
 
-        d0 = (scores[int(f)]) * (c-k)
-        d1 = (scores[int(c)]) * (k-f)
-        return d0+d1
+        d0 = (scores[int(f)]) * (c - k)
+        d1 = (scores[int(c)]) * (k - f)
+        return d0 + d1
 
     @staticmethod
     def transform_vmaf(vmaf):
-        if vmaf<99.99:
-            return -ln(1-vmaf/100)
+        if vmaf < 99.99:
+            return -ln(1 - vmaf / 100)
         else:
             # return -ln(1-99.99/100)
             return 9.210340371976184
@@ -198,15 +210,18 @@ class VMAF:
         Running vmaf on 2 files and returning file
         """
 
-        if not all((isinstance(source, Path), isinstance(encoded,Path))):
+        if not all((isinstance(source, Path), isinstance(encoded, Path))):
             source = Path(source)
             encoded = Path(encoded)
 
-        fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
+        fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(
+            ".json")
 
         # call_vmaf takes a chunk, so make a chunk of the entire source
-        ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
-                          source.as_posix(), '-f', 'yuv4mpegpipe', '-']
+        ffmpeg_gen_cmd = [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
+            source.as_posix(), '-f', 'yuv4mpegpipe', '-'
+        ]
 
         input_chunk = Chunk('', 0, ffmpeg_gen_cmd, '', 0, 0)
 
@@ -239,21 +254,27 @@ class VMAF:
 
         print(':: VMAF Run..\r', end='')
 
-        fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(".json")
+        fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(
+            ".json")
 
         # call_vmaf takes a chunk, so make a chunk of the entire source
-        ffmpeg_gen_cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
-                          source.as_posix(), *args.pix_format, '-f', 'yuv4mpegpipe', '-']
+        ffmpeg_gen_cmd = [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
+            source.as_posix(), *args.pix_format, '-f', 'yuv4mpegpipe', '-'
+        ]
 
         input_chunk = Chunk(args.temp, 0, ffmpeg_gen_cmd, '', 0, 0)
 
         scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
 
         if not scores.exists():
-            print(f'Vmaf calculation failed for chunks:\n {source.name} {encoded.stem}')
+            print(
+                f'Vmaf calculation failed for chunks:\n {source.name} {encoded.stem}'
+            )
             sys.exit()
 
-        file_path = encoded.with_name(f'{encoded.stem}_plot').with_suffix('.png')
+        file_path = encoded.with_name(f'{encoded.stem}_plot').with_suffix(
+            '.png')
         self.plot_vmaf_score_file(scores, file_path)
 
     def plot_vmaf_score_file(self, scores: Path, plot_path: Path):
@@ -261,7 +282,8 @@ class VMAF:
         Read vmaf json and plot VMAF values for each frame
         """
         if plt is None:
-            log(f'Matplotlib is not installed or could not be loaded, aborting plot_vmaf')
+            log(f'Matplotlib is not installed or could not be loaded, aborting plot_vmaf'
+                )
             return
 
         perc_1 = self.read_weighted_vmaf(scores, 0.01)
@@ -294,11 +316,18 @@ class VMAF:
             if i % 5 == 0:
                 plt.axhline(i, color='black', linewidth=0.6)
 
-        plt.plot(range(plot_size), vmafs,
+        plt.plot(range(plot_size),
+                 vmafs,
                  label=f'Frames: {plot_size}\nMean:{mean}\n'
-                       f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}', linewidth=0.7)
+                 f'1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}',
+                 linewidth=0.7)
         plt.ylabel('VMAF')
-        plt.legend(loc="lower right", markerscale=0, handlelength=0, fancybox=True, )
+        plt.legend(
+            loc="lower right",
+            markerscale=0,
+            handlelength=0,
+            fancybox=True,
+        )
         plt.ylim(int(perc_1), 100)
         plt.tight_layout()
         plt.margins(0)

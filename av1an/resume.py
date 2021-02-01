@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from threading import Lock
 
-
 done_file_lock = Lock()
 
 

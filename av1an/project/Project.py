@@ -6,14 +6,13 @@ from psutil import virtual_memory
 from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
-from av1an.utils import frame_probe_fast,  hash_path, terminate
+from av1an.utils import frame_probe_fast, hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
 
 
 class Project(object):
-
     def __init__(self, initial_data):
 
         # Project info
@@ -102,7 +101,7 @@ class Project(object):
         if self.frames > 0:
             return self.frames
 
-        if self.chunk_method in ('vs_ffms2','vs_lsmash'):
+        if self.chunk_method in ('vs_ffms2', 'vs_lsmash'):
             vs = create_vs_file(self.temp, self.input, self.chunk_method)
             fr = frame_probe_vspipe(vs)
             if fr > 0:
@@ -170,7 +169,7 @@ class Project(object):
             return self.workers
 
         cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2 ** 30)
+        ram = round(virtual_memory().total / 2**30)
 
         if self.encoder in ('aom', 'rav1e', 'vpx'):
             workers = round(min(cpu / 3, ram / 1.5))
@@ -222,7 +221,9 @@ class Project(object):
                 concatenate_ffmpeg(self.temp, self.output_file, self.encoder)
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
-            print(f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}')
+            print(
+                f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}'
+            )
             log(f'Concatenation failed, aborting, error: {e}\n')
             terminate()
 
@@ -247,8 +248,8 @@ class Project(object):
                     self.chunk_method = 'vs_ffms2'
 
             except Exception as e:
-                log(f'Vapoursynth not installed but vspipe reachable\nError:{e}' +
-                    'Fallback to Hybrid\n')
+                log(f'Vapoursynth not installed but vspipe reachable\nError:{e}'
+                    + 'Fallback to Hybrid\n')
                 self.chunk_method = 'hybrid'
 
     def check_exes(self):

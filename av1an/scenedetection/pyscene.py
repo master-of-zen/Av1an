@@ -28,10 +28,12 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
         min_scene_len = 15
 
     if ContentDetector is None:
-        log(f'Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use')
+        log(f'Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use'
+            )
         return []
 
-    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene length: {min_scene_len}\n Is Vapoursynth input: {is_vs}\n')
+    log(f'Starting PySceneDetect:\nThreshold: {threshold}, Min scene length: {min_scene_len}\n Is Vapoursynth input: {is_vs}\n'
+        )
 
     if is_vs:
         # Handling vapoursynth, so we need to create a named pipe to feed to VideoManager.
@@ -53,10 +55,12 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
 
     video_manager = VideoManager([str(vspipe_fifo if is_vs else video)])
     scene_manager = SceneManager()
-    scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=min_scene_len))
+    scene_manager.add_detector(
+        ContentDetector(threshold=threshold, min_scene_len=min_scene_len))
     base_timecode = video_manager.get_base_timecode()
 
-    video_manager.set_duration(duration=FrameTimecode(frames, video_manager.get_framerate()) if is_vs else None)
+    video_manager.set_duration(duration=FrameTimecode(
+        frames, video_manager.get_framerate()) if is_vs else None)
 
     # Set downscale factor to improve processing speed.
     video_manager.set_downscale_factor()
@@ -64,7 +68,8 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
     # Start video_manager.
     video_manager.start()
 
-    scene_manager.detect_scenes(frame_source=video_manager, show_progress=(not quiet))
+    scene_manager.detect_scenes(frame_source=video_manager,
+                                show_progress=(not quiet))
 
     # If fed using a vspipe process, ensure that vspipe has finished.
     if is_vs:

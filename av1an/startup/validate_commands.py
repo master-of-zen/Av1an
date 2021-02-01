@@ -73,7 +73,9 @@ def validate_inputs(project):
     if len(suggested) > 0:
         print('WARNING: Invalid params:')
         for cmd in suggested:
-            print(f"'{cmd[0]}' isn't a valid param for {project.encoder}. Did you mean '{cmd[1]}'?")
+            print(
+                f"'{cmd[0]}' isn't a valid param for {project.encoder}. Did you mean '{cmd[1]}'?"
+            )
         if not project.force:
             print('To continue anyway, run Av1an with --force')
             sys.exit(1)

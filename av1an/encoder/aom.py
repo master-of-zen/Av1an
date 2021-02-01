@@ -9,35 +9,35 @@ from av1an.utils import list_index_of_regex, terminate
 
 
 class Aom(Encoder):
-
     def __init__(self):
-        super().__init__(
-            encoder_bin='aomenc',
-            encoder_help='aomenc --help',
-            default_args=['--threads=8', '-b', '10', '--cpu-used=6', '--end-usage=q', '--cq-level=30', '--tile-columns=2', '--tile-rows=1'],
-            default_passes=2,
-            default_q_range=(15, 55),
-            output_extension='ivf'
-        )
+        super().__init__(encoder_bin='aomenc',
+                         encoder_help='aomenc --help',
+                         default_args=[
+                             '--threads=8', '-b', '10', '--cpu-used=6',
+                             '--end-usage=q', '--cq-level=30',
+                             '--tile-columns=2', '--tile-rows=1'
+                         ],
+                         default_passes=2,
+                         default_q_range=(15, 55),
+                         output_extension='ivf')
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
                 Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=1', *a.video_params, '-o', output, '-']
-            )
+                ['aomenc', '--passes=1', *a.video_params, '-o', output, '-'])
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=2', '--pass=1', *a.video_params, f'--fpf={c.fpf}.log', '-o', os.devnull, '-']
-            ),
-            CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
-                ['aomenc', '--passes=2', '--pass=2', *a.video_params, f'--fpf={c.fpf}.log', '-o', output, '-']
-            )
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'aomenc', '--passes=2', '--pass=1', *a.video_params,
+                f'--fpf={c.fpf}.log', '-o', os.devnull, '-'
+            ]),
+            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
+                'aomenc', '--passes=2', '--pass=2', *a.video_params,
+                f'--fpf={c.fpf}.log', '-o', output, '-'
+            ])
         ]
 
     def man_q(self, command: Command, q: int) -> Command:

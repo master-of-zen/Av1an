@@ -12,8 +12,8 @@ class Encoder(ABC):
     """
     An abstract class used for encoders
     """
-
-    def __init__(self, encoder_bin: str, encoder_help: str, default_args: Command, default_passes: int,
+    def __init__(self, encoder_bin: str, encoder_help: str,
+                 default_args: Command, default_passes: int,
                  default_q_range: Tuple[int, int], output_extension: str):
         """
         Encoder constructor
@@ -37,7 +37,10 @@ class Encoder(ABC):
         :param a: the Project
         :return: an ffmpeg command that will pipe into the encoder
         """
-        return ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', *a.ffmpeg_pipe]
+        return [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
+            *a.ffmpeg_pipe
+        ]
 
     @abstractmethod
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
@@ -83,7 +86,13 @@ class Encoder(ABC):
     def mod_command(self, command, chunk):
         return None
 
-    def make_pipes(self, a: Project, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
+    def make_pipes(self,
+                   a: Project,
+                   c: Chunk,
+                   passes: int,
+                   current_pass: int,
+                   output: str,
+                   man_q: int = None):
         """
         Creates a pipe for the given chunk with the given args
 
@@ -105,9 +114,16 @@ class Encoder(ABC):
         elif c.per_frame_target_quality_q_list:
             enc_cmd = self.mod_command(enc_cmd, c)
 
-        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
-        ffmpeg_pipe = subprocess.Popen(filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT)
-        pipe = subprocess.Popen(enc_cmd, stdin=ffmpeg_pipe.stdout, stdout=PIPE,
+        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd,
+                                           stdout=PIPE,
+                                           stderr=STDOUT)
+        ffmpeg_pipe = subprocess.Popen(filter_cmd,
+                                       stdin=ffmpeg_gen_pipe.stdout,
+                                       stdout=PIPE,
+                                       stderr=STDOUT)
+        pipe = subprocess.Popen(enc_cmd,
+                                stdin=ffmpeg_pipe.stdout,
+                                stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)
 

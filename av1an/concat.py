@@ -40,7 +40,8 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     with open(temp / "concat", 'w') as f:
 
         encode_files = sorted((temp / 'encode').iterdir())
-        f.writelines(f'file {shlex.quote("file:"+str(file.absolute()))}\n' for file in encode_files)
+        f.writelines(f'file {shlex.quote("file:"+str(file.absolute()))}\n'
+                     for file in encode_files)
 
     # Add the audio/subtitles/else file if one was extracted from the input
     audio_file = temp / "audio.mkv"
@@ -51,14 +52,22 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
 
     if encoder == 'x265':
 
-        cmd = ['ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0',
-               '-i', (temp / "concat").as_posix(), *audio, '-c', 'copy', '-movflags', 'frag_keyframe+empty_moov',
-               '-map', '0', '-f', 'mp4', output.as_posix()]
+        cmd = [
+            'ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner',
+            '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
+            (temp / "concat").as_posix(), *audio, '-c', 'copy', '-movflags',
+            'frag_keyframe+empty_moov', '-map', '0', '-f', 'mp4',
+            output.as_posix()
+        ]
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
     else:
-        cmd = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
-               (temp / "concat").as_posix(), *audio, '-c', 'copy', '-map', '0', output.as_posix()]
+        cmd = [
+            'ffmpeg', '-y', '-hide_banner',
+            '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
+            (temp / "concat").as_posix(), *audio, '-c', 'copy', '-map', '0',
+            output.as_posix()
+        ]
 
         concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT).stdout
 
@@ -148,7 +157,7 @@ def _concatenate_mkvmerge(files, output, file_limit, cmd_limit, flip=False):
         raise Exception
 
     if len(remaining) > 0:
-        return _concatenate_mkvmerge(
-            [tmp_out] + remaining, output, file_limit, cmd_limit, not flip)
+        return _concatenate_mkvmerge([tmp_out] + remaining, output, file_limit,
+                                     cmd_limit, not flip)
     else:
         return tmp_out

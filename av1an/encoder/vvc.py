@@ -18,26 +18,23 @@ class Vvc(Encoder):
     """
     Redo after VVenC default and expert app have concatenation
     """
-
-
     def __init__(self):
-        super(Vvc, self).__init__(
-            encoder_bin='vvc_encoder',
-            encoder_help='vvc_encoder --help',
-            default_args=None,
-            default_passes=1,
-            default_q_range=(15, 50),
-            output_extension='h266'
-        )
+        super(Vvc, self).__init__(encoder_bin='vvc_encoder',
+                                  encoder_help='vvc_encoder --help',
+                                  default_args=None,
+                                  default_passes=1,
+                                  default_q_range=(15, 50),
+                                  output_extension='h266')
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
-            CommandPair(
-                [],
-                ['vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file, *a.video_params, '-f', str(c.frames),
-                 '--InputBitDepth=10', '--OutputBitDepth=10', '-b', output]
-            )
+            CommandPair([], [
+                'vvc_encoder', '-c', a.vvc_conf, '-i', yuv_file,
+                *a.video_params, '-f',
+                str(c.frames), '--InputBitDepth=10', '--OutputBitDepth=10',
+                '-b', output
+            ])
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
@@ -65,7 +62,13 @@ class Vvc(Encoder):
 
         return re.search(r"POC.*? ([^ ]+?)", line)
 
-    def make_pipes(self, a: Project, c: Chunk, passes: int, current_pass: int, output: str, man_q: int = None):
+    def make_pipes(self,
+                   a: Project,
+                   c: Chunk,
+                   passes: int,
+                   current_pass: int,
+                   output: str,
+                   man_q: int = None):
         """
         Creates a pipe for the given chunk with the given project
 
@@ -77,7 +80,7 @@ class Vvc(Encoder):
         :return: a Pipe attached to the encoders stdout
         """
         # Filter cmd not used?
-        filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
+        _, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
                               self.compose_2_pass(a, c, output)[current_pass - 1]
 
         if man_q:
@@ -85,7 +88,8 @@ class Vvc(Encoder):
         elif c.vmaf_target_cq:
             enc_cmd = self.man_q(enc_cmd, c.vmaf_target_cq)
 
-        pipe = subprocess.Popen(enc_cmd, stdout=PIPE,
+        pipe = subprocess.Popen(enc_cmd,
+                                stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)
         return pipe
@@ -143,10 +147,19 @@ class Vvc(Encoder):
         """
         yuv_path = Vvc.get_yuv_file_path(chunk)
 
-        ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+        ffmpeg_gen_pipe = subprocess.Popen(chunk.ffmpeg_gen_cmd,
+                                           stdout=PIPE,
+                                           stderr=STDOUT)
 
         # TODO: apply ffmpeg filter to the yuv file
-        cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', '-', '-f', 'rawvideo', '-vf', 'format=yuv420p10le',
-               yuv_path.as_posix()]
-        pipe = subprocess.Popen(cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+        cmd = [
+            'ffmpeg', '-y', '-loglevel', 'error', '-i', '-', '-f', 'rawvideo',
+            '-vf', 'format=yuv420p10le',
+            yuv_path.as_posix()
+        ]
+        pipe = subprocess.Popen(cmd,
+                                stdin=ffmpeg_gen_pipe.stdout,
+                                stdout=PIPE,
+                                stderr=STDOUT,
+                                universal_newlines=True)
         pipe.wait()

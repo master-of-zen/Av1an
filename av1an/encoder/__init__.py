@@ -7,7 +7,6 @@ from .vvc import Vvc
 from .x264 import X264
 from .x265 import X265
 
-
 ENCODERS = {
     'aom': Aom(),
     'rav1e': Rav1e(),

@@ -25,7 +25,12 @@ class Counter:
         self.current = 0
         self.use_tqdm = (use_tqdm and (tqdm is not None))
         if use_tqdm:
-            self.tqdm_bar = tqdm(total=self.left, initial=0, dynamic_ncols=True, unit="fr", leave=True, smoothing=0.01)
+            self.tqdm_bar = tqdm(total=self.left,
+                                 initial=0,
+                                 dynamic_ncols=True,
+                                 unit="fr",
+                                 leave=True,
+                                 smoothing=0.01)
 
     def update(self, value):
         if self.use_tqdm:
@@ -42,4 +47,3 @@ class Counter:
 
     def get_frames(self):
         return self.current
-

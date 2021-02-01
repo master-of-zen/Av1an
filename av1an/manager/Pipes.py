@@ -57,7 +57,8 @@ def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk):
         raise Exception("Error in processing encoding pipe")
 
 
-def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass):
+def tqdm_bar(a: Project, c: Chunk, encoder, counter, frame_probe_source,
+             passes, current_pass):
     enc = ENCODERS[encoder]
     pipe = enc.make_pipes(a, c, passes, current_pass, c.output)
 

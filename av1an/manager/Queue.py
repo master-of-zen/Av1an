@@ -26,8 +26,12 @@ class Queue:
         self.status = 'Ok'
 
     def encoding_loop(self):
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.project.workers) as executor:
-            future_cmd = {executor.submit(self.encode_chunk, cmd): cmd for cmd in self.chunk_queue}
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.project.workers) as executor:
+            future_cmd = {
+                executor.submit(self.encode_chunk, cmd): cmd
+                for cmd in self.chunk_queue
+            }
             for future in concurrent.futures.as_completed(future_cmd):
                 try:
                     future.result()
@@ -36,7 +40,6 @@ class Queue:
                     print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
                     terminate()
         self.project.counter.close()
-
 
     def encode_chunk(self, chunk: Chunk):
         """
@@ -63,27 +66,34 @@ class Queue:
                     if self.project.target_quality_method == 'per_frame':
                         per_frame_target_quality_routine(self.project, chunk)
 
-                ENCODERS[self.project.encoder].on_before_chunk(self.project, chunk)
+                ENCODERS[self.project.encoder].on_before_chunk(
+                    self.project, chunk)
 
                 # skip first pass if reusing
                 start = 2 if self.project.reuse_first_pass and self.project.passes >= 2 else 1
 
                 # Run all passes for this chunk
                 for current_pass in range(start, self.project.passes + 1):
-                    tqdm_bar(self.project, chunk, self.project.encoder, self.project.counter, chunk_frames, self.project.passes, current_pass)
+                    tqdm_bar(self.project, chunk, self.project.encoder,
+                             self.project.counter, chunk_frames,
+                             self.project.passes, current_pass)
 
-                ENCODERS[self.project.encoder].on_after_chunk(self.project, chunk)
+                ENCODERS[self.project.encoder].on_after_chunk(
+                    self.project, chunk)
 
                 # get the number of encoded frames, if no check assume it worked and encoded same number of frames
-                encoded_frames = chunk_frames if self.project.no_check else self.frame_check_output(chunk, chunk_frames)
+                encoded_frames = chunk_frames if self.project.no_check else self.frame_check_output(
+                    chunk, chunk_frames)
 
                 # write this chunk as done if it encoded correctly
                 if encoded_frames == chunk_frames:
-                    write_progress_file(Path(self.project.temp / 'done.json'), chunk, encoded_frames)
+                    write_progress_file(Path(self.project.temp / 'done.json'),
+                                        chunk, encoded_frames)
 
                 enc_time = round(time.time() - st_time, 2)
                 log(f'Done: {chunk.index} Fr: {encoded_frames}/{chunk_frames}\n'
-                    f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n')
+                    f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n'
+                    )
                 return
 
             except Exception as e:
@@ -97,7 +107,10 @@ class Queue:
         print(msg)
         self.status = 'FATAL'
 
-    def frame_check_output(self, chunk: Chunk, expected_frames: int, last_chunk=False) -> int:
+    def frame_check_output(self,
+                           chunk: Chunk,
+                           expected_frames: int,
+                           last_chunk=False) -> int:
         actual_frames = frame_probe(chunk.output_path)
         if actual_frames != expected_frames:
             msg = f':: Chunk #{chunk.index}: {actual_frames}/{expected_frames} fr'

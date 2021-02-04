@@ -44,7 +44,7 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 
 It is recommended to set it the rate control --end-usage=q to get the highest quality rate control method possible. Only use CQ if you are planning to stream with a maximum bitrate, and CBR for livestreaming.
 
-It is recommended to the --cq-level to 20-24 for higher quality encodes, 25-30 for slightly lower quality encodes. With native 10-bit sources, the rate control is changed, so you need to considerably lower the CQ to get the same bitrate; therefore, it is recommended to set it to 13-15 to get similar average bitrate compared to 8-bit 19-24. All these previous recommendations are for 1080p30 content. Therefore, it is recommended to use a higher quantizer(more compression potential) for 1080p60 content, with a delta of usually around +15.|
+It is recommended to the --cq-level in range  20-40 depending on your source.
 
 ##### Target Bitrate:
 
@@ -55,7 +55,7 @@ To get good efficiency with VBR, it is strongly recommended to use aomenc in 2-p
 ##### Tiles(tile columns and rows)
 ` ... --tile-columns=2 --tile-rows=1 ...`
 
-For highest efficiency while keeping good threading, it is recommended to set it to --tile-columns=1 and --tile-rows=0 at 1080p30. For higher resolution/higher framerate  encoding, set it to --tile-columns=2 and --tile-rows=1.
+For highest efficiency while keeping good threading, it is recommended to set it to --tile-columns=2 and --tile-rows=1 at 1080p. For higher resolution/higher framerate  encoding, set it to --tile-columns=3 and --tile-rows=2.
 
 #### CPU preset:
 ` ... --cpu-used=6 ... `

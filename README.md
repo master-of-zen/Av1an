@@ -226,7 +226,7 @@ With your own parameters:
 ## Docker
 Docker can be ran with the following command if you are in the current directory
 ```bash
-docker run -v $(pwd):/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
+docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
 ```
 Docker can also be built by using
 ```bash

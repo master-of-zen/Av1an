@@ -73,6 +73,11 @@ RUN yes | makepkg -sri
 
 USER root
 
+# Install johnvansickle ffmpeg
+RUN mkdir -p "/home/app_user/ffmpeg" && curl -L https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz -o /home/app_user/ffmpeg/ffmpeg-git-amd64-static.tar.xz
+WORKDIR /home/app_user/ffmpeg
+RUN tar xf ffmpeg-* && mv ffmpeg-*/* /usr/sbin/
+
 # Install av1an
 COPY . /home/app_user/Av1an
 WORKDIR /home/app_user/Av1an

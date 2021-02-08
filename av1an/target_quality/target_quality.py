@@ -171,8 +171,20 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate,
     if encoder == 'aom':
         params = [
             'aomenc', '--passes=1', f'--threads={n_threads}',
-            '--tile-columns=1', '--end-usage=q', '-b', '8', '--cpu-used=6',
-            f'--cq-level={q}'
+            '--tile-columns=2', '--tile-rows=1', '--end-usage=q', '-b', '8',
+            '--cpu-used=6', f'--cq-level={q}', '--threads=16',
+            '--tile-columns=2', '--tile-rows=1', '--end-usage=q', '-b', '8',
+            '--cpu-used=6', '--cq-level=30', '--enable-filter-intra=0',
+            '--enable-smooth-intra=0', '--enable-paeth-intra=0',
+            '--enable-cfl-intra=0', '--enable-obmc=0', '--enable-palette=0',
+            '--enable-overlay=0', '--enable-intrabc=0',
+            '--enable-angle-delta=0', '--reduced-tx-type-set=1',
+            '--enable-dual-filter=0', '--enable-intra-edge-filter=0',
+            '--enable-order-hint=0', '--enable-tx64=0', '--enable-flip-idtx=0',
+            '--enable-dist-wtd-comp=0', '--enable-rect-tx=0',
+            '--enable-interintra-wedge=0', '--enable-onesided-comp=0',
+            '--enable-interintra-comp=0', '--enable-global-motion=0',
+            '--min-partition-size=32', '--max-partition-size=32'
         ]
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 

@@ -214,7 +214,7 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate,
     elif encoder == 'svt_av1':
         params = [
             'SvtAv1EncApp', '-i', 'stdin', '--lp', f'{n_threads}', '--preset',
-            '8', '--rc', '0', '--qp', f'{q}'
+            '8', '--rc', '0', '-q', f'{q}'
         ]
         cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
 

@@ -19,8 +19,6 @@ except ImportError:
     matplotlib = None
     plt = None
 
-# TODO: rework to class, account for dark scenes/banding
-
 
 def per_shot_target_quality_routine(project: Project, chunk: Chunk):
     """
@@ -95,8 +93,7 @@ def adapt_probing_rate(rate, frames):
     """
 
     #Todo: Make it depend on amount of motion in scene
-
-    #For current moment 4 for everything
+    #For current moment it's 4 for everything
 
     if frames > 0:
         return 4
@@ -356,7 +353,6 @@ def per_shot_target_quality(chunk: Chunk, project: Project):
     frames = chunk.frames
 
     # get_scene_scores(chunk, project.ffmpeg_pipe)
-
     # Adapt probing rate
     if project.probing_rate in (1, 2):
         probing_rate = project.probing_rate

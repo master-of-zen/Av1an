@@ -231,7 +231,7 @@ With your own parameters:
 Docker can be ran with the following command if you are in the current directory
 
 ```bash
-docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
+docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 
 Docker can also be built by using
@@ -243,8 +243,19 @@ docker build -t "av1an" .
 To specify a different directory to use you would replace $(pwd) with the directory
 
 ```bash
-docker run -v /c/Users/masterofzen/Videos:/videos --user $(id -u):$(id -g) -it masterofzen/av1an -i S01E01.mkv {options}
+docker run -v /c/Users/masterofzen/Videos:/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
+
+### Docker tags
+
+The docker image has the following tags
+
+|    Tag    | Description                                           |
+| :-------: | ----------------------------------------------------- |
+|   latest  | Contains the latest stable av1an version release      |
+|   master  | Contains the latest av1an commit to the master branch |
+| sha-##### | Contains the commit of the hash that is referenced    |
+|    #.##   | Stable av1an version release                          |
 
 The --user flag is require to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
 

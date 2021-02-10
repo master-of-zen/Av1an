@@ -196,7 +196,8 @@ def probe_cmd(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate,
     elif encoder == 'rav1e':
         params = [
             'rav1e', '-y', '-s', '10', '--threads', f'{n_threads}', '--tiles',
-            '32', '--quantizer', f'{q}'
+            '16', '--quantizer', f'{q}', '--low-latency',
+            '--rdo-lookahead-frames', '5'
         ]
         cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 

@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: python3-dev libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx tree
+  deps: tree
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
@@ -36,6 +36,12 @@ jobs:
           - name: chunk_select
             enc: aom
             flags: --chunk_method select
+          - name: chunk_ffms2
+            enc: aom
+            flags: --chunk_method vs_ffms2
+          - name: chunk_lsmash
+            enc: aom
+            flags: --chunk_method vs_lsmash
           - name: scenes
             enc: aom
             flags: -s scenes.json

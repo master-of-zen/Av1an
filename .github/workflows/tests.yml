@@ -86,9 +86,12 @@ jobs:
           tar xf video.tar.gz
       - name: Testing ${{ matrix.name }}
         run: |
-          ./av1an.py -i bus_cif.y4m -enc ${{ matrix.enc }} -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          ./av1an.py -i bus_cif.y4m -enc ${{ matrix.enc }} -log log_av1an -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
+      - name: Cat log
+        if: always()
+        run: cat log_av1an.log
 
   docker:
     runs-on: ubuntu-18.04

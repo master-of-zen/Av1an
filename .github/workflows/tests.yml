@@ -85,10 +85,17 @@ jobs:
           tree -a
 
   docker:
-    runs-on: ubuntu-latest
-    needs: validate
+    runs-on: ubuntu-18.04
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Docker meta
+        id: docker_meta
+        uses: crazy-max/ghaction-docker-meta@v1
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an # list of Docker images to use as base name for tags
+          tag-sha: true # add git short SHA as Docker tag
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -102,8 +109,10 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
+          context: .
+          file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/av1an:latest
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
-

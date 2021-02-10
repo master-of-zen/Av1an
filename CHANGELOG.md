@@ -1,3 +1,7 @@
+### 6
+- ~1.7x faster probes for svt-av1
+- ~2x faster probes for aomenc
+
 ### 5
 - Fixed fatal errors with ffms2/lsmash
 - Added vmaf validation on each time when VMAF initialized

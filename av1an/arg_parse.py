@@ -77,7 +77,7 @@ class Args:
                               '-i',
                               nargs='+',
                               type=Path,
-                              help='Input File')
+                              help='Input File or Vapoursynth (.py,.vpy) script')
         io_group.add_argument('--temp',
                               type=Path,
                               default=None,

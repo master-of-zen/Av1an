@@ -31,7 +31,7 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --input            Input file(s) (relative or absolute path)
+    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script (relative or absolute path)
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
@@ -181,6 +181,7 @@ With your own parameters:
 **Spliting video by scenes for parallel encoding** because AV1 encoders are currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
 
 -   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+-   [Vapoursynth](http://www.vapoursynth.com) script input support.
 -   Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
 -   Target Quality mode. Targeting end result reference visual quality. VMAF used as substructure
 -   Resuming encoding without loss of encoded progress.

@@ -102,7 +102,7 @@ class Project(object):
             return self.frames
 
         if self.chunk_method in ('vs_ffms2', 'vs_lsmash'):
-            vs = create_vs_file(self.temp, self.input, self.chunk_method)
+            vs = self.input if self.is_vs else create_vs_file(self.temp, self.input, self.chunk_method)
             fr = frame_probe_vspipe(vs)
             if fr > 0:
                 self.frames = fr

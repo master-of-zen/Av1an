@@ -69,12 +69,10 @@ It is recommended to set it to 10-bit even for 8-bit content  for higher efficie
 #### Threading and tile threading
 ` ... --threads=8 --tile-columns=1 --tile-rows=0 ... ` or ` ... --threads=16 --tile-columns=2 --tile-rows=1 ... ` for single instance encoding.
 
-If you have say an 8C/16T CPU, it is recommended to set to #cores/2 you have for chunked encoding. If you have a higher thread count CPU, limiting it to 4 threads is also a good option to prevent thread oversaturation. Give it how many threads you have for single worker encoding.
-
 #### Lag-in-frames
 ` ... --lag-in-frames=35 ... `
 
- More is better, but it makes the encoder slower, up to a limit of 35 (default is 19).
+ More is better, up to a limit of 35 (default is 19).
  
 #### CDEF usage
 ` ... --enable-cdef=0 ... ` if you want to encode >1080p30 10-bit as of January 2021.

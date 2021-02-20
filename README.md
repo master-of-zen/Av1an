@@ -50,36 +50,33 @@ With your own parameters:
 
     -w   --workers          Override number of workers.
 
-    -r   --resume           If encode was stopped/quit resumes encode with saving all progress
+    -r   --resume           If encode was stopped/quit resumes encode with saving all progress.
                             Resuming automatically skips scenedetection, audio encoding/copy,
-                            spliting, so resuming only possible after actuall encoding is started.
-                            temp folder must be presented for resume.
+                            splitting, so resuming only possible after actual encoding is started.
+                            Temp folder must be present to resume.
 
     --no_check              Skip checking numbers of frames for source and encoded chunks.
                             Needed if framerate changes to avoid console spam.
-                            By default any differences in frames of encoded files will be reported.
+                            By default, any differences in frames of encoded files will be reported.
 
-    --keep                  Not deleting temprally folders after encode finished.
+    --keep                  Doesn't delete temporary folders after encode has finished.
 
-    -q --quiet              Do not print tqdm to terminal.
+    -q --quiet              Do not print tqdm to the terminal.
 
     -log --logging          Path to .log file(By default created in temp folder)
 
-    --temp                  Set path for temporally folders. Default: .temp
+    --temp                  Set path for the temporary folder. Default: .temp
 
-    -cfg --config           Save/Read config file with encoder, encoder parameters,
+    --mkvmerge              Use mkvmerge for concatenating instead of FFmpeg.
+                            Use when concatenation fails.
+
+    -c  --config            Save/Read config file with encoder, encoder parameters,
                             FFmpeg and audio settings.
-
-    --mkvmerge              Use mkvmerge for concatenating instead of ffmpeg.
-                            Use in case when concatenation fails.
-
-    -c  --config            Save config file with given name if doesn't exists.
-                            Reads config file with that name.
                             Options provided to cli overwrite config values.
-                            All options excepth in/out/vmaf/log/temp/config paths are saved.
+                            All options except in/out/VMAF/log/temp/config paths are saved.
 
     --webm                  Outputs webm file.
-                            Use only if you're sure source video and audio is compatible.
+                            Use only if you're sure the source video and audio are compatible.
 
 <h3 align="center">FFmpeg options</h3>
 
@@ -94,7 +91,7 @@ With your own parameters:
 
     -fmt --pix_format       Setting custom pixel/bit format for piping
                             (Default: 'yuv420p10le')
-                            Based on encoder, options should be adjusted accordingly.
+                            Options should be adjusted accordingly, based on the encoder.
 
 <h3 align="center">Segmenting</h3>
 
@@ -105,91 +102,93 @@ With your own parameters:
                             `aom_keyframes` - using stat file of 1 pass of aomenc encode
                             to get exact place where encoder will place new keyframes.
                             (Keep in mind that speed also depends on set aomenc parameters)
-                            `ffmpeg` - Uses ffmpeg built in content based scene detection
+                            `ffmpeg` - Uses FFmpeg built in content based scene detection
                             with threshold. Slower and less precise than pyscene but requires
                             fewer dependencies.
                             `none` -  skips scenedetection. Useful for splitting by time
 
-    -cm  --chunk_method     Determine way in which chunks made for encoding.
-                            By default selected best one avalable.
+    -cm  --chunk_method     Determine the method in which chunks are made for encoding.
+                            By default the best method is selected automatically in this order:
                             vs_ffms2 > vs_lsmash > hybrid
-                            ['hybrid'(default), 'select', 'vs_ffms2'(Recomended To Install), 'vs_lsmash']
+                            ['hybrid'(default), 'select', 'vs_ffms2'(Recommended), 'vs_lsmash']
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
-                            If file not exist, new will be generated in current folder
+                            If the file doesn't exist, a new file will be generated in the current folder
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
 
-    -xs  --extra_split      Adding extra splits if frame distance beetween splits bigger than
+    -xs  --extra_split      Adding extra splits if frame distance between splits bigger than the
                             given value. Pair with none for time based splitting or with any
                             other splitting method to break up massive scenes.
-                            Example: 1000 frames video with single scene,
+                            Example: 1000 frames video with a single scene,
                             -xs 200 will add splits at 200,400,600,800.
+
+    --min_scene_len         Specifies the minimum number of frames in each split.
 
 <h3 align="center">Target Quality</h3>
 
     --target_quality        Quality value to target.
                             VMAF used as substructure for algorithms.
-                            Supported for all encoders(Exception:VVC).
+                            Supported in all encoders supported by Av1an except for VVC.
                             Best works in range 85-97.
                             When using this mode specify full encoding options.
                             Encoding options must include quantizer based mode,
-                            and some quantizer option provided. (This value got replaced)
+                            and some quantizer option provided. (This value will be replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
 
     --target_quality_method Type of algorithm for use.
                             Options: per_shot, per_frame.
-                            Per frame avalable only for SVT-AV1.
+                            Per frame is only supported in SVT-AV1.
 
     --min_q, --max_q        Min,Max Q values limits
-                            If not set by user, default for encoder range will be used.
+                            If not set by the user, the default for encoder range will be used.
 
-    --vmaf                  Calculate vmaf after encode is done and make a plot.
+    --vmaf                  Calculate VMAF after encode is done and make a plot.
 
     --vmaf_plots            Make plots for target quality search decisions
                             (Exception: early skips)
-                            Saved in temp folder
+                            Saved in the temp folder by default.
 
     --vmaf_path             Custom path to libvmaf models.
                             example: --vmaf_path "vmaf_v0.6.1.pkl"
                             Recomended to place both files in encoding folder
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
-                            (Required if vmaf calculation doesn't work by default)
+                            (Required if VMAF calculation doesn't work by default)
 
-    --vmaf_res              Resolution scaling for vmaf calculation,
+    --vmaf_res              Resolution scaling for VMAF calculation,
                             vmaf_v0.6.1.pkl is 1920x1080 (by default),
                             vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf_path)
 
     --probes                Number of probes for interpolation.
                             1 and 2 probes have special cases to try to work with few data points.
-                            Optimal is 4-6 probes. Default: 4
+                            The optimal level is 4-6 probes. Default: 4
 
-    --vmaf_filter           Filter used for vmaf calculation. Passed format is filter_complex.
+    --vmaf_filter           Filter used for VMAF calculation. The passed format is filter_complex.
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
                             `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`
 
-    --probing_rate             Setting rate for vmaf probes (Every N frame used in probe, Default: 4)
+    --probing_rate             Setting rate for VMAF probes (Every N frame used in probe, Default: 4)
 
-    --n_threads             Limit number of threads that used for vmaf calculation
+    --n_threads             Limit number of threads that are used for VMAF calculation
                             Example: --n_threads 12
                             (Required if VMAF calculation gives error on high core counts)
 
 <h2 align="center">Main Features</h2>
 
-**Spliting video by scenes for parallel encoding** because AV1 encoders are currently not good at multithreading, encoding is limited to single or couple of threads at the same time.
+**Splitting video by scenes for parallel encoding** because AV1 encoders are currently not very good at multithreading and encoding is limited to a very limited number of threads.
 
--   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for spliting video by scenes and running multiple encoders.
+-   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for splitting video by scenes and running multiple encoders.
 -   [Vapoursynth](http://www.vapoursynth.com) script input support.
 -   Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
--   Target Quality mode. Targeting end result reference visual quality. VMAF used as substructure
+-   Target Quality mode. Targeting end result reference visual quality. VMAF used as a substructure
 -   Resuming encoding without loss of encoded progress.
 -   Simple and clean console look.
 -   Automatic detection of the number of workers the host can handle.
 -   Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
 -   Both video and audio transcoding with FFmpeg.
--   Logging of progress of all encoders.
+-   Logging of the progress of all encoders.
 
 ## Install
 
@@ -225,11 +224,11 @@ With your own parameters:
     -   `python setup.py install`
 
 -   Also:
-    On Ubuntu systems packages `python3-opencv` and `libsm6` are required
+    On Ubuntu systems, the packages `python3-opencv` and `libsm6` are required
 
 ## Docker
 
-Docker can be ran with the following command if you are in the current directory
+Av1an can be run in a Docker container with the following command if you are in the current directory
 
 ```bash
 docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
@@ -258,8 +257,8 @@ The docker image has the following tags
 | sha-##### | Contains the commit of the hash that is referenced    |
 |    #.##   | Stable av1an version release                          |
 
-The --user flag is require to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
+The --user flag is required to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
 
-### Support developer
+### Support the developer
 
 Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG

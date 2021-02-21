@@ -48,13 +48,13 @@ class TargetQuality:
         chunk.per_frame_target_quality_q_list = self.per_frame_target_quality(
             chunk)
 
-    def log_probes(
-        self,
-        vmaf_cq,
-        frames,
-        name,
-        skip=None,
-    ):
+    def log_probes(self,
+                   vmaf_cq,
+                   frames,
+                   name,
+                   skip=None,
+                   q=None,
+                   q_vmaf=None):
         """Logs probes"""
         if skip == 'high':
             sk = ' Early Skip High CQ'
@@ -63,9 +63,12 @@ class TargetQuality:
         else:
             sk = ''
 
+        target_q = q if q else vmaf_cq[-1][1]
+        target_vmaf = q_vmaf if q_vmaf else round(vmaf_cq[-1][0], 2)
+
         log(f"Chunk: {name}, Rate: {self.probing_rate}, Fr: {frames}")
         log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}{sk}")
-        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+        log(f"Target Q: {target_q} VMAF: {target_vmaf}")
 
     def per_shot_target_quality(self, chunk: Chunk):
         # Refactor this mess
@@ -144,7 +147,7 @@ class TargetQuality:
                 vmaf_cq_upper = new_point
 
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
-        self.log_probes(vmaf_cq, frames, chunk.name)
+        self.log_probes(vmaf_cq, frames, chunk.name, q=q, q_vmaf=q_vmaf)
         # log(f'Scene_score {self.get_scene_scores(chunk, self.ffmpeg_pipe)}')
         # Plot Probes
         if self.make_plots and len(vmaf_cq) > 3:

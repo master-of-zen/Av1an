@@ -9,7 +9,6 @@ from scipy import interpolate
 from av1an.vmaf import VMAF
 from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
-from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 try:
@@ -174,15 +173,17 @@ class TargetQuality:
 
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
         log(f'Chunk: {chunk.name}, Rate: {self.probing_rate}, Fr: {frames}')
-        log(f'Q: {sorted([x[1] for x in vmaf_cq])}')
-        log(f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}')
-        log(f'Target Q: {q} VMAF: {round(q_vmaf, 2)}')
-
+        log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}")
+        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+        # log(f'Scene_score {self.get_scene_scores(chunk, self.ffmpeg_pipe)}')
         # Plot Probes
         if self.make_plots and len(vmaf_cq) > 3:
             self.plot_probes(vmaf_cq, chunk, frames)
 
         return q
+
+    def skip_check(self):
+        """Checking for early skips in search"""
 
     def adapt_probing_rate(self, rate, frames):
         """
@@ -263,10 +264,10 @@ class TargetQuality:
                              self.probing_rate, n_threads)
         pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
         process_pipe(pipe, chunk)
-        file = self.vmaf_runner.call_vmaf(chunk,
-                                          self.gen_probes_names(chunk, q),
-                                          vmaf_rate=self.probing_rate)
-        return file
+        fl = self.vmaf_runner.call_vmaf(chunk,
+                                        self.gen_probes_names(chunk, q),
+                                        vmaf_rate=self.probing_rate)
+        return fl
 
     def get_closest(self, q_list, q, positive=True):
         """
@@ -435,8 +436,7 @@ class TargetQuality:
 
         params = [
             'ffmpeg', '-hide_banner', '-i', '-', '-vf',
-            'fps=fps=5,scale=\'min(960,iw)\':-1,hqdn3d=4:4:0:0,select=\'gte(scene,0)\',metadata=print',
-            '-f', 'null', '-'
+            'select=\'gte(scene,0)\',metadata=print', '-f', 'null', '-'
         ]
         cmd = CommandPair(pipecmd, [*params])
         pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
@@ -457,8 +457,6 @@ class TargetQuality:
             print(f"\n:: Chunk: {chunk.index}")
             print('\n'.join(history))
 
-        pp = pprint.PrettyPrinter(indent=2).pprint
-
         scores = [x for x in history if 'score' in x]
 
         results = []
@@ -468,12 +466,12 @@ class TargetQuality:
             if var < 0.3:
                 results.append(var)
 
-        result = (round(np.average(results), 4))
-
-        pp(result * 1000)
+        result = (round(np.average(results), 4) * 1000)
+        return result
 
     def gen_probes_names(self, chunk: Chunk, q):
-        """Make name of vmaf probe
+        """
+        Make name of vmaf probe
         """
         return chunk.fake_input_path.with_name(
             f'v_{q}{chunk.name}').with_suffix('.ivf')
@@ -498,6 +496,9 @@ class TargetQuality:
         return pipe
 
     def plot_probes(self, vmaf_cq, chunk: Chunk, frames):
+        """
+        Makes graph with probe decisions
+        """
         if plt is None:
             log(f'Matplotlib is not installed or could not be loaded. Unable to plot probes.'
                 )
@@ -538,8 +539,8 @@ class TargetQuality:
             fl.write(text)
         return qfile
 
-    def per_frame_probe_cmd(self, chunk: Chunk, q, ffmpeg_pipe, encoder,
-                            probing_rate, qp_file) -> CommandPair:
+    def per_frame_probe_cmd(self, chunk: Chunk, q, encoder, probing_rate,
+                            qp_file) -> CommandPair:
         """
         Generate and return commands for probes at set Q values
         These are specifically not the commands that are generated
@@ -549,7 +550,7 @@ class TargetQuality:
         """
         pipe = [
             'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            '-vf', f'select=not(mod(n\\,{probing_rate}))', *ffmpeg_pipe
+            '-vf', f'select=not(mod(n\\,{probing_rate}))', *self.ffmpeg_pipe
         ]
 
         probe_name = self.gen_probes_names(chunk,
@@ -578,8 +579,7 @@ class TargetQuality:
 
     def per_frame_probe(self, q_list, q, chunk):
         qfile = chunk.make_q_file(q_list)
-        cmd = self.per_frame_probe_cmd(chunk, q, self.ffmpeg_pipe,
-                                       self.encoder, 1, qfile)
+        cmd = self.per_frame_probe_cmd(chunk, q, self.encoder, 1, qfile)
         pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
         process_pipe(pipe, chunk)
         fl = self.vmaf_runner.call_vmaf(chunk, self.gen_probes_names(chunk, q))

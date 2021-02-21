@@ -65,8 +65,10 @@ class VMAF:
                 encoder_history.append(line)
 
         if pipe.returncode != 0 and pipe.returncode != -2:
-            print(f"\n:: VMAF validation error: {pipe.returncode}")
-            print('\n'.join(encoder_history))
+            msg1 = f"VMAF validation error: {pipe.returncode}"
+            msg2 = '\n'.join(encoder_history)
+            log(msg1, msg2)
+            print(f'::{msg1}\n::{msg2}')
             sys.exit()
 
     @staticmethod
@@ -268,6 +270,7 @@ class VMAF:
         scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
 
         if not scores.exists():
+
             print(
                 f'Vmaf calculation failed for chunks:\n {source.name} {encoded.stem}'
             )

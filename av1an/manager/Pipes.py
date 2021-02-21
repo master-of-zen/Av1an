@@ -19,10 +19,10 @@ def process_pipe(pipe, chunk: Chunk):
 
     if pipe.returncode != 0 and pipe.returncode != -2:
         msg1 = f'Encoder encountered an error: {pipe.returncode}'
-        msg2 = f':: Chunk: {chunk.index}' + \
+        msg2 = f'Chunk: {chunk.index}' + \
              '\n'.join(encoder_history)
-        log(msg)
-        print(msg)
+        log(msg1, msg2)
+        print(f'::{msg1}\n::{msg2}')
         raise Exception("Error in processing pipe")
 
 

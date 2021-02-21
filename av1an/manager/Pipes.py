@@ -18,9 +18,10 @@ def process_pipe(pipe, chunk: Chunk):
             encoder_history.append(line)
 
     if pipe.returncode != 0 and pipe.returncode != -2:
-        msg = f':: Encoder encountered an error: {pipe.returncode}\n:: Chunk: {chunk.index}' + \
+        msg1 = f'Encoder encountered an error: {pipe.returncode}'
+        msg2 = f':: Chunk: {chunk.index}' + \
              '\n'.join(encoder_history)
-        log(msg + '\n\n')
+        log(msg)
         print(msg)
         raise Exception("Error in processing pipe")
 
@@ -50,10 +51,11 @@ def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk):
             encoder_history.append(line)
 
     if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
-        msg = f':: Encoder encountered an error: {pipe.returncode}\n:: Chunk: {chunk.index}\n' + \
-             '\n'.join(encoder_history)
-        log(msg + '\n\n')
-        print(msg)
+        msg1 = f'Encoder encountered an error: {pipe.returncode}'
+        msg2 = f'Chunk: {chunk.index}'
+        msg3 = '\n'.join(encoder_history)
+        log(msg1, msg2, msg3)
+        print(f'::{msg1}\n::{msg2}\n::{msg3}')
         raise Exception("Error in processing encoding pipe")
 
 

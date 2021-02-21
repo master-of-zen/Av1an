@@ -92,7 +92,8 @@ def get_keyframes(file: Path) -> List[int]:
 
 def extract_audio(input_vid: Path, temp, audio_params):
     """Extracting audio from source, transcoding if needed."""
-    log(f'Audio processing\nParams: {" ".join(audio_params)}\n')
+    log(f'Audio processing')
+    log(f'Params: {" ".join(audio_params)}')
     audio_file = temp / 'audio.mkv'
 
     # Checking is source have audio track

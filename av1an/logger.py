@@ -13,18 +13,19 @@ class Logger:
     def set_path(self, file):
         self.set_file = Path(file)
 
-    def log(self, info):
+    def log(self, *info):
         """Default logging function, write to file."""
-        if self.set_file and self.buffer:
-            with open(self.set_file, 'a') as logf:
-                logf.write(self.buffer)
-                self.buffer = None
+        for i in info:
+            if self.set_file and self.buffer:
+                with open(self.set_file, 'a') as logf:
+                    logf.write(self.buffer)
+                    self.buffer = None
 
-        if self.set_file:
-            with open(self.set_file, 'a') as logf:
-                logf.write(time.strftime('%X') + ' ' + info)
-        else:
-            self.buffer += time.strftime('%X') + ' ' + info
+            if self.set_file:
+                with open(self.set_file, 'a') as logf:
+                    logf.write(f'[{time.strftime("%X")}] {i}\n')
+            else:
+                self.buffer += f'[{time.strftime("%X")}] {i}\n'
 
 
 # Creating logger
@@ -45,4 +46,6 @@ def set_log(log_path: Path, temp):
     else:
         log_file(temp / 'log.log')
 
-    log(f"\nAv1an Started\nCommand:\n{' '.join(sys.argv)}\n")
+    log(f"Av1an Started")
+    log(f"Command:")
+    log(f"{' '.join(sys.argv)}")

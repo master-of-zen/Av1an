@@ -34,12 +34,12 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
     # Run scenedetection or skip
     if project.split_method == 'none':
-        log('Skipping scene detection\n')
+        log('Skipping scene detection')
         scenes = []
 
     # Read saved scenes:
     if project.scenes and Path(project.scenes).exists():
-        log('Using Saved Scenes\n')
+        log('Using Saved Scenes')
         scenes, frames = read_scenes_from_file(Path(project.scenes))
         project.set_frames(frames)
 
@@ -97,7 +97,7 @@ def segment(video: Path, temp: Path, frames: List[int]):
     :return: None
     """
 
-    log('Split Video\n')
+    log('Split Video')
     cmd = [
         "ffmpeg", "-hide_banner", "-y", "-i",
         video.absolute().as_posix(), "-map", "0:v:0", "-an", "-c", "copy",
@@ -118,11 +118,11 @@ def segment(video: Path, temp: Path, frames: List[int]):
         if len(line) == 0 and pipe.poll() is not None:
             break
 
-    log('Split Done\n')
+    log('Split Done')
 
 
 def extra_splits(project: Project, split_locations: list):
-    log('Applying extra splits\n')
+    log('Applying extra splits')
 
     split_locs_with_start = split_locations[:]
     split_locs_with_start.insert(0, 0)
@@ -141,7 +141,8 @@ def extra_splits(project: Project, split_locations: list):
             split_locations.extend(new_scenes)
 
     result = [int(x) for x in sorted(split_locations)]
-    log(f'Split distance: {project.extra_split}\nNew splits:{len(result)}\n')
+    log(f'Split distance: {project.extra_split}')
+    log(f'New splits:{len(result)}')
     return result
 
 
@@ -160,15 +161,15 @@ def calc_split_locations(project: Project) -> List[int]:
 
     # Splitting using PySceneDetect
     if project.split_method == 'pyscene':
-        log(f'Starting scene detection Threshold: {project.threshold}, Min_scene_length: {project.min_scene_len}\n'
+        log(f'Starting scene detection Threshold: {project.threshold}, Min_scene_length: {project.min_scene_len}'
             )
         try:
             sc = pyscene(project.input, project.threshold,
                          project.min_scene_len, project.is_vs, project.temp,
                          project.quiet)
         except Exception as e:
-            log(f'Error in PySceneDetect: {e}\n')
-            print(f'Error in PySceneDetect{e}\n')
+            log(f'Error in PySceneDetect: {e}')
+            print(f'Error in PySceneDetect{e}')
             terminate()
 
     # Splitting based on aom keyframe placement

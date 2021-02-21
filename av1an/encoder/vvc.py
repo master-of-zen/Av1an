@@ -116,9 +116,9 @@ class Vvc(Encoder):
 
     def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
         # vvc requires a yuv files as input, make it here
-        log(f'Creating yuv for chunk {chunk.name}\n')
+        log(f'Creating yuv for chunk {chunk.name}')
         Vvc.to_yuv(chunk)
-        log(f'Created yuv for chunk {chunk.name}\n')
+        log(f'Created yuv for chunk {chunk.name}')
         super().on_before_chunk(project, chunk)
 
     def on_after_chunk(self, project: Project, chunk: Chunk) -> None:

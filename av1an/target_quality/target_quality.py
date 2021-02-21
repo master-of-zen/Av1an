@@ -443,17 +443,17 @@ def per_shot_target_quality(chunk: Chunk, project: Project):
     vmaf_cq.append((score, next_q))
 
     if next_q == project.min_q and score < project.target_quality:
-        log(f"Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}\n"
-            f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ\n"
-            f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}\n\n")
+        log(f"Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}")
+        log(f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ")
+        log(f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}")
+        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
         return next_q
 
     elif next_q == project.max_q and score > project.target_quality:
-        log(f"Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}\n"
-            f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ\n"
-            f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n"
-            f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}\n\n")
+        log(f"Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}")
+        log(f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ")
+        log(f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}")
+        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
         return next_q
 
     # Set boundary
@@ -485,11 +485,10 @@ def per_shot_target_quality(chunk: Chunk, project: Project):
             vmaf_cq_upper = new_point
 
     q, q_vmaf = get_target_q(vmaf_cq, project.target_quality)
-
-    log(f'Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}\n'
-        f'Q: {sorted([x[1] for x in vmaf_cq])}\n'
-        f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}\n'
-        f'Target Q: {q} VMAF: {round(q_vmaf, 2)}\n\n')
+    log(f'Chunk: {chunk.name}, Rate: {probing_rate}, Fr: {frames}')
+    log(f'Q: {sorted([x[1] for x in vmaf_cq])}')
+    log(f'Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}')
+    log(f'Target Q: {q} VMAF: {round(q_vmaf, 2)}')
 
     # Plot Probes
     if project.vmaf_plots and len(vmaf_cq) > 3:

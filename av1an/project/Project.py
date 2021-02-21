@@ -102,7 +102,8 @@ class Project(object):
             return self.frames
 
         if self.chunk_method in ('vs_ffms2', 'vs_lsmash'):
-            vs = self.input if self.is_vs else create_vs_file(self.temp, self.input, self.chunk_method)
+            vs = self.input if self.is_vs else create_vs_file(
+                self.temp, self.input, self.chunk_method)
             fr = frame_probe_vspipe(vs)
             if fr > 0:
                 self.frames = fr
@@ -222,9 +223,9 @@ class Project(object):
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(
-                f'Concatenation failed, error\nAt line: {exc_tb.tb_lineno}\nError:{str(e)}'
+                f'Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}'
             )
-            log(f'Concatenation failed, aborting, error: {e}\n')
+            log(f'Concatenation failed, aborting, error: {e}')
             terminate()
 
     def select_best_chunking_method(self):
@@ -240,16 +241,16 @@ class Project(object):
                 plugins = vapoursynth.get_core().get_plugins()
 
                 if 'systems.innocent.lsmas' in plugins:
-                    log('Set Chunking Method: L-SMASH\n')
+                    log('Set Chunking Method: L-SMASH')
                     self.chunk_method = 'vs_lsmash'
 
                 elif 'com.vapoursynth.ffms2' in plugins:
-                    log('Set Chunking Method: FFMS2\n')
+                    log('Set Chunking Method: FFMS2')
                     self.chunk_method = 'vs_ffms2'
 
             except Exception as e:
-                log(f'Vapoursynth not installed but vspipe reachable\nError:{e}'
-                    + 'Fallback to Hybrid\n')
+                log(f'Vapoursynth not installed but vspipe reachable')
+                log(f'Error:{e}' + 'Fallback to Hybrid')
                 self.chunk_method = 'hybrid'
 
     def check_exes(self):

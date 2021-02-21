@@ -19,8 +19,9 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
     Threshold value increased by x100 for matching with pyscene range
     """
 
-    log(f'Starting FFMPEG detection:\nThreshold: {threshold}, \nIs Vapoursynth input: {is_vs}\n'
-        )
+    log(f'Starting FFMPEG detection:')
+    log(f'Threshold: {threshold}')
+    log(f'Is Vapoursynth input: {is_vs}')
     scenes = []
     frame: int = 0
 

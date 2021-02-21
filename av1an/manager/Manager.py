@@ -107,8 +107,8 @@ class EncodingManager:
         queue.encoding_loop()
 
         if queue.status.lower() == 'fatal':
-            msg = '::FATAL:: Encoding process encountered fatal error, shutting down\n'
-            print('\n', msg)
+            msg = 'FATAL Encoding process encountered fatal error, shutting down'
+            print('\n::', msg)
             log(msg)
             sys.exit(1)
 
@@ -129,14 +129,14 @@ class EncodingManager:
     def done_file(self, project: Project, chunk_queue: List[Chunk]):
         done_path = project.temp / 'done.json'
         if project.resume and done_path.exists():
-            log('Resuming...\n')
+            log('Resuming...')
             with open(done_path) as done_file:
                 data = json.load(done_file)
 
             project.set_frames(data['frames'])
             done = len(data['done'])
             self.initial_frames = sum(data['done'].values())
-            log(f'Resumed with {done} encoded clips done\n\n')
+            log(f'Resumed with {done} encoded clips done')
         else:
             self.initial_frames = 0
             total = project.get_frames()

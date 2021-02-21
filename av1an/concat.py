@@ -35,7 +35,7 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     """
     """With FFMPEG concatenate encoded segments into final file."""
 
-    log('Concatenating\n')
+    log('Concatenating')
 
     with open(temp / "concat", 'w') as f:
 
@@ -86,7 +86,7 @@ def concatenate_mkvmerge(temp: Path, output):
     :return: None
     """
 
-    log('Concatenating\n')
+    log('Concatenating')
 
     output = shlex.quote(output.as_posix())
 

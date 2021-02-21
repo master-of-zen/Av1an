@@ -38,7 +38,9 @@ class Queue:
                         future.result()
                     except Exception as exc:
                         _, _, exc_tb = sys.exc_info()
-                        print(f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}')
+                        print(
+                            f'Encoding error {exc}\nAt line {exc_tb.tb_lineno}'
+                        )
                         terminate()
         self.project.counter.close()
 
@@ -58,7 +60,7 @@ class Queue:
 
                 chunk_frames = chunk.frames
 
-                log(f'Enc: {chunk.index}, {chunk_frames} fr\n\n')
+                log(f'Enc: {chunk.index}, {chunk_frames} fr')
 
                 # Target Quality Mode
                 if self.project.target_quality:
@@ -92,20 +94,23 @@ class Queue:
                                         chunk, encoded_frames)
 
                 enc_time = round(time.time() - st_time, 2)
-                log(f'Done: {chunk.index} Fr: {encoded_frames}/{chunk_frames}\n'
-                    f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.\n\n'
+                log(f'Done: {chunk.index} Fr: {encoded_frames}/{chunk_frames}')
+                log(f'Fps: {round(encoded_frames / enc_time, 4)} Time: {enc_time} sec.'
                     )
                 return
 
             except Exception as e:
-                msg = f':: Chunk #{chunk.index} crashed with:\n:: Exception: {type(e)}\n {e}\n:: Restarting chunk\n'
-                log(msg + '\n')
-                print(msg)
+                msg1 = f'Chunk #{chunk.index} crashed'
+                msg2 = f'Exception: {type(e)} {e}'
+                msg3 = f'Restarting chunk'
+                log(msg1, msg2, msg3)
+                print(f'{msg1}\n::{msg2}\n::{msg3}')
                 restart_count += 1
 
-        msg = f'::FATAL::\n::Chunk #{chunk.index} failed more than 3 times, shutting down thread\n\n'
-        log(msg)
-        print(msg)
+        msg1 = f'FATAL'
+        msg2 = f'Chunk #{chunk.index} failed more than 3 times, shutting down thread'
+        log(msg1, msg2)
+        print(f'::{msg1}\n::{msg2}')
         self.status = 'FATAL'
 
     def frame_check_output(self,
@@ -114,7 +119,7 @@ class Queue:
                            last_chunk=False) -> int:
         actual_frames = frame_probe(chunk.output_path)
         if actual_frames != expected_frames:
-            msg = f':: Chunk #{chunk.index}: {actual_frames}/{expected_frames} fr'
+            msg = f'Chunk #{chunk.index}: {actual_frames}/{expected_frames} fr'
             log(msg)
-            print(msg)
+            print('::' + msg)
         return actual_frames

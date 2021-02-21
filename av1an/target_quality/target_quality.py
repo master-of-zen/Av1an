@@ -48,6 +48,25 @@ class TargetQuality:
         chunk.per_frame_target_quality_q_list = self.per_frame_target_quality(
             chunk)
 
+    def log_probes(
+        self,
+        vmaf_cq,
+        frames,
+        name,
+        skip=None,
+    ):
+        """Logs probes"""
+        if skip == 'high':
+            sk = ' Early Skip High CQ'
+        elif skip == 'low':
+            sk = ' Early Skip Low CQ'
+        else:
+            sk = ''
+
+        log(f"Chunk: {name}, Rate: {self.probing_rate}, Fr: {frames}")
+        log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}{sk}")
+        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+
     def per_shot_target_quality(self, chunk: Chunk):
         # Refactor this mess
         vmaf_cq = []
@@ -56,6 +75,9 @@ class TargetQuality:
         if self.probing_rate not in (1, 2):
             self.probing_rate = self.adapt_probing_rate(
                 self.probing_rate, frames)
+
+        if self.probes < 3:
+            return self.fast_search(chunk)
 
         q_list = []
         score = 0
@@ -67,47 +89,6 @@ class TargetQuality:
 
         score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, last_q))
         vmaf_cq.append((score, last_q))
-
-        if self.probes < 3:
-            #Use Euler's method with known relation between cq and vmaf
-            vmaf_cq_deriv = -0.18
-            ## Formula -ln(1-score/100) = vmaf_cq_deriv*last_q + constant
-            #constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
-            ## Formula -ln(1-project.vmaf_target/100) = vmaf_cq_deriv*cq + constant
-            #cq = (-ln(1-project.vmaf_target/100) - constant)/vmaf_cq_deriv
-            next_q = int(
-                round(last_q + (VMAF.transform_vmaf(self.target) -
-                                VMAF.transform_vmaf(score)) / vmaf_cq_deriv))
-
-            #Clamp
-            if next_q < self.min_q:
-                next_q = self.min_q
-            if self.max_q < next_q:
-                next_q = self.max_q
-
-            #Single probe cq guess or exit to avoid divide by zero
-            if self.probes == 1 or next_q == last_q:
-                return next_q
-
-            #Second probe at guessed value
-            score_2 = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
-
-            #Calculate slope
-            vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) -
-                             VMAF.transform_vmaf(score)) / (next_q - last_q)
-
-            #Same deal different slope
-            next_q = int(
-                round(next_q + (VMAF.transform_vmaf(self.target) -
-                                VMAF.transform_vmaf(score_2)) / vmaf_cq_deriv))
-
-            #Clamp
-            if next_q < self.min_q:
-                next_q = self.min_q
-            if self.max_q < next_q:
-                next_q = self.max_q
-
-            return next_q
 
         # Initialize search boundary
         vmaf_lower = score
@@ -128,19 +109,10 @@ class TargetQuality:
         vmaf_cq.append((score, next_q))
 
         if next_q == self.min_q and score < self.target:
-            log(f"Chunk: {chunk.name}, Rate: {self.probing_rate}, Fr: {frames}"
-                )
-            log(f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip Low CQ")
-            log(f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}")
-            log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+            self.log_probes(vmaf_cq, frames, chunk.name, skip='low')
             return next_q
-
         elif next_q == self.max_q and score > self.target:
-            log(f"Chunk: {chunk.name}, Rate: {self.probing_rate}, Fr: {frames}"
-                )
-            log(f"Q: {sorted([x[1] for x in vmaf_cq])}, Early Skip High CQ")
-            log(f"Vmaf: {sorted([x[0] for x in vmaf_cq], reverse=True)}")
-            log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+            self.log_probes(vmaf_cq, frames, chunk.name, skip='high')
             return next_q
 
         # Set boundary
@@ -172,9 +144,7 @@ class TargetQuality:
                 vmaf_cq_upper = new_point
 
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
-        log(f'Chunk: {chunk.name}, Rate: {self.probing_rate}, Fr: {frames}')
-        log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}")
-        log(f"Target Q: {vmaf_cq[-1][1]} VMAF: {round(vmaf_cq[-1][0], 2)}")
+        self.log_probes(vmaf_cq, frames, chunk.name)
         # log(f'Scene_score {self.get_scene_scores(chunk, self.ffmpeg_pipe)}')
         # Plot Probes
         if self.make_plots and len(vmaf_cq) > 3:
@@ -182,8 +152,62 @@ class TargetQuality:
 
         return q
 
-    def skip_check(self):
-        """Checking for early skips in search"""
+    def fast_search(self, chunk):
+        """
+        Experimental search
+        Use Euler's method with known relation between cq and vmaf
+        Formula -ln(1-score/100) = vmaf_cq_deriv*last_q + constant
+        constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
+        Formula -ln(1-project.vmaf_target/100) = vmaf_cq_deriv*cq + constant
+        cq = (-ln(1-project.vmaf_target/100) - constant)/vmaf_cq_deriv
+        """
+        vmaf_cq = []
+        q_list = []
+
+        # Make middle probe
+        middle_point = (self.min_q + self.max_q) // 2
+        q_list.append(middle_point)
+        last_q = middle_point
+
+        score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, last_q))
+        vmaf_cq.append((score, last_q))
+
+        vmaf_cq_deriv = -0.18
+        next_q = int(
+            round(last_q + (VMAF.transform_vmaf(self.target) -
+                            VMAF.transform_vmaf(score)) / vmaf_cq_deriv))
+
+        #Clamp
+        if next_q < self.min_q:
+            next_q = self.min_q
+        if self.max_q < next_q:
+            next_q = self.max_q
+
+        #Single probe cq guess or exit to avoid divide by zero
+        if self.probes == 1 or next_q == last_q:
+            return next_q
+
+        #Second probe at guessed value
+        score_2 = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
+
+        #Calculate slope
+        vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) -
+                         VMAF.transform_vmaf(score)) / (next_q - last_q)
+
+        #Same deal different slope
+        next_q = int(
+            round(next_q + (VMAF.transform_vmaf(self.target) -
+                            VMAF.transform_vmaf(score_2)) / vmaf_cq_deriv))
+
+        #Clamp
+        if next_q < self.min_q:
+            next_q = self.min_q
+        if self.max_q < next_q:
+            next_q = self.max_q
+
+        self.log_probes(vmaf_cq, chunk.frames, chunk.name)
+
+        return next_q
 
     def adapt_probing_rate(self, rate, frames):
         """

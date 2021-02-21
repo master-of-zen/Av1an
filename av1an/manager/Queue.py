@@ -100,15 +100,12 @@ class Queue:
                 return
 
             except Exception as e:
-                msg1 = f'Chunk #{chunk.index} crashed'
-                msg2 = f'Exception: {type(e)} {e}'
-                msg3 = f'Restarting chunk'
+                msg1, msg2, msg3 = f'Chunk #{chunk.index} crashed', f'Exception: {type(e)} {e}', 'Restarting chunk'
                 log(msg1, msg2, msg3)
                 print(f'{msg1}\n::{msg2}\n::{msg3}')
                 restart_count += 1
 
-        msg1 = f'FATAL'
-        msg2 = f'Chunk #{chunk.index} failed more than 3 times, shutting down thread'
+        msg1, msg2 = 'FATAL', f'Chunk #{chunk.index} failed more than 3 times, shutting down thread'
         log(msg1, msg2)
         print(f'::{msg1}\n::{msg2}')
         self.status = 'FATAL'

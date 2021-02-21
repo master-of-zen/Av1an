@@ -65,8 +65,8 @@ class VMAF:
                 encoder_history.append(line)
 
         if pipe.returncode != 0 and pipe.returncode != -2:
-            msg1 = f"VMAF validation error: {pipe.returncode}"
-            msg2 = '\n'.join(encoder_history)
+            msg1, msg2 = f"VMAF validation error: {pipe.returncode}", '\n'.join(
+                encoder_history)
             log(msg1, msg2)
             print(f'::{msg1}\n::{msg2}')
             sys.exit()
@@ -254,7 +254,7 @@ class VMAF:
         Making VMAF plot after encode is done
         """
 
-        print(':: VMAF Run..\r', end='')
+        print(':: VMAF Run..', end='\r')
 
         fl_path = encoded.with_name(f'{encoded.stem}_vmaflog').with_suffix(
             ".json")

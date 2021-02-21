@@ -3,8 +3,7 @@ import sys
 import concurrent
 import concurrent.futures
 from typing import List
-from av1an.target_quality import (per_frame_target_quality_routine,
-                                  per_shot_target_quality_routine)
+from av1an.target_quality import TargetQuality
 from av1an.encoder import ENCODERS
 from av1an.utils import frame_probe, terminate
 from av1an.resume import write_progress_file
@@ -24,6 +23,7 @@ class Queue:
         self.project = project
         self.thread_executor = concurrent.futures.ThreadPoolExecutor()
         self.status = 'Ok'
+        self.tq = TargetQuality(project) if project.target_quality else None
 
     def encoding_loop(self):
         if len(self.chunk_queue) != 0:
@@ -65,9 +65,9 @@ class Queue:
                 # Target Quality Mode
                 if self.project.target_quality:
                     if self.project.target_quality_method == 'per_shot':
-                        per_shot_target_quality_routine(self.project, chunk)
+                        self.tq.per_shot_target_quality_routine(chunk)
                     if self.project.target_quality_method == 'per_frame':
-                        per_frame_target_quality_routine(self.project, chunk)
+                        self.tq.per_frame_target_quality_routine(chunk)
 
                 ENCODERS[self.project.encoder].on_before_chunk(
                     self.project, chunk)

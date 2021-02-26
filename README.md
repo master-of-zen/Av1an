@@ -261,4 +261,4 @@ The --user flag is required to avoid permission issues with the docker container
 
 ### Support the developer
 
-Bitcoin - 1gU9aQ2qqoQPuvop2jqC68JKZh5cyCivG
+Bitcoin - 1GTRkvV4KdSaRyFDYTpZckPKQCoWbWkJV1

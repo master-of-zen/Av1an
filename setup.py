@@ -1,5 +1,7 @@
 import setuptools
 
+# TODO: rewrite it in rust
+
 REQUIRES = [
     'numpy',
     'scenedetect[opencv]',

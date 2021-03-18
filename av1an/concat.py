@@ -2,6 +2,7 @@ import os
 import platform
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
@@ -21,7 +22,7 @@ def vvc_concat(temp: Path, output: Path):
     bitstreams = ' '.join(bitstreams)
     cmd = f'vvc_concat  {bitstreams} {output.as_posix()}'
 
-    output = subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, shell=True)
 
 
 def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
@@ -74,7 +75,8 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     if len(concat) > 0:
         log(concat.decode())
         print(concat.decode())
-        raise Exception
+        tb = sys.exc_info()[2]
+        raise RuntimeError.with_traceback(tb)
 
 
 def concatenate_mkvmerge(temp: Path, output):
@@ -123,7 +125,8 @@ def concatenate_mkvmerge(temp: Path, output):
     if concat.returncode != 0:
         log(message)
         print(message)
-        raise Exception
+        tb = sys.exc_info()[2]
+        raise RuntimeError.with_traceback(tb)
 
     # remove temporary files used by recursive concat
     if os.path.exists("{}.tmp0.mkv".format(output)):
@@ -154,7 +157,8 @@ def _concatenate_mkvmerge(files, output, file_limit, cmd_limit, flip=False):
     if concat.returncode != 0:
         log(message)
         print(message)
-        raise Exception
+        tb = sys.exc_info()[2]
+        raise RuntimeError.with_traceback(tb)
 
     if len(remaining) > 0:
         return _concatenate_mkvmerge([tmp_out] + remaining, output, file_limit,

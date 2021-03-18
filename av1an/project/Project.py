@@ -199,9 +199,8 @@ class Project(object):
         done_path = self.temp / 'done.json'
         self.resume = self.resume and done_path.exists()
 
-        if not self.resume:
-            if self.temp.is_dir():
-                shutil.rmtree(self.temp)
+        if not self.resume and self.temp.is_dir():
+            shutil.rmtree(self.temp)
 
         (self.temp / 'split').mkdir(parents=True, exist_ok=True)
         (self.temp / 'encode').mkdir(exist_ok=True)

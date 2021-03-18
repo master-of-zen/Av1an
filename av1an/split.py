@@ -5,7 +5,7 @@ import subprocess
 import json
 from pathlib import Path
 from subprocess import PIPE, STDOUT
-from typing import List
+from typing import List, Tuple
 from numpy import linspace
 
 from .project import Project
@@ -74,7 +74,7 @@ def write_scenes_to_file(scenes: List[int], frames: int, scene_path: Path):
         json.dump(data, scene_file)
 
 
-def read_scenes_from_file(scene_path: Path) -> List[int]:
+def read_scenes_from_file(scene_path: Path) -> Tuple[int]:
     """
     Reads a list of split locations from a file
 

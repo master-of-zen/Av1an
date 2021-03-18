@@ -3,7 +3,6 @@ import subprocess
 from math import isnan
 import numpy as np
 import re
-import pprint
 from scipy import interpolate
 
 from av1an.vmaf import VMAF
@@ -180,29 +179,29 @@ class TargetQuality:
             round(last_q + (VMAF.transform_vmaf(self.target) -
                             VMAF.transform_vmaf(score)) / vmaf_cq_deriv))
 
-        #Clamp
+        # Clamp
         if next_q < self.min_q:
             next_q = self.min_q
         if self.max_q < next_q:
             next_q = self.max_q
 
-        #Single probe cq guess or exit to avoid divide by zero
+        # Single probe cq guess or exit to avoid divide by zero
         if self.probes == 1 or next_q == last_q:
             return next_q
 
-        #Second probe at guessed value
+        # Second probe at guessed value
         score_2 = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
 
-        #Calculate slope
+        # Calculate slope
         vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) -
                          VMAF.transform_vmaf(score)) / (next_q - last_q)
 
-        #Same deal different slope
+        # Same deal different slope
         next_q = int(
             round(next_q + (VMAF.transform_vmaf(self.target) -
                             VMAF.transform_vmaf(score_2)) / vmaf_cq_deriv))
 
-        #Clamp
+        # Clamp
         if next_q < self.min_q:
             next_q = self.min_q
         if self.max_q < next_q:
@@ -453,7 +452,8 @@ class TargetQuality:
 
     def get_scene_scores(self, chunk, ffmpeg_pipe):
         """
-        Run ffmpeg scenedetection filter to get average amount of motion in scene
+        Run ffmpeg scenedetection filter 
+        Gets average amount of motion in scene
         """
 
         pipecmd = [
@@ -527,8 +527,8 @@ class TargetQuality:
         Makes graph with probe decisions
         """
         if plt is None:
-            log(f'Matplotlib is not installed or could not be loaded. Unable to plot probes.'
-                )
+            log('Matplotlib is not installed or could not be loaded\
+            . Unable to plot probes.')
             return
         # Saving plot of vmaf calculation
 

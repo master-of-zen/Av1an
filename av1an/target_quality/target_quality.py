@@ -416,7 +416,7 @@ class TargetQuality:
 
         if v1 > target and v2 > target:
             return min(q1, q2)
-        if v1 < target and v1 < target:
+        if v1 < target and v2 < target:
             return max(q1, q2)
 
         dif1 = abs(target - v2)

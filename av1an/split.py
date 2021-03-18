@@ -11,7 +11,7 @@ from numpy import linspace
 from .project import Project
 from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
 from .logger import log
-from .utils import terminate, frame_probe
+from .utils import terminate
 
 # TODO: organize to single segmenting/splitting module
 

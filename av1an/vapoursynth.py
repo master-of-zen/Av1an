@@ -16,8 +16,8 @@ def frame_probe_vspipe(source: Path):
     Get frame count from vspipe.
     :param: source: Path to input vapoursynth (vpy/py) file
     """
-    cmd = f"vspipe -i {source.as_posix()}  -"
-    r = run(split(cmd), capture_output=True)
+    cmd = ["vspipe", "-i", source.as_posix(), "-"]
+    r = run(cmd, capture_output=True)
     matches = re.findall(r"Frames:\s*([0-9]+)\s",
                          r.stderr.decode("utf-8") + r.stdout.decode("utf-8"))
     frames = int(matches[-1])

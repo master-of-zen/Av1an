@@ -58,7 +58,6 @@ class Aom(Encoder):
 
         if 'fatal' in line.lower():
             print('\n\nERROR IN ENCODING PROCESS\n\n', line)
-            log()
             terminate()
         if 'Pass 2/2' in line or 'Pass 1/1' in line:
             return re.search(r"frame.*?/([^ ]+?) ", line)

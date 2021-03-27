@@ -13,7 +13,7 @@ from .encoder import Encoder
 from av1an.logger import log
 from av1an.utils import list_index_of_regex
 
-
+#TODO: improve on vvc support  
 class Vvc(Encoder):
     """
     Redo after VVenC default and expert app have concatenation

@@ -24,7 +24,7 @@ def frame_probe_vspipe(source: Path):
     return frames
 
 
-def create_vs_file(temp, source, chunk_method):
+def create_vs_file(temp: Path, source, chunk_method):
     """
     Creates vs pipe file or returns file if it exists
     """
@@ -35,7 +35,7 @@ def create_vs_file(temp, source, chunk_method):
         return load_script
 
     if chunk_method == 'vs_ffms2':
-        cache_file = (temp / 'split' / 'cache.ffindex').resolve().as_posix()
+        cache_file = (temp / 'split' / 'cache.ffindex').resolve()
         script = "from vapoursynth import core\n" \
             "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
     else:
@@ -44,7 +44,7 @@ def create_vs_file(temp, source, chunk_method):
         "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
 
     with open(load_script, 'w+') as file:
-        file.write(script.format(source.resolve().as_posix(), cache_file))
+        file.write(script.format(Path(source).resolve(), cache_file))
 
     cache_generation = f'vspipe -i {load_script.as_posix()} -i -'
     d = Popen(split(cache_generation), stdout=PIPE, stderr=PIPE).wait()

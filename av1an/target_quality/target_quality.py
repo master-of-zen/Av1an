@@ -359,7 +359,7 @@ class TargetQuality:
             params = [
                 'rav1e', '-y', '-s', '10', '--threads', f'{n_threads}',
                 '--tiles', '16', '--quantizer', f'{q}', '--low-latency',
-                '--rdo-lookahead-frames', '5'
+                '--rdo-lookahead-frames', '5', '--no-scene-detection'
             ]
             cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
@@ -452,7 +452,7 @@ class TargetQuality:
 
     def get_scene_scores(self, chunk, ffmpeg_pipe):
         """
-        Run ffmpeg scenedetection filter 
+        Run ffmpeg scenedetection filter
         Gets average amount of motion in scene
         """
 

@@ -14,7 +14,7 @@ class Rav1e(Encoder):
                          encoder_help='rav1e --fullhelp',
                          default_args=[
                              '--tiles', '8', '--speed', '6', '--quantizer',
-                             '100'
+                             '100', '--no-scene-detection'
                          ],
                          default_passes=1,
                          default_q_range=(50, 140),

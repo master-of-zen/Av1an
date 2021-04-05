@@ -113,7 +113,7 @@ class TargetQuality:
         score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
         vmaf_cq.append((score, next_q))
 
-        if next_q == self.min_q or next_q == self.max_q:
+        if (next_q == self.min_q and score < self.target) or (next_q == self.max_q and score > self.target):
             self.log_probes(vmaf_cq, frames, chunk.name, next_q, score,
                             skip='low' if score < self.target else 'high')
             return next_q

@@ -1,6 +1,7 @@
 ### 6
 - ~1.7x faster probes for svt-av1
 - ~2x faster probes for aomenc
+-  Changed rav1e settings, disable rav1e scene detection
 
 ### 5
 - Fixed fatal errors with ffms2/lsmash

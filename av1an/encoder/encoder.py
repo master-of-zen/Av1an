@@ -12,6 +12,7 @@ class Encoder(ABC):
     """
     An abstract class used for encoders
     """
+
     def __init__(self, encoder_bin: str, encoder_help: str,
                  default_args: Command, default_passes: int,
                  default_q_range: Tuple[int, int], output_extension: str):
@@ -105,7 +106,7 @@ class Encoder(ABC):
         :return: a Pipe attached to the encoders stdout
         """
         filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
-                              self.compose_2_pass(a, c, output)[current_pass - 1]
+            self.compose_2_pass(a, c, output)[current_pass - 1]
         if man_q:
             enc_cmd = self.man_q(enc_cmd, man_q)
         elif c.per_shot_target_quality_cq:
@@ -146,23 +147,6 @@ class Encoder(ABC):
         :return: True if the encoder bin exists
         """
         return find_executable(self.encoder_bin) is not None
-
-    def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
-        """
-        An event that is called before the encoding passes of a chunk starts
-        :param project: the Project
-        :param chunk: the chunk
-        :return: None
-        """
-        pass
-
-    def on_after_chunk(self, project: Project, chunk: Chunk) -> None:
-        """
-        An event that is called after the encoding passes of a chunk completes
-        :param project: the Project
-        :param chunk: the chunk
-        :return: None
-        """
         pass
 
     def __eq__(self, o: object) -> bool:

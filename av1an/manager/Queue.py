@@ -17,6 +17,7 @@ class Queue:
     """
     Queue manager with ability to add/remove/restart jobs
     """
+
     def __init__(self, project, chunk_queue):
         self.chunk_queue = chunk_queue
         self.queue = []
@@ -69,9 +70,6 @@ class Queue:
                     if self.project.target_quality_method == 'per_frame':
                         self.tq.per_frame_target_quality_routine(chunk)
 
-                ENCODERS[self.project.encoder].on_before_chunk(
-                    self.project, chunk)
-
                 # skip first pass if reusing
                 start = 2 if self.project.reuse_first_pass and self.project.passes >= 2 else 1
 
@@ -80,9 +78,6 @@ class Queue:
                     tqdm_bar(self.project, chunk, self.project.encoder,
                              self.project.counter, chunk_frames,
                              self.project.passes, current_pass)
-
-                ENCODERS[self.project.encoder].on_after_chunk(
-                    self.project, chunk)
 
                 # get the number of encoded frames, if no check assume it worked and encoded same number of frames
                 encoded_frames = chunk_frames if self.project.no_check else self.frame_check_output(

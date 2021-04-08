@@ -13,11 +13,12 @@ from .encoder import Encoder
 from av1an.logger import log
 from av1an.utils import list_index_of_regex
 
-#TODO: improve on vvc support  
+
 class Vvc(Encoder):
     """
     Redo after VVenC default and expert app have concatenation
     """
+
     def __init__(self):
         super(Vvc, self).__init__(encoder_bin='vvc_encoder',
                                   encoder_help='vvc_encoder --help',
@@ -81,7 +82,7 @@ class Vvc(Encoder):
         """
         # Filter cmd not used?
         _, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
-                              self.compose_2_pass(a, c, output)[current_pass - 1]
+            self.compose_2_pass(a, c, output)[current_pass - 1]
 
         if man_q:
             enc_cmd = self.man_q(enc_cmd, man_q)
@@ -113,19 +114,6 @@ class Vvc(Encoder):
                           'Example: -wdt 640 -hgt 360 -fr 23.98 -q 30'
 
         return super().is_valid(project)
-
-    def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
-        # vvc requires a yuv files as input, make it here
-        log(f'Creating yuv for chunk {chunk.name}')
-        Vvc.to_yuv(chunk)
-        log(f'Created yuv for chunk {chunk.name}')
-        super().on_before_chunk(project, chunk)
-
-    def on_after_chunk(self, project: Project, chunk: Chunk) -> None:
-        # delete the yuv file for this chunk
-        yuv_path = Vvc.get_yuv_file_path(chunk)
-        os.remove(yuv_path)
-        super().on_after_chunk(project, chunk)
 
     @staticmethod
     def get_yuv_file_path(chunk: Chunk) -> Path:

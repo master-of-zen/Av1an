@@ -37,11 +37,11 @@ def create_vs_file(temp: Path, source, chunk_method):
     if chunk_method == 'vs_ffms2':
         cache_file = (temp / 'split' / 'cache.ffindex').resolve()
         script = "from vapoursynth import core\n" \
-            "core.ffms2.Source(\"{}\", cachefile=\"{}\").set_output()"
+            "core.ffms2.Source(r\"{}\", cachefile=\"{}\").set_output()"
     else:
         cache_file = (temp / 'split' / 'cache.lwi').resolve().as_posix()
         script = "from vapoursynth import core\n" \
-        "core.lsmas.LWLibavSource(\"{}\", cachefile=\"{}\").set_output()"
+        "core.lsmas.LWLibavSource(r\"{}\", cachefile=\"{}\").set_output()"
 
     with open(load_script, 'w+') as file:
         file.write(script.format(Path(source).resolve(), cache_file))

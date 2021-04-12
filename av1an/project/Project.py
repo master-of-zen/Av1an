@@ -101,9 +101,12 @@ class Project(object):
         if self.frames > 0:
             return self.frames
 
-        if self.chunk_method in ('vs_ffms2', 'vs_lsmash'):
-            vs = self.input if self.is_vs else create_vs_file(
-                self.temp, self.input, self.chunk_method)
+        if self.chunk_method in ("vs_ffms2", "vs_lsmash"):
+            vs = (
+                self.input
+                if self.is_vs
+                else create_vs_file(self.temp, self.input, self.chunk_method)
+            )
             fr = frame_probe_vspipe(vs)
             if fr > 0:
                 self.frames = fr
@@ -128,12 +131,15 @@ class Project(object):
         :param project: the Project
         """
         if self.webm:
-            suffix = '.webm'
+            suffix = ".webm"
         else:
-            suffix = '.mkv'
+            suffix = ".mkv"
 
-        self.output_file = Path(self.output_file).with_suffix(suffix) if self.output_file \
-            else Path(f'{self.input.stem}_{self.encoder}{suffix}')
+        self.output_file = (
+            Path(self.output_file).with_suffix(suffix)
+            if self.output_file
+            else Path(f"{self.input.stem}_{self.encoder}{suffix}")
+        )
 
     def load_project_from_file(self, path_string):
         """
@@ -149,7 +155,7 @@ class Project(object):
         Save project attributes from json to this class
         """
         pth = Path(path_string)
-        with open(pth, 'w') as json_data:
+        with open(pth, "w") as json_data:
             json_data.write(self.save_project())
 
     def save_project(self):
@@ -157,11 +163,11 @@ class Project(object):
         Returns json of this class, which later can be loaded
         """
         dt = dict(self.__dict__)
-        del dt['input']
-        del dt['output_file']
-        del dt['temp']
-        del dt['vmaf_path']
-        del dt['config']
+        del dt["input"]
+        del dt["output_file"]
+        del dt["temp"]
+        del dt["vmaf_path"]
+        del dt["config"]
         return json.dumps(dt, indent=4, sort_keys=True)
 
     def determine_workers(self):
@@ -170,15 +176,15 @@ class Project(object):
             return self.workers
 
         cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2**30)
+        ram = round(virtual_memory().total / 2 ** 30)
 
-        if self.encoder in ('aom', 'rav1e', 'vpx'):
+        if self.encoder in ("aom", "rav1e", "vpx"):
             workers = round(min(cpu / 3, ram / 1.5))
 
-        elif self.encoder in ('svt_av1', 'svt_vp9', 'x265', 'x264'):
+        elif self.encoder in ("svt_av1", "svt_vp9", "x265", "x264"):
             workers = round(min(cpu, ram)) // 8
 
-        elif self.encoder in 'vvc':
+        elif self.encoder in "vvc":
             workers = round(min(cpu, ram)) // 4
 
         # fix if workers round up to 0
@@ -193,17 +199,17 @@ class Project(object):
         if self.temp:
             self.temp = Path(str(self.temp))
         else:
-            self.temp = Path('.' + str(hash_path(str(self.input))))
+            self.temp = Path("." + str(hash_path(str(self.input))))
 
         # Checking is resume possible
-        done_path = self.temp / 'done.json'
+        done_path = self.temp / "done.json"
         self.resume = self.resume and done_path.exists()
 
         if not self.resume and self.temp.is_dir():
             shutil.rmtree(self.temp)
 
-        (self.temp / 'split').mkdir(parents=True, exist_ok=True)
-        (self.temp / 'encode').mkdir(exist_ok=True)
+        (self.temp / "split").mkdir(parents=True, exist_ok=True)
+        (self.temp / "encode").mkdir(exist_ok=True)
 
     def concat_routine(self):
         """
@@ -213,8 +219,8 @@ class Project(object):
         :return: None
         """
         try:
-            if self.encoder == 'vvc':
-                vvc_concat(self.temp, self.output_file.with_suffix('.h266'))
+            if self.encoder == "vvc":
+                vvc_concat(self.temp, self.output_file.with_suffix(".h266"))
             elif self.mkvmerge:
                 concatenate_mkvmerge(self.temp, self.output_file)
             else:
@@ -222,61 +228,69 @@ class Project(object):
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(
-                f'Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}'
+                f"Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}"
             )
-            log(f'Concatenation failed, aborting, error: {e}')
+            log(f"Concatenation failed, aborting, error: {e}")
             terminate()
 
     def select_best_chunking_method(self):
         """
         Selecting best chunking method based on available methods
         """
-        if not find_executable('vspipe'):
-            self.chunk_method = 'hybrid'
-            log('Set Chunking Method: Hybrid')
+        if not find_executable("vspipe"):
+            self.chunk_method = "hybrid"
+            log("Set Chunking Method: Hybrid")
         else:
             try:
                 import vapoursynth
+
                 plugins = vapoursynth.get_core().get_plugins()
 
-                if 'systems.innocent.lsmas' in plugins:
-                    log('Set Chunking Method: L-SMASH')
-                    self.chunk_method = 'vs_lsmash'
+                if "systems.innocent.lsmas" in plugins:
+                    log("Set Chunking Method: L-SMASH")
+                    self.chunk_method = "vs_lsmash"
 
-                elif 'com.vapoursynth.ffms2' in plugins:
-                    log('Set Chunking Method: FFMS2')
-                    self.chunk_method = 'vs_ffms2'
+                elif "com.vapoursynth.ffms2" in plugins:
+                    log("Set Chunking Method: FFMS2")
+                    self.chunk_method = "vs_ffms2"
 
             except Exception as e:
-                log(f'Vapoursynth not installed but vspipe reachable')
-                log(f'Error:{e}' + 'Fallback to Hybrid')
-                self.chunk_method = 'hybrid'
+                log(f"Vapoursynth not installed but vspipe reachable")
+                log(f"Error:{e}" + "Fallback to Hybrid")
+                self.chunk_method = "hybrid"
 
     def check_exes(self):
         """
         Checking required executables
         """
 
-        if not find_executable('ffmpeg'):
-            print('No ffmpeg')
+        if not find_executable("ffmpeg"):
+            print("No ffmpeg")
             terminate()
 
-        if self.chunk_method in ['vs_ffms2', 'vs_lsmash']:
-            if not find_executable('vspipe'):
-                print('vspipe executable not found')
+        if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
+            if not find_executable("vspipe"):
+                print("vspipe executable not found")
                 terminate()
 
             try:
                 import vapoursynth
+
                 plugins = vapoursynth.get_core().get_plugins()
 
-                if self.chunk_method == 'vs_lsmash' and "systems.innocent.lsmas" not in plugins:
-                    print('lsmas is not installed')
+                if (
+                    self.chunk_method == "vs_lsmash"
+                    and "systems.innocent.lsmas" not in plugins
+                ):
+                    print("lsmas is not installed")
                     terminate()
 
-                if self.chunk_method == 'vs_ffms2' and "com.vapoursynth.ffms2" not in plugins:
-                    print('ffms2 is not installed')
+                if (
+                    self.chunk_method == "vs_ffms2"
+                    and "com.vapoursynth.ffms2" not in plugins
+                ):
+                    print("ffms2 is not installed")
                     terminate()
             except ModuleNotFoundError:
-                print('Vapoursynth is not installed')
+                print("Vapoursynth is not installed")
                 terminate()

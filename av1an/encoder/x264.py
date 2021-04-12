@@ -10,33 +10,76 @@ from av1an.utils import list_index_of_regex
 
 class X264(Encoder):
     def __init__(self):
-        super().__init__(encoder_bin='x264',
-                         encoder_help='x264 --fullhelp',
-                         default_args=['--preset', 'slow', '--crf', '25'],
-                         default_passes=1,
-                         default_q_range=(15, 35),
-                         output_extension='mkv')
+        super().__init__(
+            encoder_bin="x264",
+            encoder_help="x264 --fullhelp",
+            default_args=["--preset", "slow", "--crf", "25"],
+            default_passes=1,
+            default_q_range=(15, 35),
+            output_extension="mkv",
+        )
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
-                'x264', '--stitchable', '--log-level', 'error', '--demuxer',
-                'y4m', *a.video_params, '-', '-o', output
-            ])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                [
+                    "x264",
+                    "--stitchable",
+                    "--log-level",
+                    "error",
+                    "--demuxer",
+                    "y4m",
+                    *a.video_params,
+                    "-",
+                    "-o",
+                    output,
+                ],
+            )
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
-                'x264', '--stitchable', '--log-level', 'error', '--pass', '1',
-                '--demuxer', 'y4m', *a.video_params, '-', '--stats',
-                f'{c.fpf}.log', '-', '-o', os.devnull
-            ]),
-            CommandPair(Encoder.compose_ffmpeg_pipe(a), [
-                'x264', '--stitchable', '--log-level', 'error', '--pass', '2',
-                '--demuxer', 'y4m', *a.video_params, '-', '--stats',
-                f'{c.fpf}.log', '-', '-o', output
-            ])
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                [
+                    "x264",
+                    "--stitchable",
+                    "--log-level",
+                    "error",
+                    "--pass",
+                    "1",
+                    "--demuxer",
+                    "y4m",
+                    *a.video_params,
+                    "-",
+                    "--stats",
+                    f"{c.fpf}.log",
+                    "-",
+                    "-o",
+                    os.devnull,
+                ],
+            ),
+            CommandPair(
+                Encoder.compose_ffmpeg_pipe(a),
+                [
+                    "x264",
+                    "--stitchable",
+                    "--log-level",
+                    "error",
+                    "--pass",
+                    "2",
+                    "--demuxer",
+                    "y4m",
+                    *a.video_params,
+                    "-",
+                    "--stats",
+                    f"{c.fpf}.log",
+                    "-",
+                    "-o",
+                    output,
+                ],
+            ),
         ]
 
     def man_q(self, command: Command, q: int) -> Command:
@@ -49,7 +92,7 @@ class X264(Encoder):
         adjusted_command = command.copy()
 
         i = list_index_of_regex(adjusted_command, r"--crf")
-        adjusted_command[i + 1] = f'{q}'
+        adjusted_command[i + 1] = f"{q}"
 
         return adjusted_command
 

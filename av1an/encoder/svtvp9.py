@@ -9,12 +9,14 @@ from av1an.utils import list_index_of_regex
 
 class SvtVp9(Encoder):
     def __init__(self):
-        super().__init__(encoder_bin='SvtVp9EncApp',
-                         encoder_help='SvtVp9EncApp --help',
-                         default_args=None,
-                         default_passes=1,
-                         default_q_range=(15, 55),
-                         output_extension='ivf')
+        super().__init__(
+            encoder_bin="SvtVp9EncApp",
+            encoder_help="SvtVp9EncApp --help",
+            default_args=None,
+            default_passes=1,
+            default_q_range=(15, 55),
+            output_extension="ivf",
+        )
 
     @staticmethod
     def compose_ffmpeg_raw_pipe(a: Project) -> Command:
@@ -26,16 +28,35 @@ class SvtVp9(Encoder):
         :return: a command
         """
         return [
-            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            *a.ffmpeg, *a.pix_format, '-f', 'rawvideo', '-'
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "-",
+            *a.ffmpeg,
+            *a.pix_format,
+            "-f",
+            "rawvideo",
+            "-",
         ]
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
-            CommandPair(SvtVp9.compose_ffmpeg_raw_pipe(a), [
-                'SvtVp9EncApp', '-i', 'stdin', '-n', f'{c.frames}',
-                *a.video_params, '-b', output
-            ])
+            CommandPair(
+                SvtVp9.compose_ffmpeg_raw_pipe(a),
+                [
+                    "SvtVp9EncApp",
+                    "-i",
+                    "stdin",
+                    "-n",
+                    f"{c.frames}",
+                    *a.video_params,
+                    "-b",
+                    output,
+                ],
+            )
         ]
 
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
@@ -43,7 +64,7 @@ class SvtVp9(Encoder):
 
     def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         if project.video_params is None:
-            return False, 'SVT-VP9 requires: -w, -h, and -fps/-fps-num/-fps-denom'
+            return False, "SVT-VP9 requires: -w, -h, and -fps/-fps-num/-fps-denom"
         return super().is_valid(project)
 
     def man_q(self, command: Command, q: int) -> Command:
@@ -56,7 +77,7 @@ class SvtVp9(Encoder):
         adjusted_command = command.copy()
 
         i = list_index_of_regex(adjusted_command, r"-q")
-        adjusted_command[i + 1] = f'{q}'
+        adjusted_command[i + 1] = f"{q}"
 
         return adjusted_command
 

@@ -10,6 +10,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
+
 try:
     import matplotlib
     from matplotlib import pyplot as plt
@@ -20,10 +21,12 @@ except ImportError:
 
 class TargetQuality:
     def __init__(self, project):
-        self.vmaf_runner = VMAF(n_threads=project.n_threads,
-                                model=project.vmaf_path,
-                                res=project.vmaf_res,
-                                vmaf_filter=project.vmaf_filter)
+        self.vmaf_runner = VMAF(
+            n_threads=project.n_threads,
+            model=project.vmaf_path,
+            res=project.vmaf_res,
+            vmaf_filter=project.vmaf_filter,
+        )
         self.n_threads = project.n_threads
         self.probing_rate = project.probing_rate
         self.probes = project.probes
@@ -44,8 +47,7 @@ class TargetQuality:
         :param chunk: the Chunk
         :return: None
         """
-        chunk.per_frame_target_quality_q_list = self.per_frame_target_quality(
-            chunk)
+        chunk.per_frame_target_quality_q_list = self.per_frame_target_quality(chunk)
 
     def log_probes(self, vmaf_cq, frames, name, target_q, target_vmaf, skip=None):
         """
@@ -58,12 +60,12 @@ class TargetQuality:
         :type target_vmaf: float Calculated VMAF that would be achieved by using the q
         :return: None
         """
-        if skip == 'high':
-            sk = ' Early Skip High CQ'
-        elif skip == 'low':
-            sk = ' Early Skip Low CQ'
+        if skip == "high":
+            sk = " Early Skip High CQ"
+        elif skip == "low":
+            sk = " Early Skip Low CQ"
         else:
-            sk = ''
+            sk = ""
 
         log(f"Chunk: {name}, Rate: {self.probing_rate}, Fr: {frames}")
         log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}{sk}")
@@ -79,8 +81,7 @@ class TargetQuality:
         frames = chunk.frames
 
         if self.probing_rate not in (1, 2):
-            self.probing_rate = self.adapt_probing_rate(
-                self.probing_rate, frames)
+            self.probing_rate = self.adapt_probing_rate(self.probing_rate, frames)
 
         if self.probes < 3:
             return self.fast_search(chunk)
@@ -113,9 +114,17 @@ class TargetQuality:
         score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
         vmaf_cq.append((score, next_q))
 
-        if (next_q == self.min_q and score < self.target) or (next_q == self.max_q and score > self.target):
-            self.log_probes(vmaf_cq, frames, chunk.name, next_q, score,
-                            skip='low' if score < self.target else 'high')
+        if (next_q == self.min_q and score < self.target) or (
+            next_q == self.max_q and score > self.target
+        ):
+            self.log_probes(
+                vmaf_cq,
+                frames,
+                chunk.name,
+                next_q,
+                score,
+                skip="low" if score < self.target else "high",
+            )
             return next_q
 
         # Set boundary
@@ -128,9 +137,9 @@ class TargetQuality:
 
         # VMAF search
         for _ in range(self.probes - 2):
-            new_point = self.weighted_search(vmaf_cq_lower, vmaf_lower,
-                                             vmaf_cq_upper, vmaf_upper,
-                                             self.target)
+            new_point = self.weighted_search(
+                vmaf_cq_lower, vmaf_lower, vmaf_cq_upper, vmaf_upper, self.target
+            )
             if new_point in [x[1] for x in vmaf_cq]:
                 break
 
@@ -177,8 +186,12 @@ class TargetQuality:
 
         vmaf_cq_deriv = -0.18
         next_q = int(
-            round(last_q + (VMAF.transform_vmaf(self.target) -
-                            VMAF.transform_vmaf(score)) / vmaf_cq_deriv))
+            round(
+                last_q
+                + (VMAF.transform_vmaf(self.target) - VMAF.transform_vmaf(score))
+                / vmaf_cq_deriv
+            )
+        )
 
         # Clamp
         if next_q < self.min_q:
@@ -195,13 +208,18 @@ class TargetQuality:
         score_2 = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
 
         # Calculate slope
-        vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) -
-                         VMAF.transform_vmaf(score)) / (next_q - last_q)
+        vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) - VMAF.transform_vmaf(score)) / (
+            next_q - last_q
+        )
 
         # Same deal different slope
         next_q = int(
-            round(next_q + (VMAF.transform_vmaf(self.target) -
-                            VMAF.transform_vmaf(score_2)) / vmaf_cq_deriv))
+            round(
+                next_q
+                + (VMAF.transform_vmaf(self.target) - VMAF.transform_vmaf(score_2))
+                / vmaf_cq_deriv
+            )
+        )
 
         # Clamp
         if next_q < self.min_q:
@@ -223,8 +241,8 @@ class TargetQuality:
         :return: new probing rate
         """
 
-        #Todo: Make it depend on amount of motion in scene
-        #For current moment it's 4 for everything
+        # Todo: Make it depend on amount of motion in scene
+        # For current moment it's 4 for everything
 
         if frames > 0:
             return 4
@@ -247,9 +265,9 @@ class TargetQuality:
         y = [float(x[0]) for x in sorted(scores)]
 
         if len(x) > 2:
-            interpolation = 'quadratic'
+            interpolation = "quadratic"
         else:
-            interpolation = 'linear'
+            interpolation = "linear"
         f = interpolate.interp1d(x, y, kind=interpolation)
         xnew = np.linspace(min(x), max(x), max(x) - min(x))
         tl = list(zip(xnew, f(xnew)))
@@ -288,13 +306,14 @@ class TargetQuality:
         """
 
         n_threads = self.n_threads if self.n_threads else 12
-        cmd = self.probe_cmd(chunk, q, self.ffmpeg_pipe, self.encoder,
-                             self.probing_rate, n_threads)
+        cmd = self.probe_cmd(
+            chunk, q, self.ffmpeg_pipe, self.encoder, self.probing_rate, n_threads
+        )
         pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
         process_pipe(pipe, chunk, utility)
-        fl = self.vmaf_runner.call_vmaf(chunk,
-                                        self.gen_probes_names(chunk, q),
-                                        vmaf_rate=self.probing_rate)
+        fl = self.vmaf_runner.call_vmaf(
+            chunk, self.gen_probes_names(chunk, q), vmaf_rate=self.probing_rate
+        )
         return fl
 
     def get_closest(self, q_list, q, positive=True):
@@ -313,8 +332,9 @@ class TargetQuality:
 
         return min(q_list, key=lambda x: abs(x - q))
 
-    def probe_cmd(self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate,
-                  n_threads) -> CommandPair:
+    def probe_cmd(
+        self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads
+    ) -> CommandPair:
         """
         Generate and return commands for probes at set Q values
         These are specifically not the commands that are generated
@@ -323,90 +343,211 @@ class TargetQuality:
         These should not be moved into encoder classes at this point.
         """
         pipe = [
-            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            '-vf', f'select=not(mod(n\\,{probing_rate}))', *ffmpeg_pipe
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "-",
+            "-vf",
+            f"select=not(mod(n\\,{probing_rate}))",
+            *ffmpeg_pipe,
         ]
 
-        probe_name = self.gen_probes_names(chunk,
-                                           q).with_suffix('.ivf').as_posix()
+        probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
 
-        if encoder == 'aom':
+        if encoder == "aom":
             params = [
-                'aomenc', '--passes=1', f'--threads={n_threads}',
-                '--tile-columns=2', '--tile-rows=1', '--end-usage=q', '-b',
-                '8', '--cpu-used=6', f'--cq-level={q}',
-                '--enable-filter-intra=0', '--enable-smooth-intra=0',
-                '--enable-paeth-intra=0', '--enable-cfl-intra=0',
-                '--enable-obmc=0', '--enable-palette=0', '--enable-overlay=0',
-                '--enable-intrabc=0', '--enable-angle-delta=0',
-                '--reduced-tx-type-set=1', '--enable-dual-filter=0',
-                '--enable-intra-edge-filter=0', '--enable-order-hint=0',
-                '--enable-flip-idtx=0', '--enable-dist-wtd-comp=0',
-                '--enable-rect-tx=0', '--enable-interintra-wedge=0',
-                '--enable-onesided-comp=0', '--enable-interintra-comp=0',
-                '--enable-global-motion=0', '--min-partition-size=32',
-                '--max-partition-size=32'
+                "aomenc",
+                "--passes=1",
+                f"--threads={n_threads}",
+                "--tile-columns=2",
+                "--tile-rows=1",
+                "--end-usage=q",
+                "-b",
+                "8",
+                "--cpu-used=6",
+                f"--cq-level={q}",
+                "--enable-filter-intra=0",
+                "--enable-smooth-intra=0",
+                "--enable-paeth-intra=0",
+                "--enable-cfl-intra=0",
+                "--enable-obmc=0",
+                "--enable-palette=0",
+                "--enable-overlay=0",
+                "--enable-intrabc=0",
+                "--enable-angle-delta=0",
+                "--reduced-tx-type-set=1",
+                "--enable-dual-filter=0",
+                "--enable-intra-edge-filter=0",
+                "--enable-order-hint=0",
+                "--enable-flip-idtx=0",
+                "--enable-dist-wtd-comp=0",
+                "--enable-rect-tx=0",
+                "--enable-interintra-wedge=0",
+                "--enable-onesided-comp=0",
+                "--enable-interintra-comp=0",
+                "--enable-global-motion=0",
+                "--min-partition-size=32",
+                "--max-partition-size=32",
             ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
-        elif encoder == 'x265':
+        elif encoder == "x265":
             params = [
-                'x265', '--log-level', '0', '--no-progress', '--y4m',
-                '--frame-threads', f'{n_threads}', '--preset', 'fast', '--crf',
-                f'{q}'
+                "x265",
+                "--log-level",
+                "0",
+                "--no-progress",
+                "--y4m",
+                "--frame-threads",
+                f"{n_threads}",
+                "--preset",
+                "fast",
+                "--crf",
+                f"{q}",
             ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
-        elif encoder == 'rav1e':
+        elif encoder == "rav1e":
             params = [
-                'rav1e', '-y', '-s', '10', '--threads', f'{n_threads}',
-                '--tiles', '16', '--quantizer', f'{q}', '--low-latency',
-                '--rdo-lookahead-frames', '5', '--no-scene-detection'
+                "rav1e",
+                "-y",
+                "-s",
+                "10",
+                "--threads",
+                f"{n_threads}",
+                "--tiles",
+                "16",
+                "--quantizer",
+                f"{q}",
+                "--low-latency",
+                "--rdo-lookahead-frames",
+                "5",
+                "--no-scene-detection",
             ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
-        elif encoder == 'vpx':
+        elif encoder == "vpx":
             params = [
-                'vpxenc', '-b', '10', '--profile=2', '--passes=1', '--pass=1',
-                '--codec=vp9', f'--threads={n_threads}', '--cpu-used=9',
-                '--end-usage=q', f'--cq-level={q}', '--row-mt=1'
+                "vpxenc",
+                "-b",
+                "10",
+                "--profile=2",
+                "--passes=1",
+                "--pass=1",
+                "--codec=vp9",
+                f"--threads={n_threads}",
+                "--cpu-used=9",
+                "--end-usage=q",
+                f"--cq-level={q}",
+                "--row-mt=1",
             ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
-        elif encoder == 'svt_av1':
+        elif encoder == "svt_av1":
             params = [
-                'SvtAv1EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
-                '--preset', '8', '-q', f'{q}', '--tile-rows', '1',
-                '--tile-columns', '2', '--hme', '0', '--pred-struct', '0',
-                '--sg-filter-mode', '0', '--enable-restoration-filtering', '0',
-                '--cdef-level', '0', '--disable-dlf', '0', '--mrp-level', '0',
-                '--enable-tpl-la', '0', '--enable-mfmv', '0',
-                '--enable-local-warp', '0', '--enable-global-motion', '0',
-                '--enable-interintra-comp', '0', '--obmc-level', '0',
-                '--rdoq-level', '0', '--filter-intra-level', '0',
-                '--enable-intra-edge-filter', '0',
-                '--enable-pic-based-rate-est', '0', '--pred-me', '0',
-                '--bipred-3x3', '0', '--compound', '0', '--use-default-me-hme',
-                '0', '--ext-block', '0', '--hbd-md', '0', '--palette-level',
-                '0', '--umv', '0', '--tf-level', '3'
+                "SvtAv1EncApp",
+                "-i",
+                "stdin",
+                "--lp",
+                f"{n_threads}",
+                "--preset",
+                "8",
+                "-q",
+                f"{q}",
+                "--tile-rows",
+                "1",
+                "--tile-columns",
+                "2",
+                "--hme",
+                "0",
+                "--pred-struct",
+                "0",
+                "--sg-filter-mode",
+                "0",
+                "--enable-restoration-filtering",
+                "0",
+                "--cdef-level",
+                "0",
+                "--disable-dlf",
+                "0",
+                "--mrp-level",
+                "0",
+                "--enable-tpl-la",
+                "0",
+                "--enable-mfmv",
+                "0",
+                "--enable-local-warp",
+                "0",
+                "--enable-global-motion",
+                "0",
+                "--enable-interintra-comp",
+                "0",
+                "--obmc-level",
+                "0",
+                "--rdoq-level",
+                "0",
+                "--filter-intra-level",
+                "0",
+                "--enable-intra-edge-filter",
+                "0",
+                "--enable-pic-based-rate-est",
+                "0",
+                "--pred-me",
+                "0",
+                "--bipred-3x3",
+                "0",
+                "--compound",
+                "0",
+                "--use-default-me-hme",
+                "0",
+                "--ext-block",
+                "0",
+                "--hbd-md",
+                "0",
+                "--palette-level",
+                "0",
+                "--umv",
+                "0",
+                "--tf-level",
+                "3",
             ]
-            cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
 
-        elif encoder == 'svt_vp9':
+        elif encoder == "svt_vp9":
             params = [
-                'SvtVp9EncApp', '-i', 'stdin', '--lp', f'{n_threads}',
-                '-enc-mode', '8', '-q', f'{q}'
+                "SvtVp9EncApp",
+                "-i",
+                "stdin",
+                "--lp",
+                f"{n_threads}",
+                "-enc-mode",
+                "8",
+                "-q",
+                f"{q}",
             ]
             # TODO: pipe needs to output rawvideo
-            cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
 
-        elif encoder == 'x264':
+        elif encoder == "x264":
             params = [
-                'x264', '--log-level', 'error', '--demuxer', 'y4m', '-',
-                '--no-progress', '--threads', f'{n_threads}', '--preset',
-                'medium', '--crf', f'{q}'
+                "x264",
+                "--log-level",
+                "error",
+                "--demuxer",
+                "y4m",
+                "-",
+                "--no-progress",
+                "--threads",
+                f"{n_threads}",
+                "--preset",
+                "medium",
+                "--crf",
+                f"{q}",
             ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         return cmd
 
@@ -433,7 +574,7 @@ class TargetQuality:
         y = [float(x[0]) for x in sorted(vmaf_cq)]
 
         # Interpolate data
-        f = interpolate.interp1d(x, y, kind='quadratic')
+        f = interpolate.interp1d(x, y, kind="quadratic")
         xnew = np.linspace(min(x), max(x), max(x) - min(x))
 
         # Getting value closest to target
@@ -459,13 +600,26 @@ class TargetQuality:
         """
 
         pipecmd = [
-            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            *ffmpeg_pipe
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "-",
+            *ffmpeg_pipe,
         ]
 
         params = [
-            'ffmpeg', '-hide_banner', '-i', '-', '-vf',
-            'select=\'gte(scene,0)\',metadata=print', '-f', 'null', '-'
+            "ffmpeg",
+            "-hide_banner",
+            "-i",
+            "-",
+            "-vf",
+            "select='gte(scene,0)',metadata=print",
+            "-f",
+            "null",
+            "-",
         ]
         cmd = CommandPair(pipecmd, [*params])
         pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
@@ -488,9 +642,9 @@ class TargetQuality:
         if pipe.returncode != 0 and pipe.returncode != -2:
             print(f"\n:: Error in getting scene score {pipe.returncode}")
             print(f"\n:: Chunk: {chunk.index}")
-            print('\n'.join(history))
+            print("\n".join(history))
 
-        scores = [x for x in history if 'score' in x]
+        scores = [x for x in history if "score" in x]
 
         results = []
         for x in scores:
@@ -499,32 +653,35 @@ class TargetQuality:
             if var < 0.3:
                 results.append(var)
 
-        result = (round(np.average(results), 4) * 1000)
+        result = round(np.average(results), 4) * 1000
         return result
 
     def gen_probes_names(self, chunk: Chunk, q):
         """
         Make name of vmaf probe
         """
-        return chunk.fake_input_path.with_name(
-            f'v_{q}{chunk.name}').with_suffix('.ivf')
+        return chunk.fake_input_path.with_name(f"v_{q}{chunk.name}").with_suffix(".ivf")
 
     def make_pipes(self, ffmpeg_gen_cmd: Command, command: CommandPair):
 
-        ffmpeg_gen_pipe = subprocess.Popen(ffmpeg_gen_cmd,
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.STDOUT)
+        ffmpeg_gen_pipe = subprocess.Popen(
+            ffmpeg_gen_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
 
-        ffmpeg_pipe = subprocess.Popen(command[0],
-                                       stdin=ffmpeg_gen_pipe.stdout,
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT)
+        ffmpeg_pipe = subprocess.Popen(
+            command[0],
+            stdin=ffmpeg_gen_pipe.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
 
-        pipe = subprocess.Popen(command[1],
-                                stdin=ffmpeg_pipe.stdout,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                universal_newlines=True)
+        pipe = subprocess.Popen(
+            command[1],
+            stdin=ffmpeg_pipe.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
 
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         return pipe, utility
@@ -534,8 +691,10 @@ class TargetQuality:
         Makes graph with probe decisions
         """
         if plt is None:
-            log('Matplotlib is not installed or could not be loaded\
-            . Unable to plot probes.')
+            log(
+                "Matplotlib is not installed or could not be loaded\
+            . Unable to plot probes."
+            )
             return
         # Saving plot of vmaf calculation
 
@@ -543,38 +702,37 @@ class TargetQuality:
         y = [float(x[0]) for x in sorted(vmaf_cq)]
 
         cq, tl, f, xnew = self.interpolate_data(vmaf_cq, self.target)
-        matplotlib.use('agg')
+        matplotlib.use("agg")
         plt.ioff()
-        plt.plot(xnew, f(xnew), color='tab:blue', alpha=1)
-        plt.plot(x, y, 'p', color='tab:green', alpha=1)
-        plt.plot(cq[0], cq[1], 'o', color='red', alpha=1)
+        plt.plot(xnew, f(xnew), color="tab:blue", alpha=1)
+        plt.plot(x, y, "p", color="tab:green", alpha=1)
+        plt.plot(cq[0], cq[1], "o", color="red", alpha=1)
         plt.grid(True)
         plt.xlim(self.min_q, self.max_q)
-        vmafs = [
-            int(x[1]) for x in tl
-            if isinstance(x[1], float) and not isnan(x[1])
-        ]
+        vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
         plt.ylim(min(vmafs), max(vmafs) + 1)
-        plt.ylabel('VMAF')
-        plt.title(f'Chunk: {chunk.name}, Frames: {frames}')
+        plt.ylabel("VMAF")
+        plt.title(f"Chunk: {chunk.name}, Frames: {frames}")
         plt.xticks(np.arange(self.min_q, self.max_q + 1, 1.0))
         temp = self.temp / chunk.name
-        plt.savefig(f'{temp}.png', dpi=200, format='png')
+        plt.savefig(f"{temp}.png", dpi=200, format="png")
         plt.close()
 
     def make_q_file(self, q_list, chunk):
-        qfile = chunk.fake_input_path.with_name(
-            f'probe_{chunk.name}').with_suffix('.txt')
-        with open(qfile, 'w') as fl:
-            text = ''
+        qfile = chunk.fake_input_path.with_name(f"probe_{chunk.name}").with_suffix(
+            ".txt"
+        )
+        with open(qfile, "w") as fl:
+            text = ""
 
             for x in q_list:
-                text += str(x) + '\n'
+                text += str(x) + "\n"
             fl.write(text)
         return qfile
 
-    def per_frame_probe_cmd(self, chunk: Chunk, q, encoder, probing_rate,
-                            qp_file) -> CommandPair:
+    def per_frame_probe_cmd(
+        self, chunk: Chunk, q, encoder, probing_rate, qp_file
+    ) -> CommandPair:
         """
         Generate and return commands for probes at set Q values
         These are specifically not the commands that are generated
@@ -583,22 +741,39 @@ class TargetQuality:
         These should not be moved into encoder classes at this point.
         """
         pipe = [
-            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            '-vf', f'select=not(mod(n\\,{probing_rate}))', *self.ffmpeg_pipe
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "-",
+            "-vf",
+            f"select=not(mod(n\\,{probing_rate}))",
+            *self.ffmpeg_pipe,
         ]
 
-        probe_name = self.gen_probes_names(chunk,
-                                           q).with_suffix('.ivf').as_posix()
-        if encoder == 'svt_av1':
+        probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
+        if encoder == "svt_av1":
             params = [
-                'SvtAv1EncApp', '-i', 'stdin', '--preset', '8', '--rc', '0',
-                '--passes', '1', '--use-q-file', '1', '--qpfile',
-                f'{qp_file.as_posix()}'
+                "SvtAv1EncApp",
+                "-i",
+                "stdin",
+                "--preset",
+                "8",
+                "--rc",
+                "0",
+                "--passes",
+                "1",
+                "--use-q-file",
+                "1",
+                "--qpfile",
+                f"{qp_file.as_posix()}",
             ]
 
-            cmd = CommandPair(pipe, [*params, '-b', probe_name, '-'])
+            cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
         else:
-            print('supported only by SVT-AV1')
+            print("supported only by SVT-AV1")
             exit()
         """
         elif encoder == 'x265':
@@ -618,28 +793,30 @@ class TargetQuality:
         process_pipe(pipe, chunk, utility)
         fl = self.vmaf_runner.call_vmaf(chunk, self.gen_probes_names(chunk, q))
         jsn = VMAF.read_json(fl)
-        vmafs = [x['metrics']['vmaf'] for x in jsn['frames']]
+        vmafs = [x["metrics"]["vmaf"] for x in jsn["frames"]]
         return vmafs
 
     def add_probes_to_frame_list(self, frame_list, q_list, vmafs):
         frame_list = list(frame_list)
         for index, q_vmaf in enumerate(zip(q_list, vmafs)):
-            frame_list[index]['probes'].append((q_vmaf[0], q_vmaf[1]))
+            frame_list[index]["probes"].append((q_vmaf[0], q_vmaf[1]))
 
         return frame_list
 
     def per_frame_target_quality(self, chunk):
         frames = chunk.frames
-        frame_list = [{'frame_number': x, 'probes': []} for x in range(frames)]
+        frame_list = [{"frame_number": x, "probes": []} for x in range(frames)]
 
         for _ in range(self.probes):
             q_list = self.gen_next_q(frame_list, chunk)
             vmafs = self.per_frame_probe(q_list, 1, chunk)
-            frame_list = self.add_probes_to_frame_list(frame_list, q_list,
-                                                       vmafs)
+            frame_list = self.add_probes_to_frame_list(frame_list, q_list, vmafs)
             mse = round(
-                self.get_square_error([x['probes'][-1][1] for x in frame_list],
-                                      self.target), 2)
+                self.get_square_error(
+                    [x["probes"][-1][1] for x in frame_list], self.target
+                ),
+                2,
+            )
             # print(':: MSE:', mse)
 
             if mse < 1.0:
@@ -651,14 +828,14 @@ class TargetQuality:
         total = 0
         for i in ls:
             dif = i - target
-            total += dif**2
+            total += dif ** 2
         mse = total / len(ls)
         return mse
 
     def gen_next_q(self, frame_list, chunk):
         q_list = []
 
-        probes = len(frame_list[0]['probes'])
+        probes = len(frame_list[0]["probes"])
 
         if probes == 0:
             return [self.min_q] * len(frame_list)
@@ -667,15 +844,15 @@ class TargetQuality:
         else:
             for probe in frame_list:
 
-                x = [x[0] for x in probe['probes']]
-                y = [x[1] for x in probe['probes']]
+                x = [x[0] for x in probe["probes"]]
+                y = [x[1] for x in probe["probes"]]
 
                 if probes > 2:
                     if len(x) != len(set(x)):
-                        q_list.append(probe['probes'][-1][0])
+                        q_list.append(probe["probes"][-1][0])
                         continue
 
-                interpolation = 'quadratic' if probes > 2 else 'linear'
+                interpolation = "quadratic" if probes > 2 else "linear"
 
                 f = interpolate.interp1d(x, y, kind=interpolation)
                 xnew = np.linspace(min(x), max(x), max(x) - min(x))

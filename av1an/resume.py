@@ -14,7 +14,7 @@ def read_done_data(temp: Path):
     """
     try:
         done_file_lock.acquire()
-        done_path = temp / 'done.json'
+        done_path = temp / "done.json"
         with open(done_path) as done_file:
             data = json.load(done_file)
     finally:
@@ -36,8 +36,8 @@ def write_progress_file(progress_file: Path, chunk, encoded_frames: int):
         done_file_lock.acquire()
         with progress_file.open() as f:
             d = json.load(f)
-        d['done'][chunk.name] = encoded_frames
-        with progress_file.open('w') as f:
+        d["done"][chunk.name] = encoded_frames
+        with progress_file.open("w") as f:
             json.dump(d, f)
     finally:
         if done_file_lock.locked():

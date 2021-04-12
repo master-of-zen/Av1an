@@ -4,11 +4,11 @@ import sys
 import time
 from pathlib import Path
 
-# Todo: Add self testing on startup 
+# Todo: Add self testing on startup
 class Logger:
     def __init__(self):
         self.set_file = False
-        self.buffer = ''
+        self.buffer = ""
 
     def set_path(self, file):
         self.set_file = Path(file)
@@ -17,12 +17,12 @@ class Logger:
         """Default logging function, write to file."""
         for i in info:
             if self.set_file and self.buffer:
-                with open(self.set_file, 'a') as logf:
+                with open(self.set_file, "a") as logf:
                     logf.write(self.buffer)
                     self.buffer = None
 
             if self.set_file:
-                with open(self.set_file, 'a') as logf:
+                with open(self.set_file, "a") as logf:
                     logf.write(f'[{time.strftime("%X")}] {i}\n')
             else:
                 self.buffer += f'[{time.strftime("%X")}] {i}\n'
@@ -39,12 +39,12 @@ def set_log(log_path: Path, temp):
 
     if log_path:
         log_path = Path(log_path)
-        if log_path.suffix == '':
-            log_path = log_path.with_suffix('.log')
+        if log_path.suffix == "":
+            log_path = log_path.with_suffix(".log")
         log_file(log_path)
 
     else:
-        log_file(temp / 'log.log')
+        log_file(temp / "log.log")
 
     log(f"Av1an Started")
     log(f"Command:")

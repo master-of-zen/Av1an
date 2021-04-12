@@ -20,10 +20,10 @@ def vvc_concat(temp: Path, output: Path):
     :param output: the output video
     :return: None
     """
-    encode_files = sorted((temp / 'encode').iterdir())
+    encode_files = sorted((temp / "encode").iterdir())
     bitstreams = [x.as_posix() for x in encode_files]
-    bitstreams = ' '.join(bitstreams)
-    cmd = f'vvc_concat  {bitstreams} {output.as_posix()}'
+    bitstreams = " ".join(bitstreams)
+    cmd = f"vvc_concat  {bitstreams} {output.as_posix()}"
 
     subprocess.run(cmd, shell=True, check=True)
 
@@ -38,43 +38,74 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     :return: None
     """
 
-    log('Concatenating')
+    log("Concatenating")
 
-    with open(temp / "concat", 'w') as f:
+    with open(temp / "concat", "w") as f:
 
-        encode_files = sorted((temp / 'encode').iterdir())
-        f.writelines(f'file {shlex.quote("file:"+str(file.absolute()))}\n'
-                     for file in encode_files)
+        encode_files = sorted((temp / "encode").iterdir())
+        f.writelines(
+            f'file {shlex.quote("file:"+str(file.absolute()))}\n'
+            for file in encode_files
+        )
 
     # Add the audio/subtitles/else file if one was extracted from the input
     audio_file = temp / "audio.mkv"
     if audio_file.exists():
-        audio = ('-i', audio_file.as_posix(), '-c', 'copy', '-map', '1')
+        audio = ("-i", audio_file.as_posix(), "-c", "copy", "-map", "1")
     else:
         audio = ()
 
-    if encoder == 'x265':
+    if encoder == "x265":
 
         cmd = [
-            'ffmpeg', '-y', '-fflags', '+genpts', '-hide_banner',
-            '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
-            (temp / "concat").as_posix(), *audio, '-c', 'copy', '-movflags',
-            'frag_keyframe+empty_moov', '-map', '0', '-f', 'mp4',
-            output.as_posix()
+            "ffmpeg",
+            "-y",
+            "-fflags",
+            "+genpts",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            (temp / "concat").as_posix(),
+            *audio,
+            "-c",
+            "copy",
+            "-movflags",
+            "frag_keyframe+empty_moov",
+            "-map",
+            "0",
+            "-f",
+            "mp4",
+            output.as_posix(),
         ]
-        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT,
-                                check=True).stdout
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT, check=True).stdout
 
     else:
         cmd = [
-            'ffmpeg', '-y', '-hide_banner',
-            '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i',
-            (temp / "concat").as_posix(), *audio, '-c', 'copy', '-map', '0',
-            output.as_posix()
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            (temp / "concat").as_posix(),
+            *audio,
+            "-c",
+            "copy",
+            "-map",
+            "0",
+            output.as_posix(),
         ]
 
-        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT,
-                                check=True).stdout
+        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT, check=True).stdout
 
     if len(concat) > 0:
         log(concat.decode())
@@ -92,31 +123,32 @@ def concatenate_mkvmerge(temp: Path, output):
     :return: None
     """
 
-    log('Concatenating')
+    log("Concatenating")
 
     output = shlex.quote(output.as_posix())
 
-    encode_files = sorted((temp / 'encode').iterdir(),
-                          key=lambda x: int(x.stem)
-                          if x.stem.isdigit() else x.stem)
+    encode_files = sorted(
+        (temp / "encode").iterdir(),
+        key=lambda x: int(x.stem) if x.stem.isdigit() else x.stem,
+    )
     encode_files = [shlex.quote(f.as_posix()) for f in encode_files]
 
     if platform.system() == "Linux":
         file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
-        cmd_limit = os.sysconf(os.sysconf_names['SC_ARG_MAX'])
+        cmd_limit = os.sysconf(os.sysconf_names["SC_ARG_MAX"])
     else:
         file_limit = -1
         cmd_limit = 32767
 
     audio_file = temp / "audio.mkv"
-    audio = audio_file.as_posix() if audio_file.exists() else ''
+    audio = audio_file.as_posix() if audio_file.exists() else ""
 
     if len(encode_files) > 1:
         encode_files = [
             _concatenate_mkvmerge(encode_files, output, file_limit, cmd_limit)
         ]
 
-    cmd = ['mkvmerge', '-o', output, encode_files[0]]
+    cmd = ["mkvmerge", "-o", output, encode_files[0]]
 
     if audio:
         cmd.append(audio)
@@ -145,12 +177,13 @@ def _concatenate_mkvmerge(files, output, file_limit, cmd_limit, flip=False):
 
     remaining = []
     for i, file in enumerate(files[1:]):
-        new_cmd = cmd + ['+{}'.format(file)]
-        if sum(len(s) for s in new_cmd) < cmd_limit \
-            and (file_limit == -1 or i < max(1, file_limit - 10)):
+        new_cmd = cmd + ["+{}".format(file)]
+        if sum(len(s) for s in new_cmd) < cmd_limit and (
+            file_limit == -1 or i < max(1, file_limit - 10)
+        ):
             cmd = new_cmd
         else:
-            remaining = files[i + 1:]
+            remaining = files[i + 1 :]
             break
 
     concat = subprocess.Popen(cmd, stdout=PIPE, universal_newlines=True)
@@ -164,6 +197,7 @@ def _concatenate_mkvmerge(files, output, file_limit, cmd_limit, flip=False):
         raise RuntimeError.with_traceback(tb)
 
     if len(remaining) > 0:
-        return _concatenate_mkvmerge([tmp_out] + remaining, output, file_limit,
-                                     cmd_limit, not flip)
+        return _concatenate_mkvmerge(
+            [tmp_out] + remaining, output, file_limit, cmd_limit, not flip
+        )
     return tmp_out

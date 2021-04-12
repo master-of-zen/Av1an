@@ -24,7 +24,7 @@ def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
     :return: None
     """
     chunk_dicts = [c.to_dict() for c in chunk_queue]
-    with open(temp / 'chunks.json', 'w') as file:
+    with open(temp / "chunks.json", "w") as file:
         json.dump(chunk_dicts, file)
 
 
@@ -35,13 +35,14 @@ def read_chunk_queue(temp: Path) -> List[Chunk]:
     :param temp: the temp directory
     :return: the chunk queue
     """
-    with open(temp / 'chunks.json', 'r') as file:
+    with open(temp / "chunks.json", "r") as file:
         chunk_dicts = json.load(file)
     return [Chunk.create_from_dict(cd, temp) for cd in chunk_dicts]
 
 
-def load_or_gen_chunk_queue(project: Project, resuming: bool,
-                            split_locations: List[int]) -> List[Chunk]:
+def load_or_gen_chunk_queue(
+    project: Project, resuming: bool, split_locations: List[int]
+) -> List[Chunk]:
     """
     If resuming, loads the chunk queue and removes already done chunks or
     creates a chunk queue and saves it for resuming later.
@@ -54,10 +55,8 @@ def load_or_gen_chunk_queue(project: Project, resuming: bool,
     # if resuming, read chunks from file and remove those already done
     if resuming:
         chunk_queue = read_chunk_queue(project.temp)
-        done_chunk_names = read_done_data(project.temp)['done'].keys()
-        chunk_queue = [
-            c for c in chunk_queue if c.name not in done_chunk_names
-        ]
+        done_chunk_names = read_done_data(project.temp)["done"].keys()
+        chunk_queue = [c for c in chunk_queue if c.name not in done_chunk_names]
         return chunk_queue
 
     # create and save
@@ -67,8 +66,7 @@ def load_or_gen_chunk_queue(project: Project, resuming: bool,
     return chunk_queue
 
 
-def create_encoding_queue(project: Project,
-                          split_locations: List[int]) -> List[Chunk]:
+def create_encoding_queue(project: Project, split_locations: List[int]) -> List[Chunk]:
     """
     Creates a list of chunks using the cli option chunk_method specified
 
@@ -77,22 +75,22 @@ def create_encoding_queue(project: Project,
     :return: A list of chunks
     """
     chunk_method_gen = {
-        'segment': create_video_queue_segment,
-        'select': create_video_queue_select,
-        'vs_ffms2': create_video_queue_vsffms2,
-        'vs_lsmash': create_video_queue_vslsmash,
-        'hybrid': create_video_queue_hybrid
+        "segment": create_video_queue_segment,
+        "select": create_video_queue_select,
+        "vs_ffms2": create_video_queue_vsffms2,
+        "vs_lsmash": create_video_queue_vslsmash,
+        "hybrid": create_video_queue_hybrid,
     }
-    chunk_queue = chunk_method_gen[project.chunk_method](project,
-                                                         split_locations)
+    chunk_queue = chunk_method_gen[project.chunk_method](project, split_locations)
 
     # Sort largest first so chunks that take a long time to encode start first
     chunk_queue.sort(key=lambda c: c.size, reverse=True)
     return chunk_queue
 
 
-def create_video_queue_hybrid(project: Project,
-                              split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_hybrid(
+    project: Project, split_locations: List[int]
+) -> List[Chunk]:
     """
     Create list of chunks using hybrid segment-select approach
 
@@ -112,14 +110,17 @@ def create_video_queue_hybrid(project: Project,
 
     # Make segments
     segment(project.input, project.temp, to_split[1:])
-    source_path = project.temp / 'split'
-    queue_files = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+    source_path = project.temp / "split"
+    queue_files = [x for x in source_path.iterdir() if x.suffix == ".mkv"]
     queue_files.sort(key=lambda p: p.stem)
 
     kf_list = list(zip(to_split, to_split[1:] + end))
     for f, (x, y) in zip(queue_files, kf_list):
-        to_add = [(f, [s[0] - x, s[1] - x]) for s in segments_list
-                  if s[0] >= x and s[1] <= y and s[0] - x < s[1] - x]
+        to_add = [
+            (f, [s[0] - x, s[1] - x])
+            for s in segments_list
+            if s[0] >= x and s[1] <= y and s[0] - x < s[1] - x
+        ]
         segments.extend(to_add)
 
     chunk_queue = [
@@ -129,18 +130,19 @@ def create_video_queue_hybrid(project: Project,
     return chunk_queue
 
 
-def create_video_queue_vsffms2(project: Project,
-                               split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_vsffms2(
+    project: Project, split_locations: List[int]
+) -> List[Chunk]:
     return create_video_queue_vs(project, split_locations)
 
 
-def create_video_queue_vslsmash(project: Project,
-                                split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_vslsmash(
+    project: Project, split_locations: List[int]
+) -> List[Chunk]:
     return create_video_queue_vs(project, split_locations)
 
 
-def create_video_queue_vs(project: Project,
-                          split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_vs(project: Project, split_locations: List[int]) -> List[Chunk]:
     """
     Create a list of chunks using vspipe and ffms2 for frame accurate seeking
 
@@ -160,8 +162,7 @@ def create_video_queue_vs(project: Project,
     if project.is_vs:
         vs_script = project.input
     else:
-        vs_script = create_vs_file(project.temp, source_file,
-                                   project.chunk_method)
+        vs_script = create_vs_file(project.temp, source_file, project.chunk_method)
 
     chunk_queue = [
         create_vs_chunk(project, index, vs_script, *cb)
@@ -171,8 +172,9 @@ def create_video_queue_vs(project: Project,
     return chunk_queue
 
 
-def create_vs_chunk(project: Project, index: int, vs_script: Path,
-                    frame_start: int, frame_end: int) -> Chunk:
+def create_vs_chunk(
+    project: Project, index: int, vs_script: Path, frame_start: int, frame_end: int
+) -> Chunk:
     """
     Creates a chunk using vspipe
 
@@ -189,10 +191,14 @@ def create_vs_chunk(project: Project, index: int, vs_script: Path,
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
     vspipe_gen_cmd = [
-        'vspipe',
-        vs_script.resolve().as_posix(), '-y', '-', '-s',
-        str(frame_start), '-e',
-        str(frame_end)
+        "vspipe",
+        vs_script.resolve().as_posix(),
+        "-y",
+        "-",
+        "-s",
+        str(frame_start),
+        "-e",
+        str(frame_end),
     ]
     extension = ENCODERS[project.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
@@ -202,8 +208,9 @@ def create_vs_chunk(project: Project, index: int, vs_script: Path,
     return chunk
 
 
-def create_video_queue_select(project: Project,
-                              split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_select(
+    project: Project, split_locations: List[int]
+) -> List[Chunk]:
     """
     Create a list of chunks using the select filter
 
@@ -226,8 +233,9 @@ def create_video_queue_select(project: Project,
     return chunk_queue
 
 
-def create_select_chunk(project: Project, index: int, src_path: Path,
-                        frame_start: int, frame_end: int) -> Chunk:
+def create_select_chunk(
+    project: Project, index: int, src_path: Path, frame_start: int, frame_end: int
+) -> Chunk:
     """
     Creates a chunk using ffmpeg's select filter
 
@@ -244,10 +252,21 @@ def create_select_chunk(project: Project, index: int, src_path: Path,
     frame_end -= 1  # the frame end boundary is actually a frame that should be included in the next chunk
 
     ffmpeg_gen_cmd = [
-        'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
-        src_path.as_posix(), '-vf',
-        f'select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS',
-        *project.pix_format, '-color_range', '0', '-f', 'yuv4mpegpipe', '-'
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        src_path.as_posix(),
+        "-vf",
+        f"select=between(n\\,{frame_start}\\,{frame_end}),setpts=PTS-STARTPTS",
+        *project.pix_format,
+        "-color_range",
+        "0",
+        "-f",
+        "yuv4mpegpipe",
+        "-",
     ]
     extension = ENCODERS[project.encoder].output_extension
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
@@ -257,8 +276,9 @@ def create_select_chunk(project: Project, index: int, src_path: Path,
     return chunk
 
 
-def create_video_queue_segment(project: Project,
-                               split_locations: List[int]) -> List[Chunk]:
+def create_video_queue_segment(
+    project: Project, split_locations: List[int]
+) -> List[Chunk]:
     """
     Create a list of chunks using segmented files
 
@@ -271,12 +291,12 @@ def create_video_queue_segment(project: Project,
     segment(project.input, project.temp, split_locations)
 
     # get the names of all the split files
-    source_path = project.temp / 'split'
-    queue_files = [x for x in source_path.iterdir() if x.suffix == '.mkv']
+    source_path = project.temp / "split"
+    queue_files = [x for x in source_path.iterdir() if x.suffix == ".mkv"]
     queue_files.sort(key=lambda p: p.stem)
 
     if len(queue_files) == 0:
-        er = 'Error: No files found in temp/split, probably splitting not working'
+        er = "Error: No files found in temp/split, probably splitting not working"
         print(er)
         log(er)
         terminate()
@@ -289,8 +309,7 @@ def create_video_queue_segment(project: Project,
     return chunk_queue
 
 
-def create_chunk_from_segment(project: Project, index: int,
-                              file: Path) -> Chunk:
+def create_chunk_from_segment(project: Project, index: int, file: Path) -> Chunk:
     """
     Creates a Chunk object from a segment file generated by ffmpeg
 
@@ -300,15 +319,24 @@ def create_chunk_from_segment(project: Project, index: int,
     :return: A Chunk
     """
     ffmpeg_gen_cmd = [
-        'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i',
-        file.as_posix(), *project.pix_format, '-color_range', '0', '-f',
-        'yuv4mpegpipe', '-'
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        file.as_posix(),
+        *project.pix_format,
+        "-color_range",
+        "0",
+        "-f",
+        "yuv4mpegpipe",
+        "-",
     ]
     file_size = file.stat().st_size
     frames = project.get_frames()
     extension = ENCODERS[project.encoder].output_extension
 
-    chunk = Chunk(project.temp, index, ffmpeg_gen_cmd, extension, file_size,
-                  frames)
+    chunk = Chunk(project.temp, index, ffmpeg_gen_cmd, extension, file_size, frames)
 
     return chunk

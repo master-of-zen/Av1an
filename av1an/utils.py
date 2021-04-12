@@ -50,7 +50,7 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     for i, elem in enumerate(lst):
         if reg.match(elem):
             return i
-    raise ValueError(f'{reg} is not in list')
+    raise ValueError(f"{reg} is not in list")
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):
@@ -65,10 +65,12 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
         try:
             import vapoursynth
             from vapoursynth import core
+
             plugins = vapoursynth.get_core().get_plugins()
-            if 'systems.innocent.lsmas' in plugins:
-                total = core.lsmas.LWLibavSource(source.as_posix(),
-                                                 cache=False).num_frames
+            if "systems.innocent.lsmas" in plugins:
+                total = core.lsmas.LWLibavSource(
+                    source.as_posix(), cache=False
+                ).num_frames
                 return total
         except:
             video = cv2.VideoCapture(source.as_posix())

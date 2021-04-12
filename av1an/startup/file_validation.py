@@ -5,7 +5,7 @@ import numpy as np
 def process_inputs(inputs):
     # Check input file for being valid
     if not inputs:
-        print('No input file')
+        print("No input file")
         exit()
 
     input_list = []
@@ -13,9 +13,9 @@ def process_inputs(inputs):
     for item in inputs:
         if item.is_dir():
             new_inputs = [
-                x for x in item.iterdir()
-                if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv",
-                                ".m2ts")
+                x
+                for x in item.iterdir()
+                if x.suffix in (".mkv", ".mp4", ".mov", ".avi", ".flv", ".m2ts")
             ]
             input_list.extend(new_inputs)
         else:

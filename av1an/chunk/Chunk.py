@@ -9,8 +9,16 @@ class Chunk:
     Chunk class. Stores information relating to a chunk. The command that gets the chunk and the encoding commands
     to be run on this chunk.
     """
-    def __init__(self, temp: Path, index: int, ffmpeg_gen_cmd: Command,
-                 output_ext: str, size: int, frames: int):
+
+    def __init__(
+        self,
+        temp: Path,
+        index: int,
+        ffmpeg_gen_cmd: Command,
+        output_ext: str,
+        size: int,
+        frames: int,
+    ):
         """
         Chunk class constructor
 
@@ -39,12 +47,12 @@ class Chunk:
         :return: A dictionary
         """
         return {
-            'index': self.index,
-            'ffmpeg_gen_cmd': self.ffmpeg_gen_cmd,
-            'size': self.size,
-            'frames': self.frames,
-            'output_ext': self.output_ext,
-            'per_shot_target_quality_cq': self.per_shot_target_quality_cq,
+            "index": self.index,
+            "ffmpeg_gen_cmd": self.ffmpeg_gen_cmd,
+            "size": self.size,
+            "frames": self.frames,
+            "output_ext": self.output_ext,
+            "per_shot_target_quality_cq": self.per_shot_target_quality_cq,
         }
 
     @property
@@ -55,7 +63,7 @@ class Chunk:
 
         :return: a path
         """
-        return (self.temp / 'split') / f'{self.name}.mkv'
+        return (self.temp / "split") / f"{self.name}.mkv"
 
     @property
     def output_path(self) -> Path:
@@ -65,7 +73,7 @@ class Chunk:
 
         :return: the Path of this encoded chunk
         """
-        return (self.temp / 'encode') / f'{self.name}.{self.output_ext}'
+        return (self.temp / "encode") / f"{self.name}.{self.output_ext}"
 
     @property
     def output(self) -> str:
@@ -86,7 +94,7 @@ class Chunk:
 
         :return: the string of this chunk's first pass file (no extension)
         """
-        fpf_file = (self.temp / 'split') / f'{self.name}_fpf'
+        fpf_file = (self.temp / "split") / f"{self.name}_fpf"
         return fpf_file.as_posix()
 
     @property
@@ -109,19 +117,26 @@ class Chunk:
         :param temp: the temp directory
         :return: A Chunk from the dictionary
         """
-        chunk = Chunk(temp, d['index'], d['ffmpeg_gen_cmd'], d['output_ext'],
-                      d['size'], d['frames'])
-        chunk.per_shot_target_quality_cq = d['per_shot_target_quality_cq']
+        chunk = Chunk(
+            temp,
+            d["index"],
+            d["ffmpeg_gen_cmd"],
+            d["output_ext"],
+            d["size"],
+            d["frames"],
+        )
+        chunk.per_shot_target_quality_cq = d["per_shot_target_quality_cq"]
         return chunk
 
     def make_q_file(self, q_list):
-        qfile = self.fake_input_path.with_name(
-            f'q_file_{self.name}').with_suffix('.txt')
-        with open(qfile, 'w') as fl:
-            text = ''
+        qfile = self.fake_input_path.with_name(f"q_file_{self.name}").with_suffix(
+            ".txt"
+        )
+        with open(qfile, "w") as fl:
+            text = ""
 
             for x in q_list:
-                text += str(x) + '\n'
+                text += str(x) + "\n"
 
             fl.write(text)
         return qfile

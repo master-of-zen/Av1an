@@ -128,7 +128,8 @@ class Encoder(ABC):
                                 stderr=STDOUT,
                                 universal_newlines=True)
 
-        return pipe
+        utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
+        return pipe, utility
 
     def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         """

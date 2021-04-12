@@ -139,7 +139,8 @@ class VMAF:
                                 stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)
-        process_pipe(pipe, chunk)
+        utility = (ffmpeg_gen_pipe,)
+        process_pipe(pipe, chunk, utility)
 
         return fl_path
 

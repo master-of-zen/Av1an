@@ -290,8 +290,8 @@ class TargetQuality:
         n_threads = self.n_threads if self.n_threads else 12
         cmd = self.probe_cmd(chunk, q, self.ffmpeg_pipe, self.encoder,
                              self.probing_rate, n_threads)
-        pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-        process_pipe(pipe, chunk)
+        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
+        process_pipe(pipe, chunk, utility)
         fl = self.vmaf_runner.call_vmaf(chunk,
                                         self.gen_probes_names(chunk, q),
                                         vmaf_rate=self.probing_rate)
@@ -468,7 +468,7 @@ class TargetQuality:
             'select=\'gte(scene,0)\',metadata=print', '-f', 'null', '-'
         ]
         cmd = CommandPair(pipecmd, [*params])
-        pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
+        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
 
         history = []
 
@@ -480,6 +480,10 @@ class TargetQuality:
                 continue
             if line:
                 history.append(line)
+
+        for u_pipe in utility:
+            if u_pipe.poll() is None:
+                u_pipe.kill()
 
         if pipe.returncode != 0 and pipe.returncode != -2:
             print(f"\n:: Error in getting scene score {pipe.returncode}")
@@ -522,7 +526,8 @@ class TargetQuality:
                                 stderr=subprocess.STDOUT,
                                 universal_newlines=True)
 
-        return pipe
+        utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
+        return pipe, utility
 
     def plot_probes(self, vmaf_cq, chunk: Chunk, frames):
         """
@@ -609,8 +614,8 @@ class TargetQuality:
     def per_frame_probe(self, q_list, q, chunk):
         qfile = chunk.make_q_file(q_list)
         cmd = self.per_frame_probe_cmd(chunk, q, self.encoder, 1, qfile)
-        pipe = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-        process_pipe(pipe, chunk)
+        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
+        process_pipe(pipe, chunk, utility)
         fl = self.vmaf_runner.call_vmaf(chunk, self.gen_probes_names(chunk, q))
         jsn = VMAF.read_json(fl)
         vmafs = [x['metrics']['vmaf'] for x in jsn['frames']]

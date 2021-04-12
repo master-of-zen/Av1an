@@ -93,7 +93,7 @@ class Vvc(Encoder):
                                 stdout=PIPE,
                                 stderr=STDOUT,
                                 universal_newlines=True)
-        return pipe
+        return pipe, tuple()
 
     def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         # vvc requires a special concat executable

@@ -167,7 +167,6 @@ class Encoder(ABC):
         :return: True if the encoder bin exists
         """
         return find_executable(self.encoder_bin) is not None
-        pass
 
     def __eq__(self, o: object) -> bool:
         """

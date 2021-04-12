@@ -25,19 +25,12 @@ def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
     for u_pipe in utility:
         if u_pipe.poll() is None:
             u_pipe.kill()
-            log(f'[process_pipe] Killed unclosed utility pipe.')
 
     if pipe.returncode != 0 and pipe.returncode != -2:
         msg1 = f'Encoder encountered an error: {pipe.returncode}'
         msg2 = f'Chunk: {chunk.index}' + \
              '\n'.join(encoder_history)
         log(msg1, msg2)
-        try:
-            for u_pipe in utility:
-                # print(u_pipe.stderr.readlines())
-                log(u_pipe.stdout.readlines())
-        except:
-            log('Failed to get stderr for a pipe')
         tb = sys.exc_info()[2]
         raise RuntimeError("Error in processing encoding pipe").with_traceback(
             tb)
@@ -70,7 +63,6 @@ def process_encoding_pipe(pipe, encoder, counter, chunk: Chunk, utility: Iterabl
     for u_pipe in utility:
         if u_pipe.poll() is None:
             u_pipe.kill()
-            log(f'[process_encoding_pipe] Killed unclosed utility pipe.')
 
     if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
         msg1 = f'Encoder encountered an error: {pipe.returncode}'

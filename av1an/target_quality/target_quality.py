@@ -345,7 +345,7 @@ class TargetQuality:
                 '--enable-rect-tx=0', '--enable-interintra-wedge=0',
                 '--enable-onesided-comp=0', '--enable-interintra-comp=0',
                 '--enable-global-motion=0', '--min-partition-size=32',
-                '--max-partition-size=32', '--vmaf-model-path=vmaf_v0.6.1.json'
+                '--max-partition-size=32'
             ]
             cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
 
@@ -484,7 +484,6 @@ class TargetQuality:
         for u_pipe in utility:
             if u_pipe.poll() is None:
                 u_pipe.kill()
-                log(f'[get_scene scores] Killed unclosed utility pipe.')
 
         if pipe.returncode != 0 and pipe.returncode != -2:
             print(f"\n:: Error in getting scene score {pipe.returncode}")

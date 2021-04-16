@@ -142,9 +142,9 @@ class Project(object):
                     os.makedirs(Path(self.output_file), exist_ok=True)
                 self.output_file = Path(f"{self.output_file}{self.input.stem}_{self.encoder}{suffix}")
             else:
-                self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
+                self.output_file = Path(self.output_file).with_suffix(suffix)
         else:
-            self.output_file = Path(self.output_file).with_suffix(suffix)
+            self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
 
     def load_project_from_file(self, path_string):
         """

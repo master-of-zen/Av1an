@@ -138,6 +138,8 @@ class Project(object):
         # Check for non-empty string
         if isinstance(self.output_file, str) and self.output_file:
             if self.output_file[-1] in ('\\', '/'):
+                if not Path(self.output_file).exists():
+                    os.makedirs(Path(self.output_file), exist_ok=True)
                 self.output_file = Path(f"{self.output_file}{self.input.stem}_{self.encoder}{suffix}")
             else:
                 self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")

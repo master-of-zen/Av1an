@@ -81,10 +81,10 @@ class Args:
             help="Input File or Vapoursynth (.py,.vpy) script",
         )
         io_group.add_argument(
-            "--temp", type=Path, default=None, help="Set temp folder path"
+            "--temp", type=str, default=None, help="Set temp folder path"
         )
         io_group.add_argument(
-            "--output_file", "-o", type=Path, default=None, help="Specify output file"
+            "--output_file", "-o", type=str, default=None, help="Specify output file"
         )
         io_group.add_argument(
             "--mkvmerge",

@@ -48,7 +48,7 @@ def create_vs_file(temp: Path, source, chunk_method):
             'core.lsmas.LWLibavSource(r"{}", cachefile="{}").set_output()'
         )
 
-    with open(load_script, "w+") as file:
+    with open(load_script, "w+", encoding='utf-8') as file:
         file.write(script.format(Path(source).resolve(), cache_file))
 
     cache_generation = f"vspipe -i {load_script.as_posix()} -i -"

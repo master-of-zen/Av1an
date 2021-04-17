@@ -135,11 +135,16 @@ class Project(object):
         else:
             suffix = ".mkv"
 
-        self.output_file = (
-            Path(self.output_file).with_suffix(suffix)
-            if self.output_file
-            else Path(f"{self.input.stem}_{self.encoder}{suffix}")
-        )
+        # Check for non-empty string
+        if isinstance(self.output_file, str) and self.output_file:
+            if self.output_file[-1] in ('\\', '/'):
+                if not Path(self.output_file).exists():
+                    os.makedirs(Path(self.output_file), exist_ok=True)
+                self.output_file = Path(f"{self.output_file}{self.input.stem}_{self.encoder}{suffix}")
+            else:
+                self.output_file = Path(self.output_file).with_suffix(suffix)
+        else:
+            self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
 
     def load_project_from_file(self, path_string):
         """
@@ -197,7 +202,10 @@ class Project(object):
         """Creating temporally folders when needed."""
 
         if self.temp:
-            self.temp = Path(str(self.temp))
+            if self.temp[-1] in ('\\', '/'):
+                self.temp = Path(f"{self.temp}{'.' + str(hash_path(str(self.input)))}")
+            else:
+                self.temp = Path(str(self.temp))
         else:
             self.temp = Path("." + str(hash_path(str(self.input))))
 

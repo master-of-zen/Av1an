@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 from math import isnan
 import numpy as np
@@ -37,6 +38,7 @@ class TargetQuality:
         self.encoder = project.encoder
         self.ffmpeg_pipe = project.ffmpeg_pipe
         self.temp = project.temp
+        self.workers = project.workers
 
     def per_frame_target_quality_routine(self, chunk: Chunk):
         """
@@ -305,7 +307,7 @@ class TargetQuality:
         :return : path to json file with vmaf scores
         """
 
-        n_threads = self.n_threads if self.n_threads else 12
+        n_threads = self.n_threads if self.n_threads else self.auto_vmaf_threads()
         cmd = self.probe_cmd(
             chunk, q, self.ffmpeg_pipe, self.encoder, self.probing_rate, n_threads
         )
@@ -315,6 +317,19 @@ class TargetQuality:
             chunk, self.gen_probes_names(chunk, q), vmaf_rate=self.probing_rate
         )
         return fl
+
+    def auto_vmaf_threads(self):
+        """
+        Calculates number of vmaf threads based on CPU cores in system
+
+        :return: Integer value for number of threads
+        """
+        cores = os.cpu_count()
+        # One thread may not be enough to keep the CPU saturated, so over-provision a bit.
+        over_provision_factor = 1.25
+        minimum_threads = 1
+
+        return int(max((cores / self.workers) * over_provision_factor, minimum_threads))
 
     def get_closest(self, q_list, q, positive=True):
         """

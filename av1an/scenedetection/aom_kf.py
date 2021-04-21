@@ -66,6 +66,9 @@ fields = [
     "duration",
     "count",
     "raw_error_stdev",
+    "is_flash",
+    "noise_var",
+    "cor_coeff",
 ]
 
 
@@ -198,23 +201,30 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     return is_keyframe
 
 
+def parse_fpfile(stat_file, fields, buffer_size):
+    number_of_frames = round(os.stat(stat_file).st_size / buffer_size) - 1
+    dict_list = []
+
+    with open(stat_file, "rb") as file:
+        frame_buf = file.read(buffer_size)
+        while len(frame_buf) > 0:
+            stats = struct.unpack("d" * len(fields), frame_buf)
+            p = dict(zip(fields, stats))
+            dict_list.append(p)
+            frame_buf = file.read(buffer_size)
+    return number_of_frames, dict_list
+
+
 def find_aom_keyframes(stat_file, key_freq_min):
+    global fields
     keyframes_list = []
 
-    number_of_frames = round(os.stat(stat_file).st_size / 208) - 1
-    dict_list = []
     try:
-        with open(stat_file, "rb") as file:
-            frame_buf = file.read(208)
-            while len(frame_buf) > 0:
-                stats = struct.unpack("d" * 26, frame_buf)
-                p = dict(zip(fields, stats))
-                dict_list.append(p)
-                frame_buf = file.read(208)
-    except Exception as e:
-        print("Get exception:", e)
-        print("Recomended to switch to different method of scenedetection")
-        terminate()
+        buffer_size = 232
+        number_of_frames, dict_list = parse_fpfile(stat_file, fields, buffer_size)
+    except struct.error:
+        buffer_size = 208
+        number_of_frames, dict_list = parse_fpfile(stat_file, fields[:26], buffer_size)
 
     # intentionally skipping 0th frame and last 16 frames
     frame_count_so_far = 1

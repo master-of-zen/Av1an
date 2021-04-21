@@ -6,6 +6,7 @@ import subprocess
 from collections import deque
 from pathlib import Path
 from subprocess import PIPE, STDOUT
+from typing import Union, Tuple, Dict, List
 
 import cv2
 
@@ -201,7 +202,7 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     return is_keyframe
 
 
-def parse_fpfile(stat_file, fields, buffer_size):
+def parse_fpfile(stat_file: Union[str, Path], fields: list, buffer_size: int) -> Tuple[int, List[Dict[str, list]]]:
     number_of_frames = round(os.stat(stat_file).st_size / buffer_size) - 1
     dict_list = []
 
@@ -215,7 +216,7 @@ def parse_fpfile(stat_file, fields, buffer_size):
     return number_of_frames, dict_list
 
 
-def find_aom_keyframes(stat_file, key_freq_min):
+def find_aom_keyframes(stat_file: Path, key_freq_min: int):
     global fields
     keyframes_list = []
 

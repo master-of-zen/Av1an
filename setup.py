@@ -15,7 +15,7 @@ REQUIRES = [
 with open("README.md", "r") as f:
     long_description = f.read()
 
-version = "6.1-2"
+version = "6.1-3"
 
 setuptools.setup(
     name="Av1an",

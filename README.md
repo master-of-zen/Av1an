@@ -109,8 +109,10 @@ With your own parameters:
 
     -cm  --chunk_method     Determine the method in which chunks are made for encoding.
                             By default the best method is selected automatically in this order:
-                            vs_ffms2 > vs_lsmash > hybrid
-                            ['hybrid'(default), 'select', 'vs_ffms2'(Recommended), 'vs_lsmash']
+                            vs_ffms2 > vs_lsmash > hybrid.
+                            vs_ffms2 or vs_lsmash are recommended.
+                            ['hybrid'(default), 'select', 'vs_ffms2', 'vs_lsmash']
+
 
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 

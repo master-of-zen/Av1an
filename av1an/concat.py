@@ -50,7 +50,7 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
 
     # Add the audio/subtitles/else file if one was extracted from the input
     audio_file = temp / "audio.mkv"
-    if audio_file.exists():
+    if audio_file.exists() and audio_file.size() > 1024:
         audio = ("-i", audio_file.as_posix(), "-c", "copy", "-map", "1")
     else:
         audio = ()

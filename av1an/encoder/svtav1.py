@@ -32,7 +32,6 @@ class SvtAv1(Encoder):
                     *a.video_params,
                     "-b",
                     output,
-                    "-",
                 ],
             )
         ]
@@ -56,7 +55,6 @@ class SvtAv1(Encoder):
                     f"{c.fpf}.stat",
                     "-b",
                     os.devnull,
-                    "-",
                 ],
             ),
             CommandPair(
@@ -76,7 +74,6 @@ class SvtAv1(Encoder):
                     f"{c.fpf}.stat",
                     "-b",
                     output,
-                    "-",
                 ],
             ),
         ]

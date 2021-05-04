@@ -10,6 +10,7 @@ from av1an.utils import frame_probe_fast, hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
+from av1an_rust import get_ffmpeg_info
 
 
 class Project(object):
@@ -137,10 +138,12 @@ class Project(object):
 
         # Check for non-empty string
         if isinstance(self.output_file, str) and self.output_file:
-            if self.output_file[-1] in ('\\', '/'):
+            if self.output_file[-1] in ("\\", "/"):
                 if not Path(self.output_file).exists():
                     os.makedirs(Path(self.output_file), exist_ok=True)
-                self.output_file = Path(f"{self.output_file}{self.input.stem}_{self.encoder}{suffix}")
+                self.output_file = Path(
+                    f"{self.output_file}{self.input.stem}_{self.encoder}{suffix}"
+                )
             else:
                 self.output_file = Path(self.output_file).with_suffix(suffix)
         else:
@@ -202,7 +205,7 @@ class Project(object):
         """Creating temporally folders when needed."""
 
         if self.temp:
-            if self.temp[-1] in ('\\', '/'):
+            if self.temp[-1] in ("\\", "/"):
                 self.temp = Path(f"{self.temp}{'.' + str(hash_path(str(self.input)))}")
             else:
                 self.temp = Path(str(self.temp))
@@ -275,6 +278,9 @@ class Project(object):
         if not find_executable("ffmpeg"):
             print("No ffmpeg")
             terminate()
+        else:
+            log("Rust code")
+            log(get_ffmpeg_info())
 
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
             if not find_executable("vspipe"):

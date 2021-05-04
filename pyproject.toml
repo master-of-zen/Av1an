@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "maturin"
+requires = ["setuptools", "wheel", "setuptools-rust"]
+
+[tool.maturin]
+bindings = "pyo3"
+manylinux = "off"
+
+[package.metadata.maturin]
+requires-dist = [
+    "numpy",
+    "scenedetect[opencv]",
+    "opencv-python",
+    "tqdm",
+    "psutil",
+    "scipy",
+    "matplotlib",
+]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]

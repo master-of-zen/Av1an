@@ -31,7 +31,10 @@ def frame_probe_ffmpeg(source: Path):
     matches = re.findall(
         r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8")
     )
-    return int(matches[-1])
+    total = int(matches[-1])
+    log("Get frame count with ffmpeg")
+    log(f"Frame count: {total}")
+    return total
 
 
 def get_frametypes(file: Path) -> List:

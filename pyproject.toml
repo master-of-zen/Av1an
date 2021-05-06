@@ -1,10 +1,13 @@
 [build-system]
 build-backend = "maturin"
-requires = ["setuptools", "wheel", "setuptools-rust"]
+requires = ["setuptools"]
 
 [tool.maturin]
 bindings = "pyo3"
-manylinux = "off"
+manylinux = "on"
+
+[tool.maturin.dependencies]
+python = "^3.6"
 
 [package.metadata.maturin]
 requires-dist = [

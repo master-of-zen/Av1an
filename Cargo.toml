@@ -3,6 +3,23 @@ name = "Av1an"
 version = "0.1.0"
 authors = ["Zen <46526140+master-of-zen@users.noreply.github.com>"]
 edition = "2018"
+readme = "README.md"
+homepage = "https://github.com/master-of-zen/Av1an"
+
+[package.metadata.maturin]
+maintainer = "Zen"
+maintainer-email = "46526140+master-of-zen@users.noreply.github.com"
+classifier = ["Programming Language :: Python", "Programming Language :: Rust"]
+requires-dist = [
+    "numpy",
+    "scenedetect[opencv]",
+    "opencv-python",
+    "tqdm",
+    "psutil",
+    "scipy",
+    "matplotlib",
+]
+
 
 [lib]
 name = "av1an_rust"

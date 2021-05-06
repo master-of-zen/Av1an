@@ -3,8 +3,9 @@ build-backend = "maturin"
 requires = ["setuptools"]
 
 [tool.maturin]
+cargo-extra-args = ["--release"]
 bindings = "pyo3"
-manylinux = "on"
+manylinux = "off"
 
 [tool.maturin.dependencies]
 python = "^3.6"

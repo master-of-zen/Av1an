@@ -191,7 +191,7 @@ class Args:
                 "vpx",
                 "x265",
                 "x264",
-                "vvc",
+                # "vvc",
             ],
         )
         encode_group.add_argument(
@@ -204,11 +204,6 @@ class Args:
             "--force",
             help="Force encoding if input args seen as invalid",
             action="store_true",
-        )
-
-        # VVC
-        encode_group.add_argument(
-            "--vvc_conf", type=Path, default=None, help="Path to VVC confing file"
         )
 
         # FFmpeg params

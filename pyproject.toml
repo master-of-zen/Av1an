@@ -1,14 +1,14 @@
 [build-system]
 build-backend = "maturin"
-requires = ["setuptools"]
+requires = ["setuptools", "maturin"]
 
 [tool.maturin]
-cargo-extra-args = ["--release"]
+# cargo-extra-args = ["--release"]
 bindings = "pyo3"
 manylinux = "off"
 
-[tool.maturin.dependencies]
-python = "^3.6"
+#[tool.maturin.dependencies]
+#python = "^3.6"
 
 [package.metadata.maturin]
 requires-dist = [

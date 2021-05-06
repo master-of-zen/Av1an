@@ -10,7 +10,7 @@ from av1an.utils import frame_probe_fast, hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-from av1an_rust import get_ffmpeg_info
+from av1an.av1an import get_ffmpeg_info
 
 
 class Project(object):

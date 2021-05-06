@@ -12,9 +12,11 @@ REQUIRES = [
     "psutil",
     "scipy",
     "matplotlib",
+    "maturin",
+    "setuptools_rust",
 ]
 
-setup_requires = ["setuptools-rust>=0.9.2"]
+setup_requires = ["setuptools-rust", "maturin"]
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -34,9 +36,7 @@ setuptools.setup(
     setup_requires=setup_requires,
     install_requires=REQUIRES,
     py_modules=["av1an"],
-    rust_extensions=[
-        RustExtension("av1an_rust.av1an_rust", "Cargo.toml", binding=Binding.PyO3)
-    ],
+    rust_extensions=[RustExtension("av1an.av1an", "Cargo.toml", binding=Binding.PyO3)],
     include_package_data=True,
     entry_points={"console_scripts": ["av1an=av1an:main"]},
     classifiers=[

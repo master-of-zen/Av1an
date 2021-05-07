@@ -23,21 +23,20 @@ def set_target_quality(project):
     """
     if project.vmaf_path:
         if not Path(project.vmaf_path).exists():
-            print(
-                f"No model with this path: {Path(project.vmaf_path).as_posix()}"
-            )
+            print(f"No model with this path: {Path(project.vmaf_path).as_posix()}")
             terminate()
 
     if project.probes < 4:
         print(
-            'Target quality with less than 4 probes is experimental and not recommended'
+            "Target quality with less than 4 probes is experimental and not recommended"
         )
 
     encoder = ENCODERS[project.encoder]
 
-    if project.encoder not in (
-            'x265',
-            'svt_av1') and project.target_quality_method == 'per_frame':
+    if (
+        project.encoder not in ("x265", "svt_av1")
+        and project.target_quality_method == "per_frame"
+    ):
         print(
             f":: Per frame Target Quality is not supported for selected encoder\n:: Supported encoders: x265, svt_av1"
         )
@@ -68,8 +67,11 @@ def setup_encoder(project: Project):
     if project.passes is None:
         project.passes = encoder.default_passes
 
-    project.video_params = encoder.default_args if project.video_params is None \
+    project.video_params = (
+        encoder.default_args
+        if project.video_params is None
         else shlex.split(project.video_params)
+    )
 
     validate_inputs(project)
 
@@ -80,9 +82,9 @@ def startup_check(project: Project):
     Set constant values
     """
     if sys.version_info < (3, 6):
-        print('Python 3.6+ required')
+        print("Python 3.6+ required")
         sys.exit()
-    if sys.platform == 'linux':
+    if sys.platform == "linux":
 
         def restore_term():
             os.system("stty sane")
@@ -95,24 +97,30 @@ def startup_check(project: Project):
     project.is_vs = is_vapoursynth(project.input[0])
 
     if project.is_vs:
-        project.chunk_method = 'vs_ffms2'
+        project.chunk_method = "vs_ffms2"
 
     project.check_exes()
 
     set_target_quality(project)
 
-    if project.reuse_first_pass and project.encoder != 'aom' and project.split_method != 'aom_keyframes':
-        print('Reusing the first pass is only supported with \
-              the aom encoder and aom_keyframes split method.')
+    if (
+        project.reuse_first_pass
+        and project.encoder != "aom"
+        and project.split_method != "aom_keyframes"
+    ):
+        print(
+            "Reusing the first pass is only supported with \
+              the aom encoder and aom_keyframes split method."
+        )
         terminate()
 
     setup_encoder(project)
 
     # No check because vvc
-    if project.encoder == 'vvc':
+    if project.encoder == "vvc":
         project.no_check = True
 
-    if project.encoder == 'svt_vp9' and project.passes == 2:
+    if project.encoder == "svt_vp9" and project.passes == 2:
         print(
             "Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported"
         )
@@ -121,8 +129,11 @@ def startup_check(project: Project):
     project.audio_params = shlex.split(project.audio_params)
     project.ffmpeg = shlex.split(project.ffmpeg)
 
-    project.pix_format = ['-strict', '-1', '-pix_fmt', project.pix_format]
+    project.pix_format = ["-strict", "-1", "-pix_fmt", project.pix_format]
     project.ffmpeg_pipe = [
-        *project.ffmpeg, *project.pix_format, '-color_range', '0', '-f',
-        'yuv4mpegpipe', '-'
+        *project.ffmpeg,
+        *project.pix_format,
+        "-f",
+        "yuv4mpegpipe",
+        "-",
     ]

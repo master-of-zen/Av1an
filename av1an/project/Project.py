@@ -263,7 +263,7 @@ class Project(object):
                     self.chunk_method = "vs_ffms2"
                 else:
                     log(f"Vapoursynth installed but no supported chunking methods.")
-                    log("Fallbacking back to Hybrid")
+                    log("Fallback to Hybrid")
                     self.chunk_method = "hybrid"
 
             except Exception as e:

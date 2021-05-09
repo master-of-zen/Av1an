@@ -261,6 +261,10 @@ class Project(object):
                 elif "com.vapoursynth.ffms2" in plugins:
                     log("Set Chunking Method: FFMS2")
                     self.chunk_method = "vs_ffms2"
+                else:
+                    log(f"Vapoursynth installed but no supported chunking methods.")
+                    log("Fallback to Hybrid")
+                    self.chunk_method = "hybrid"
 
             except Exception as e:
                 log(f"Vapoursynth not installed but vspipe reachable")

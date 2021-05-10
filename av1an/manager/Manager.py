@@ -38,6 +38,7 @@ class Main:
             project = Project(vars(self.args))
             project.input = file
             project.outputs_filenames()
+            project.promt_output_overwrite()
             queue.append(project)
         return queue
 

@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 import setuptools
+from setuptools_rust import Binding, RustExtension
 
 # TODO: rewrite it in rust
 
@@ -10,7 +12,11 @@ REQUIRES = [
     "psutil",
     "scipy",
     "matplotlib",
+    "maturin",
+    "setuptools_rust",
 ]
+
+setup_requires = ["setuptools-rust", "maturin"]
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -27,8 +33,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/master-of-zen/Av1an",
     packages=setuptools.find_packages(".", exclude="tests"),
+    setup_requires=setup_requires,
     install_requires=REQUIRES,
     py_modules=["av1an"],
+    rust_extensions=[RustExtension("av1an.av1an", "Cargo.toml", binding=Binding.PyO3)],
+    include_package_data=True,
     entry_points={"console_scripts": ["av1an=av1an:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -36,4 +45,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
+    zip_safe=False,
 )

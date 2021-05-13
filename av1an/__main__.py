@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from .arg_parse import Args
 from .manager import Manager
 from .startup.setup import startup_check

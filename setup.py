@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 import setuptools
-from setuptools_rust import Binding, RustExtension
+import sys
 
-# TODO: rewrite it in rust
+try:
+    from setuptools_rust import Binding, RustExtension
+except ImportError:
+    import subprocess
+
+    errno = subprocess.call([sys.executable, "-m", "pip", "install", "setuptools-rust"])
+    if errno:
+        print("Please install setuptools-rust package")
+        raise SystemExit(errno)
+    else:
+        from setuptools_rust import Binding, RustExtension
+
 
 REQUIRES = [
     "numpy",

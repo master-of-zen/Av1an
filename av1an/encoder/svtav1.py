@@ -13,7 +13,7 @@ class SvtAv1(Encoder):
         super(SvtAv1, self).__init__(
             encoder_bin="SvtAv1EncApp",
             encoder_help="SvtAv1EncApp --help",
-            default_args=["--preset", "4", "--rc", "0", "-q", "25"],
+            default_args=["--preset", "4","--keyint", "240", "--rc", "0", "--crf", "25"],
             default_passes=1,
             default_q_range=(15, 50),
             output_extension="ivf",
@@ -86,7 +86,7 @@ class SvtAv1(Encoder):
         :return: command with new cq value"""
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
 
         qp_file = chunk.make_q_file(chunk.per_frame_target_quality_q_list)
 
@@ -104,7 +104,7 @@ class SvtAv1(Encoder):
 
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
         adjusted_command[i + 1] = f"{q}"
 
         return adjusted_command

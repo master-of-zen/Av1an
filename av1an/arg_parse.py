@@ -287,7 +287,7 @@ class Args:
         # Misc
         misc_group = parser.add_argument_group("Misc")
         misc_group.add_argument(
-            "--version", action="version", version=f"Av1an version: 6.1.4"
+            "--version", action="version", version=f"Av1an version: 6.1.5"
         )
         # Initialize project with initial values
         return parser

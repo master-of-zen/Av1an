@@ -275,12 +275,8 @@ class Project(object):
         Checking required executables
         """
 
-        if not find_executable("ffmpeg"):
-            print("No ffmpeg")
-            terminate()
-        else:
-            log("Rust code")
-            log(get_ffmpeg_info())
+        log("Rust code")
+        log(get_ffmpeg_info())
 
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
             if not find_executable("vspipe"):

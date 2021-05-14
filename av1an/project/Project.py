@@ -152,7 +152,8 @@ class Project(object):
 
         if self.output_file.exists():
             print(
-                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:"
+                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:", 
+                end='',
             )
 
             promt = input()

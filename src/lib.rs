@@ -21,10 +21,7 @@ fn get_ffmpeg_info() -> PyResult<String> {
 #[pyfunction]
 fn adapt_probing_rate(_frames: usize, rate: usize) -> PyResult<usize> {
   let new_rate = match rate {
-    1 => 1,
-    2 => 2,
-    3 => 3,
-    4 => 4,
+    1..=4 => rate,
     _ => 4,
   } as usize;
   Ok(new_rate)

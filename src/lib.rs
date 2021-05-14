@@ -16,7 +16,7 @@ fn get_ffmpeg_info() -> PyResult<String> {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn av1an_rust(_py: Python, m: &PyModule) -> PyResult<()> {
+fn av1an(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
 
   Ok(())

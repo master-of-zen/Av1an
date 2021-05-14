@@ -13,10 +13,6 @@ from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
 from av1an.logger import log
 
 
-def terminate():
-    sys.exit(1)
-
-
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     """
     Gets the first index of the list where regex_str matches

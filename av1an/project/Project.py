@@ -6,7 +6,7 @@ from psutil import virtual_memory
 from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
-from av1an.utils import frame_probe_fast, terminate
+from av1an.utils import frame_probe_fast
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
@@ -153,8 +153,8 @@ class Project(object):
 
         if self.output_file.exists():
             print(
-                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:", 
-                end='',
+                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:",
+                end="",
             )
 
             promt = input()
@@ -261,7 +261,7 @@ class Project(object):
                 f"Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}"
             )
             log(f"Concatenation failed, aborting, error: {e}")
-            terminate()
+            sys.exit(1)
 
     def select_best_chunking_method(self):
         """
@@ -300,7 +300,7 @@ class Project(object):
 
         if not find_executable("ffmpeg"):
             print("No ffmpeg")
-            terminate()
+            sys.exit(1)
         else:
             log("Rust code")
             log(get_ffmpeg_info())
@@ -308,7 +308,7 @@ class Project(object):
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
             if not find_executable("vspipe"):
                 print("vspipe executable not found")
-                terminate()
+                sys.exit(1)
 
             try:
                 import vapoursynth
@@ -320,14 +320,14 @@ class Project(object):
                     and "systems.innocent.lsmas" not in plugins
                 ):
                     print("lsmas is not installed")
-                    terminate()
+                    sys.exit(1)
 
                 if (
                     self.chunk_method == "vs_ffms2"
                     and "com.vapoursynth.ffms2" not in plugins
                 ):
                     print("ffms2 is not installed")
-                    terminate()
+                    sys.exit(1)
             except ModuleNotFoundError:
                 print("Vapoursynth is not installed")
-                terminate()
+                sys.exit(1)

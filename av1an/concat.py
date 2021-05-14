@@ -100,6 +100,7 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
             *audio,
             "-c",
             "copy",
+            "-sn",
             "-map",
             "0",
             output.as_posix(),

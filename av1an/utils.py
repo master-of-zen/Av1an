@@ -17,17 +17,6 @@ def terminate():
     sys.exit(1)
 
 
-def get_cq(command):
-    """
-    Return cq values from command
-    :param command: string with commands for encoder
-    :return: list with frame numbers of keyframes
-
-    """
-    matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
-    return int(matches[-1])
-
-
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     """
     Gets the first index of the list where regex_str matches

@@ -17,18 +17,6 @@ def terminate():
     sys.exit(1)
 
 
-def hash_path(s: str) -> int:
-    """
-    Return hash of full path to file
-    :param s: string
-    """
-    assert isinstance(s, str)
-    file_hash = str(hashlib.sha3_512(s.encode()).hexdigest())[-8:]
-    log(f"File hash: {file_hash}")
-
-    return file_hash
-
-
 def get_cq(command):
     """
     Return cq values from command

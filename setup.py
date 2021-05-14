@@ -49,7 +49,7 @@ setuptools.setup(
     py_modules=["av1an"],
     rust_extensions=[RustExtension("av1an.av1an", "Cargo.toml", binding=Binding.PyO3)],
     include_package_data=True,
-    entry_points={"console_scripts": ["av1an=av1an:main"]},
+    entry_points={"console_scripts": ["av1an=cli:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

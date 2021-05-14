@@ -194,6 +194,7 @@ class Project(object):
         return json.dumps(dt, indent=4, sort_keys=True)
 
     def determine_workers(self):
+        """Returns number of workers that machine can handle with selected encoder."""
         if self.workers:
             return self.workers
 

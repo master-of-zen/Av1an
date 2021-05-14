@@ -82,7 +82,7 @@ class TargetQuality:
         vmaf_cq = []
         frames = chunk.frames
 
-        if self.probing_rate not in (1, 2):
+        if self.probing_rate not in (1, 2, 3):
             self.probing_rate = self.adapt_probing_rate(self.probing_rate, frames)
 
         if self.probes < 3:
@@ -399,11 +399,15 @@ class TargetQuality:
                 "--enable-order-hint=0",
                 "--enable-flip-idtx=0",
                 "--enable-dist-wtd-comp=0",
-                "--enable-rect-tx=0",
                 "--enable-interintra-wedge=0",
                 "--enable-onesided-comp=0",
                 "--enable-interintra-comp=0",
                 "--enable-global-motion=0",
+                "--enable-cdef=0",
+                "--max-reference-frames=3",
+                "--cdf-update-mode=2",
+                "--deltaq-mode=0",
+                "--sb-size=64",
                 "--min-partition-size=32",
                 "--max-partition-size=32",
             ]
@@ -470,14 +474,14 @@ class TargetQuality:
                 f"{n_threads}",
                 "--preset",
                 "8",
-                "-q",
+                "--keyint",
+                "240",
+                "--crf",
                 f"{q}",
                 "--tile-rows",
                 "1",
                 "--tile-columns",
                 "2",
-                "--hme",
-                "0",
                 "--pred-struct",
                 "0",
                 "--sg-filter-mode",
@@ -489,8 +493,6 @@ class TargetQuality:
                 "--disable-dlf",
                 "0",
                 "--mrp-level",
-                "0",
-                "--enable-tpl-la",
                 "0",
                 "--enable-mfmv",
                 "0",
@@ -515,8 +517,6 @@ class TargetQuality:
                 "--bipred-3x3",
                 "0",
                 "--compound",
-                "0",
-                "--use-default-me-hme",
                 "0",
                 "--ext-block",
                 "0",

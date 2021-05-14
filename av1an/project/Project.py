@@ -220,14 +220,17 @@ class Project(object):
     def setup(self):
         """Creating temporally folders when needed."""
 
+        hash = str(hash_path(str(self.input)))
+
         if self.temp:
             if self.temp[-1] in ("\\", "/"):
-                self.temp = Path(f"{self.temp}{'.' + str(hash_path(str(self.input)))}")
+                self.temp = Path(f"{self.temp}{'.' + hash}")
             else:
                 self.temp = Path(str(self.temp))
         else:
-            self.temp = Path("." + str(hash_path(str(self.input))))
+            self.temp = Path("." + hash)
 
+        log(f"File hash: {hash}")
         # Checking is resume possible
         done_path = self.temp / "done.json"
         self.resume = self.resume and done_path.exists()

@@ -5,7 +5,7 @@ from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.encoder.encoder import Encoder
-from av1an.utils import list_index_of_regex, terminate
+from av1an.utils import list_index_of_regex
 
 
 class Rav1e(Encoder):
@@ -88,5 +88,5 @@ class Rav1e(Encoder):
 
         if "error" in line.lower():
             print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            terminate()
+            sys.exit(1)
         return re.search(r"encoded.*? ([^ ]+?) ", line)

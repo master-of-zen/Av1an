@@ -5,7 +5,7 @@ from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from .encoder import Encoder
-from av1an.utils import list_index_of_regex, terminate
+from av1an.utils import list_index_of_regex
 
 
 class Vpx(Encoder):
@@ -89,6 +89,6 @@ class Vpx(Encoder):
 
         if "fatal" in line.lower():
             print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            terminate()
+            sys.exit(1)
         if "Pass 2/2" in line or "Pass 1/1" in line:
             return re.search(r"frame.*?/([^ ]+?) ", line)

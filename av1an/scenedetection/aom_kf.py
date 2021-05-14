@@ -1,6 +1,7 @@
 #!/bin/env python
 import os
 import re
+import sys
 import struct
 import subprocess
 from collections import deque
@@ -17,7 +18,7 @@ except ImportError:
 
 from av1an.commandtypes import CommandPair
 from av1an.logger import log
-from av1an.utils import terminate, frame_probe_fast
+from av1an.utils import frame_probe_fast
 from av1an.vapoursynth import compose_vapoursynth_pipe
 
 # This is a script that returns a list of keyframes that aom would likely place. Port of aom's C code.
@@ -202,7 +203,9 @@ def test_candidate_kf(dict_list, current_frame_index, frame_count_so_far):
     return is_keyframe
 
 
-def parse_fpfile(stat_file: Union[str, Path], fields: list, buffer_size: int) -> Tuple[int, List[Dict[str, list]]]:
+def parse_fpfile(
+    stat_file: Union[str, Path], fields: list, buffer_size: int
+) -> Tuple[int, List[Dict[str, list]]]:
     number_of_frames = round(os.stat(stat_file).st_size / buffer_size) - 1
     dict_list = []
 
@@ -351,7 +354,7 @@ def aom_keyframes(
         log(er)
         print(er)
         if not stat_file.exists():
-            terminate()
+            sys.exit(1)
         else:
             # aom crashed, but created keyframes.log, so we will try to continue
             print(

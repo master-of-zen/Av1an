@@ -23,6 +23,8 @@ def frame_probe_ffmpeg(source: Path):
         source.as_posix(),
         "-map",
         "0:v:0",
+        "-c",
+        "copy",
         "-f",
         "null",
         "-",

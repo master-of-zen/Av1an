@@ -159,7 +159,7 @@ class TargetQuality:
 
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
         self.log_probes(vmaf_cq, frames, chunk.name, q, q_vmaf)
-        # log(f'Scene_score {self.get_scene_scores(chunk, self.ffmpeg_pipe)}')
+
         # Plot Probes
         if self.make_plots and len(vmaf_cq) > 3:
             self.plot_probes(vmaf_cq, chunk, frames)
@@ -607,69 +607,6 @@ class TargetQuality:
         :return: None
         """
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)
-
-    def get_scene_scores(self, chunk, ffmpeg_pipe):
-        """
-        Run ffmpeg scenedetection filter
-        Gets average amount of motion in scene
-        """
-
-        pipecmd = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            *ffmpeg_pipe,
-        ]
-
-        params = [
-            "ffmpeg",
-            "-hide_banner",
-            "-i",
-            "-",
-            "-vf",
-            "select='gte(scene,0)',metadata=print",
-            "-f",
-            "null",
-            "-",
-        ]
-        cmd = CommandPair(pipecmd, [*params])
-        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-
-        history = []
-
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-            if len(line) == 0:
-                continue
-            if line:
-                history.append(line)
-
-        for u_pipe in utility:
-            if u_pipe.poll() is None:
-                u_pipe.kill()
-
-        if pipe.returncode != 0 and pipe.returncode != -2:
-            print(f"\n:: Error in getting scene score {pipe.returncode}")
-            print(f"\n:: Chunk: {chunk.index}")
-            print("\n".join(history))
-
-        scores = [x for x in history if "score" in x]
-
-        results = []
-        for x in scores:
-            matches = re.findall(r"=\s*([\S\s]+)", x)
-            var = float(matches[-1])
-            if var < 0.3:
-                results.append(var)
-
-        result = round(np.average(results), 4) * 1000
-        return result
 
     def gen_probes_names(self, chunk: Chunk, q):
         """

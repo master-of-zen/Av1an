@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 import setuptools
-from setuptools_rust import Binding, RustExtension
+import sys
 
-# TODO: rewrite it in rust
+try:
+    from setuptools_rust import Binding, RustExtension
+except ImportError:
+    import subprocess
+
+    errno = subprocess.call([sys.executable, "-m", "pip", "install", "setuptools-rust"])
+    if errno:
+        print("Please install setuptools-rust package")
+        raise SystemExit(errno)
+    else:
+        from setuptools_rust import Binding, RustExtension
+
 
 REQUIRES = [
     "numpy",
@@ -21,7 +32,7 @@ setup_requires = ["setuptools-rust", "maturin"]
 with open("README.md", "r") as f:
     long_description = f.read()
 
-version = "6.1.3"
+version = "6.1.5"
 
 setuptools.setup(
     name="Av1an",
@@ -38,7 +49,7 @@ setuptools.setup(
     py_modules=["av1an"],
     rust_extensions=[RustExtension("av1an.av1an", "Cargo.toml", binding=Binding.PyO3)],
     include_package_data=True,
-    entry_points={"console_scripts": ["av1an=av1an:main"]},
+    entry_points={"console_scripts": ["av1an=cli:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

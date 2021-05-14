@@ -24,7 +24,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     :param resuming: if the encode is being resumed
     :return: A list of frames to split on
     """
-    scene_file = project.temp / "scenes.txt"
+    scene_file = project.temp / "scenes.json"
 
     # if resuming, we already have the split file, so just read that and return
     if resuming:

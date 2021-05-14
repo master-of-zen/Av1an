@@ -209,7 +209,7 @@ class Args:
                 "vpx",
                 "x265",
                 "x264",
-                "vvc",
+                # "vvc",
             ],
         )
         encode_group.add_argument(
@@ -222,11 +222,6 @@ class Args:
             "--force",
             help="Force encoding if input args seen as invalid",
             action="store_true",
-        )
-
-        # VVC
-        encode_group.add_argument(
-            "--vvc_conf", type=Path, default=None, help="Path to VVC confing file"
         )
 
         # FFmpeg params
@@ -310,7 +305,7 @@ class Args:
         # Misc
         misc_group = parser.add_argument_group("Misc")
         misc_group.add_argument(
-            "--version", action="version", version=f"Av1an version: 6.1.3"
+            "--version", action="version", version=f"Av1an version: 6.1.5"
         )
         # Initialize project with initial values
         return parser

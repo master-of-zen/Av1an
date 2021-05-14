@@ -127,7 +127,7 @@ class Project(object):
 
     def outputs_filenames(self):
         """
-        Set output filename
+        Set output filename and promts overwrite if file exists
 
         :param project: the Project
         """
@@ -148,6 +148,21 @@ class Project(object):
                 self.output_file = Path(self.output_file).with_suffix(suffix)
         else:
             self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
+
+    def promt_output_overwrite(self):
+
+        if self.output_file.exists():
+            print(
+                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:"
+            )
+
+            promt = input()
+
+            if "y" in promt.lower() or promt.strip() == "":
+                pass
+            else:
+                print("Stopping")
+                sys.exit()
 
     def load_project_from_file(self, path_string):
         """
@@ -264,6 +279,10 @@ class Project(object):
                 elif "com.vapoursynth.ffms2" in plugins:
                     log("Set Chunking Method: FFMS2")
                     self.chunk_method = "vs_ffms2"
+                else:
+                    log(f"Vapoursynth installed but no supported chunking methods.")
+                    log("Fallback to Hybrid")
+                    self.chunk_method = "hybrid"
 
             except Exception as e:
                 log(f"Vapoursynth not installed but vspipe reachable")
@@ -275,8 +294,12 @@ class Project(object):
         Checking required executables
         """
 
-        log("Rust code")
-        log(get_ffmpeg_info())
+        if not find_executable("ffmpeg"):
+            print("No ffmpeg")
+            terminate()
+        else:
+            log("Rust code")
+            log(get_ffmpeg_info())
 
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
             if not find_executable("vspipe"):

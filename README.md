@@ -26,12 +26,14 @@ Example with default parameters:
 With your own parameters:
 
     av1an -i input -enc aom -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl" -min_q 20 -max_q 60
-    -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k" -s scenes.csv -log my_log -o output
+    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl" 
+    -min_q 20 -max_q 60 -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k" 
+    -s scenes.csv -log my_log -o output
 
 <h2 align="center">Usage</h2>
 
-    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script (relative or absolute path)
+    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script 
+                            (relative or absolute path)
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
@@ -83,9 +85,10 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -ff  --ffmpeg           FFmpeg options video options. Applied to each encoding segment individually.
-                            (Warning: Cropping doesn't work with Target VMAF mode without
-                            specifying it in --vmaf_filter)
+    -ff  --ffmpeg           FFmpeg options video options. 
+                            Applied to each encoding segment individually.
+                            (Warning: Cropping doesn't work with Target VMAF mode 
+                            without specifying it in --vmaf_filter)
                             Example:
                             --ff " -vf scale=320:240 "
 
@@ -117,7 +120,8 @@ With your own parameters:
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
-                            If the file doesn't exist, a new file will be generated in the current folder
+                            If the file doesn't exist, a new file will be generated 
+                            in the current folder.
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
 
@@ -171,7 +175,7 @@ With your own parameters:
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
                             `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`
 
-    --probing_rate             Setting rate for VMAF probes (Every N frame used in probe, Default: 4)
+    --probing_rate          Setting rate for VMAF probes (Every N frame used in probe, Default: 4)
 
     --n_threads             Limit number of threads that are used for VMAF calculation
                             Example: --n_threads 12

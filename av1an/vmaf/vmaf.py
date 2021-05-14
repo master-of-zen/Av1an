@@ -83,30 +83,6 @@ class VMAF:
             fl = json.load(f)
             return fl
 
-    def get_vmaf_motion(self):
-        """
-        Runs vmaf_motion filter on chunk and returns average score
-        """
-
-        cmd = [
-            "ffmpeg",
-            "-loglevel",
-            "error",
-            "-y",
-            "-hide_banner",
-            "-r",
-            "60",
-            "-i",
-            "-",
-            "-vf",
-            "vmafmotion",
-            "-f",
-            "null",
-            "-",
-        ]
-
-        print(cmd)
-
     def call_vmaf(
         self, chunk: Chunk, encoded: Path, vmaf_rate: int = None, fl_path: Path = None
     ):

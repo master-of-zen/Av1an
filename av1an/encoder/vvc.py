@@ -30,16 +30,15 @@ class Vvc(Encoder):
         )
 
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        yuv_file: str = Vvc.get_yuv_file_path(c).as_posix()
         return [
             CommandPair(
-                [],
+                [Encoder.compose_ffmpeg_pipe(a)],
                 [
                     "vvc_encoder",
                     "-c",
                     a.vvc_conf,
                     "-i",
-                    yuv_file,
+                    "-",
                     *a.video_params,
                     "-f",
                     str(c.frames),
@@ -117,10 +116,6 @@ class Vvc(Encoder):
         if not find_executable("vvc_concat"):
             return False, 'vvc concatenation executable "vvc_concat" not found'
 
-        # make sure there's a vvc config file
-        if project.vvc_conf is None:
-            return False, "Conf file for vvc required"
-
         # vvc requires video information that av1an can't provide
         if project.video_params is None:
             return (
@@ -134,50 +129,3 @@ class Vvc(Encoder):
             )
 
         return super().is_valid(project)
-
-    @staticmethod
-    def get_yuv_file_path(chunk: Chunk) -> Path:
-        """
-        Gets the yuv path to be used for a given chunk
-
-        :param chunk: the Chunk
-        :return: a yuv file path for the chunk
-        """
-        return (chunk.temp / "split") / f"{chunk.name}.yuv"
-
-    @staticmethod
-    def to_yuv(chunk: Chunk) -> None:
-        """
-        Generates a yuv file for a given chunk
-
-        :param chunk: the Chunk
-        :return: None
-        """
-        yuv_path = Vvc.get_yuv_file_path(chunk)
-
-        ffmpeg_gen_pipe = subprocess.Popen(
-            chunk.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT
-        )
-
-        # TODO: apply ffmpeg filter to the yuv file
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            "-f",
-            "rawvideo",
-            "-vf",
-            "format=yuv420p10le",
-            yuv_path.as_posix(),
-        ]
-        pipe = subprocess.Popen(
-            cmd,
-            stdin=ffmpeg_gen_pipe.stdout,
-            stdout=PIPE,
-            stderr=STDOUT,
-            universal_newlines=True,
-        )
-        pipe.wait()

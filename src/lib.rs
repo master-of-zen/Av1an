@@ -143,7 +143,7 @@ fn determine_workers(encoder: &str) -> PyResult<u64> {
   let encoder = Encoder::from_str(encoder)
     // TODO remove boilerplate somehow
     .map_err(|_| {
-      pyo3::exceptions::PyTypeError::new_err(format!("Unsupported encoder: {:?}", encoder))
+      pyo3::exceptions::PyTypeError::new_err(format!("Unsupported encoder: '{}'", encoder))
     })?;
 
   // let system = sysinfo::System::new_with_specifics(sysinfo::RefreshKind::new());

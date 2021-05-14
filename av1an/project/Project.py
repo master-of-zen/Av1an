@@ -10,7 +10,7 @@ from av1an.utils import frame_probe_fast, hash_path, terminate
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-from av1an.av1an import get_ffmpeg_info
+from av1an.av1an import get_ffmpeg_info, determine_workers as determine_workers_rust
 
 
 class Project(object):
@@ -194,27 +194,10 @@ class Project(object):
         return json.dumps(dt, indent=4, sort_keys=True)
 
     def determine_workers(self):
-        """Returns number of workers that machine can handle with selected encoder."""
         if self.workers:
             return self.workers
 
-        cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2 ** 30)
-
-        if self.encoder in ("aom", "rav1e", "vpx"):
-            workers = round(min(cpu / 3, ram / 1.5))
-
-        elif self.encoder in ("svt_av1", "svt_vp9", "x265", "x264"):
-            workers = round(min(cpu, ram)) // 8
-
-        elif self.encoder in "vvc":
-            workers = round(min(cpu, ram)) // 4
-
-        # fix if workers round up to 0
-        if workers == 0:
-            workers = 1
-
-        self.workers = workers
+        self.workers = determine_workers_rust(self.encoder)
 
     def setup(self):
         """Creating temporally folders when needed."""

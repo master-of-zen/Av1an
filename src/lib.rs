@@ -19,6 +19,18 @@ fn get_ffmpeg_info() -> PyResult<String> {
 }
 
 #[pyfunction]
+fn adapt_probing_rate(_frames: usize, rate: usize) -> PyResult<usize> {
+  let new_rate = match rate {
+    1 => 1,
+    2 => 2,
+    3 => 3,
+    4 => 4,
+    _ => 4,
+  } as usize;
+  Ok(new_rate)
+}
+
+#[pyfunction]
 fn hash_path(path: String) -> PyResult<String> {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
@@ -32,6 +44,7 @@ fn hash_path(path: String) -> PyResult<String> {
 fn av1an(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
   m.add_function(wrap_pyfunction!(hash_path, m)?)?;
+  m.add_function(wrap_pyfunction!(adapt_probing_rate, m)?)?;
 
   Ok(())
 }

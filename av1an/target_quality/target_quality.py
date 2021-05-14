@@ -11,6 +11,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
+from av1an.av1an import adapt_probing_rate
 
 try:
     import matplotlib
@@ -82,8 +83,7 @@ class TargetQuality:
         vmaf_cq = []
         frames = chunk.frames
 
-        if self.probing_rate not in (1, 2, 3):
-            self.probing_rate = self.adapt_probing_rate(self.probing_rate, frames)
+        self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
 
         if self.probes < 3:
             return self.fast_search(chunk)
@@ -232,31 +232,6 @@ class TargetQuality:
         self.log_probes(vmaf_cq, chunk.frames, chunk.name, next_q, self.target)
 
         return next_q
-
-    def adapt_probing_rate(self, rate, frames):
-        """
-        Change probing rate depending on amount of frames in scene.
-        Ensure that low frame count scenes get decent amount of probes
-
-        :param rate: given rate of probing
-        :param frames: amount of frames in scene
-        :return: new probing rate
-        """
-
-        # Todo: Make it depend on amount of motion in scene
-        # For current moment it's 4 for everything
-
-        if frames > 0:
-            return 4
-
-        if frames < 40:
-            return 4
-        elif frames < 120:
-            return 8
-        elif frames <= 240:
-            return 10
-        elif frames > 240:
-            return 16
 
     def get_target_q(self, scores, target_quality):
         """

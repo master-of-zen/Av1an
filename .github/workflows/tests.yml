@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree python-is-python3
+  deps: tree python-is-python3 python3-venv
   DEBIAN_FRONTEND: noninteractive
 
 jobs:

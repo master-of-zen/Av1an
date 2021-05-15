@@ -74,7 +74,7 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
-      - name: Install latest stable
+      - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
@@ -92,6 +92,13 @@ jobs:
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install -r requirements.txt
+
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do

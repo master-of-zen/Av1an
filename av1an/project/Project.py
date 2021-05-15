@@ -2,7 +2,6 @@ import json
 import sys
 import os
 import shutil
-from psutil import virtual_memory
 from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
@@ -10,11 +9,11 @@ from av1an.utils import frame_probe_fast
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-<<<<<<< HEAD
-from av1an.av1an import get_ffmpeg_info, determine_workers as determine_workers_rust
-=======
-from av1an.av1an import get_ffmpeg_info, hash_path
->>>>>>> ad72975a25c5dc7106e7e013f26cf4b9bf560ab7
+from av1an.av1an import (
+    get_ffmpeg_info,
+    hash_path,
+    determine_workers as determine_workers_rust,
+)
 
 
 class Project(object):
@@ -288,11 +287,7 @@ class Project(object):
 
         if not find_executable("ffmpeg"):
             print("No ffmpeg")
-<<<<<<< HEAD
-            terminate()
-=======
             sys.exit(1)
->>>>>>> ad72975a25c5dc7106e7e013f26cf4b9bf560ab7
         else:
             log("Rust code")
             log(get_ffmpeg_info())

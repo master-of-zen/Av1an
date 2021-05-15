@@ -93,11 +93,8 @@ jobs:
           apt-get update && apt-get install -y ${{ env.deps }}
           pip3 install -r requirements.txt
 
-      - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+      - name: Build Av1an
+        run: maturin develop --release
 
       - name: Download videos
         run: |

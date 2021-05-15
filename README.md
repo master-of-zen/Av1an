@@ -234,12 +234,15 @@ With your own parameters:
 
 ## Docker
 
-Av1an can be run in a Docker container with the following command if you are in the current directory
-
+Av1an can be run in a Docker container with the following command if you are in the current directory  
+Linux  
 ```bash
 docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
-
+Windows  
+```powershell
+docker run -v ${PWD}:/videos -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+```
 Docker can also be built by using
 
 ```bash
@@ -252,6 +255,8 @@ To specify a different directory to use you would replace $(pwd) with the direct
 docker run -v /c/Users/masterofzen/Videos:/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 
+The --user flag is required on linux to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
+
 ### Docker tags
 
 The docker image has the following tags
@@ -262,8 +267,6 @@ The docker image has the following tags
 |   master  | Contains the latest av1an commit to the master branch |
 | sha-##### | Contains the commit of the hash that is referenced    |
 |    #.##   | Stable av1an version release                          |
-
-The --user flag is required to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
 
 ### Support the developer
 

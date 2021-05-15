@@ -6,3 +6,4 @@ psutil
 scipy
 matplotlib
 setuptools_rust
+maturin

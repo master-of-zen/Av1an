@@ -77,25 +77,21 @@ jobs:
       - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
+            toolchain: nightly
             override: true
             profile: default
             default: true
+            components: rustfmt, clippy
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
 
-      - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
-          python3 setup.py install
+          pip3 install -r requirements.txt
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do

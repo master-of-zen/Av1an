@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree
+  deps: tree python-is-python3
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
@@ -102,7 +102,7 @@ jobs:
 
         # the package installation will only be executed when the
         # requirements-files have changed.
-      - run: pip install -r requirements.txt
+      - run: pip3 install -r requirements.txt
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Build Av1an

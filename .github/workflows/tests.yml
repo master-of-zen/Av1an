@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree
+  deps: tree python-is-python3 python3-venv
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
@@ -74,10 +74,42 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            profile: default
+            default: true
+            components: rustfmt, clippy
+
+      - name: Run cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
-          python3 setup.py install
+
+      - uses: syphar/restore-virtualenv@v1
+        id: cache-virtualenv
+        with:
+          requirement_files: requirements.txt  # this is optional
+
+      - uses: syphar/restore-pip-download-cache@v1
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+        # the package installation will only be executed when the
+        # requirements-files have changed.
+      - run: pip3 install -r requirements.txt
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+      - name: Build Av1an
+        run: |
+          pip3 install vapoursynth
+          maturin develop --release
+
       - name: Download videos
         run: |
           for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do

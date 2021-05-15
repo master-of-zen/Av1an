@@ -34,3 +34,6 @@ av-ivf = { git = "https://github.com/rust-av/ivf-rs", rev = "031aab76d1fc70a4b85
 anyhow = "1.0.40"
 num_cpus = "1.13.0"
 sysinfo = "0.17.4"
+vapoursynth = { version = "0.3.0", features = ["vsscript-api-32", "vapoursynth-api-35", "vapoursynth-functions", "vsscript-functions"] }
+thiserror = "1.0.24"
+num-rational = "0.4.0"

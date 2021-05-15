@@ -3,6 +3,7 @@ from subprocess import PIPE
 from pathlib import Path
 from shlex import split
 from subprocess import run, Popen
+from av1an.av1an import create_vs_file as create_vs_file_rust
 
 VS_EXTENSIONS = [".vpy", ".py"]
 
@@ -31,26 +32,12 @@ def create_vs_file(temp: Path, source, chunk_method):
     """
 
     load_script = temp / "split" / "loadscript.vpy"
-
     if load_script.exists():
         return load_script
 
-    if chunk_method == "vs_ffms2":
-        cache_file = (temp / "split" / "cache.ffindex").resolve()
-        script = (
-            "from vapoursynth import core\n"
-            'core.ffms2.Source(r"{}", cachefile="{}").set_output()'
-        )
-    else:
-        cache_file = (temp / "split" / "cache.lwi").resolve().as_posix()
-        script = (
-            "from vapoursynth import core\n"
-            'core.lsmas.LWLibavSource(r"{}", cachefile="{}").set_output()'
-        )
+    create_vs_file_rust(temp, source, chunk_method)
 
-    with open(load_script, "w+", encoding='utf-8') as file:
-        file.write(script.format(Path(source).resolve(), cache_file))
-
+    # TODO replace this with rust function
     cache_generation = f"vspipe -i {load_script.as_posix()} -i -"
     d = Popen(split(cache_generation), stdout=PIPE, stderr=PIPE).wait()
 

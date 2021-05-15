@@ -1,17 +1,22 @@
+#![allow(unused)]
+
 #[macro_use]
 extern crate log;
 extern crate av_format;
 extern crate av_ivf;
+extern crate thiserror;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::{fs::File, io::Write};
 
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use sysinfo::SystemExt;
 
 mod concat;
+mod vapoursynth;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -49,7 +54,7 @@ pub enum ConcatMethod {
   MKVMerge,
   /// FFmpeg
   FFmpeg,
-  /// Use native functions implemented in av1an
+  /// Use native functions implemented in av1an if possible
   Native,
 }
 
@@ -59,11 +64,27 @@ pub enum SplitMethod {
   FFmpeg,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ChunkMethod {
   Select,
   FFMS2,
   LSMASH,
   Hybrid,
+}
+
+impl FromStr for ChunkMethod {
+  type Err = ();
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    // set to match usage in python code
+    match s {
+      "vs_ffms2" => Ok(Self::FFMS2),
+      "vs_lsmash" => Ok(Self::LSMASH),
+      "hybrid" => Ok(Self::Hybrid),
+      "select" => Ok(Self::Select),
+      _ => Err(()),
+    }
+  }
 }
 
 pub struct EncodeConfig {
@@ -170,11 +191,64 @@ fn determine_workers(encoder: &str) -> PyResult<u64> {
   ))
 }
 
+/// Creates vs pipe file
+#[pyfunction]
+// fn create_vs_file(temp: &Path, source: &Path, chunk_method: ChunkMethod) -> PyResult<()> {
+fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> PyResult<()> {
+  // only for python code, remove if being called by rust
+  let temp = Path::new(temp);
+  let source = Path::new(source);
+  let chunk_method = ChunkMethod::from_str(chunk_method)
+    // TODO implement this in the FromStr implementation itself
+    .map_err(|_| pyo3::exceptions::PyTypeError::new_err("Invalid chunk method"))?;
+  let mut load_script = File::create(temp.join("split").join("loadscript.vpy"))?;
+
+  let cache_file = temp
+    .join("split")
+    .join(format!(
+      "cache.{}",
+      match chunk_method {
+        ChunkMethod::FFMS2 => "ffindex",
+        ChunkMethod::LSMASH => "lwi",
+        _ =>
+          return Err(pyo3::exceptions::PyTypeError::new_err(
+            "Can only use vapoursynth chunk methods if creating vapoursynth file"
+          )),
+      }
+    ))
+    .canonicalize()?;
+
+  load_script.write_all(
+    // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
+    format!(
+      "from vapoursynth import core\n\
+core.{}({:?}, cachefile={:?}).set_output()",
+      match chunk_method {
+        ChunkMethod::FFMS2 => "ffms2.Source",
+        ChunkMethod::LSMASH => "lsmas.LWLibavSource",
+        _ => unreachable!(),
+      },
+      source,
+      cache_file
+    )
+    .as_bytes(),
+  )?;
+
+  Ok(())
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn av1an(_py: Python, m: &PyModule) -> PyResult<()> {
+  // use crate::vapoursynth::__pyo3_get_function_vspipe;
+  use crate::vapoursynth::__pyo3_get_function_vspipe_get_num_frames;
+
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
   m.add_function(wrap_pyfunction!(determine_workers, m)?)?;
+  m.add_function(wrap_pyfunction!(create_vs_file, m)?)?;
+  m.add_function(wrap_pyfunction!(vspipe_get_num_frames, m)?)?;
+
+  // m.add_function(wrap_pyfunction!(vspipe, m)?)?;
 
   Ok(())
 }

@@ -91,7 +91,19 @@ jobs:
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
-          pip3 install -r requirements.txt
+
+      - uses: syphar/restore-virtualenv@v1
+        id: cache-virtualenv
+        with:
+          requirement_files: requirements.txt  # this is optional
+
+      - uses: syphar/restore-pip-download-cache@v1
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+        # the package installation will only be executed when the
+        # requirements-files have changed.
+      - run: pip install -r requirements.txt
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Build Av1an
         run: maturin develop --release

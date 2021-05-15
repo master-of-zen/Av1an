@@ -12,9 +12,16 @@ class Encoder(ABC):
     """
     An abstract class used for encoders
     """
-    def __init__(self, encoder_bin: str, encoder_help: str,
-                 default_args: Command, default_passes: int,
-                 default_q_range: Tuple[int, int], output_extension: str):
+
+    def __init__(
+        self,
+        encoder_bin: str,
+        encoder_help: str,
+        default_args: Command,
+        default_passes: int,
+        default_q_range: Tuple[int, int],
+        output_extension: str,
+    ):
         """
         Encoder constructor
 
@@ -38,8 +45,14 @@ class Encoder(ABC):
         :return: an ffmpeg command that will pipe into the encoder
         """
         return [
-            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-',
-            *a.ffmpeg_pipe
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "-",
+            *a.ffmpeg_pipe,
         ]
 
     @abstractmethod
@@ -86,13 +99,15 @@ class Encoder(ABC):
     def mod_command(self, command, chunk):
         return None
 
-    def make_pipes(self,
-                   a: Project,
-                   c: Chunk,
-                   passes: int,
-                   current_pass: int,
-                   output: str,
-                   man_q: int = None):
+    def make_pipes(
+        self,
+        a: Project,
+        c: Chunk,
+        passes: int,
+        current_pass: int,
+        output: str,
+        man_q: int = None,
+    ):
         """
         Creates a pipe for the given chunk with the given args
 
@@ -104,8 +119,11 @@ class Encoder(ABC):
         :param man_q: use a different quality
         :return: a Pipe attached to the encoders stdout
         """
-        filter_cmd, enc_cmd = self.compose_1_pass(a, c, output)[0] if passes == 1 else \
-                              self.compose_2_pass(a, c, output)[current_pass - 1]
+        filter_cmd, enc_cmd = (
+            self.compose_1_pass(a, c, output)[0]
+            if passes == 1
+            else self.compose_2_pass(a, c, output)[current_pass - 1]
+        )
         if man_q:
             enc_cmd = self.man_q(enc_cmd, man_q)
         elif c.per_shot_target_quality_cq:
@@ -114,20 +132,20 @@ class Encoder(ABC):
         elif c.per_frame_target_quality_q_list:
             enc_cmd = self.mod_command(enc_cmd, c)
 
-        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd,
-                                           stdout=PIPE,
-                                           stderr=STDOUT)
-        ffmpeg_pipe = subprocess.Popen(filter_cmd,
-                                       stdin=ffmpeg_gen_pipe.stdout,
-                                       stdout=PIPE,
-                                       stderr=STDOUT)
-        pipe = subprocess.Popen(enc_cmd,
-                                stdin=ffmpeg_pipe.stdout,
-                                stdout=PIPE,
-                                stderr=STDOUT,
-                                universal_newlines=True)
+        ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+        ffmpeg_pipe = subprocess.Popen(
+            filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT
+        )
+        pipe = subprocess.Popen(
+            enc_cmd,
+            stdin=ffmpeg_pipe.stdout,
+            stdout=PIPE,
+            stderr=STDOUT,
+            universal_newlines=True,
+        )
 
-        return pipe
+        utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
+        return pipe, utility
 
     def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
         """
@@ -137,7 +155,10 @@ class Encoder(ABC):
         :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
         """
         if not self.check_exists():
-            return False, f'Encoder {self.encoder_bin} not found. Is it installed in the system path?'
+            return (
+                False,
+                f"Encoder {self.encoder_bin} not found. Is it installed in the system path?",
+            )
         return True, None
 
     def check_exists(self) -> bool:
@@ -146,24 +167,6 @@ class Encoder(ABC):
         :return: True if the encoder bin exists
         """
         return find_executable(self.encoder_bin) is not None
-
-    def on_before_chunk(self, project: Project, chunk: Chunk) -> None:
-        """
-        An event that is called before the encoding passes of a chunk starts
-        :param project: the Project
-        :param chunk: the chunk
-        :return: None
-        """
-        pass
-
-    def on_after_chunk(self, project: Project, chunk: Chunk) -> None:
-        """
-        An event that is called after the encoding passes of a chunk completes
-        :param project: the Project
-        :param chunk: the chunk
-        :return: None
-        """
-        pass
 
     def __eq__(self, o: object) -> bool:
         """

@@ -16,20 +16,24 @@ class Ui_Av1an_main_windows(object):
         Av1an_main_windows.resize(960, 600)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding)
+            QtWidgets.QSizePolicy.MinimumExpanding,
+        )
         sizePolicy.setHorizontalStretch(200)
         sizePolicy.setVerticalStretch(200)
         sizePolicy.setHeightForWidth(
-            Av1an_main_windows.sizePolicy().hasHeightForWidth())
+            Av1an_main_windows.sizePolicy().hasHeightForWidth()
+        )
         Av1an_main_windows.setSizePolicy(sizePolicy)
         Av1an_main_windows.setMinimumSize(QtCore.QSize(960, 600))
         self.centralwidget = QtWidgets.QWidget(Av1an_main_windows)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(200)
         sizePolicy.setVerticalStretch(200)
         sizePolicy.setHeightForWidth(
-            self.centralwidget.sizePolicy().hasHeightForWidth())
+            self.centralwidget.sizePolicy().hasHeightForWidth()
+        )
         self.centralwidget.setSizePolicy(sizePolicy)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -42,23 +46,23 @@ class Ui_Av1an_main_windows(object):
         self.Input_Button = QtWidgets.QPushButton(self.centralwidget)
         self.Input_Button.setObjectName("Input_Button")
         self.ButtonSelect.addWidget(self.Input_Button)
-        spacerItem = QtWidgets.QSpacerItem(10, 20,
-                                           QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            10, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.ButtonSelect.addItem(spacerItem)
         self.Video_Settings_Button = QtWidgets.QPushButton(self.centralwidget)
         self.Video_Settings_Button.setObjectName("Video_Settings_Button")
         self.ButtonSelect.addWidget(self.Video_Settings_Button)
-        spacerItem1 = QtWidgets.QSpacerItem(10, 20,
-                                            QtWidgets.QSizePolicy.Expanding,
-                                            QtWidgets.QSizePolicy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            10, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.ButtonSelect.addItem(spacerItem1)
         self.Encoder_Button = QtWidgets.QPushButton(self.centralwidget)
         self.Encoder_Button.setObjectName("Encoder_Button")
         self.ButtonSelect.addWidget(self.Encoder_Button)
-        spacerItem2 = QtWidgets.QSpacerItem(10, 20,
-                                            QtWidgets.QSizePolicy.Expanding,
-                                            QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(
+            10, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.ButtonSelect.addItem(spacerItem2)
         self.OutputButton = QtWidgets.QPushButton(self.centralwidget)
         self.OutputButton.setObjectName("OutputButton")
@@ -72,23 +76,23 @@ class Ui_Av1an_main_windows(object):
         self.MainWidget.setMinimumSize(QtCore.QSize(800, 400))
         self.MainWidget.setObjectName("MainWidget")
         self.page = QtWidgets.QWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(100)
         sizePolicy.setVerticalStretch(100)
-        sizePolicy.setHeightForWidth(
-            self.page.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.page.sizePolicy().hasHeightForWidth())
         self.page.setSizePolicy(sizePolicy)
         self.page.setObjectName("page")
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.page)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
         self.DropInLabel = QtWidgets.QLabel(self.page)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(100)
         sizePolicy.setVerticalStretch(100)
-        sizePolicy.setHeightForWidth(
-            self.DropInLabel.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.DropInLabel.sizePolicy().hasHeightForWidth())
         self.DropInLabel.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(36)
@@ -99,7 +103,8 @@ class Ui_Av1an_main_windows(object):
             "\n"
             "                border: 4px dashed #aaa\n"
             "\n"
-            "            }")
+            "            }"
+        )
         self.DropInLabel.setFrameShape(QtWidgets.QFrame.Box)
         self.DropInLabel.setScaledContents(True)
         self.DropInLabel.setAlignment(QtCore.Qt.AlignCenter)
@@ -108,12 +113,12 @@ class Ui_Av1an_main_windows(object):
         self.horizontalLayout_4.addWidget(self.DropInLabel)
         self.MainWidget.addWidget(self.page)
         self.page_2 = QtWidgets.QWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(100)
         sizePolicy.setVerticalStretch(100)
-        sizePolicy.setHeightForWidth(
-            self.page_2.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.page_2.sizePolicy().hasHeightForWidth())
         self.page_2.setSizePolicy(sizePolicy)
         self.page_2.setObjectName("page_2")
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.page_2)
@@ -125,11 +130,11 @@ class Ui_Av1an_main_windows(object):
         self.pushButton_4 = QtWidgets.QPushButton(self.gen_set_wid)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding)
+            QtWidgets.QSizePolicy.MinimumExpanding,
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.pushButton_4.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
         self.pushButton_4.setSizePolicy(sizePolicy)
         self.pushButton_4.setMinimumSize(QtCore.QSize(200, 200))
         font = QtGui.QFont()
@@ -150,11 +155,11 @@ class Ui_Av1an_main_windows(object):
         self.pushButton_3 = QtWidgets.QPushButton(self.widget_2)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding)
+            QtWidgets.QSizePolicy.MinimumExpanding,
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.pushButton_3.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.pushButton_3.sizePolicy().hasHeightForWidth())
         self.pushButton_3.setSizePolicy(sizePolicy)
         self.pushButton_3.setMinimumSize(QtCore.QSize(200, 200))
         font = QtGui.QFont()
@@ -171,11 +176,11 @@ class Ui_Av1an_main_windows(object):
         self.pushButton = QtWidgets.QPushButton(self.page_4)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding)
+            QtWidgets.QSizePolicy.MinimumExpanding,
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.pushButton.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
         self.pushButton.setMinimumSize(QtCore.QSize(200, 200))
         font = QtGui.QFont()
@@ -189,19 +194,19 @@ class Ui_Av1an_main_windows(object):
         self.Progress_Bar.setContentsMargins(10, 10, 10, 10)
         self.Progress_Bar.setObjectName("Progress_Bar")
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(100)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.progressBar.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
         self.progressBar.setSizePolicy(sizePolicy)
         self.progressBar.setProperty("value", 24)
         self.progressBar.setObjectName("progressBar")
         self.Progress_Bar.addWidget(self.progressBar)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 20,
-                                            QtWidgets.QSizePolicy.Expanding,
-                                            QtWidgets.QSizePolicy.Minimum)
+        spacerItem3 = QtWidgets.QSpacerItem(
+            20, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.Progress_Bar.addItem(spacerItem3)
         self.StartStop = QtWidgets.QPushButton(self.centralwidget)
         self.StartStop.setObjectName("StartStop")
@@ -218,20 +223,18 @@ class Ui_Av1an_main_windows(object):
     def retranslateUi(self, Av1an_main_windows):
         _translate = QtCore.QCoreApplication.translate
         Av1an_main_windows.setWindowTitle(
-            _translate("Av1an_main_windows", "MainWindow"))
+            _translate("Av1an_main_windows", "MainWindow")
+        )
         self.Input_Button.setText(_translate("Av1an_main_windows", "Input"))
         self.Video_Settings_Button.setText(
-            _translate("Av1an_main_windows", "Generic Settings"))
-        self.Encoder_Button.setText(_translate("Av1an_main_windows",
-                                               "Encoder"))
+            _translate("Av1an_main_windows", "Generic Settings")
+        )
+        self.Encoder_Button.setText(_translate("Av1an_main_windows", "Encoder"))
         self.OutputButton.setText(_translate("Av1an_main_windows", "Output"))
         self.DropInLabel.setText(
-            _translate("Av1an_main_windows",
-                       "Drop In File Or Click For Import"))
-        self.pushButton_4.setText(
-            _translate("Av1an_main_windows", "GENERAL SETTINGS"))
-        self.pushButton_3.setText(
-            _translate("Av1an_main_windows", "Encoder Stuff"))
-        self.pushButton.setText(
-            _translate("Av1an_main_windows", "OUTPUT STUFF"))
+            _translate("Av1an_main_windows", "Drop In File Or Click For Import")
+        )
+        self.pushButton_4.setText(_translate("Av1an_main_windows", "GENERAL SETTINGS"))
+        self.pushButton_3.setText(_translate("Av1an_main_windows", "Encoder Stuff"))
+        self.pushButton.setText(_translate("Av1an_main_windows", "OUTPUT STUFF"))
         self.StartStop.setText(_translate("Av1an_main_windows", "Start"))

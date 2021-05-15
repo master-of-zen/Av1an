@@ -10,31 +10,7 @@ import hashlib
 
 from av1an.ffmpeg import frame_probe_ffmpeg
 from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
-
-
-def terminate():
-    sys.exit(1)
-
-
-def hash_path(s: str) -> int:
-    """
-    Return hash of full path to file
-    :param s: string
-    """
-    assert isinstance(s, str)
-
-    return str(hashlib.sha3_512(s.encode()).hexdigest())[-8:]
-
-
-def get_cq(command):
-    """
-    Return cq values from command
-    :param command: string with commands for encoder
-    :return: list with frame numbers of keyframes
-
-    """
-    matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
-    return int(matches[-1])
+from av1an.logger import log
 
 
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:
@@ -50,7 +26,7 @@ def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     for i, elem in enumerate(lst):
         if reg.match(elem):
             return i
-    raise ValueError(f'{reg} is not in list')
+    raise ValueError(f"{reg} is not in list")
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):
@@ -65,15 +41,20 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
         try:
             import vapoursynth
             from vapoursynth import core
+
             plugins = vapoursynth.get_core().get_plugins()
-            if 'systems.innocent.lsmas' in plugins:
-                total = core.lsmas.LWLibavSource(source.as_posix(),
-                                                 cache=False).num_frames
+            if "systems.innocent.lsmas" in plugins:
+                total = core.lsmas.LWLibavSource(
+                    source.as_posix(), cache=False
+                ).num_frames
+                log("Get frame count with lsmash")
+                log(f"Frame count: {total}")
                 return total
         except:
             video = cv2.VideoCapture(source.as_posix())
             total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
             video.release()
+            log("Can't open input with Pyscenedetect OpenCV")
     if is_vs or total < 1:
         total = frame_probe(source)
 

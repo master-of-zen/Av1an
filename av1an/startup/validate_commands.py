@@ -22,9 +22,9 @@ def sort_params(params: List) -> List:
     two_params = []
 
     for param in params:
-        if param.startswith('--'):
+        if param.startswith("--"):
             two_params.append(param)
-        elif param.startswith('-'):
+        elif param.startswith("-"):
             one_params.append(param)
 
     return one_params, two_params
@@ -44,8 +44,7 @@ def match_commands(params: List, valid_options: List) -> Union[str, bool]:
 
 def suggest_fix(wrong_arg, arg_dictionary):
     arg_dictionary = list(arg_dictionary)
-    scores = [(SequenceMatcher(None, wrong_arg, b).ratio(), b)
-              for b in arg_dictionary]
+    scores = [(SequenceMatcher(None, wrong_arg, b).ratio(), b) for b in arg_dictionary]
     return max(scores, key=lambda x: x[0])[1]
 
 
@@ -54,7 +53,7 @@ def get_encoder_project(project):
 
     help_text = run_command(help_command)
 
-    matches = re.findall(r'\s+(-\w+|(?:--\w+(?:-\w+)*))', help_text)
+    matches = re.findall(r"\s+(-\w+|(?:--\w+(?:-\w+)*))", help_text)
     parameters = set(matches)
 
     return parameters
@@ -63,19 +62,21 @@ def get_encoder_project(project):
 def validate_inputs(project):
     video_params = project.video_params
 
-    video_params = [x.split('=')[0] for x in video_params if x[0] == "-"]
+    video_params = [x.split("=")[0] for x in video_params if x[0] == "-"]
 
     parameters = get_encoder_project(project)
 
-    suggested = [(x, suggest_fix(x, parameters))
-                 for x in match_commands(video_params, parameters)]
+    suggested = [
+        (x, suggest_fix(x, parameters))
+        for x in match_commands(video_params, parameters)
+    ]
 
     if len(suggested) > 0:
-        print('WARNING: Invalid params:')
+        print("WARNING: Invalid params:")
         for cmd in suggested:
             print(
                 f"'{cmd[0]}' isn't a valid param for {project.encoder}. Did you mean '{cmd[1]}'?"
             )
         if not project.force:
-            print('To continue anyway, run Av1an with --force')
+            print("To continue anyway, run Av1an with --force")
             sys.exit(1)

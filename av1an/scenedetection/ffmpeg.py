@@ -19,15 +19,15 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
     Threshold value increased by x100 for matching with pyscene range
     """
 
-    log(f'Starting FFMPEG detection:')
-    log(f'Threshold: {threshold}')
-    log(f'Is Vapoursynth input: {is_vs}')
+    log(f"Starting FFMPEG detection:")
+    log(f"Threshold: {threshold}")
+    log(f"Is Vapoursynth input: {is_vs}")
     scenes = []
     frame: int = 0
 
     if is_vs:
         if sys.platform == "linux":
-            vspipe_fifo = temp / 'vspipe.y4m'
+            vspipe_fifo = temp / "vspipe.y4m"
             mkfifo(vspipe_fifo)
         else:
             vspipe_fifo = None
@@ -36,15 +36,23 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
         vspipe_process = Popen(vspipe_cmd)
 
     cmd = [
-        'ffmpeg', '-hwaccel', 'auto', '-hide_banner', '-i',
-        str(vspipe_fifo if is_vs else video.as_posix()), '-an', '-sn', '-vf',
-        'scale=\'min(960,iw):-1:flags=neighbor\',select=\'gte(scene,0)\',metadata=print',
-        '-f', 'null', '-'
+        "ffmpeg",
+        "-hwaccel",
+        "auto",
+        "-hide_banner",
+        "-i",
+        str(vspipe_fifo if is_vs else video.as_posix()),
+        "-an",
+        "-sn",
+        "-vf",
+        "scale='min(960,iw):-1:flags=neighbor',select='gte(scene,0)',metadata=print",
+        "-f",
+        "null",
+        "-",
     ]
-    pipe = Popen(cmd,
-                 stdout=subprocess.PIPE,
-                 stderr=subprocess.STDOUT,
-                 universal_newlines=True)
+    pipe = Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
+    )
 
     while True:
         line = pipe.stdout.readline().strip()
@@ -53,28 +61,27 @@ def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
         if len(line) == 0:
             continue
 
-        if 'frame' in line:
-            match = re.findall(r':(\d+)', line)
+        if "frame" in line:
+            match = re.findall(r":(\d+)", line)
             if match:
                 frame = int(match[0])
                 continue
 
-        if 'score' in line:
+        if "score" in line:
             matches = re.findall(r"=\s*([\S\s]+)", line)
             if matches:
                 score = float(matches[-1]) * 100
-                if score > threshold and frame - max(
-                        scenes, default=0) > min_scene_len:
+                if score > threshold and frame - max(scenes, default=0) > min_scene_len:
                     scenes.append(frame)
 
     if pipe.returncode != 0 and pipe.returncode != -2:
         print(f"\n:: Error in ffmpeg scenedetection {pipe.returncode}")
-        print('\n'.join(scenes))
+        print("\n".join(scenes))
 
     if is_vs:
         vspipe_process.wait()
 
-    log(f'Found split points: {len(scenes)}\n')
-    log(f'Splits: {scenes}\n')
+    log(f"Found split points: {len(scenes)}\n")
+    log(f"Splits: {scenes}\n")
 
     return scenes

@@ -11,6 +11,7 @@ class CommandPair(NamedTuple):
     """
     A pair of commands, the ffmpeg filter and then the encoder command
     """
+
     ffmpeg_cmd: Command
     encode_cmd: Command
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from .arg_parse import Args
-from .manager import Manager
-from .startup.setup import startup_check
+from av1an.arg_parse import Args
+from av1an.manager import Manager
+from av1an.startup.setup import startup_check
 
 
 def main():

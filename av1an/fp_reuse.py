@@ -14,10 +14,10 @@ def read_first_pass(log_path):
     :return: A list of dictionaries. The keys are the fields from aom_keyframes.py
     """
     frame_stats = []
-    with open(log_path, 'rb') as file:
+    with open(log_path, "rb") as file:
         frame_buf = file.read(208)
         while len(frame_buf) > 0:
-            stats = struct.unpack('d' * 26, frame_buf)
+            stats = struct.unpack("d" * 26, frame_buf)
             p = dict(zip(fields, stats))
             frame_stats.append(p)
             frame_buf = file.read(208)
@@ -32,9 +32,9 @@ def write_first_pass_log(log_path, frm_lst: List[Dict]):
     :param frm_lst: the list of dictionaries of the frame stats + eos stat
     :return: None
     """
-    with open(log_path, 'wb') as file:
+    with open(log_path, "wb") as file:
         for frm in frm_lst:
-            frm_bin = struct.pack('d' * 26, *frm.values())
+            frm_bin = struct.pack("d" * 26, *frm.values())
             file.write(frm_bin)
 
 
@@ -46,7 +46,7 @@ def reindex_chunk(chunk_stats: List[Dict]):
     :return: None
     """
     for i, frm_stats in enumerate(chunk_stats):
-        frm_stats['frame'] = i
+        frm_stats["frame"] = i
 
 
 def compute_eos_stats(chunk_stats: List[Dict], old_eos: Dict):
@@ -75,14 +75,15 @@ def segment_first_pass(temp, framenums):
     :param framenums: a list of frame numbers along the split boundaries
     :return: None
     """
-    stat_file = temp / 'keyframes.log'  # TODO(n9Mtq4): makes this a constant for use here and w/ aom_keyframes.py
+    stat_file = (
+        temp / "keyframes.log"
+    )  # TODO(n9Mtq4): makes this a constant for use here and w/ aom_keyframes.py
     stats = read_first_pass(stat_file)
 
     # special case for only 1 scene
     # we don't need to do anything with the log
     if len(framenums) == 0:
-        write_first_pass_log(os.path.join(temp, "split", "00000_fpf.log"),
-                             stats)
+        write_first_pass_log(os.path.join(temp, "split", "00000_fpf.log"), stats)
         return
 
     eos_stats = stats[-1]  # EOS stats is the last one
@@ -92,11 +93,10 @@ def segment_first_pass(temp, framenums):
     for i in range(0, len(frm_split) - 1):
         frm_start_idx = frm_split[i]
         frm_end_idx = frm_split[i + 1]
-        log_name = split_names[i] + '_fpf.log'
+        log_name = split_names[i] + "_fpf.log"
 
         chunk_stats = stats[frm_start_idx:frm_end_idx]
         reindex_chunk(chunk_stats)
         chunk_stats = chunk_stats + [compute_eos_stats(chunk_stats, eos_stats)]
 
-        write_first_pass_log(os.path.join(temp, "split", log_name),
-                             chunk_stats)
+        write_first_pass_log(os.path.join(temp, "split", log_name), chunk_stats)

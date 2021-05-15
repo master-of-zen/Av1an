@@ -142,3 +142,5 @@ dmypy.json
 Upload.sh
 
 *.backup
+
+*.lock

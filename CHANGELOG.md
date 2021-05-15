@@ -1,9 +1,14 @@
+### 7
+- Starting including rust code
+- FFMPEG info, hash path, adapt probing rate to rust
+
 ### 6
 - ~1.7x faster probes for svt-av1
 - ~2x faster probes for aomenc
 -  Changed rav1e settings, disable rav1e scene detection
 - Temporally removed VVC support until it's 100% ready and working
 - Added overwrite promt
+- Speed up for SVT-AV1 target quality
 
 
 ### 5

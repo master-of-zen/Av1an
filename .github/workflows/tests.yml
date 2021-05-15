@@ -74,17 +74,23 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
-      - name: Install latest nightly
+      - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
             toolchain: stable
             override: true
-            components: rustfmt, clippy
+            profile: default
+            default: true
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
 
       - name: Install requirements
         run: |

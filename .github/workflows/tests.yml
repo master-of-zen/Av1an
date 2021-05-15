@@ -74,6 +74,17 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            components: rustfmt, clippy
+
+      - name: Run cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
       - name: Install requirements
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}

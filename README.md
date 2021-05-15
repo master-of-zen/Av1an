@@ -26,13 +26,15 @@ Example with default parameters:
 With your own parameters:
 
     av1an -i input -enc aom -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl" 
-    -min_q 20 -max_q 60 -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k" 
+    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl"
+    -min_q 20 -max_q 60 -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k"
     -s scenes.csv -log my_log -o output
+
+
 
 <h2 align="center">Usage</h2>
 
-    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script 
+    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script
                             (relative or absolute path)
 
     -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
@@ -85,9 +87,9 @@ With your own parameters:
     -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -ff  --ffmpeg           FFmpeg options video options. 
+    -ff  --ffmpeg           FFmpeg options video options.
                             Applied to each encoding segment individually.
-                            (Warning: Cropping doesn't work with Target VMAF mode 
+                            (Warning: Cropping doesn't work with Target VMAF mode
                             without specifying it in --vmaf_filter)
                             Example:
                             --ff " -vf scale=320:240 "
@@ -120,7 +122,7 @@ With your own parameters:
     -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
-                            If the file doesn't exist, a new file will be generated 
+                            If the file doesn't exist, a new file will be generated
                             in the current folder.
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
@@ -198,6 +200,12 @@ With your own parameters:
 
 ## Install
 
+<h2 align="center">Warning! Av1an GIT is currently under state of changing. Building and using latest Av1an GIT is differs from PIP stable.
+
+[For current latest follow this instructions](https://gist.github.com/master-of-zen/0833bec1e7df72ed165083cd44e9187b). If latest changes not required, just use PIP version</h2>
+
+
+
 -   Prerequisites:
     -   [Windows Prebuilds](https://ci.appveyor.com/project/master-of-zen/av1an/build/artifacts)
     -   [Install Python3](https://www.python.org/downloads/) <br>
@@ -234,12 +242,12 @@ With your own parameters:
 
 ## Docker
 
-Av1an can be run in a Docker container with the following command if you are in the current directory  
-Linux  
+Av1an can be run in a Docker container with the following command if you are in the current directory
+Linux
 ```bash
 docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
-Windows  
+Windows
 ```powershell
 docker run -v ${PWD}:/videos -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```

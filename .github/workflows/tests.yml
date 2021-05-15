@@ -106,7 +106,9 @@ jobs:
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Build Av1an
-        run: maturin develop --release
+        run: |
+          pip3 install vapoursynth
+          maturin develop --release
 
       - name: Download videos
         run: |

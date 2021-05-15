@@ -6,3 +6,7 @@ psutil
 scipy
 matplotlib
 setuptools_rust
+<<<<<<< HEAD
+=======
+maturin
+>>>>>>> ad72975a25c5dc7106e7e013f26cf4b9bf560ab7

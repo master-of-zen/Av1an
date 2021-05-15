@@ -10,7 +10,6 @@ from pathlib import Path
 from av1an.startup.validate_commands import validate_inputs
 from av1an.encoder import ENCODERS
 from av1an.project import Project
-from av1an.utils import terminate
 from av1an.logger import log
 from av1an.vapoursynth import is_vapoursynth
 
@@ -24,7 +23,7 @@ def set_target_quality(project):
     if project.vmaf_path:
         if not Path(project.vmaf_path).exists():
             print(f"No model with this path: {Path(project.vmaf_path).as_posix()}")
-            terminate()
+            sys.exit(1)
 
     if project.probes < 4:
         print(
@@ -62,7 +61,7 @@ def setup_encoder(project: Project):
     settings_valid, error_msg = encoder.is_valid(project)
     if not settings_valid:
         print(error_msg)
-        terminate()
+        sys.exit(1)
 
     if project.passes is None:
         project.passes = encoder.default_passes
@@ -112,7 +111,7 @@ def startup_check(project: Project):
             "Reusing the first pass is only supported with \
               the aom encoder and aom_keyframes split method."
         )
-        terminate()
+        sys.exit(1)
 
     setup_encoder(project)
 

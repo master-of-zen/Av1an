@@ -6,11 +6,15 @@ from psutil import virtual_memory
 from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
-from av1an.utils import frame_probe_fast, hash_path, terminate
+from av1an.utils import frame_probe_fast
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
 from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
+<<<<<<< HEAD
 from av1an.av1an import get_ffmpeg_info, determine_workers as determine_workers_rust
+=======
+from av1an.av1an import get_ffmpeg_info, hash_path
+>>>>>>> ad72975a25c5dc7106e7e013f26cf4b9bf560ab7
 
 
 class Project(object):
@@ -153,7 +157,8 @@ class Project(object):
 
         if self.output_file.exists():
             print(
-                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:"
+                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:",
+                end="",
             )
 
             promt = input()
@@ -203,14 +208,17 @@ class Project(object):
     def setup(self):
         """Creating temporally folders when needed."""
 
+        hash = str(hash_path(str(self.input)))
+
         if self.temp:
             if self.temp[-1] in ("\\", "/"):
-                self.temp = Path(f"{self.temp}{'.' + str(hash_path(str(self.input)))}")
+                self.temp = Path(f"{self.temp}{'.' + hash}")
             else:
                 self.temp = Path(str(self.temp))
         else:
-            self.temp = Path("." + str(hash_path(str(self.input))))
+            self.temp = Path("." + hash)
 
+        log(f"File hash: {hash}")
         # Checking is resume possible
         done_path = self.temp / "done.json"
         self.resume = self.resume and done_path.exists()
@@ -241,7 +249,7 @@ class Project(object):
                 f"Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}"
             )
             log(f"Concatenation failed, aborting, error: {e}")
-            terminate()
+            sys.exit(1)
 
     def select_best_chunking_method(self):
         """
@@ -280,7 +288,11 @@ class Project(object):
 
         if not find_executable("ffmpeg"):
             print("No ffmpeg")
+<<<<<<< HEAD
             terminate()
+=======
+            sys.exit(1)
+>>>>>>> ad72975a25c5dc7106e7e013f26cf4b9bf560ab7
         else:
             log("Rust code")
             log(get_ffmpeg_info())
@@ -288,7 +300,7 @@ class Project(object):
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
             if not find_executable("vspipe"):
                 print("vspipe executable not found")
-                terminate()
+                sys.exit(1)
 
             try:
                 import vapoursynth
@@ -300,14 +312,14 @@ class Project(object):
                     and "systems.innocent.lsmas" not in plugins
                 ):
                     print("lsmas is not installed")
-                    terminate()
+                    sys.exit(1)
 
                 if (
                     self.chunk_method == "vs_ffms2"
                     and "com.vapoursynth.ffms2" not in plugins
                 ):
                     print("ffms2 is not installed")
-                    terminate()
+                    sys.exit(1)
             except ModuleNotFoundError:
                 print("Vapoursynth is not installed")
-                terminate()
+                sys.exit(1)

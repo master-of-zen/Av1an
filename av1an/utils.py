@@ -13,33 +13,6 @@ from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
 from av1an.logger import log
 
 
-def terminate():
-    sys.exit(1)
-
-
-def hash_path(s: str) -> int:
-    """
-    Return hash of full path to file
-    :param s: string
-    """
-    assert isinstance(s, str)
-    file_hash = str(hashlib.sha3_512(s.encode()).hexdigest())[-8:]
-    log(f"File hash: {file_hash}")
-
-    return file_hash
-
-
-def get_cq(command):
-    """
-    Return cq values from command
-    :param command: string with commands for encoder
-    :return: list with frame numbers of keyframes
-
-    """
-    matches = re.findall(r"--cq-level= *([^ ]+?) ", command)
-    return int(matches[-1])
-
-
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:
     """
     Gets the first index of the list where regex_str matches

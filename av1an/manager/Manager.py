@@ -15,7 +15,7 @@ from av1an.project.Project import Project
 from av1an.split import split_routine
 from av1an.startup.file_validation import process_inputs
 
-from av1an.utils import frame_probe, terminate
+from av1an.utils import frame_probe
 from av1an.vmaf import VMAF
 
 from .Counter import BaseManager, Counter, Manager

@@ -9,6 +9,10 @@ extern crate thiserror;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::{
+  collections::hash_map::DefaultHasher,
+  hash::{Hash, Hasher},
+};
 use std::{fs::File, io::Write};
 
 use pyo3::prelude::*;
@@ -237,6 +241,23 @@ core.{}({:?}, cachefile={:?}).set_output()",
   Ok(())
 }
 
+#[pyfunction]
+fn adapt_probing_rate(_frames: usize, rate: usize) -> usize {
+  match rate {
+    1..=4 => rate,
+    _ => 4,
+  }
+}
+
+#[pyfunction]
+fn hash_path(path: String) -> PyResult<String> {
+  let mut s = DefaultHasher::new();
+  path.hash(&mut s);
+  let hs = s.finish().to_string();
+  let out = hs[0..7].to_string();
+  Ok(out)
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn av1an(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -247,8 +268,8 @@ fn av1an(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(determine_workers, m)?)?;
   m.add_function(wrap_pyfunction!(create_vs_file, m)?)?;
   m.add_function(wrap_pyfunction!(vspipe_get_num_frames, m)?)?;
-
-  // m.add_function(wrap_pyfunction!(vspipe, m)?)?;
+  m.add_function(wrap_pyfunction!(hash_path, m)?)?;
+  m.add_function(wrap_pyfunction!(adapt_probing_rate, m)?)?;
 
   Ok(())
 }

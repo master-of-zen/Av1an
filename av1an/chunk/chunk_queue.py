@@ -11,7 +11,6 @@ from av1an.ffmpeg import get_keyframes
 from av1an.logger import log
 from av1an.resume import read_done_data
 from av1an.split import segment
-from av1an.utils import terminate
 from av1an.vapoursynth import create_vs_file
 
 
@@ -297,7 +296,7 @@ def create_video_queue_segment(
         er = "Error: No files found in temp/split, probably splitting not working"
         print(er)
         log(er)
-        terminate()
+        sys.exit(1)
 
     chunk_queue = [
         create_chunk_from_segment(project, index, file)

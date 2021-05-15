@@ -5,7 +5,7 @@ import concurrent.futures
 from typing import List
 from av1an.target_quality import TargetQuality
 from av1an.encoder import ENCODERS
-from av1an.utils import frame_probe, terminate
+from av1an.utils import frame_probe
 from av1an.resume import write_progress_file
 from av1an.chunk import Chunk
 from av1an.logger import log
@@ -41,7 +41,7 @@ class Queue:
                     except Exception as exc:
                         _, _, exc_tb = sys.exc_info()
                         print(f"Encoding error {exc}\nAt line {exc_tb.tb_lineno}")
-                        terminate()
+                        sys.exit(1)
         self.project.counter.close()
 
     def encode_chunk(self, chunk: Chunk):

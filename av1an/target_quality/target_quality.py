@@ -11,6 +11,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
+from av1an.av1an import adapt_probing_rate
 
 try:
     import matplotlib
@@ -82,8 +83,7 @@ class TargetQuality:
         vmaf_cq = []
         frames = chunk.frames
 
-        if self.probing_rate not in (1, 2):
-            self.probing_rate = self.adapt_probing_rate(self.probing_rate, frames)
+        self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
 
         if self.probes < 3:
             return self.fast_search(chunk)
@@ -159,7 +159,7 @@ class TargetQuality:
 
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
         self.log_probes(vmaf_cq, frames, chunk.name, q, q_vmaf)
-        # log(f'Scene_score {self.get_scene_scores(chunk, self.ffmpeg_pipe)}')
+
         # Plot Probes
         if self.make_plots and len(vmaf_cq) > 3:
             self.plot_probes(vmaf_cq, chunk, frames)
@@ -232,31 +232,6 @@ class TargetQuality:
         self.log_probes(vmaf_cq, chunk.frames, chunk.name, next_q, self.target)
 
         return next_q
-
-    def adapt_probing_rate(self, rate, frames):
-        """
-        Change probing rate depending on amount of frames in scene.
-        Ensure that low frame count scenes get decent amount of probes
-
-        :param rate: given rate of probing
-        :param frames: amount of frames in scene
-        :return: new probing rate
-        """
-
-        # Todo: Make it depend on amount of motion in scene
-        # For current moment it's 4 for everything
-
-        if frames > 0:
-            return 4
-
-        if frames < 40:
-            return 4
-        elif frames < 120:
-            return 8
-        elif frames <= 240:
-            return 10
-        elif frames > 240:
-            return 16
 
     def get_target_q(self, scores, target_quality):
         """
@@ -399,11 +374,15 @@ class TargetQuality:
                 "--enable-order-hint=0",
                 "--enable-flip-idtx=0",
                 "--enable-dist-wtd-comp=0",
-                "--enable-rect-tx=0",
                 "--enable-interintra-wedge=0",
                 "--enable-onesided-comp=0",
                 "--enable-interintra-comp=0",
                 "--enable-global-motion=0",
+                "--enable-cdef=0",
+                "--max-reference-frames=3",
+                "--cdf-update-mode=2",
+                "--deltaq-mode=0",
+                "--sb-size=64",
                 "--min-partition-size=32",
                 "--max-partition-size=32",
             ]
@@ -470,14 +449,14 @@ class TargetQuality:
                 f"{n_threads}",
                 "--preset",
                 "8",
-                "-q",
+                "--keyint",
+                "240",
+                "--crf",
                 f"{q}",
                 "--tile-rows",
                 "1",
                 "--tile-columns",
                 "2",
-                "--hme",
-                "0",
                 "--pred-struct",
                 "0",
                 "--sg-filter-mode",
@@ -489,8 +468,6 @@ class TargetQuality:
                 "--disable-dlf",
                 "0",
                 "--mrp-level",
-                "0",
-                "--enable-tpl-la",
                 "0",
                 "--enable-mfmv",
                 "0",
@@ -515,8 +492,6 @@ class TargetQuality:
                 "--bipred-3x3",
                 "0",
                 "--compound",
-                "0",
-                "--use-default-me-hme",
                 "0",
                 "--ext-block",
                 "0",
@@ -607,69 +582,6 @@ class TargetQuality:
         :return: None
         """
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)
-
-    def get_scene_scores(self, chunk, ffmpeg_pipe):
-        """
-        Run ffmpeg scenedetection filter
-        Gets average amount of motion in scene
-        """
-
-        pipecmd = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            *ffmpeg_pipe,
-        ]
-
-        params = [
-            "ffmpeg",
-            "-hide_banner",
-            "-i",
-            "-",
-            "-vf",
-            "select='gte(scene,0)',metadata=print",
-            "-f",
-            "null",
-            "-",
-        ]
-        cmd = CommandPair(pipecmd, [*params])
-        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-
-        history = []
-
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-            if len(line) == 0:
-                continue
-            if line:
-                history.append(line)
-
-        for u_pipe in utility:
-            if u_pipe.poll() is None:
-                u_pipe.kill()
-
-        if pipe.returncode != 0 and pipe.returncode != -2:
-            print(f"\n:: Error in getting scene score {pipe.returncode}")
-            print(f"\n:: Chunk: {chunk.index}")
-            print("\n".join(history))
-
-        scores = [x for x in history if "score" in x]
-
-        results = []
-        for x in scores:
-            matches = re.findall(r"=\s*([\S\s]+)", x)
-            var = float(matches[-1])
-            if var < 0.3:
-                results.append(var)
-
-        result = round(np.average(results), 4) * 1000
-        return result
 
     def gen_probes_names(self, chunk: Chunk, q):
         """

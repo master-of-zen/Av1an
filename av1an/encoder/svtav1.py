@@ -5,7 +5,7 @@ from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.encoder.encoder import Encoder
-from av1an.utils import list_index_of_regex, terminate
+from av1an.utils import list_index_of_regex
 
 
 class SvtAv1(Encoder):
@@ -13,7 +13,16 @@ class SvtAv1(Encoder):
         super(SvtAv1, self).__init__(
             encoder_bin="SvtAv1EncApp",
             encoder_help="SvtAv1EncApp --help",
-            default_args=["--preset", "4", "--rc", "0", "-q", "25"],
+            default_args=[
+                "--preset",
+                "4",
+                "--keyint",
+                "240",
+                "--rc",
+                "0",
+                "--crf",
+                "25",
+            ],
             default_passes=1,
             default_q_range=(15, 50),
             output_extension="ivf",
@@ -86,7 +95,7 @@ class SvtAv1(Encoder):
         :return: command with new cq value"""
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
 
         qp_file = chunk.make_q_file(chunk.per_frame_target_quality_q_list)
 
@@ -104,7 +113,7 @@ class SvtAv1(Encoder):
 
         adjusted_command = command.copy()
 
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q)")
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
         adjusted_command[i + 1] = f"{q}"
 
         return adjusted_command
@@ -116,5 +125,5 @@ class SvtAv1(Encoder):
         :return: match object from re.search matching the number of encoded frames"""
         if "error" in line.lower():
             print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            terminate()
+            sys.exit(1)
         return re.search(r"Encoding frame\s+(\d+)", line)

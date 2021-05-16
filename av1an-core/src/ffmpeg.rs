@@ -32,8 +32,7 @@ pub fn ffmpeg_get_frame_count(source: &Path) -> usize {
 
   let cap = re.captures(&output).unwrap();
 
-  let frame_count = cap[cap.len() - 1].parse::<usize>().unwrap();
-  frame_count
+  cap[cap.len() - 1].parse::<usize>().unwrap()
 }
 
 /// Returns vec of all keyframes

@@ -37,7 +37,7 @@ fn hash_path(path: &str) -> PyResult<String> {
 fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> PyResult<String> {
   // only for python code, remove if being called by rust
   let temp = Path::new(temp);
-  let source = Path::new(source);
+  let source = Path::new(source).canonicalize()?;
   let chunk_method = ChunkMethod::from_str(chunk_method)
     // TODO implement this in the FromStr implementation itself
     .map_err(|_| pyo3::exceptions::PyTypeError::new_err("Invalid chunk method"))?;
@@ -117,6 +117,12 @@ fn ffmpeg_get_frame_count(source: &str) -> usize {
   av1an_core::ffmpeg::ffmpeg_get_frame_count(Path::new(source))
 }
 
+#[pyfunction]
+fn concatenate_ivf(input: &str, output: &str) -> PyResult<()> {
+  av1an_core::concat::concat_ivf(Path::new(input), Path::new(output))
+    .map_err(|e| pyo3::exceptions::PyTypeError::new_err(format!("{}", e)))
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -128,6 +134,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(frame_probe_vspipe, m)?)?;
   m.add_function(wrap_pyfunction!(ffmpeg_get_frame_count, m)?)?;
   m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
+  m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
 
   Ok(())
 }

@@ -13,7 +13,7 @@ use std::str::FromStr;
 use std::{fs::File, io::Write};
 use sysinfo::SystemExt;
 
-mod concat;
+pub mod concat;
 pub mod ffmpeg;
 pub mod vapoursynth;
 

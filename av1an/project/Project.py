@@ -14,6 +14,7 @@ from av1an_pyo3 import (
     hash_path,
     create_vs_file,
     determine_workers as determine_workers_rust,
+    concatenate_ivf,
 )
 
 
@@ -30,6 +31,7 @@ class Project(object):
         self.temp: Path = None
         self.output_file: Path = None
         self.mkvmerge: bool = None
+        self.output_ivf: bool = None
         self.config = None
         self.webm = None
 
@@ -111,7 +113,9 @@ class Project(object):
                 self.input
                 if self.is_vs
                 else create_vs_file(
-                    self.temp.as_posix(), self.input.as_posix(), self.chunk_method
+                    str(self.temp.resolve()),
+                    str(self.input.resolve()),
+                    self.chunk_method,
                 )
             )
             fr = frame_probe_vspipe(vs)
@@ -240,6 +244,11 @@ class Project(object):
         try:
             if self.encoder == "vvc":
                 vvc_concat(self.temp, self.output_file.with_suffix(".h266"))
+            elif self.output_ivf:
+                concatenate_ivf(
+                    str((self.temp / "encode").resolve()),
+                    str(self.output_file.with_suffix(".ivf").resolve()),
+                )
             elif self.mkvmerge:
                 concatenate_mkvmerge(self.temp, self.output_file)
             else:

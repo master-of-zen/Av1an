@@ -109,7 +109,11 @@ class Args:
             help="Use mkvmerge instead of ffmpeg to concatenate",
             action="store_true",
         )
-
+        io_group.add_argument(
+            "--output_ivf",
+            help="Output an .ivf file (will not have audio)",
+            action="store_true",
+        )
         io_group.add_argument(
             "--quiet",
             "-q",

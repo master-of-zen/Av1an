@@ -2,11 +2,12 @@ FROM luigi311/encoders-docker:latest
 
 ENV MPLCONFIGDIR="/home/app_user/"
 ARG DEBIAN_FRONTEND=noninteractive
+ARG DEPENDENCIES="mkvtoolnix curl python-is-python3 python3-venv"
 
 # Install dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        mkvtoolnix && \
+        ${DEPENDENCIES} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -24,12 +25,24 @@ RUN useradd -ms /bin/bash app_user
 # Install av1an
 COPY . /Av1an
 WORKDIR /Av1an
-RUN python3 setup.py install
 
 # Change permissions
 RUN chmod 777 -R /Av1an
 
+# Change user
 USER app_user
+
+# Install rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Create virtualenv required for maturin develop
+ENV VIRTUAL_ENV=/Av1an/venv
+RUN python3 -m venv "${VIRTUAL_ENV}"
+ENV PATH="$VIRTUAL_ENV/bin:/home/app_user/.cargo/bin:$PATH"
+
+# Install av1an requirements and build rust requirements
+RUN pip3 install -r requirements.txt vapoursynth && \
+    maturin develop --release
 
 VOLUME ["/videos"]
 WORKDIR /videos

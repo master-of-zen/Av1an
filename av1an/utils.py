@@ -1,16 +1,14 @@
 #!/bin/env python
 
 import re
-import sys
 from typing import List
 from pathlib import Path
 import cv2
 import numpy as np
-import hashlib
 
-from av1an.ffmpeg import frame_probe_ffmpeg
 from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
 from av1an.logger import log
+from av1an.av1an import ffmpeg_get_frame_count
 
 
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:
@@ -71,4 +69,4 @@ def frame_probe(source: Path):
     if is_vapoursynth(source):
         return frame_probe_vspipe(source)
 
-    return frame_probe_ffmpeg(source)
+    return ffmpeg_get_frame_count(str(source.resolve()))

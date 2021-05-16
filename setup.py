@@ -17,6 +17,7 @@ except ImportError:
 
 REQUIRES = [
     "numpy",
+    "vapoursynth",
     "scenedetect[opencv]",
     "opencv-python",
     "tqdm",

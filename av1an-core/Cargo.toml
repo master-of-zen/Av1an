@@ -1,0 +1,19 @@
+[package]
+name = "av1an-core"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4.14"
+av-format = "0.3.1"
+av-ivf = { git = "https://github.com/rust-av/ivf-rs", rev = "031aab76d1fc70a4b8518dc2ef5c3f4f1d839721" }
+anyhow = "1.0.40"
+num_cpus = "1.13.0"
+sysinfo = "0.17.4"
+vapoursynth = { version = "0.3.0", features = ["vsscript-functions", "vapoursynth-functions"] }
+clap = "2.33.3"
+num-rational = "0.4.0"
+failure = "0.1.8"
+regex = "1.5.4"

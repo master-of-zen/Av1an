@@ -7,3 +7,4 @@ scipy
 matplotlib
 setuptools_rust
 maturin
+vapoursynth

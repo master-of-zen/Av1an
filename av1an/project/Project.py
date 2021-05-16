@@ -2,15 +2,19 @@ import json
 import sys
 import os
 import shutil
-from psutil import virtual_memory
 from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
-from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-from av1an.av1an import get_ffmpeg_info, hash_path
+from av1an_pyo3 import frame_probe_vspipe
+from av1an_pyo3 import (
+    get_ffmpeg_info,
+    hash_path,
+    create_vs_file,
+    determine_workers as determine_workers_rust,
+)
 
 
 class Project(object):
@@ -106,7 +110,9 @@ class Project(object):
             vs = (
                 self.input
                 if self.is_vs
-                else create_vs_file(self.temp, self.input, self.chunk_method)
+                else create_vs_file(
+                    self.temp.as_posix(), self.input.as_posix(), self.chunk_method
+                )
             )
             fr = frame_probe_vspipe(vs)
             if fr > 0:
@@ -150,7 +156,6 @@ class Project(object):
             self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
 
     def promt_output_overwrite(self):
-
         if self.output_file.exists():
             print(
                 f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:",
@@ -199,23 +204,7 @@ class Project(object):
         if self.workers:
             return self.workers
 
-        cpu = os.cpu_count()
-        ram = round(virtual_memory().total / 2 ** 30)
-
-        if self.encoder in ("aom", "rav1e", "vpx"):
-            workers = round(min(cpu / 3, ram / 1.5))
-
-        elif self.encoder in ("svt_av1", "svt_vp9", "x265", "x264"):
-            workers = round(min(cpu, ram)) // 8
-
-        elif self.encoder in "vvc":
-            workers = round(min(cpu, ram)) // 4
-
-        # fix if workers round up to 0
-        if workers == 0:
-            workers = 1
-
-        self.workers = workers
+        self.workers = determine_workers_rust(self.encoder)
 
     def setup(self):
         """Creating temporally folders when needed."""

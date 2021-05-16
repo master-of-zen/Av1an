@@ -42,7 +42,7 @@ ENV PATH="$VIRTUAL_ENV/bin:/home/app_user/.cargo/bin:$PATH"
 
 # Install av1an requirements and build rust requirements
 RUN pip3 install -r requirements.txt vapoursynth && \
-    maturin develop --release
+    maturin develop --release -m av1an-pyo3/Cargo.toml
 
 VOLUME ["/videos"]
 WORKDIR /videos

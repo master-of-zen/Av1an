@@ -41,7 +41,6 @@ def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
     log("Concatenating")
 
     with open(temp / "concat", "w") as f:
-
         encode_files = sorted((temp / "encode").iterdir())
         f.writelines(
             f'file {shlex.quote("file:"+str(file.absolute()))}\n'

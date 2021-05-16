@@ -1,39 +1,6 @@
-[package]
-name = "Av1an"
-version = "0.1.0"
-authors = ["Zen <46526140+master-of-zen@users.noreply.github.com>"]
-edition = "2018"
-readme = "README.md"
-homepage = "https://github.com/master-of-zen/Av1an"
+[workspace]
 
-[package.metadata.maturin]
-maintainer = "Zen"
-maintainer-email = "46526140+master-of-zen@users.noreply.github.com"
-classifier = ["Programming Language :: Python", "Programming Language :: Rust"]
-requires-dist = [
-    "numpy",
-    "scenedetect[opencv]",
-    "opencv-python",
-    "tqdm",
-    "psutil",
-    "scipy",
-    "matplotlib",
+members = [
+    "av1an-core",
+    "av1an-pyo3",
 ]
-
-[lib]
-name = "av1an"
-crate-type = ["cdylib"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-pyo3 = { version = "0.13.2", features = ["extension-module"] }
-log = "0.4.14"
-av-format = "0.3.1"
-av-ivf = { git = "https://github.com/rust-av/ivf-rs", rev = "031aab76d1fc70a4b8518dc2ef5c3f4f1d839721" }
-anyhow = "1.0.40"
-num_cpus = "1.13.0"
-sysinfo = "0.17.4"
-vapoursynth = { version = "0.3.0", features = ["vsscript-api-32", "vapoursynth-api-35", "vapoursynth-functions", "vsscript-functions"] }
-thiserror = "1.0.24"
-num-rational = "0.4.0"

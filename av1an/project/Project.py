@@ -8,10 +8,11 @@ from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
 from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
 from av1an.logger import log
-from av1an.vapoursynth import create_vs_file, frame_probe_vspipe
-from av1an.av1an import (
+from av1an_pyo3 import frame_probe_vspipe
+from av1an_pyo3 import (
     get_ffmpeg_info,
     hash_path,
+    create_vs_file,
     determine_workers as determine_workers_rust,
 )
 
@@ -109,7 +110,9 @@ class Project(object):
             vs = (
                 self.input
                 if self.is_vs
-                else create_vs_file(self.temp, self.input, self.chunk_method)
+                else create_vs_file(
+                    self.temp.as_posix(), self.input.as_posix(), self.chunk_method
+                )
             )
             fr = frame_probe_vspipe(vs)
             if fr > 0:
@@ -153,7 +156,6 @@ class Project(object):
             self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
 
     def promt_output_overwrite(self):
-
         if self.output_file.exists():
             print(
                 f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:",

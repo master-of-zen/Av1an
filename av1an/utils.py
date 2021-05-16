@@ -9,7 +9,8 @@ import numpy as np
 import hashlib
 
 from av1an.ffmpeg import frame_probe_ffmpeg
-from av1an.vapoursynth import frame_probe_vspipe, is_vapoursynth
+from av1an.vapoursynth import is_vapoursynth
+from av1an_pyo3 import frame_probe_vspipe
 from av1an.logger import log
 
 

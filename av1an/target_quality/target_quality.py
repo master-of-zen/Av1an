@@ -11,7 +11,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
-from av1an.av1an import adapt_probing_rate
+from av1an_pyo3 import adapt_probing_rate
 
 try:
     import matplotlib

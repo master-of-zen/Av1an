@@ -7,37 +7,6 @@ from subprocess import PIPE, STDOUT
 from typing import List
 from av1an.logger import log
 
-# TODO: redo to module, add ffmpeg scenedetection for fallback
-
-
-def frame_probe_ffmpeg(source: Path):
-    """
-    Get frame count.
-    Direct counting of frame count using ffmpeg. Slow, Precise.
-    :param: source: Path to input file
-    """
-    cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-i",
-        source.as_posix(),
-        "-map",
-        "0:v:0",
-        "-c",
-        "copy",
-        "-f",
-        "null",
-        "-",
-    ]
-    r = subprocess.run(cmd, stdout=PIPE, stderr=PIPE)
-    matches = re.findall(
-        r"frame=\s*([0-9]+)\s", r.stderr.decode("utf-8") + r.stdout.decode("utf-8")
-    )
-    total = int(matches[-1])
-    log("Get frame count with ffmpeg")
-    log(f"Frame count: {total}")
-    return total
-
 
 def get_frametypes(file: Path) -> List:
     """

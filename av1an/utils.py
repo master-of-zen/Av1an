@@ -1,16 +1,14 @@
 #!/bin/env python
 
 import re
-import sys
 from typing import List
 from pathlib import Path
 import cv2
 import numpy as np
-import hashlib
 
-from av1an.ffmpeg import frame_probe_ffmpeg
 from av1an.vapoursynth import is_vapoursynth
-from av1an_pyo3 import frame_probe_vspipe
+from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count
+
 from av1an.logger import log
 
 
@@ -72,4 +70,4 @@ def frame_probe(source: Path):
     if is_vapoursynth(source):
         return frame_probe_vspipe(source)
 
-    return frame_probe_ffmpeg(source)
+    return ffmpeg_get_frame_count(str(source.resolve()))

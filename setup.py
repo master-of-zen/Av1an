@@ -33,7 +33,7 @@ setup_requires = ["setuptools-rust", "maturin"]
 with open("README.md", "r") as f:
     long_description = f.read()
 
-version = "6.1.5"
+version = "7.0.0"
 
 setuptools.setup(
     name="Av1an",
@@ -50,7 +50,7 @@ setuptools.setup(
     py_modules=["av1an"],
     rust_extensions=[RustExtension("av1an.av1an", "Cargo.toml", binding=Binding.PyO3)],
     include_package_data=True,
-    entry_points={"console_scripts": ["av1an=cli:main"]},
+    entry_points={"console_scripts": ["av1an=av1an.py"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

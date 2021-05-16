@@ -90,6 +90,10 @@ def startup_check(project: Project):
 
         atexit.register(restore_term)
 
+    if project.encoder not in ["rav1e", "aom", "svt_av1", "vpx"] and project.output_ivf:
+        print(".ivf only supports VP8, VP9, and AV1")
+        sys.exit(1)
+
     if not project.chunk_method:
         project.select_best_chunking_method()
 

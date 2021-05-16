@@ -31,6 +31,16 @@ class Args:
 
         return self.project
 
+    # for integration testing
+    def get_project_with_args(self, args):
+        """
+        Create and return project object with all parameters
+        """
+        self.parse_from_args(args)
+        self.project = Project(self.parsed)
+
+        return self.project
+
     def get_defaults(self) -> dict:
         """
         Get dictionary of default values specified in arg_parsing()
@@ -51,6 +61,14 @@ class Args:
         if not self.parsed["input"]:
             self.parser.print_help()
             sys.exit()
+
+    # added for integration testing with rust code
+    def parse_from_args(self, args):
+        """
+        Parse provided command line parameters
+        """
+        print(vars(self.parser.parse_args(args)))
+        self.parsed = vars(self.parser.parse_args(args))
 
     def save_load_project_file(self):
         """

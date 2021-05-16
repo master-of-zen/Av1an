@@ -108,7 +108,7 @@ jobs:
       - name: Build Av1an
         run: |
           pip3 install vapoursynth
-          maturin develop --release
+          maturin develop --release -m av1an-pyo3/Cargo.toml
 
       - name: Download videos
         run: |

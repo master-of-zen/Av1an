@@ -1,0 +1,35 @@
+[package]
+name = "av1an-pyo3"
+version = "0.1.0"
+edition = "2018"
+authors = ["Zen <46526140+master-of-zen@users.noreply.github.com>"]
+homepage = "https://github.com/master-of-zen/Av1an"
+
+[package.metadata.maturin]
+maintainer = "Zen"
+maintainer-email = "46526140+master-of-zen@users.noreply.github.com"
+classifier = ["Programming Language :: Python", "Programming Language :: Rust"]
+requires-dist = [
+    "numpy",
+    "scenedetect[opencv]",
+    "opencv-python",
+    "tqdm",
+    "psutil",
+    "scipy",
+    "matplotlib",
+    "vapoursynth",
+]
+
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
+
+[lib]
+name = "av1an_pyo3"
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pyo3 = { version = "0.13.2" }
+av1an-core = { path = "../av1an-core" }

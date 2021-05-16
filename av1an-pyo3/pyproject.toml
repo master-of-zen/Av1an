@@ -19,7 +19,9 @@ requires-dist = [
     "psutil",
     "scipy",
     "matplotlib",
+    "vapoursynth",
 ]
+
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python",

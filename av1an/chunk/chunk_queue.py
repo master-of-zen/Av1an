@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 from typing import List
-from subprocess import Popen, DEVNULL
-from shlex import split
 
 from av1an.project import Project
 from av1an.chunk import Chunk
@@ -11,7 +9,8 @@ from av1an.ffmpeg import get_keyframes
 from av1an.logger import log
 from av1an.resume import read_done_data
 from av1an.split import segment
-from av1an.vapoursynth import create_vs_file
+from av1an_pyo3 import create_vs_file
+import sys
 
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
@@ -161,7 +160,9 @@ def create_video_queue_vs(project: Project, split_locations: List[int]) -> List[
     if project.is_vs:
         vs_script = project.input
     else:
-        vs_script = create_vs_file(project.temp, source_file, project.chunk_method)
+        vs_script = create_vs_file(
+            project.temp.as_posix(), source_file, project.chunk_method
+        )
 
     chunk_queue = [
         create_vs_chunk(project, index, vs_script, *cb)
@@ -191,7 +192,7 @@ def create_vs_chunk(
 
     vspipe_gen_cmd = [
         "vspipe",
-        vs_script.resolve().as_posix(),
+        vs_script,
         "-y",
         "-",
         "-s",

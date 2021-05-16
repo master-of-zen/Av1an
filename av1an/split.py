@@ -7,6 +7,7 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import List, Tuple
 from numpy import linspace
+import sys
 
 from .project import Project
 from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
@@ -186,7 +187,7 @@ def calc_split_locations(project: Project) -> List[int]:
             )
         except Exception as e:
             log(f"Error in PySceneDetect: {e}")
-            print(f"Error in PySceneDetect{e}")
+            print(f"Error in PySceneDetect: {e}")
             sys.exit(1)
 
     # Splitting based on aom keyframe placement

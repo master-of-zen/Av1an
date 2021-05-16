@@ -5,11 +5,10 @@ from typing import List
 from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.encoder import ENCODERS
-from av1an.ffmpeg import get_keyframes
 from av1an.logger import log
 from av1an.resume import read_done_data
 from av1an.split import segment
-from av1an_pyo3 import create_vs_file
+from av1an_pyo3 import create_vs_file, get_keyframes
 import sys
 
 
@@ -96,7 +95,7 @@ def create_video_queue_hybrid(
     :param split_locations: a list of frames to split on
     :return: A list of chunks
     """
-    keyframes = get_keyframes(project.input)
+    keyframes = get_keyframes(str(project.input.resolve()))
 
     end = [project.get_frames()]
 

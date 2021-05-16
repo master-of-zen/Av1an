@@ -17,6 +17,13 @@ fn adapt_probing_rate(_frames: usize, rate: usize) -> usize {
 }
 
 #[pyfunction]
+fn get_keyframes(source: &str) -> PyResult<Vec<usize>> {
+  let pt = Path::new(source);
+  let kf = av1an_core::ffmpeg::get_keyframes(pt);
+  Ok(kf)
+}
+
+#[pyfunction]
 fn hash_path(path: &str) -> PyResult<String> {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
@@ -107,7 +114,7 @@ fn frame_probe_vspipe(source: &str) -> PyResult<usize> {
 
 #[pyfunction]
 fn ffmpeg_get_frame_count(source: &str) -> usize {
-  av1an_core::ffmpeg_get_frame_count(Path::new(source))
+  av1an_core::ffmpeg::ffmpeg_get_frame_count(Path::new(source))
 }
 
 /// A Python module implemented in Rust.
@@ -120,6 +127,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(adapt_probing_rate, m)?)?;
   m.add_function(wrap_pyfunction!(frame_probe_vspipe, m)?)?;
   m.add_function(wrap_pyfunction!(ffmpeg_get_frame_count, m)?)?;
+  m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
 
   Ok(())
 }

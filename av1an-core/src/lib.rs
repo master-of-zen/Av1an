@@ -14,6 +14,7 @@ use std::{fs::File, io::Write};
 use sysinfo::SystemExt;
 
 mod concat;
+pub mod ffmpeg;
 pub mod vapoursynth;
 
 #[allow(non_camel_case_types)]
@@ -160,39 +161,6 @@ pub fn adapt_probing_rate(rate: usize) -> usize {
     1..=4 => rate,
     _ => 4,
   }
-}
-
-/// Get frame count. Direct counting of frame count using ffmpeg
-pub fn ffmpeg_get_frame_count(source: &Path) -> usize {
-  let source_path = Path::new(&source);
-
-  let mut cmd = Command::new("ffmpeg");
-  cmd.args(&[
-    "-hide_banner",
-    "-i",
-    source_path.to_str().unwrap(),
-    "-map",
-    "0:v:0",
-    "-c",
-    "copy",
-    "-f",
-    "null",
-    "-",
-  ]);
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  let out = cmd.output().unwrap();
-  assert!(out.status.success());
-
-  let re = Regex::new(r".*frame=\s*([0-9]+)\s").unwrap();
-  let output = String::from_utf8(out.stderr).unwrap();
-
-  let cap = re.captures(&output).unwrap();
-
-  let frame_count = cap[cap.len() - 1].parse::<usize>().unwrap();
-  frame_count
 }
 
 /// Determine the optimal number of workers for an encoder

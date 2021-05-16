@@ -291,7 +291,6 @@ class Project(object):
             print("No ffmpeg")
             sys.exit(1)
         else:
-            log("Rust code")
             log(get_ffmpeg_info())
 
         if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:

@@ -44,46 +44,6 @@ def get_frametypes(file: Path) -> List:
     return frames
 
 
-def get_keyframes(file: Path) -> List[int]:
-    """
-    Read file info and return list of all keyframes
-
-    :param file: Path for input file
-    :return: list with frame numbers of keyframes
-    """
-
-    keyframes = []
-
-    ff = [
-        "ffmpeg",
-        "-hide_banner",
-        "-i",
-        file.as_posix(),
-        "-vf",
-        r"select=eq(pict_type\,PICT_TYPE_I)",
-        "-f",
-        "null",
-        "-loglevel",
-        "debug",
-        "-",
-    ]
-
-    pipe = subprocess.Popen(ff, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    while True:
-        line = pipe.stdout.readline().strip().decode("utf-8")
-
-        if len(line) == 0 and pipe.poll() is not None:
-            break
-
-        match = re.search(r"n:([0-9]+)\.[0-9]+ pts:.+key:1", line)
-        if match:
-            keyframe = int(match.group(1))
-            keyframes.append(keyframe)
-
-    return keyframes
-
-
 def extract_audio(input_vid: Path, temp, audio_params):
     """Extracting audio from source, transcoding if needed."""
     log(f"Audio processing")

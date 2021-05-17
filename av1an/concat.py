@@ -28,92 +28,6 @@ def vvc_concat(temp: Path, output: Path):
     subprocess.run(cmd, shell=True, check=True)
 
 
-def concatenate_ffmpeg(temp: Path, output: Path, encoder: str):
-    """
-    Uses ffmpeg to concatenate encoded segments into the final file
-
-    :param temp: the temp directory
-    :param output: the final output file
-    :param encoder: the encoder
-    :return: None
-    """
-
-    log("Concatenating")
-
-    with open(temp / "concat", "w") as f:
-        encode_files = sorted((temp / "encode").iterdir())
-        f.writelines(
-            f'file {shlex.quote("file:"+str(file.absolute()))}\n'
-            for file in encode_files
-        )
-
-    # Add the audio/subtitles/else file if one was extracted from the input
-    audio_file = temp / "audio.mkv"
-    if audio_file.exists() and audio_file.stat().st_size > 1024:
-        audio = ("-i", audio_file.as_posix(), "-c", "copy", "-map", "1")
-    else:
-        audio = ()
-
-    if encoder == "x265":
-
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-fflags",
-            "+genpts",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            (temp / "concat").as_posix(),
-            *audio,
-            "-c",
-            "copy",
-            "-movflags",
-            "frag_keyframe+empty_moov",
-            "-map",
-            "0",
-            "-f",
-            "mp4",
-            output.as_posix(),
-        ]
-        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT, check=True).stdout
-
-    else:
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            (temp / "concat").as_posix(),
-            *audio,
-            "-c",
-            "copy",
-            "-sn",
-            "-map",
-            "0",
-            output.as_posix(),
-        ]
-
-        concat = subprocess.run(cmd, stdout=PIPE, stderr=STDOUT, check=True).stdout
-
-    if len(concat) > 0:
-        log(concat.decode())
-        print(concat.decode())
-        tb = sys.exc_info()[2]
-        raise RuntimeError.with_traceback(tb)
-
-
 def concatenate_mkvmerge(temp: Path, output):
     """
     Uses mkvmerge to concatenate encoded segments into the final file
@@ -122,8 +36,6 @@ def concatenate_mkvmerge(temp: Path, output):
     :param output: the final output file
     :return: None
     """
-
-    log("Concatenating")
 
     output = shlex.quote(output.as_posix())
 

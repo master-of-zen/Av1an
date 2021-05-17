@@ -6,15 +6,16 @@ from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
-from av1an.concat import vvc_concat, concatenate_ffmpeg, concatenate_mkvmerge
+from av1an.concat import vvc_concat, concatenate_mkvmerge
 from av1an.logger import log
-from av1an_pyo3 import frame_probe_vspipe
 from av1an_pyo3 import (
     get_ffmpeg_info,
     hash_path,
     create_vs_file,
     determine_workers as determine_workers_rust,
+    frame_probe_vspipe,
     concatenate_ivf,
+    concatenate_ffmpeg,
 )
 
 
@@ -242,6 +243,7 @@ class Project(object):
         :return: None
         """
         try:
+            log("Concatenating")
             if self.encoder == "vvc":
                 vvc_concat(self.temp, self.output_file.with_suffix(".h266"))
             elif self.output_ivf:
@@ -252,7 +254,11 @@ class Project(object):
             elif self.mkvmerge:
                 concatenate_mkvmerge(self.temp, self.output_file)
             else:
-                concatenate_ffmpeg(self.temp, self.output_file, self.encoder)
+                concatenate_ffmpeg(
+                    str(str(self.temp.resolve())),
+                    str(str(self.output_file.resolve())),
+                    self.encoder,
+                )
         except Exception as e:
             _, _, exc_tb = sys.exc_info()
             print(

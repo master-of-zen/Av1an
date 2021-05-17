@@ -136,7 +136,22 @@ fn concatenate_ivf(input: &str, output: &str) -> PyResult<()> {
     .map_err(|e| pyo3::exceptions::PyTypeError::new_err(format!("{}", e)))
 }
 
-/// A Python module implemented in Rust.
+#[pyfunction]
+fn concatenate_ffmpeg(temp: String, output: String, encoder: String) -> PyResult<()> {
+  let encoder = Encoder::from_str(&encoder).map_err(|_| {
+    pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
+  })?;
+
+  let temp_path = Path::new(&temp);
+  let output_path = Path::new(&output);
+
+  Ok(av1an_core::ffmpeg::concatenate_ffmpeg(
+    temp_path,
+    output_path,
+    encoder,
+  ))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -149,6 +164,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
   m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
+  m.add_function(wrap_pyfunction!(concatenate_ffmpeg, m)?)?;
 
   Ok(())
 }

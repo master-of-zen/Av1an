@@ -15,16 +15,17 @@ use sysinfo::SystemExt;
 
 pub mod concat;
 pub mod ffmpeg;
+pub mod target_quality;
 pub mod vapoursynth;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
 pub enum Encoder {
-  libaom,
+  aom,
   rav1e,
   libvpx,
-  SvtAv1,
-  SvtVp9,
+  svt_av1,
+  svt_vp9,
   x264,
   x265,
 }
@@ -35,11 +36,11 @@ impl FromStr for Encoder {
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     // set to match usage in python code
     match s {
-      "aom" => Ok(Self::libaom),
+      "aom" => Ok(Self::aom),
       "rav1e" => Ok(Self::rav1e),
       "vpx" => Ok(Self::libvpx),
-      "svt_av1" => Ok(Self::SvtAv1),
-      "svt_vp9" => Ok(Self::SvtVp9),
+      "svt_av1" => Ok(Self::svt_av1),
+      "svt_vp9" => Ok(Self::svt_vp9),
       "x264" => Ok(Self::x264),
       "x265" => Ok(Self::x265),
       _ => Err(()),
@@ -175,11 +176,11 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
 
   std::cmp::max(
     match encoder {
-      Encoder::libaom | Encoder::rav1e | Encoder::libvpx => std::cmp::min(
+      Encoder::aom | Encoder::rav1e | Encoder::libvpx => std::cmp::min(
         (cpu as f64 / 3.0).round() as u64,
         (ram_gb as f64 / 1.5).round() as u64,
       ),
-      Encoder::SvtAv1 | Encoder::SvtVp9 | Encoder::x264 | Encoder::x265 => {
+      Encoder::svt_av1 | Encoder::svt_vp9 | Encoder::x264 | Encoder::x265 => {
         std::cmp::min(cpu, ram_gb) / 8
       }
     },

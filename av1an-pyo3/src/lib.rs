@@ -32,6 +32,19 @@ fn hash_path(path: &str) -> PyResult<String> {
   Ok(out)
 }
 
+#[pyfunction]
+fn construct_target_quality_command(
+  encoder: String,
+  threads: String,
+  q: String,
+) -> PyResult<Vec<String>> {
+  let encoder = Encoder::from_str(&encoder).map_err(|_| {
+    pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
+  })?;
+
+  Ok(av1an_core::target_quality::construct_target_quality_command(encoder, threads, q))
+}
+
 /// Creates vs pipe file
 #[pyfunction]
 fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> PyResult<String> {
@@ -135,6 +148,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(ffmpeg_get_frame_count, m)?)?;
   m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
+  m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
 
   Ok(())
 }

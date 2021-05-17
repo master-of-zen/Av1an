@@ -11,7 +11,7 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
-from av1an_pyo3 import adapt_probing_rate
+from av1an_pyo3 import adapt_probing_rate, construct_target_quality_command
 
 try:
     import matplotlib
@@ -348,195 +348,32 @@ class TargetQuality:
         probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
 
         if encoder == "aom":
-            params = [
-                "aomenc",
-                "--passes=1",
-                f"--threads={n_threads}",
-                "--tile-columns=2",
-                "--tile-rows=1",
-                "--end-usage=q",
-                "-b",
-                "8",
-                "--cpu-used=6",
-                f"--cq-level={q}",
-                "--enable-filter-intra=0",
-                "--enable-smooth-intra=0",
-                "--enable-paeth-intra=0",
-                "--enable-cfl-intra=0",
-                "--enable-obmc=0",
-                "--enable-palette=0",
-                "--enable-overlay=0",
-                "--enable-intrabc=0",
-                "--enable-angle-delta=0",
-                "--reduced-tx-type-set=1",
-                "--enable-dual-filter=0",
-                "--enable-intra-edge-filter=0",
-                "--enable-order-hint=0",
-                "--enable-flip-idtx=0",
-                "--enable-dist-wtd-comp=0",
-                "--enable-interintra-wedge=0",
-                "--enable-onesided-comp=0",
-                "--enable-interintra-comp=0",
-                "--enable-global-motion=0",
-                "--enable-cdef=0",
-                "--max-reference-frames=3",
-                "--cdf-update-mode=2",
-                "--deltaq-mode=0",
-                "--sb-size=64",
-                "--min-partition-size=32",
-                "--max-partition-size=32",
-            ]
+            params = construct_target_quality_command("aom", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "x265":
-            params = [
-                "x265",
-                "--log-level",
-                "0",
-                "--no-progress",
-                "--y4m",
-                "--frame-threads",
-                f"{n_threads}",
-                "--preset",
-                "fast",
-                "--crf",
-                f"{q}",
-            ]
+            params = construct_target_quality_command("x265", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "rav1e":
-            params = [
-                "rav1e",
-                "-y",
-                "-s",
-                "10",
-                "--threads",
-                f"{n_threads}",
-                "--tiles",
-                "16",
-                "--quantizer",
-                f"{q}",
-                "--low-latency",
-                "--rdo-lookahead-frames",
-                "5",
-                "--no-scene-detection",
-            ]
+            params = construct_target_quality_command("rav1e", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "vpx":
-            params = [
-                "vpxenc",
-                "-b",
-                "10",
-                "--profile=2",
-                "--passes=1",
-                "--pass=1",
-                "--codec=vp9",
-                f"--threads={n_threads}",
-                "--cpu-used=9",
-                "--end-usage=q",
-                f"--cq-level={q}",
-                "--row-mt=1",
-            ]
+            params = construct_target_quality_command("vpx", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "svt_av1":
-            params = [
-                "SvtAv1EncApp",
-                "-i",
-                "stdin",
-                "--lp",
-                f"{n_threads}",
-                "--preset",
-                "8",
-                "--keyint",
-                "240",
-                "--crf",
-                f"{q}",
-                "--tile-rows",
-                "1",
-                "--tile-columns",
-                "2",
-                "--pred-struct",
-                "0",
-                "--sg-filter-mode",
-                "0",
-                "--enable-restoration-filtering",
-                "0",
-                "--cdef-level",
-                "0",
-                "--disable-dlf",
-                "0",
-                "--mrp-level",
-                "0",
-                "--enable-mfmv",
-                "0",
-                "--enable-local-warp",
-                "0",
-                "--enable-global-motion",
-                "0",
-                "--enable-interintra-comp",
-                "0",
-                "--obmc-level",
-                "0",
-                "--rdoq-level",
-                "0",
-                "--filter-intra-level",
-                "0",
-                "--enable-intra-edge-filter",
-                "0",
-                "--enable-pic-based-rate-est",
-                "0",
-                "--pred-me",
-                "0",
-                "--bipred-3x3",
-                "0",
-                "--compound",
-                "0",
-                "--ext-block",
-                "0",
-                "--hbd-md",
-                "0",
-                "--palette-level",
-                "0",
-                "--umv",
-                "0",
-                "--tf-level",
-                "3",
-            ]
+            params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-b", probe_name])
 
         elif encoder == "svt_vp9":
-            params = [
-                "SvtVp9EncApp",
-                "-i",
-                "stdin",
-                "--lp",
-                f"{n_threads}",
-                "-enc-mode",
-                "8",
-                "-q",
-                f"{q}",
-            ]
+            params = construct_target_quality_command("svt_vp9", str(n_threads), str(q))
             # TODO: pipe needs to output rawvideo
             cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
 
         elif encoder == "x264":
-            params = [
-                "x264",
-                "--log-level",
-                "error",
-                "--demuxer",
-                "y4m",
-                "-",
-                "--no-progress",
-                "--threads",
-                f"{n_threads}",
-                "--preset",
-                "medium",
-                "--crf",
-                f"{q}",
-            ]
+            params = construct_target_quality_command("x264", n_threads, str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         return cmd

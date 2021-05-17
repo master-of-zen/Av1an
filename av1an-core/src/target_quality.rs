@@ -51,7 +51,7 @@ pub fn construct_target_quality_command(
       "-s".into(),
       "10".into(),
       "--threads".into(),
-      format!("--threads={}", threads),
+      format!("{}", threads),
       "--tiles".into(),
       "16".into(),
       "--quantizer".into(),

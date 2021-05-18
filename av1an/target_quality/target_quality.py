@@ -373,7 +373,7 @@ class TargetQuality:
             cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
 
         elif encoder == "x264":
-            params = construct_target_quality_command("x264", n_threads, str(q))
+            params = construct_target_quality_command("x264", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         return cmd

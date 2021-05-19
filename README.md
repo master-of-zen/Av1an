@@ -141,8 +141,8 @@ With your own parameters:
                             VMAF used as substructure for algorithms.
                             Supported in all encoders supported by Av1an except for VVC.
                             Best works in range 85-97.
-                            When using this mode specify full encoding options.
-                            Encoding options must include quantizer based mode,
+                            When using this mode, you must specify full encoding options.
+                            These encoding options must include a quantizer based mode,
                             and some quantizer option provided. (This value will be replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
 
@@ -153,7 +153,7 @@ With your own parameters:
     --min_q, --max_q        Min,Max Q values limits
                             If not set by the user, the default for encoder range will be used.
 
-    --vmaf                  Calculate VMAF after encode is done and make a plot.
+    --vmaf                  Calculate VMAF after encoding is done and make a plot.
 
     --vmaf_plots            Make plots for target quality search decisions
                             (Exception: early skips)
@@ -161,7 +161,7 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models.
                             example: --vmaf_path "vmaf_v0.6.1.pkl"
-                            Recomended to place both files in encoding folder
+                            Recommended to place both files in encoding folder
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if VMAF calculation doesn't work by default)
 
@@ -194,7 +194,7 @@ With your own parameters:
 -   Resuming encoding without loss of encoded progress.
 -   Simple and clean console look.
 -   Automatic detection of the number of workers the host can handle.
--   Building encoding queue with bigger files first, minimizing waiting for the last scene to encode.
+-   Builds the encoding queue with bigger files first, minimizing waiting for the last scene to encode.
 -   Both video and audio transcoding with FFmpeg.
 -   Logging of the progress of all encoders.
 

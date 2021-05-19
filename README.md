@@ -161,7 +161,7 @@ With your own parameters:
 
     --vmaf_path             Custom path to libvmaf models.
                             example: --vmaf_path "vmaf_v0.6.1.pkl"
-                            Recomended to place both files in encoding folder
+                            Recommended to place both files in encoding folder
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if VMAF calculation doesn't work by default)
 

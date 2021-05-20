@@ -220,3 +220,38 @@ pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
 
   assert!(out.status.success());
 }
+
+pub fn get_frame_types(file: &Path) -> Vec<String> {
+  let mut cmd = Command::new("ffmpeg");
+
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  let args = [
+    "ffmpeg",
+    "-hide_banner",
+    "-i",
+    file.to_str().unwrap(),
+    "-vf",
+    "showinfo",
+    "-f",
+    "null",
+    "-loglevel",
+    "debug",
+    "-",
+  ];
+
+  cmd.args(args);
+
+  let out = cmd.output().unwrap();
+
+  assert!(out.status.success());
+
+  let output = String::from_utf8(out.stderr).unwrap();
+
+  let str_vec = output.split("\n").collect::<Vec<_>>();
+
+  let string_vec: Vec<String> = str_vec.iter().map(|x| x.to_string()).collect();
+
+  string_vec
+}

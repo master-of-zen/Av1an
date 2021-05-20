@@ -108,6 +108,13 @@ fn get_ffmpeg_info() -> String {
 }
 
 #[pyfunction]
+fn get_frame_types(file: String) -> Vec<String> {
+  let input_file = Path::new(&file);
+
+  av1an_core::ffmpeg::get_frame_types(input_file)
+}
+
+#[pyfunction]
 fn determine_workers(encoder: &str) -> PyResult<u64> {
   Ok(av1an_core::determine_workers(
     Encoder::from_str(encoder).map_err(|_| {
@@ -173,6 +180,6 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ffmpeg, m)?)?;
   m.add_function(wrap_pyfunction!(extract_audio, m)?)?;
-
+  m.add_function(wrap_pyfunction!(get_frame_types, m)?)?;
   Ok(())
 }

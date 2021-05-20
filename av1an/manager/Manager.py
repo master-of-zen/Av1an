@@ -8,7 +8,6 @@ from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
-from av1an.ffmpeg import extract_audio
 from av1an.fp_reuse import segment_first_pass
 from av1an.logger import log, set_log
 from av1an.project.Project import Project
@@ -17,7 +16,7 @@ from av1an.startup.file_validation import process_inputs
 
 from av1an.utils import frame_probe
 from av1an.vmaf import VMAF
-
+from av1an_pyo3 import extract_audio
 from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
 
@@ -95,7 +94,11 @@ class EncodingManager:
 
         self.done_file(project, chunk_queue)
         if not project.resume:
-            extract_audio(project.input, project.temp, project.audio_params)
+            extract_audio(
+                str(project.input.resolve()),
+                str(project.temp.resolve()),
+                project.audio_params,
+            )
 
             if project.reuse_first_pass:
                 segment_first_pass(project.temp, split_locations)

@@ -126,6 +126,13 @@ fn frame_probe_vspipe(source: &str) -> PyResult<usize> {
 }
 
 #[pyfunction]
+fn extract_audio(input: String, temp: String, audio_params: Vec<String>) {
+  let input_path = Path::new(&input);
+  let temp_path = Path::new(&temp);
+  av1an_core::ffmpeg::extract_audio(input_path, temp_path, audio_params);
+}
+
+#[pyfunction]
 fn ffmpeg_get_frame_count(source: &str) -> usize {
   av1an_core::ffmpeg::ffmpeg_get_frame_count(Path::new(source))
 }
@@ -165,6 +172,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
   m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ffmpeg, m)?)?;
+  m.add_function(wrap_pyfunction!(extract_audio, m)?)?;
 
   Ok(())
 }

@@ -1,4 +1,5 @@
 #![allow(unused)]
+#![feature(iter_zip)]
 
 #[macro_use]
 extern crate log;
@@ -15,6 +16,7 @@ use sysinfo::SystemExt;
 
 pub mod concat;
 pub mod ffmpeg;
+pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;
 

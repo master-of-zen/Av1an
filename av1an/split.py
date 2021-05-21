@@ -13,6 +13,8 @@ from .project import Project
 from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
 from .logger import log
 
+from av1an_pyo3 import extra_splits
+
 # TODO: organize to single segmenting/splitting module
 
 
@@ -54,7 +56,10 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
     # Applying extra splits
     if project.extra_split:
-        scenes = extra_splits(project, scenes)
+        log("Applying extra splits")
+        log(f"Split distance: {project.extra_split}")
+        scenes = extra_splits(scenes, project.get_frames(), project.extra_split)
+        log(f"New splits:{len(scenes)}")
 
     # write scenes for resuming later if needed
     return scenes
@@ -128,31 +133,6 @@ def segment(video: Path, temp: Path, frames: List[int]):
             break
 
     log("Split Done")
-
-
-def extra_splits(project: Project, split_locations: list):
-    log("Applying extra splits")
-
-    split_locs_with_start = split_locations[:]
-    split_locs_with_start.insert(0, 0)
-
-    split_locs_with_end = split_locations[:]
-    split_locs_with_end.append(project.get_frames())
-
-    splits = list(zip(split_locs_with_start, split_locs_with_end))
-    for i in splits:
-        distance = i[1] - i[0]
-        if distance > project.extra_split:
-            to_add = distance // project.extra_split
-            new_scenes = list(
-                linspace(i[0], i[1], to_add + 1, dtype=int, endpoint=False)[1:]
-            )
-            split_locations.extend(new_scenes)
-
-    result = [int(x) for x in sorted(split_locations)]
-    log(f"Split distance: {project.extra_split}")
-    log(f"New splits:{len(result)}")
-    return result
 
 
 def calc_split_locations(project: Project) -> List[int]:

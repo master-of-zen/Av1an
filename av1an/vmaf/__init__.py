@@ -1,1 +1,0 @@
-from .vmaf import VMAF

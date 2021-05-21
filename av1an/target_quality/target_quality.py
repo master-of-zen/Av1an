@@ -626,20 +626,3 @@ class TargetQuality:
                 q_list.append(int(round(q[0])))
 
             return q_list
-
-
-"""
-def frame_types_probe(chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, qp_file) -> CommandPair:
-
-    probe_name = gen_probes_names(chunk, q).with_suffix('.ivf').as_posix()
-
-    pipe = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', '-', '-vf', f'select=not(mod(n\\,{probing_rate}))',
-            *ffmpeg_pipe]
-
-    params = ['x265', '--log-level', '0', '--no-progress',
-              '--y4m', '--preset', 'fast', '--crf', f'{q}']
-
-    cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-
-    return cmd
-"""

@@ -7,8 +7,7 @@ from av1an.chunk import Chunk
 from av1an.encoder import ENCODERS
 from av1an.logger import log
 from av1an.resume import read_done_data
-from av1an.split import segment
-from av1an_pyo3 import create_vs_file, get_keyframes
+from av1an_pyo3 import create_vs_file, get_keyframes, segment
 import sys
 
 
@@ -106,7 +105,9 @@ def create_video_queue_hybrid(
     segments = []
 
     # Make segments
-    segment(project.input, project.temp, to_split[1:])
+    log("Segmenting Video")
+    segment(str(project.input.resolve()), str(project.temp.resolve()), to_split[1:])
+    log("Segment Done")
     source_path = project.temp / "split"
     queue_files = [x for x in source_path.iterdir() if x.suffix == ".mkv"]
     queue_files.sort(key=lambda p: p.stem)
@@ -285,8 +286,9 @@ def create_video_queue_segment(
     """
 
     # segment into separate files
+    log("Split Video")
     segment(project.input, project.temp, split_locations)
-
+    log("Split Done")
     # get the names of all the split files
     source_path = project.temp / "split"
     queue_files = [x for x in source_path.iterdir() if x.suffix == ".mkv"]

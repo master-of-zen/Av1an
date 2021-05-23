@@ -171,6 +171,13 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
   av1an_core::split::extra_splits(split_locations, total_frames, split_size)
 }
 
+#[pyfunction]
+fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
+  let input = Path::new(&input);
+  let temp = Path::new(&temp);
+  Ok(av1an_core::split::segment(input, temp, segments))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -187,5 +194,6 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(extract_audio, m)?)?;
   m.add_function(wrap_pyfunction!(get_frame_types, m)?)?;
   m.add_function(wrap_pyfunction!(extra_splits, m)?)?;
+  m.add_function(wrap_pyfunction!(segment, m)?)?;
   Ok(())
 }

@@ -1,4 +1,54 @@
 use std::iter::zip;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+pub fn segment(input: &Path, temp: &Path, segments: Vec<usize>) {
+  let mut cmd = Command::new("ffmpeg");
+
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  cmd.args(&[
+    "-hide_banner",
+    "-y",
+    "-i",
+    input.to_str().unwrap(),
+    "-map",
+    "0:v:0",
+    "-an",
+    "-c",
+    "copy",
+    "-avoid_negative_ts",
+    "1",
+    "-vsync",
+    "0",
+  ]);
+
+  if segments.len() > 0 {
+    let segments_to_string = segments
+      .clone()
+      .iter()
+      .map(|x| x.to_string())
+      .collect::<Vec<String>>();
+    let segments_joined = segments_to_string.join(",");
+
+    cmd.args(&[
+      "-f",
+      "segment",
+      "-segment_frames",
+      &segments_joined.to_owned(),
+    ]);
+    let split_path = Path::new(temp).join("split").join("%05d.mkv");
+    let split_str = split_path.to_str().unwrap();
+    cmd.arg(split_str);
+  } else {
+    let split_path = Path::new(temp).join("split").join("0.mkv");
+    let split_str = split_path.to_str().unwrap();
+    cmd.arg(split_str);
+  }
+  let out = cmd.output().unwrap();
+  assert!(out.status.success());
+}
 
 pub fn extra_splits(
   split_locations: Vec<usize>,

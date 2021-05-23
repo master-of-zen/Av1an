@@ -90,51 +90,6 @@ def read_scenes_from_file(scene_path: Path) -> Tuple[int]:
         return data["scenes"], data["frames"]
 
 
-def segment(video: Path, temp: Path, frames: List[int]):
-    """
-    Uses ffmpeg to segment the video into separate files.
-    Splits the video by frame numbers or copies the video if no splits are needed
-
-    :param video: the source video
-    :param temp: the temp directory
-    :param frames: the split locations
-    :return: None
-    """
-
-    log("Split Video")
-    cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-y",
-        "-i",
-        video.absolute().as_posix(),
-        "-map",
-        "0:v:0",
-        "-an",
-        "-c",
-        "copy",
-        "-avoid_negative_ts",
-        "1",
-        "-vsync",
-        "0",
-    ]
-
-    if len(frames) > 0:
-        cmd.extend(
-            ["-f", "segment", "-segment_frames", ",".join([str(x) for x in frames])]
-        )
-        cmd.append(os.path.join(temp, "split", "%05d.mkv"))
-    else:
-        cmd.append(os.path.join(temp, "split", "0.mkv"))
-    pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    while True:
-        line = pipe.stdout.readline().strip()
-        if len(line) == 0 and pipe.poll() is not None:
-            break
-
-    log("Split Done")
-
-
 def calc_split_locations(project: Project) -> List[int]:
     """
     Determines a list of frame numbers to split on with pyscenedetect or aom keyframes

@@ -161,9 +161,6 @@ jobs:
         with:
           name: docker-cache
           path: /tmp/docker-cache.tar
-        
-      - name: ls
-        run: ls /tmp/.buildx-cache
 
   docker-publish:
     needs: docker
@@ -180,9 +177,6 @@ jobs:
 
       - name: Extract docker cache
         run: tar -xf /tmp/docker-cache.tar -C /
-      
-      - name: ls
-        run: ls /tmp/.buildx-cache
      
       - name: Docker meta
         id: docker_meta

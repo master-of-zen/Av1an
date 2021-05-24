@@ -22,7 +22,7 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
 # Create user
 RUN useradd -ms /bin/bash app_user
 
-# Install av1an
+# Copy av1an
 COPY . /Av1an
 WORKDIR /Av1an
 
@@ -41,7 +41,7 @@ RUN python3 -m venv "${VIRTUAL_ENV}"
 ENV PATH="$VIRTUAL_ENV/bin:/home/app_user/.cargo/bin:$PATH"
 
 # Install av1an requirements and build rust requirements
-RUN pip3 install -r requirements.txt vapoursynth
+RUN pip3 install wheel && pip3 install -r requirements.txt vapoursynth
 RUN maturin develop --release -m av1an-pyo3/Cargo.toml
 
 VOLUME ["/videos"]

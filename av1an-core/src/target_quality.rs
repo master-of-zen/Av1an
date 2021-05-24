@@ -1,5 +1,6 @@
 use crate::Encoder;
 use std::str::FromStr;
+use std::cmp;
 
 pub fn construct_target_quality_command(
   encoder: Encoder,
@@ -171,7 +172,7 @@ pub fn construct_target_quality_command(
       "--no-progress".into(),
       "--y4m".into(),
       "--frame-threads".into(),
-      format!("{}", threads),
+      format!("{}", cmp::min(threads,16.to_string())),
       "--preset".into(),
       "fast".into(),
       "--crf".into(),

@@ -74,6 +74,7 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
+     
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
@@ -116,36 +117,92 @@ jobs:
             curl -LO https://$url/video.tar.gz && break
           done
           tar xf video.tar.gz
+    
       - name: Testing ${{ matrix.name }}
         run: |
           ./av1an.py -i bus_cif.y4m -enc ${{ matrix.enc }} -log log_av1an -tr 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
+     
       - name: Cat log
         if: always()
         run: cat log_av1an.log
 
   docker:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+     
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+    
+      - name: Build
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: av1an:action
+          cache-to: type=local,dest=/tmp/.buildx-cache
+    
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+   
+      - name: Tar docker cache
+        run: tar -cf /tmp/docker-cache.tar /tmp/.buildx-cache
+
+      - name: Artifact docker cache
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-cache
+          path: /tmp/docker-cache.tar
+        
+      - name: ls
+        run: ls /tmp/.buildx-cache
+
+  docker-publish:
+    needs: docker
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+     
+      - uses: actions/download-artifact@v2
+        with:
+         name: docker-cache
+         path: /tmp/
+
+      - name: Extract docker cache
+        run: tar -xf /tmp/docker-cache.tar -C /
+      
+      - name: ls
+        run: ls /tmp/.buildx-cache
+     
       - name: Docker meta
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an # list of Docker images to use as base name for tags
           tag-sha: true # add git short SHA as Docker tag
+    
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
+     
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+   
       - name: Login to DockerHub
         uses: docker/login-action@v1 
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
@@ -155,5 +212,7 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+    
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

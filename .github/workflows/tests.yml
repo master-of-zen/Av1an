@@ -19,7 +19,7 @@ jobs:
   validate:
     name: ${{ matrix.name }} ${{ matrix.enc }} 
     runs-on: ubuntu-latest
-    container: registry.gitlab.com/luigi311/encoders-docker:latest
+    container: luigi311/encoders-docker:latest
     strategy:
       fail-fast: false
       matrix:

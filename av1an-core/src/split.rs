@@ -80,3 +80,35 @@ pub fn extra_splits(
 
   result_vec
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_extra_split_no_segments() {
+    let total_frames = 300;
+    let split_size = 240;
+    let done = extra_splits((vec![]), total_frames, split_size);
+    let expected_split_locations = vec![150];
+
+    assert_eq!(expected_split_locations, done);
+  }
+
+  #[test]
+  fn test_extra_split_segments() {
+    let total_frames = 2000;
+    let split_size = 130;
+    let done = extra_splits(
+      (vec![150, 460, 728, 822, 876, 890, 1100, 1399, 1709]),
+      total_frames,
+      split_size,
+    );
+    let expected_split_locations: Vec<usize> = vec![
+      75, 150, 253, 356, 460, 549, 638, 728, 822, 876, 890, 995, 1100, 1199, 1299, 1399, 1502,
+      1605, 1709, 1806, 1903,
+    ];
+
+    assert_eq!(expected_split_locations, done);
+  }
+}

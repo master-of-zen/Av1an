@@ -1,6 +1,3 @@
 [workspace]
 
-members = [
-    "av1an-core",
-    "av1an-pyo3",
-]
+members = ["av1an-core", "av1an-pyo3", "av1an-scene-detection"]

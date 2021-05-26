@@ -37,7 +37,7 @@ fn process_inputs(inputs: Vec<&Path>) -> Vec<&Path> {
 
   // Process all inputs (folders and files)
   // into single path vector
-  for fl in inputs {
+  for fl in inputs.clone() {
     if fl.is_dir() {
       for file in fl {
         let path_file = Path::new(file);
@@ -57,6 +57,12 @@ fn process_inputs(inputs: Vec<&Path>) -> Vec<&Path> {
     .cloned()
     .filter(|x| match_file_type(*x))
     .collect();
+
+  if result.is_empty() {
+    println!("Not valid inputs");
+    println!("{:#?}", inputs);
+    exit(1);
+  }
 
   result
 }

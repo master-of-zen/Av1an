@@ -1,3 +1,5 @@
+use core::f64;
+
 struct AomFirstPassStats {
   frame: u64,                    // Frame number
   weight: u64,                   // Weight assigned to this frame
@@ -26,4 +28,17 @@ struct AomFirstPassStats {
   is_flash: u64,
   noise_var: u64,
   cor_coeff: u64,
+}
+
+fn get_second_ref_usage_thresh(frame_count_so_far: u64) -> f64 {
+  let adapt_upto = 32.0;
+  let min_second_ref_usage_thresh = 0.085;
+  let second_ref_usage_thresh_max_delta = 0.035;
+
+  if frame_count_so_far as f64 >= adapt_upto {
+    return min_second_ref_usage_thresh + second_ref_usage_thresh_max_delta;
+  } else {
+    min_second_ref_usage_thresh
+      + (frame_count_so_far as f64 / (adapt_upto - 1.0)) * second_ref_usage_thresh_max_delta
+  }
 }

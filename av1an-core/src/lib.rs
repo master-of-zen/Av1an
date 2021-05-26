@@ -17,6 +17,7 @@ use sysinfo::SystemExt;
 pub mod aom_kf;
 pub mod concat;
 pub mod ffmpeg;
+pub mod file_validation;
 pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;

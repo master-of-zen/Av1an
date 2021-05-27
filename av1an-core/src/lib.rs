@@ -14,6 +14,7 @@ use std::str::FromStr;
 use std::{fs::File, io::Write};
 use sysinfo::SystemExt;
 
+pub mod aom_kf;
 pub mod concat;
 pub mod ffmpeg;
 pub mod split;

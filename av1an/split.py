@@ -13,7 +13,7 @@ from .project import Project
 from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
 from .logger import log
 
-from av1an_pyo3 import extra_splits
+from av1an_pyo3 import extra_splits, read_scenes_from_file, write_scenes_to_file
 
 # TODO: organize to single segmenting/splitting module
 
@@ -30,7 +30,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
     # if resuming, we already have the split file, so just read that and return
     if resuming:
-        scenes, frames = read_scenes_from_file(scene_file)
+        scenes, frames = read_scenes_from_file(str(scene_file.resolve()))
         project.set_frames(frames)
         return scenes
 
@@ -42,7 +42,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     # Read saved scenes:
     if project.scenes and Path(project.scenes).exists():
         log("Using Saved Scenes")
-        scenes, frames = read_scenes_from_file(Path(project.scenes))
+        scenes, frames = read_scenes_from_file(str(Path(project.scenes).resolve()))
         project.set_frames(frames)
 
     else:
@@ -52,7 +52,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
             write_scenes_to_file(scenes, project.get_frames(), Path(project.scenes))
 
     # Write internal scenes
-    write_scenes_to_file(scenes, project.get_frames(), scene_file)
+    write_scenes_to_file(scenes, project.get_frames(), str(scene_file.resolve()))
 
     # Applying extra splits
     if project.extra_split:
@@ -63,31 +63,6 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
     # write scenes for resuming later if needed
     return scenes
-
-
-def write_scenes_to_file(scenes: List[int], frames: int, scene_path: Path):
-    """
-    Writes a list of scenes to the a file
-
-    :param scenes: the scenes to write
-    :param scene_path: the file to write to
-    :return: None
-    """
-    with open(scene_path, "w") as scene_file:
-        data = {"scenes": scenes, "frames": frames}
-        json.dump(data, scene_file)
-
-
-def read_scenes_from_file(scene_path: Path) -> Tuple[int]:
-    """
-    Reads a list of split locations from a file
-
-    :param scene_path: the file to read from
-    :return: a list of frames to split on
-    """
-    with open(scene_path, "r") as scene_file:
-        data = json.load(scene_file)
-        return data["scenes"], data["frames"]
 
 
 def calc_split_locations(project: Project) -> List[int]:

@@ -196,6 +196,24 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
   out
 }
 
+#[pyfunction]
+fn write_scenes_to_file(
+  scenes: Vec<usize>,
+  frames: usize,
+  scenes_path_string: String,
+) -> PyResult<()> {
+  let scene_path = PathBuf::from(scenes_path_string);
+
+  Ok(av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap())
+}
+
+#[pyfunction]
+fn read_scenes_from_file(scenes_path_string: String) -> (Vec<usize>, usize) {
+  let scene_path = PathBuf::from(scenes_path_string);
+
+  av1an_core::split::read_scenes_from_file(scene_path).unwrap()
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -214,5 +232,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(extra_splits, m)?)?;
   m.add_function(wrap_pyfunction!(segment, m)?)?;
   m.add_function(wrap_pyfunction!(process_inputs, m)?)?;
+  m.add_function(wrap_pyfunction!(write_scenes_to_file, m)?)?;
+  m.add_function(wrap_pyfunction!(read_scenes_from_file, m)?)?;
   Ok(())
 }

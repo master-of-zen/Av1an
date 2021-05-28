@@ -1,3 +1,9 @@
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::error;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::iter::zip;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -79,6 +85,42 @@ pub fn extra_splits(
   result_vec.sort();
 
   result_vec
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct ScenesData {
+  scenes: Vec<usize>,
+  frames: usize,
+}
+
+pub fn write_scenes_to_file(
+  scenes: Vec<usize>,
+  frames: usize,
+  scene_path: PathBuf,
+) -> std::io::Result<()> {
+  /// Writes a list of scenes and frame count to the file
+  let data = ScenesData { scenes, frames };
+
+  let serialized = serde_json::to_string(&data).unwrap();
+
+  let mut file = File::create(scene_path)?;
+
+  file.write_all(serialized.as_bytes())?;
+
+  Ok(())
+}
+pub fn read_scenes_from_file(
+  scene_path: PathBuf,
+) -> Result<(Vec<usize>, usize), Box<dyn error::Error>> {
+  let file = File::open(scene_path)?;
+
+  let mut contents = String::new();
+
+  let reader = BufReader::new(file);
+
+  let data: ScenesData = serde_json::from_reader(reader)?;
+
+  Ok((data.scenes, data.frames))
 }
 
 #[cfg(test)]

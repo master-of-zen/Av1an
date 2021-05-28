@@ -10,7 +10,7 @@ use std::{io::prelude::*, path::PathBuf};
 fn match_file_type(input: PathBuf) -> bool {
   let extension = input.as_path().extension().unwrap().to_str().unwrap();
 
-  if ["mkv", "mp4", "mov", "avi", "flv", "m2ts"]
+  if ["mkv", "mp4", "mov", "avi", "flv", "m2ts", "y4m"]
     .iter()
     .any(|&v| input.extension().map_or(false, |u| v == u))
   {

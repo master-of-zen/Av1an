@@ -28,16 +28,7 @@ class Args:
 
         self.project = Project(self.parsed)
 
-        if self.project.config:
-            self.save_load_project_file()
-
         return self.project
-
-    def get_difference(self) -> dict:
-        """
-        Return difference of defaults and new
-        """
-        return dict([x for x in self.parsed.items() if x not in self.defaults.items()])
 
     def parse(self):
         """
@@ -49,18 +40,3 @@ class Args:
         if not self.parsed["input"]:
             print("No input")
             sys.exit()
-
-    def save_load_project_file(self):
-        """
-        Saves current/Loads given project file, loads saved project first and when overwrites only unique values from current parse
-        """
-        cfg_path = Path(self.project.config)
-
-        if cfg_path.exists():
-
-            new = self.get_difference()
-            self.project.load_project_from_file(self.project.config)
-            self.project.load_project(new)
-
-        else:
-            self.project.save_project_to_file(self.project.config)

@@ -73,12 +73,7 @@ With your own parameters:
 
     --mkvmerge              Use mkvmerge for concatenating instead of FFmpeg.
                             Use when concatenation fails.
-
-    -c  --config            Save/Read config file with encoder, encoder parameters,
-                            FFmpeg and audio settings.
-                            Options provided to cli overwrite config values.
-                            All options except in/out/VMAF/log/temp/config paths are saved.
-
+                            
     --webm                  Outputs webm file.
                             Use only if you're sure the source video and audio are compatible.
 

@@ -99,7 +99,6 @@ pub struct EncodeConfig {
   output_file: PathBuf,
 
   concat_method: ConcatMethod,
-  config: (),
   webm: (),
   chunk_method: ChunkMethod,
   scenes: PathBuf,

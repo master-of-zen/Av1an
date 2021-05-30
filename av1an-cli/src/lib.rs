@@ -40,10 +40,6 @@ pub struct Args {
   #[clap(long)]
   keep: bool,
 
-  /// Path to config file (creates if it does not exist)
-  #[clap(short = 'c', long, parse(from_os_str))]
-  config: Option<PathBuf>,
-
   /// Output to webm
   #[clap(long)]
   webm: bool,

@@ -33,7 +33,6 @@ class Project(object):
         self.output_file: Path = None
         self.mkvmerge: bool = None
         self.output_ivf: bool = None
-        self.config = None
         self.webm = None
 
         # Splitting
@@ -169,35 +168,6 @@ class Project(object):
             else:
                 print("Stopping")
                 sys.exit()
-
-    def load_project_from_file(self, path_string):
-        """
-        Loads projedt attributes from json to this class
-        """
-        pth = Path(path_string)
-        with open(pth) as json_data:
-            data = json.load(json_data)
-        self.load_project(data)
-
-    def save_project_to_file(self, path_string):
-        """
-        Save project attributes from json to this class
-        """
-        pth = Path(path_string)
-        with open(pth, "w") as json_data:
-            json_data.write(self.save_project())
-
-    def save_project(self):
-        """
-        Returns json of this class, which later can be loaded
-        """
-        dt = dict(self.__dict__)
-        del dt["input"]
-        del dt["output_file"]
-        del dt["temp"]
-        del dt["vmaf_path"]
-        del dt["config"]
-        return json.dumps(dt, indent=4, sort_keys=True)
 
     def determine_workers(self):
         """Returns number of workers that machine can handle with selected encoder."""

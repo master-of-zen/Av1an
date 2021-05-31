@@ -80,17 +80,16 @@ pub fn get_keyframes(source: &Path) -> Vec<usize> {
 pub fn write_concat_file(temp_folder: &Path) {
   let concat_file = &temp_folder.join("concat");
   let encode_folder = &temp_folder.join("encode");
-  let files = read_dir(encode_folder).unwrap();
+  let mut files: Vec<_> = read_dir(encode_folder)
+    .unwrap()
+    .map(|x| x.unwrap())
+    .collect();
 
-  let mut fls = vec![];
-
-  for i in files {
-    fls.push(i.unwrap());
-  }
+  files.sort_by_key(|x| x.path());
 
   let mut contents = String::new();
 
-  for i in fls {
+  for i in files {
     contents.push_str(format!("file {}\n", i.path().display()).as_str());
   }
 

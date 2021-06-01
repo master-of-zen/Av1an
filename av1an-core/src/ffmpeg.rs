@@ -213,7 +213,7 @@ pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         &concat_file,
       ])
       .args(audio_cmd)
-      .args(["-c", "copy", "-sn", "-map", "0", output.to_str().unwrap()]),
+      .args(["-c", "copy", output.to_str().unwrap()]),
   };
   let out = cmd.output().unwrap();
 

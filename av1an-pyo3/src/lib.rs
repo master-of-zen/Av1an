@@ -3,13 +3,13 @@ use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
 
-use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
 #[pyfunction]
 fn adapt_probing_rate(_frames: usize, rate: usize) -> usize {
@@ -178,6 +178,24 @@ fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
   Ok(av1an_core::split::segment(input, temp, segments))
 }
 
+#[pyfunction]
+fn process_inputs(input: Vec<String>) -> Vec<String> {
+  let path_bufs: Vec<PathBuf> = input
+    .into_iter()
+    .map(|x| PathBuf::from_str(x.as_str()).unwrap())
+    .collect();
+
+  let processed = av1an_core::file_validation::process_inputs(path_bufs);
+
+  let out: Vec<String> = processed
+    .clone()
+    .iter()
+    .map(|x| x.as_path().to_str().unwrap().to_string())
+    .collect();
+
+  out
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -195,5 +213,6 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_frame_types, m)?)?;
   m.add_function(wrap_pyfunction!(extra_splits, m)?)?;
   m.add_function(wrap_pyfunction!(segment, m)?)?;
+  m.add_function(wrap_pyfunction!(process_inputs, m)?)?;
   Ok(())
 }

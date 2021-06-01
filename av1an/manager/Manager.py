@@ -12,11 +12,10 @@ from av1an.fp_reuse import segment_first_pass
 from av1an.logger import log, set_log
 from av1an.project.Project import Project
 from av1an.split import split_routine
-from av1an.startup.file_validation import process_inputs
 
 from av1an.utils import frame_probe
 from av1an.vmaf import VMAF
-from av1an_pyo3 import extract_audio
+from av1an_pyo3 import extract_audio, process_inputs
 from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
 
@@ -25,7 +24,10 @@ class Main:
     def __init__(self, args):
         self.file_queue: list[Path] = []
         self.args = args
-        self.file_queue = process_inputs(args.input)
+        inputs = [str(x).strip() for x in args.input]
+        input_paths = [Path(x) for x in process_inputs(inputs)]
+
+        self.file_queue = input_paths
         self.projects = self.create_project_list()
 
     def create_project_list(self):

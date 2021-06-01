@@ -1,14 +1,14 @@
-use std::io::prelude::*;
-use std::path::{is_separator, Path, PathBuf};
+use std::path::{is_separator, Path};
 use std::process::{exit, Command, Stdio};
 use std::{
   fs::{remove_file, File},
   path,
 };
+use std::{io::prelude::*, path::PathBuf};
 
 /// Returns file if it have suffix of media file
-fn match_file_type(input: &Path) -> bool {
-  let extension = input.extension().unwrap().to_str().unwrap();
+fn match_file_type(input: PathBuf) -> bool {
+  let extension = input.as_path().extension().unwrap().to_str().unwrap();
 
   if ["mkv", "mp4", "mov", "avi", "flv", "m2ts"]
     .iter()
@@ -20,47 +20,51 @@ fn match_file_type(input: &Path) -> bool {
   }
 }
 
-fn validate_files(files: Vec<&Path>) -> Vec<&Path> {
-  let valid: Vec<&Path> = files.iter().cloned().filter(|x| x.exists()).collect();
+fn validate_files(files: Vec<PathBuf>) -> Vec<PathBuf> {
+  let valid: Vec<PathBuf> = files
+    .iter()
+    .cloned()
+    .filter(|x| x.as_path().exists())
+    .collect();
   valid
 }
 
 /// Process given input file/dir
 /// Returns vector of files to process
-fn process_inputs(inputs: Vec<&Path>) -> Vec<&Path> {
+pub fn process_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
   if inputs.is_empty() {
     println!("No inputs");
     exit(0);
   }
 
-  let mut input_files: Vec<&Path> = vec![];
+  let mut input_files: Vec<PathBuf> = vec![];
 
   // Process all inputs (folders and files)
   // into single path vector
-  for fl in inputs.clone() {
-    if fl.is_dir() {
-      for file in fl {
-        let path_file = Path::new(file);
+  for fl in &inputs {
+    if fl.as_path().is_dir() {
+      for file in fl.as_path().read_dir().unwrap() {
+        let entry = file.unwrap();
+        let path_file = PathBuf::from(entry.path());
         input_files.push(path_file);
       }
     } else {
-      input_files.push(fl);
+      input_files.push(fl.to_path_buf());
     }
   }
 
   // Check are all files real
   let valid_input = validate_files(input_files);
-
   // Match files to media file extensions
-  let result: Vec<&Path> = valid_input
+  let result: Vec<PathBuf> = valid_input
     .iter()
     .cloned()
-    .filter(|x| match_file_type(*x))
+    .filter(|x| match_file_type(x.to_path_buf()))
     .collect();
 
   if result.is_empty() {
-    println!("Not valid inputs");
-    println!("{:#?}", inputs);
+    println!("No valid inputs");
+    println!("{:#?}", &inputs);
     exit(1);
   }
 
@@ -73,14 +77,14 @@ mod tests {
 
   #[test]
   fn test_match_file_type_true() {
-    let file = Path::new("input.mkv");
+    let file = PathBuf::from("input.mkv");
 
     assert_eq!(match_file_type(file), true)
   }
 
   #[test]
   fn test_match_file_type_false() {
-    let file = Path::new("picture.png");
+    let file = PathBuf::from("picture.png");
 
     assert_eq!(match_file_type(file), false)
   }
@@ -93,10 +97,10 @@ mod tests {
     File::create("dummy_3.jpeg").unwrap();
 
     let files = vec![
-      Path::new("dummy_1.mkv"),
-      Path::new("dummy_2.txt"),
-      Path::new("dummy_3.jpeg"),
-      Path::new("dummy_4.404"),
+      PathBuf::from("dummy_1.mkv"),
+      PathBuf::from("dummy_2.txt"),
+      PathBuf::from("dummy_3.jpeg"),
+      PathBuf::from("dummy_4.404"),
     ];
 
     let mut valid_files = files.clone();

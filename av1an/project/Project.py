@@ -6,7 +6,7 @@ from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
-from av1an.concat import vvc_concat, concatenate_mkvmerge
+from av1an.concat import concatenate_mkvmerge
 from av1an.logger import log
 from av1an_pyo3 import (
     get_ffmpeg_info,
@@ -83,11 +83,6 @@ class Project(object):
         self.probing_rate: int = None
         self.n_threads: int = None
         self.vmaf_filter: str = None
-
-        # VVC
-        self.vvc_conf: Path = None
-        self.video_dimensions = (None, None)
-        self.video_framerate = None
 
         # Set all initial values
         self.load_project(initial_data)
@@ -244,9 +239,7 @@ class Project(object):
         """
         try:
             log("Concatenating")
-            if self.encoder == "vvc":
-                vvc_concat(self.temp, self.output_file.with_suffix(".h266"))
-            elif self.output_ivf:
+            if self.output_ivf:
                 concatenate_ivf(
                     str((self.temp / "encode").resolve()),
                     str(self.output_file.with_suffix(".ivf").resolve()),

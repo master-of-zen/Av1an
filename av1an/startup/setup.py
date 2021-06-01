@@ -119,10 +119,6 @@ def startup_check(project: Project):
 
     setup_encoder(project)
 
-    # No check because vvc
-    if project.encoder == "vvc":
-        project.no_check = True
-
     if project.encoder == "svt_vp9" and project.passes == 2:
         print(
             "Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported"

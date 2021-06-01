@@ -17,7 +17,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using VVC / AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, SVT-VP9, VPX, x265, x264, VTM(Experimental) are supported.
+An easy way to start using AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, SVT-VP9, VPX, x265, x264, VTM(Experimental) are supported.
 
 Example with default parameters:
 
@@ -41,7 +41,7 @@ With your own parameters:
                             Output file ending is always `.mkv`
 
     -enc --encoder          Encoder to use
-                            (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`,`vvc`)
+                            (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`)
                             Default: aom
                             Example: -enc rav1e
 
@@ -50,7 +50,7 @@ With your own parameters:
 
     -p   --passes           Set number of passes for encoding
                             (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1,
-                            VPX: 2, x265: 1, x264: 1, VVC:1)
+                            VPX: 2, x265: 1, x264: 1)
 
     -w   --workers          Override number of workers.
 
@@ -139,7 +139,7 @@ With your own parameters:
 
     --target_quality        Quality value to target.
                             VMAF used as substructure for algorithms.
-                            Supported in all encoders supported by Av1an except for VVC.
+                            Supported in all encoders supported by Av1an.
                             Best works in range 85-97.
                             When using this mode, you must specify full encoding options.
                             These encoding options must include a quantizer based mode,
@@ -219,7 +219,6 @@ With your own parameters:
     -   [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
     -   [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
     -   [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
-    -   [Install VTM](https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM) VVC encoding test model
 
 -   Optional :
 

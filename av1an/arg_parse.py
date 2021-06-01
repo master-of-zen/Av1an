@@ -213,7 +213,6 @@ class Args:
                 "vpx",
                 "x265",
                 "x264",
-                # "vvc",
             ],
         )
         encode_group.add_argument(

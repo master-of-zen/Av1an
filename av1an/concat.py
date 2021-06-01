@@ -12,22 +12,6 @@ if platform.system() == "Linux":
     import resource
 
 
-def vvc_concat(temp: Path, output: Path):
-    """
-    Concatenates vvc files
-
-    :param temp: the temp directory
-    :param output: the output video
-    :return: None
-    """
-    encode_files = sorted((temp / "encode").iterdir())
-    bitstreams = [x.as_posix() for x in encode_files]
-    bitstreams = " ".join(bitstreams)
-    cmd = f"vvc_concat  {bitstreams} {output.as_posix()}"
-
-    subprocess.run(cmd, shell=True, check=True)
-
-
 def concatenate_mkvmerge(temp: Path, output):
     """
     Uses mkvmerge to concatenate encoded segments into the final file

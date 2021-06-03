@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
-
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -214,6 +213,16 @@ fn read_scenes_from_file(scenes_path_string: String) -> (Vec<usize>, usize) {
   av1an_core::split::read_scenes_from_file(scene_path).unwrap()
 }
 
+#[pyfunction]
+fn parse_args() -> String {
+  av1an_cli::parse_args()
+}
+
+#[pyfunction]
+fn default_args() -> String {
+  av1an_cli::default_args()
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -234,5 +243,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(process_inputs, m)?)?;
   m.add_function(wrap_pyfunction!(write_scenes_to_file, m)?)?;
   m.add_function(wrap_pyfunction!(read_scenes_from_file, m)?)?;
+  m.add_function(wrap_pyfunction!(parse_args, m)?)?;
+  m.add_function(wrap_pyfunction!(default_args, m)?)?;
   Ok(())
 }

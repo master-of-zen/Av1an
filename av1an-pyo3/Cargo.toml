@@ -33,3 +33,4 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.13.2" }
 av1an-core = { path = "../av1an-core" }
+av1an-cli = { path = "../av1an-cli" }

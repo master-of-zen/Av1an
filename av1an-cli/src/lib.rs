@@ -49,7 +49,7 @@ pub struct Args {
   webm: bool,
 
   /// Method for creating chunks
-  #[clap(short = 'm', long, default_value = "hybrid")]
+  #[clap(short = 'm', long)]
   chunk_method: String,
 
   /// File location for scenes
@@ -57,7 +57,7 @@ pub struct Args {
   scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long)]
+  #[clap(long, possible_values = &["ffmpeg", "pyscene", "aom_keyframess"], default_value = "pyscene")]
   split_method: Option<String>,
 
   /// Number of frames after which make split
@@ -100,7 +100,7 @@ pub struct Args {
   force: bool,
 
   /// FFmpeg commands
-  #[clap(short = 'f', long, default_value = " ")]
+  #[clap(short = 'f', long, default_value = "")]
   ffmpeg: String,
 
   /// FFmpeg audio parameters
@@ -109,7 +109,7 @@ pub struct Args {
 
   /// FFmpeg pixel format
   #[clap(long, default_value = "yuv420p10le")]
-  pix_fmt: String,
+  pix_format: String,
 
   /// Calculate VMAF after encode
   #[clap(long)]
@@ -132,7 +132,7 @@ pub struct Args {
   target_quality: Option<f64>,
 
   /// Method selection for target quality
-  #[clap(long, possible_values = &["per_frame", "per_shot"])]
+  #[clap(long, possible_values = &["per_frame", "per_shot"], default_value = "per_shot")]
   target_quality_method: Option<String>,
 
   /// Number of probes to make for target_quality

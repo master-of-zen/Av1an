@@ -2,6 +2,7 @@ import time
 import sys
 import concurrent
 import concurrent.futures
+import traceback
 from typing import List
 from av1an.target_quality import TargetQuality
 from av1an.encoder import ENCODERS
@@ -114,6 +115,7 @@ class Queue:
                 )
                 log(msg1, msg2, msg3)
                 print(f"{msg1}\n::{msg2}\n::{msg3}")
+                traceback.print_exc()
                 restart_count += 1
 
         msg1, msg2 = (

@@ -59,7 +59,7 @@ class Project(object):
         self.ffmpeg_pipe: Command = None
         self.ffmpeg: str = None
         self.audio_params = None
-        self.pix_format: Command = None
+        self.pix_format = None
 
         # Misc
         self.quiet = False

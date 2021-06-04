@@ -2,6 +2,8 @@
 - Starting including rust code
 - FFMPEG info, hash path, adapt probing rate to rust
 - Removed VVC support for now
+- Args parsing to rust
+- Removed per frame target quality code (as it's too complex for me to make it work, atm)
 
 ### 6
 - ~1.7x faster probes for svt-av1

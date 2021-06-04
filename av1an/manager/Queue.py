@@ -67,10 +67,7 @@ class Queue:
                 if self.project.target_quality:
                     if self.project.target_quality_method == "per_shot":
                         self.tq.per_shot_target_quality_routine(chunk)
-                    if self.project.target_quality_method == "per_frame":
-                        self.tq.per_frame_target_quality_routine(chunk)
 
-                # skip first pass if reusing
                 start = (
                     2
                     if self.project.reuse_first_pass and self.project.passes >= 2

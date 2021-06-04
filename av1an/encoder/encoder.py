@@ -129,9 +129,6 @@ class Encoder(ABC):
         elif c.per_shot_target_quality_cq:
             enc_cmd = self.man_q(enc_cmd, c.per_shot_target_quality_cq)
 
-        elif c.per_frame_target_quality_q_list:
-            enc_cmd = self.mod_command(enc_cmd, c)
-
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
         ffmpeg_pipe = subprocess.Popen(
             filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT

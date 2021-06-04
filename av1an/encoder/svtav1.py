@@ -87,23 +87,6 @@ class SvtAv1(Encoder):
             ),
         ]
 
-    def mod_command(self, command, chunk) -> Command:
-        """Return new command with q_file
-
-        :param command: old command
-        :param q: q list
-        :return: command with new cq value"""
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
-
-        qp_file = chunk.make_q_file(chunk.per_frame_target_quality_q_list)
-
-        new = ["--use-q-file", "1", "--qpfile", f"{qp_file.as_posix()}"]
-        new_cmd = adjusted_command[:i] + new + adjusted_command[i + 2 :]
-
-        return new_cmd
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 

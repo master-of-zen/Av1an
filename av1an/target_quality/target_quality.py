@@ -41,17 +41,6 @@ class TargetQuality:
         self.temp = project.temp
         self.workers = project.workers
 
-    def per_frame_target_quality_routine(self, chunk: Chunk):
-        """
-        Applies per_shot_target_quality to this chunk. Determines what the cq value should be and sets the
-        per_shot_target_quality_cq for this chunk
-
-        :param project: the Project
-        :param chunk: the Chunk
-        :return: None
-        """
-        chunk.per_frame_target_quality_q_list = self.per_frame_target_quality(chunk)
-
     def log_probes(self, vmaf_cq, frames, name, target_q, target_vmaf, skip=None):
         """
         Logs probes result
@@ -494,99 +483,12 @@ class TargetQuality:
             fl.write(text)
         return qfile
 
-    def per_frame_probe_cmd(
-        self, chunk: Chunk, q, encoder, probing_rate, qp_file
-    ) -> CommandPair:
-        """
-        Generate and return commands for probes at set Q values
-        These are specifically not the commands that are generated
-        by the user or encoder defaults, since these
-        should be faster than the actual encoding commands.
-        These should not be moved into encoder classes at this point.
-        """
-        pipe = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            "-vf",
-            f"select=not(mod(n\\,{probing_rate}))",
-            *self.ffmpeg_pipe,
-        ]
-
-        probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
-        if encoder == "svt_av1":
-            params = [
-                "SvtAv1EncApp",
-                "-i",
-                "stdin",
-                "--preset",
-                "8",
-                "--rc",
-                "0",
-                "--passes",
-                "1",
-                "--use-q-file",
-                "1",
-                "--qpfile",
-                f"{qp_file.as_posix()}",
-            ]
-
-            cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
-        else:
-            print("supported only by SVT-AV1")
-            exit()
-        """
-        elif encoder == 'x265':
-            params = [
-                'x265', '--log-level', '0', '--no-progress', '--y4m', '--preset',
-                'fast', '--crf', f'{q}'
-            ]
-            cmd = CommandPair(pipe, [*params, '-o', probe_name, '-'])
-        """
-
-        return cmd
-
-    def per_frame_probe(self, q_list, q, chunk):
-        qfile = chunk.make_q_file(q_list)
-        cmd = self.per_frame_probe_cmd(chunk, q, self.encoder, 1, qfile)
-        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-        process_pipe(pipe, chunk, utility)
-        fl = self.vmaf_runner.call_vmaf(chunk, self.gen_probes_names(chunk, q))
-        jsn = VMAF.read_json(fl)
-        vmafs = [x["metrics"]["vmaf"] for x in jsn["frames"]]
-        return vmafs
-
     def add_probes_to_frame_list(self, frame_list, q_list, vmafs):
         frame_list = list(frame_list)
         for index, q_vmaf in enumerate(zip(q_list, vmafs)):
             frame_list[index]["probes"].append((q_vmaf[0], q_vmaf[1]))
 
         return frame_list
-
-    def per_frame_target_quality(self, chunk):
-        frames = chunk.frames
-        frame_list = [{"frame_number": x, "probes": []} for x in range(frames)]
-
-        for _ in range(self.probes):
-            q_list = self.gen_next_q(frame_list, chunk)
-            vmafs = self.per_frame_probe(q_list, 1, chunk)
-            frame_list = self.add_probes_to_frame_list(frame_list, q_list, vmafs)
-            mse = round(
-                self.get_square_error(
-                    [x["probes"][-1][1] for x in frame_list], self.target
-                ),
-                2,
-            )
-            # print(':: MSE:', mse)
-
-            if mse < 1.0:
-                return q_list
-
-        return q_list
 
     def get_square_error(self, ls, target):
         total = 0

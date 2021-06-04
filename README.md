@@ -147,8 +147,7 @@ With your own parameters:
                             `--crf`,`--cq-level`,`--quantizer` etc
 
     --target_quality_method Type of algorithm for use.
-                            Options: per_shot, per_frame.
-                            Per frame is only supported in SVT-AV1.
+                            Options: per_shot
 
     --min_q, --max_q        Min,Max Q values limits
                             If not set by the user, the default for encoder range will be used.

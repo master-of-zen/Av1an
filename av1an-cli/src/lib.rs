@@ -2,7 +2,7 @@ use clap::AppSettings::ColoredHelp;
 use clap::Clap;
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 // Cross-platform command-line AV1 / VP9 / HEVC / H264 / VVC encoding framework with per scene quality encoding
 #[derive(Clap, Debug, Serialize, Deserialize)]
@@ -57,7 +57,7 @@ pub struct Args {
   scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long, possible_values = &["ffmpeg", "pyscene", "aom_keyframess"], default_value = "pyscene")]
+  #[clap(long, possible_values = &["ffmpeg", "pyscene", "aom_keyframess"])]
   split_method: Option<String>,
 
   /// Number of frames after which make split
@@ -132,8 +132,8 @@ pub struct Args {
   target_quality: Option<f64>,
 
   /// Method selection for target quality
-  #[clap(long, possible_values = &["per_frame", "per_shot"], default_value = "per_shot")]
-  target_quality_method: Option<String>,
+  #[clap(long, possible_values = &[ "per_shot"], default_value = "per_shot")]
+  target_quality_method: String,
 
   /// Number of probes to make for target_quality
   #[clap(long, default_value = "4")]

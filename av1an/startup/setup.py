@@ -119,7 +119,7 @@ def startup_check(project: Project):
     project.audio_params = shlex.split(project.audio_params)
     project.ffmpeg = shlex.split(project.ffmpeg)
 
-    project.pix_format = ["-strict", "-1", "-pix_fmt", project.pix_fmt]
+    project.pix_format = ["-strict", "-1", "-pix_fmt", project.pix_format]
     project.ffmpeg_pipe = [
         *project.ffmpeg,
         *project.pix_format,

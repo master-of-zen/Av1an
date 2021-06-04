@@ -50,7 +50,7 @@ pub struct Args {
 
   /// Method for creating chunks
   #[clap(short = 'm', long)]
-  chunk_method: String,
+  chunk_method: Option<String>,
 
   /// File location for scenes
   #[clap(short, long, parse(from_os_str))]
@@ -100,8 +100,8 @@ pub struct Args {
   force: bool,
 
   /// FFmpeg commands
-  #[clap(short = 'f', long, default_value = "")]
-  ffmpeg: String,
+  #[clap(short = 'f', long)]
+  ffmpeg: Option<String>,
 
   /// FFmpeg audio parameters
   #[clap(short, long, default_value = "-c:a copy")]

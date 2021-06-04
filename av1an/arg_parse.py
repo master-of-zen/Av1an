@@ -45,6 +45,7 @@ class Args:
         """
         self.parsed = json.loads(parse_args())
         self.parsed["input"] = [Path(self.parsed["input"])]
+        self.parsed["ffmpeg"] = self.parsed["ffmpeg"] if self.parsed["ffmpeg"] else ""
         if not self.parsed["input"]:
             print("No input")
             sys.exit()

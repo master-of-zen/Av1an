@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
 
-// Cross-platform command-line AV1 / VP9 / HEVC / H264 / VVC encoding framework with per scene quality encoding
+// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
 #[derive(Clap, Debug, Serialize, Deserialize)]
 #[clap(name = "av1an", setting = ColoredHelp, version)]
 pub struct Args {
@@ -49,7 +49,7 @@ pub struct Args {
   webm: bool,
 
   /// Method for creating chunks
-  #[clap(short = 'm', long)]
+  #[clap(short = 'm', long, possible_values=&["segment", "select", "vs_ffms2", "vs_lsmash", "hybrid"])]
   chunk_method: Option<String>,
 
   /// File location for scenes

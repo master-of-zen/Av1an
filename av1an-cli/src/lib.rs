@@ -29,7 +29,7 @@ pub struct Args {
   quiet: bool,
 
   /// Enable logging
-  #[clap(short = 'l', long)]
+  #[clap(short, long)]
   log: Option<String>,
 
   /// Resume previous session
@@ -65,7 +65,7 @@ pub struct Args {
   extra_split: usize,
 
   /// PySceneDetect Threshold
-  #[clap(long, default_value = "35.0")]
+  #[clap(short, long, default_value = "35.0")]
   threshold: f64,
 
   /// Minimum number of frames in a split

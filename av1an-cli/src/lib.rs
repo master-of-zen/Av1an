@@ -14,7 +14,7 @@ pub struct Args {
 
   /// Temporary directory to use
   #[clap(long, parse(from_os_str))]
-  temp_dir: Option<PathBuf>,
+  temp: Option<PathBuf>,
 
   /// Specify output file
   #[clap(short, long, parse(from_os_str))]
@@ -80,7 +80,7 @@ pub struct Args {
   #[clap(short, long)]
   video_params: Option<String>,
 
-  #[clap(short, long, default_value = "aom", possible_values=&["aom", "rav1e", "libvpx", "svt-av1", "svt-vp9", "x264", "x265"])]
+  #[clap(short, long, default_value = "aom", possible_values=&["aom", "rav1e", "vpx", "svt_av1", "x264", "x265"])]
   encoder: String,
 
   /// Number of workers

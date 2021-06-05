@@ -79,11 +79,4 @@ def tqdm_bar(
 ):
     enc = ENCODERS[encoder]
     pipe, utility = enc.make_pipes(a, c, passes, current_pass, c.output)
-
-    if encoder in ("aom", "vpx", "rav1e", "x265", "x264", "svt_av1"):
-        process_encoding_pipe(pipe, encoder, counter, c, utility)
-
-    if encoder in ("svt_vp9"):
-        # SVT-VP9 is special
-        process_pipe(pipe, c, utility)
-        counter.update(frame_probe_source // passes)
+    process_encoding_pipe(pipe, encoder, counter, c, utility)

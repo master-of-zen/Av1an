@@ -41,7 +41,7 @@ With your own parameters:
                             Output file ending is always `.mkv`
 
     -enc --encoder          Encoder to use
-                            (`aom`,`rav1e`,`svt_av1`,`svt_vp9`,`vpx`,`x265`, `x264`)
+                            (`aom`,`rav1e`,`svt_av1`,`vpx`,`x265`, `x264`)
                             Default: aom
                             Example: -enc rav1e
 
@@ -73,7 +73,7 @@ With your own parameters:
 
     --mkvmerge              Use mkvmerge for concatenating instead of FFmpeg.
                             Use when concatenation fails.
-                            
+
     --webm                  Outputs webm file.
                             Use only if you're sure the source video and audio are compatible.
 

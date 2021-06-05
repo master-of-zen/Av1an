@@ -356,11 +356,6 @@ class TargetQuality:
             params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-b", probe_name])
 
-        elif encoder == "svt_vp9":
-            params = construct_target_quality_command("svt_vp9", str(n_threads), str(q))
-            # TODO: pipe needs to output rawvideo
-            cmd = CommandPair(pipe, [*params, "-b", probe_name, "-"])
-
         elif encoder == "x264":
             params = construct_target_quality_command("x264", str(n_threads), str(q))
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])

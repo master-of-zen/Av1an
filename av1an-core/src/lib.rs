@@ -28,7 +28,6 @@ pub enum Encoder {
   rav1e,
   libvpx,
   svt_av1,
-  svt_vp9,
   x264,
   x265,
 }
@@ -43,7 +42,6 @@ impl FromStr for Encoder {
       "rav1e" => Ok(Self::rav1e),
       "vpx" => Ok(Self::libvpx),
       "svt_av1" => Ok(Self::svt_av1),
-      "svt_vp9" => Ok(Self::svt_vp9),
       "x264" => Ok(Self::x264),
       "x265" => Ok(Self::x265),
       _ => Err(()),
@@ -182,9 +180,7 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
         (cpu as f64 / 3.0).round() as u64,
         (ram_gb as f64 / 1.5).round() as u64,
       ),
-      Encoder::svt_av1 | Encoder::svt_vp9 | Encoder::x264 | Encoder::x265 => {
-        std::cmp::min(cpu, ram_gb) / 8
-      }
+      Encoder::svt_av1 | Encoder::x264 | Encoder::x265 => std::cmp::min(cpu, ram_gb) / 8,
     },
     1,
   )

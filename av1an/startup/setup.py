@@ -110,12 +110,6 @@ def startup_check(project: Project):
 
     setup_encoder(project)
 
-    if project.encoder == "svt_vp9" and project.passes == 2:
-        print(
-            "Implicitly changing 2 pass svt-vp9 to 1 pass\n2 pass svt-vp9 isn't supported"
-        )
-        project.passes = 1
-
     project.audio_params = shlex.split(project.audio_params)
     project.ffmpeg = shlex.split(project.ffmpeg)
 

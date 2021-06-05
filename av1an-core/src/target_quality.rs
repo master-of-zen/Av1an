@@ -1,6 +1,6 @@
 use crate::Encoder;
-use std::str::FromStr;
 use std::cmp;
+use std::str::FromStr;
 
 pub fn construct_target_quality_command(
   encoder: Encoder,
@@ -139,17 +139,6 @@ pub fn construct_target_quality_command(
       "--tf-level".into(),
       "3".into(),
     ],
-    Encoder::svt_vp9 => vec![
-      "SvtVp9EncApp".into(),
-      "-i".into(),
-      "stdin".into(),
-      "--lp".into(),
-      format!("{}", threads),
-      "-enc-mode".into(),
-      "8".into(),
-      "-q".into(),
-      format!("{}", q),
-    ],
     Encoder::x264 => vec![
       "x264".into(),
       "--log-level".into(),
@@ -172,7 +161,7 @@ pub fn construct_target_quality_command(
       "--no-progress".into(),
       "--y4m".into(),
       "--frame-threads".into(),
-      format!("{}", cmp::min(threads,16.to_string())),
+      format!("{}", cmp::min(threads, 16.to_string())),
       "--preset".into(),
       "fast".into(),
       "--crf".into(),

@@ -18,7 +18,7 @@ pub struct Args {
 
   /// Specify output file
   #[clap(short, long, parse(from_os_str))]
-  output: Option<PathBuf>,
+  output_file: Option<PathBuf>,
 
   /// Concatenation method to use for splits
   #[clap(short, long, possible_values = &["ffmpeg", "mkvmerge", "ivf"], default_value = "ffmpeg")]

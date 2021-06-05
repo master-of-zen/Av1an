@@ -17,31 +17,31 @@ env:
 
 jobs:
   validate:
-    name: ${{ matrix.name }} ${{ matrix.enc }} 
+    name: ${{ matrix.name }} ${{ matrix.enc }}
     runs-on: ubuntu-latest
     container: luigi311/encoders-docker:latest
     strategy:
       fail-fast: false
       matrix:
         enc: [aom, rav1e, svt_av1, vpx, x265, x264]
-        name: [baseline, target_quality]
+        name: [baseline, target-quality]
         include:
           - name: baseline
             flags: ""
-          - name: target_quality
-            flags: --target_quality 95
+          - name: target-quality
+            flags: --target-quality 95
           - name: chunk_hybrid
             enc: aom
-            flags: --chunk_method hybrid
+            flags: --chunk-method hybrid
           - name: chunk_select
             enc: aom
-            flags: --chunk_method select
+            flags: --chunk-method select
           - name: chunk_ffms2
             enc: aom
-            flags: --chunk_method vs_ffms2
+            flags: --chunk-method vs_ffms2
           - name: chunk_lsmash
             enc: aom
-            flags: --chunk_method vs_lsmash
+            flags: --chunk-method vs_lsmash
           - name: scenes
             enc: aom
             flags: -s scenes.json
@@ -51,15 +51,15 @@ jobs:
           - name: vmaf
             enc: aom
             flags: --vmaf
-          - name: vmaf_plots
+          - name: vmaf-plots
             enc: aom
-            flags: --vmaf_plots
+            flags: --vmaf-plots
           - name: extra_splits
             enc: aom
-            flags: -xs 10
+            flags: -x 10
           - name: split_aom_keyframes
             enc: aom
-            flags: --split_method aom_keyframes
+            flags: --split-method aom_keyframes
           - name: video_settings
             enc: aom
             flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
@@ -74,7 +74,7 @@ jobs:
           SvtAv1EncApp --help
           rav1e --help
           x265 --help || true
-     
+
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
@@ -117,13 +117,13 @@ jobs:
             curl -LO https://$url/video.tar.gz && break
           done
           tar xf video.tar.gz
-    
+
       - name: Testing ${{ matrix.name }}
         run: |
           ./av1an.py -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an -t 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
-     
+
       - name: Cat log
         if: always()
         run: cat log_av1an.log
@@ -133,13 +133,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-    
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-     
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-    
+
       - name: Build
         id: docker_build
         uses: docker/build-push-action@v2
@@ -149,10 +149,10 @@ jobs:
           push: false
           tags: av1an:action
           cache-to: type=local,dest=/tmp/.buildx-cache
-    
+
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
-   
+
       - name: Tar docker cache
         run: tar -cf /tmp/docker-cache.tar /tmp/.buildx-cache
 
@@ -169,7 +169,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-     
+
       - uses: actions/download-artifact@v2
         with:
          name: docker-cache
@@ -177,26 +177,26 @@ jobs:
 
       - name: Extract docker cache
         run: tar -xf /tmp/docker-cache.tar -C /
-     
+
       - name: Docker meta
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an # list of Docker images to use as base name for tags
           tag-sha: true # add git short SHA as Docker tag
-    
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-     
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-   
+
       - name: Login to DockerHub
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
+
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
@@ -207,6 +207,6 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
-    
+
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

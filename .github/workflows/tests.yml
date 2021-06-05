@@ -163,7 +163,7 @@ jobs:
           path: /tmp/docker-cache.tar
 
   docker-publish:
-    needs: docker
+    needs: [validate, docker]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:

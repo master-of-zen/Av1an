@@ -3,9 +3,8 @@ import sys
 import concurrent
 import concurrent.futures
 import traceback
-from typing import List
+
 from av1an.target_quality import TargetQuality
-from av1an.encoder import ENCODERS
 from av1an.utils import frame_probe
 from av1an.resume import write_progress_file
 from av1an.chunk import Chunk

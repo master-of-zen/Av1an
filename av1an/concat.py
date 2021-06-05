@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from subprocess import PIPE, STDOUT
+from subprocess import PIPE
 
 from av1an.logger import log
 

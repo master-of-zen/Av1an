@@ -3,7 +3,6 @@ import os
 
 from math import isnan
 import numpy as np
-import re
 from scipy import interpolate
 
 from av1an.vmaf import VMAF
@@ -68,7 +67,6 @@ class TargetQuality:
         :type: Chunk chunk to probe
         :rtype: int q to use
         """
-        # TODO: Refactor this mess
         vmaf_cq = []
         frames = chunk.frames
 

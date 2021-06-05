@@ -13,7 +13,6 @@ from av1an.logger import log, set_log
 from av1an.project.Project import Project
 from av1an.split import split_routine
 
-from av1an.utils import frame_probe
 from av1an.vmaf import VMAF
 from av1an_pyo3 import extract_audio, process_inputs
 from .Counter import BaseManager, Counter, Manager

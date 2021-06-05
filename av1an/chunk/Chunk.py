@@ -126,16 +126,3 @@ class Chunk:
         )
         chunk.per_shot_target_quality_cq = d["per_shot_target_quality_cq"]
         return chunk
-
-    def make_q_file(self, q_list):
-        qfile = self.fake_input_path.with_name(f"q_file_{self.name}").with_suffix(
-            ".txt"
-        )
-        with open(qfile, "w") as fl:
-            text = ""
-
-            for x in q_list:
-                text += str(x) + "\n"
-
-            fl.write(text)
-        return qfile

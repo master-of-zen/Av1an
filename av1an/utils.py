@@ -4,7 +4,6 @@ import re
 from typing import List
 from pathlib import Path
 import cv2
-import numpy as np
 
 from av1an.vapoursynth import is_vapoursynth
 from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count

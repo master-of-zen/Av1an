@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 
 from av1an.project import Project
 from av1an.chunk import Chunk

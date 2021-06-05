@@ -9,7 +9,6 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 from typing import Union, Tuple, Dict, List
 
-import cv2
 
 try:
     from tqdm import tqdm

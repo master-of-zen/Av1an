@@ -67,7 +67,7 @@ With your own parameters:
 
     -q --quiet              Do not print tqdm to the terminal.
 
-    -log --logging          Path to .log file(By default created in temp folder)
+    -l --logging          Path to .log file(By default created in temp folder)
 
     --temp                  Set path for the temporary folder. Default: .temp
 

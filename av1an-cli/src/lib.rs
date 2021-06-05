@@ -30,7 +30,7 @@ pub struct Args {
 
   /// Enable logging
   #[clap(short, long)]
-  log: Option<String>,
+  logging: Option<String>,
 
   /// Resume previous session
   #[clap(short, long)]

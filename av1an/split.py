@@ -28,7 +28,6 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     """
     scene_file = project.temp / "scenes.json"
 
-    # if resuming, we already have the split file, so just read that and return
     if resuming:
         scenes, frames = read_scenes_from_file(str(scene_file.resolve()))
         project.set_frames(frames)

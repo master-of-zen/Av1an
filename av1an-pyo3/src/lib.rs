@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
 #[pyfunction]
-fn adapt_probing_rate(_frames: usize, rate: usize) -> usize {
+fn adapt_probing_rate(rate: usize, _frames: usize) -> usize {
   av1an_core::adapt_probing_rate(rate)
 }
 

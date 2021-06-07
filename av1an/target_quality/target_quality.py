@@ -11,7 +11,11 @@ from av1an.logger import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
-from av1an_pyo3 import adapt_probing_rate, construct_target_quality_command, construct_target_quality_slow_command
+from av1an_pyo3 import (
+    adapt_probing_rate,
+    construct_target_quality_command,
+    construct_target_quality_slow_command,
+)
 
 try:
     import matplotlib
@@ -225,33 +229,23 @@ class TargetQuality:
 
         return int(max((cores / self.workers) * over_provision_factor, minimum_threads))
 
-    def get_closest(self, q_list, q, positive=True):
-        """
-        Returns closest value from the list, ascending or descending
-
-        :param q_list: list of q values that been already used
-        :param q:
-        :param positive: search direction, positive - only values bigger than q
-        :return: q value from list
-        """
-        if positive:
-            q_list = [x for x in q_list if x > q]
-        else:
-            q_list = [x for x in q_list if x < q]
-
-        return min(q_list, key=lambda x: abs(x - q))
-
-    def probe_cmd_slow( self, encoder, q):
+    def probe_cmd_slow(self, encoder, q):
         args = self.video_params.copy()
         drop_indexs = []
-        drop_pattern = ["--cq-level=*", "--passes=*", "--pass=*", "--crf", "--quantizer"]
+        drop_pattern = [
+            "--cq-level=*",
+            "--passes=*",
+            "--pass=*",
+            "--crf",
+            "--quantizer",
+        ]
         for pattern in drop_pattern:
             if fnmatch.filter(args, pattern):
                 index = args.index(fnmatch.filter(args, pattern)[0])
                 drop_indexs.append(index)
                 if pattern == "--crf" or pattern == "--quantizer":
-                    drop_indexs.append(index+1)
-        for i in sorted(drop_indexs,reverse=True):
+                    drop_indexs.append(index + 1)
+        for i in sorted(drop_indexs, reverse=True):
             args.pop(i)
         params = construct_target_quality_slow_command(encoder, str(q))
         params.extend(args)

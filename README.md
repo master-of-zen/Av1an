@@ -167,6 +167,9 @@ With your own parameters:
                             1 and 2 probes have special cases to try to work with few data points.
                             The optimal level is 4-6 probes. Default: 4
 
+    --probe-slow            Use video encoding parameters for vmaf probes to get a more 
+                            accurate Q at the cost of speed.
+
     --vmaf_filter           Filter used for VMAF calculation. The passed format is filter_complex.
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
                             `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`

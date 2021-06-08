@@ -158,6 +158,7 @@ pub fn get_ffmpeg_info() -> String {
 }
 
 pub fn adapt_probing_rate(rate: usize) -> usize {
+  println!("Rust adapt_probing_rate: {}", rate);
   match rate {
     1..=4 => rate,
     _ => 4,

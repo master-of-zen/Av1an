@@ -72,9 +72,7 @@ class TargetQuality:
         """
         vmaf_cq = []
         frames = chunk.frames
-
         self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
-
         if self.probes < 3:
             return self.fast_search(chunk)
 
@@ -365,35 +363,35 @@ class TargetQuality:
             params = construct_target_quality_command("x265", str(n_threads), str(q))
             if self.probe_slow:
                 params = self.probe_cmd_slow("x265", str(q))
-        
+
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
-            
+
         elif encoder == "rav1e":
             params = construct_target_quality_command("rav1e", str(n_threads), str(q))
             if self.probe_slow:
                 params = self.probe_cmd_slow("rav1e", str(q))
-            
+
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "vpx":
             params = construct_target_quality_command("vpx", str(n_threads), str(q))
             if self.probe_slow:
                 params = self.probe_cmd_slow("vpx", str(q))
-            
+
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "svt_av1":
             params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
             if self.probe_slow:
                 params = self.probe_cmd_slow("svt_av1", str(q))
-            
+
             cmd = CommandPair(pipe, [*params, "-b", probe_name])
 
         elif encoder == "x264":
             params = construct_target_quality_command("x264", str(n_threads), str(q))
             if self.probe_slow:
                 params = self.probe_cmd_slow("x264", str(q))
-            
+
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         return cmd

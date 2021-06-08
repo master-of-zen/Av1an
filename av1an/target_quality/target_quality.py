@@ -320,7 +320,7 @@ class TargetQuality:
             if fnmatch.filter(args, pattern):
                 index = args.index(fnmatch.filter(args, pattern)[0])
                 drop_indexs.append(index)
-                if pattern == "--crf" or pattern == "--quantizier":
+                if pattern == "--crf" or pattern == "--quantizer":
                     drop_indexs.append(index+1)
         for i in sorted(drop_indexs,reverse=True):
             args.pop(i)

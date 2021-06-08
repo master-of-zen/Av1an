@@ -75,6 +75,7 @@ class Project(object):
         # Target Quality
         self.target_quality: int = None
         self.probes: int = None
+        self.probe_slow: bool = None
         self.min_q: int = None
         self.max_q: int = None
         self.vmaf_plots: bool = None

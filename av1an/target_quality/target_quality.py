@@ -73,8 +73,6 @@ class TargetQuality:
         vmaf_cq = []
         frames = chunk.frames
         self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
-        if self.probes < 3:
-            return self.fast_search(chunk)
 
         q_list = []
 
@@ -153,73 +151,6 @@ class TargetQuality:
             self.plot_probes(vmaf_cq, chunk, frames)
 
         return q
-
-    def fast_search(self, chunk):
-        """
-        Experimental search
-        Use Euler's method with known relation between cq and vmaf
-        Formula -ln(1-score/100) = vmaf_cq_deriv*last_q + constant
-        constant = -ln(1-score/100) - vmaf_cq_deriv*last_q
-        Formula -ln(1-project.vmaf_target/100) = vmaf_cq_deriv*cq + constant
-        cq = (-ln(1-project.vmaf_target/100) - constant)/vmaf_cq_deriv
-        """
-        vmaf_cq = []
-        q_list = []
-
-        # Make middle probe
-        middle_point = (self.min_q + self.max_q) // 2
-        q_list.append(middle_point)
-        last_q = middle_point
-
-        score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, last_q))
-        vmaf_cq.append((score, last_q))
-
-        vmaf_cq_deriv = -0.18
-        next_q = int(
-            round(
-                last_q
-                + (VMAF.transform_vmaf(self.target) - VMAF.transform_vmaf(score))
-                / vmaf_cq_deriv
-            )
-        )
-
-        # Clamp
-        if next_q < self.min_q:
-            next_q = self.min_q
-        if self.max_q < next_q:
-            next_q = self.max_q
-
-        # Single probe cq guess or exit to avoid divide by zero
-        if self.probes == 1 or next_q == last_q:
-            self.log_probes(vmaf_cq, chunk.frames, chunk.name, next_q, self.target)
-            return next_q
-
-        # Second probe at guessed value
-        score_2 = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
-
-        # Calculate slope
-        vmaf_cq_deriv = (VMAF.transform_vmaf(score_2) - VMAF.transform_vmaf(score)) / (
-            next_q - last_q
-        )
-
-        # Same deal different slope
-        next_q = int(
-            round(
-                next_q
-                + (VMAF.transform_vmaf(self.target) - VMAF.transform_vmaf(score_2))
-                / vmaf_cq_deriv
-            )
-        )
-
-        # Clamp
-        if next_q < self.min_q:
-            next_q = self.min_q
-        if self.max_q < next_q:
-            next_q = self.max_q
-
-        self.log_probes(vmaf_cq, chunk.frames, chunk.name, next_q, self.target)
-
-        return next_q
 
     def get_target_q(self, scores, target_quality):
         """
@@ -499,18 +430,6 @@ class TargetQuality:
         temp = self.temp / chunk.name
         plt.savefig(f"{temp}.png", dpi=200, format="png")
         plt.close()
-
-    def make_q_file(self, q_list, chunk):
-        qfile = chunk.fake_input_path.with_name(f"probe_{chunk.name}").with_suffix(
-            ".txt"
-        )
-        with open(qfile, "w") as fl:
-            text = ""
-
-            for x in q_list:
-                text += str(x) + "\n"
-            fl.write(text)
-        return qfile
 
     def add_probes_to_frame_list(self, frame_list, q_list, vmafs):
         frame_list = list(frame_list)

@@ -44,6 +44,18 @@ fn construct_target_quality_command(
   Ok(av1an_core::target_quality::construct_target_quality_command(encoder, threads, q))
 }
 
+#[pyfunction]
+fn construct_target_quality_slow_command(
+  encoder: String,
+  q: String,
+) -> PyResult<Vec<String>> {
+  let encoder = Encoder::from_str(&encoder).map_err(|_| {
+    pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
+  })?;
+
+  Ok(av1an_core::target_quality::construct_target_quality_slow_command(encoder, q))
+}
+
 /// Creates vs pipe file
 #[pyfunction]
 fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> PyResult<String> {
@@ -235,6 +247,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
   m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
+  m.add_function(wrap_pyfunction!(construct_target_quality_slow_command, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ffmpeg, m)?)?;
   m.add_function(wrap_pyfunction!(extract_audio, m)?)?;
   m.add_function(wrap_pyfunction!(get_frame_types, m)?)?;

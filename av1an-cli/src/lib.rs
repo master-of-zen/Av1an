@@ -135,6 +135,14 @@ pub struct Args {
   #[clap(long, default_value = "4")]
   probes: usize,
 
+  /// Use encoding settings for probes
+  #[clap(long)]
+  probe_slow: bool,
+
+  /// Framerate for probes, 1 - original
+  #[clap(long, default_value = "4")]
+  probing_rate: usize,
+
   /// Min q for target_quality
   #[clap(long)]
   min_q: Option<u8>,
@@ -146,10 +154,6 @@ pub struct Args {
   /// Make plots of probes in temp folder
   #[clap(long)]
   vmaf_plots: bool,
-
-  /// Framerate for probes, 1 - original
-  #[clap(long, default_value = "4")]
-  probing_rate: usize,
 
   /// Filter applied to source at vmaf calcualation, use if you crop source
   #[clap(long)]
@@ -167,5 +171,5 @@ pub fn parse_args() -> String {
 
 /// Get default values of args
 pub fn default_args() -> String {
-  serde_json::to_string(&Args::parse_from(["av1an"])).unwrap()
+  serde_json::to_string(&Args::parse_from(&["av1an"])).unwrap()
 }

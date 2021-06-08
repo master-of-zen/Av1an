@@ -144,3 +144,5 @@ Upload.sh
 *.backup
 
 *.lock
+*.png
+*.json

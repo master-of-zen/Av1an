@@ -312,6 +312,23 @@ class TargetQuality:
 
         return min(q_list, key=lambda x: abs(x - q))
 
+    def probe_cmd_slow( self, encoder, q):
+        args = self.video_params.copy()
+        drop_indexs = []
+        drop_pattern = ["--cq-level=*", "--passes=*", "--pass=*", "--crf", "--quantizer"]
+        for pattern in drop_pattern:
+            if fnmatch.filter(args, pattern):
+                index = args.index(fnmatch.filter(args, pattern)[0])
+                drop_indexs.append(index)
+                if pattern == "--crf" or pattern == "--quantizier":
+                    drop_indexs.append(index+1)
+        for i in sorted(drop_indexs,reverse=True):
+            args.pop(i)
+        params = construct_target_quality_slow_command(encoder, str(q))
+        params.extend(args)
+
+        return params
+
     def probe_cmd(
         self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads
     ) -> CommandPair:
@@ -336,45 +353,47 @@ class TargetQuality:
         ]
 
         probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
-        args = self.video_params.copy()
 
         if encoder == "aom":
             params = construct_target_quality_command("aom", str(n_threads), str(q))
             if self.probe_slow:
-                drop_indexs = []
-                drop_indexs.append(args.index(fnmatch.filter(args, "--cq-level=*")[0]))
-                if fnmatch.filter(args, "--passes=*"):
-                    drop_indexs.append(args.index(fnmatch.filter(args, "--passes=*")[0]))
-                for i in sorted(drop_indexs,reverse=True):
-                  del args[i]
-                params = construct_target_quality_slow_command("aom", str(q))
-                params.extend(args)
+                params = self.probe_cmd_slow("aom", str(q))
 
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "x265":
             params = construct_target_quality_command("x265", str(n_threads), str(q))
             if self.probe_slow:
-                drop_indexs = args.index("--crf")
-                del args[drop_indexs:drop_indexs+2]
-                params = construct_target_quality_slow_command("x265", str(q))
-                params.extend(args)
+                params = self.probe_cmd_slow("x265", str(q))
+        
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
             
         elif encoder == "rav1e":
             params = construct_target_quality_command("rav1e", str(n_threads), str(q))
+            if self.probe_slow:
+                params = self.probe_cmd_slow("rav1e", str(q))
+            
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "vpx":
             params = construct_target_quality_command("vpx", str(n_threads), str(q))
+            if self.probe_slow:
+                params = self.probe_cmd_slow("vpx", str(q))
+            
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "svt_av1":
             params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
+            if self.probe_slow:
+                params = self.probe_cmd_slow("svt_av1", str(q))
+            
             cmd = CommandPair(pipe, [*params, "-b", probe_name])
 
         elif encoder == "x264":
             params = construct_target_quality_command("x264", str(n_threads), str(q))
+            if self.probe_slow:
+                params = self.probe_cmd_slow("x264", str(q))
+            
             cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
 
         return cmd

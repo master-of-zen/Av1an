@@ -176,33 +176,30 @@ pub fn construct_target_quality_slow_command(
   q: String,
 ) -> Vec<String> {
   match encoder {
-    // "--end-usage=q".into(),
-    // format!("--cq-level={}", q),
     Encoder::aom => vec![
       "aomenc".into(),
       "--passes=1".into(),
       format!("--cq-level={}", q),
     ],
-    // "--quantizer".into(),
-    // format!("{}", q),
     Encoder::rav1e => vec![
       "rav1e".into(),
       "-y".into(),
+      "--quantizer".into(),
+      format!("{}", q),
     ],
-    // "--end-usage=q".into(),
-    // format!("--cq-level={}", q),
     Encoder::libvpx => vec![
       "vpxenc".into(),
+      "--passes=1".into(),
+      "--pass=1".into(),
+      format!("--cq-level={}",q),
     ],
-    // "--crf".into(),
-    // format!("{}", q),
     Encoder::svt_av1 => vec![
       "SvtAv1EncApp".into(),
       "-i".into(),
       "stdin".into(),
+      "--crf".into(),
+      format!("{}", q),
     ],
-    // "--crf".into(),
-    // format!("{}", q),
     Encoder::x264 => vec![
       "x264".into(),
       "--log-level".into(),
@@ -211,6 +208,8 @@ pub fn construct_target_quality_slow_command(
       "y4m".into(),
       "-".into(),
       "--no-progress".into(),
+      "--crf".into(),
+      format!("{}", q),
     ],
     Encoder::x265 => vec![
       "x265".into(),

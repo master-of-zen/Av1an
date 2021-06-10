@@ -45,10 +45,7 @@ fn construct_target_quality_command(
 }
 
 #[pyfunction]
-fn construct_target_quality_slow_command(
-  encoder: String,
-  q: String,
-) -> PyResult<Vec<String>> {
+fn construct_target_quality_slow_command(encoder: String, q: String) -> PyResult<Vec<String>> {
   let encoder = Encoder::from_str(&encoder).map_err(|_| {
     pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
   })?;
@@ -235,6 +232,11 @@ fn default_args() -> String {
   av1an_cli::default_args()
 }
 
+#[pyfunction]
+fn vmaf_auto_threads(workers: usize) -> usize {
+  av1an_core::target_quality::vmaf_auto_threads(workers)
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -258,5 +260,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(read_scenes_from_file, m)?)?;
   m.add_function(wrap_pyfunction!(parse_args, m)?)?;
   m.add_function(wrap_pyfunction!(default_args, m)?)?;
+  m.add_function(wrap_pyfunction!(vmaf_auto_threads, m)?)?;
+
   Ok(())
 }

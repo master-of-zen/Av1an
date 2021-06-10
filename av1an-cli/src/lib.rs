@@ -68,10 +68,6 @@ pub struct Args {
   #[clap(long, default_value = "60")]
   min_scene_len: usize,
 
-  /// Reuse the first pass from aom_keyframes split on the chunks
-  #[clap(long)]
-  reuse_first_pass: bool,
-
   /// Specify encoding passes
   #[clap(short, long)]
   passes: Option<u8>,

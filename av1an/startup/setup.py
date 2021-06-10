@@ -97,17 +97,6 @@ def startup_check(project: Project):
 
     set_target_quality(project)
 
-    if (
-        project.reuse_first_pass
-        and project.encoder != "aom"
-        and project.split_method != "aom_keyframes"
-    ):
-        print(
-            "Reusing the first pass is only supported with \
-              the aom encoder and aom_keyframes split method."
-        )
-        sys.exit(1)
-
     setup_encoder(project)
 
     project.audio_params = shlex.split(project.audio_params)

@@ -8,7 +8,6 @@ from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
-from av1an.fp_reuse import segment_first_pass
 from av1an.logger import log, set_log
 from av1an.project.Project import Project
 from av1an.split import split_routine
@@ -100,9 +99,6 @@ class EncodingManager:
                 str(project.temp.resolve()),
                 project.audio_params,
             )
-
-            if project.reuse_first_pass:
-                segment_first_pass(project.temp, split_locations)
 
         # do encoding loop
         project.determine_workers()

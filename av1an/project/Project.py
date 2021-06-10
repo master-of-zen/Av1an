@@ -44,9 +44,6 @@ class Project(object):
         # PySceneDetect split
         self.threshold: float = None
 
-        # AOM Keyframe split
-        self.reuse_first_pass: bool = None
-
         # Encoding
         self.passes = None
         self.video_params: Command = None

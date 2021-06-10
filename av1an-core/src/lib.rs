@@ -106,9 +106,6 @@ pub struct EncodeConfig {
   // PySceneDetect split
   threshold: f32,
 
-  // TODO refactor, this should really be in the enum of each encoder
-  reuse_first_pass: bool,
-
   // Encoding
   passes: (),
   video_params: (),

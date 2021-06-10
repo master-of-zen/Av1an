@@ -67,14 +67,8 @@ class Queue:
                     if self.project.target_quality_method == "per_shot":
                         self.tq.per_shot_target_quality_routine(chunk)
 
-                start = (
-                    2
-                    if self.project.reuse_first_pass and self.project.passes >= 2
-                    else 1
-                )
-
                 # Run all passes for this chunk
-                for current_pass in range(start, self.project.passes + 1):
+                for current_pass in range(1, self.project.passes + 1):
                     tqdm_bar(
                         self.project,
                         chunk,

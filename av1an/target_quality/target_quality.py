@@ -262,6 +262,8 @@ class TargetQuality:
             "-",
             "-vf",
             f"select=not(mod(n\\,{probing_rate}))",
+            "-vsync",
+            "0",
             *ffmpeg_pipe,
         ]
 

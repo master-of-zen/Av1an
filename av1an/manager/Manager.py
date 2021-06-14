@@ -86,7 +86,7 @@ class EncodingManager:
 
         project.setup()
         if project.logging:
-            set_log(project.logging)
+            set_log(Path(project.logging).with_suffix(".log").as_posix())
         else:
             set_log((project.temp / "log.log").as_posix())
 

@@ -1,8 +1,7 @@
-use failure::Error;
 use regex::Regex;
 use std::fs::{read_dir, File};
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::Encoder;
@@ -94,7 +93,7 @@ pub fn write_concat_file(temp_folder: &Path) {
   }
 
   let mut file = File::create(concat_file).unwrap();
-  file.write_all(contents.as_bytes());
+  file.write_all(contents.as_bytes()).unwrap();
 }
 
 pub fn have_audio(file: &Path) -> bool {
@@ -149,7 +148,6 @@ pub fn extract_audio(input: &Path, temp: &Path, audio_params: Vec<String>) {
 
 /// Concatenates using ffmpeg
 pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
-  let out = Path::new(&output);
   let concat = &temp.join("concat");
   let concat_file = concat.to_str().unwrap();
 

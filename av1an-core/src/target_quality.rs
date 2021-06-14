@@ -1,6 +1,5 @@
 use crate::Encoder;
 use std::cmp;
-use std::str::FromStr;
 extern crate num_cpus;
 
 pub fn construct_target_quality_command(
@@ -168,7 +167,6 @@ pub fn construct_target_quality_command(
       "--crf".into(),
       format!("{}", q),
     ],
-    _ => vec!["".into()],
   }
 }
 
@@ -218,7 +216,6 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
       "--crf".into(),
       format!("{}", q),
     ],
-    _ => vec!["".into()],
   }
 }
 
@@ -228,7 +225,6 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
 
   let over_provision_factor = 1.25;
   let value = ((threads / workers) as f64 * over_provision_factor) as usize;
-  let minimum_threads = 1f64;
 
   std::cmp::max(value, 1)
 }

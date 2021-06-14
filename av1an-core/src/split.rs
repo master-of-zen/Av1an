@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::iter::zip;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -98,7 +96,7 @@ pub fn write_scenes_to_file(
   frames: usize,
   scene_path: PathBuf,
 ) -> std::io::Result<()> {
-  /// Writes a list of scenes and frame count to the file
+  // Writes a list of scenes and frame count to the file
   let data = ScenesData { scenes, frames };
 
   let serialized = serde_json::to_string(&data).unwrap();
@@ -113,8 +111,6 @@ pub fn read_scenes_from_file(
   scene_path: PathBuf,
 ) -> Result<(Vec<usize>, usize), Box<dyn error::Error>> {
   let file = File::open(scene_path)?;
-
-  let mut contents = String::new();
 
   let reader = BufReader::new(file);
 
@@ -131,7 +127,7 @@ mod tests {
   fn test_extra_split_no_segments() {
     let total_frames = 300;
     let split_size = 240;
-    let done = extra_splits((vec![]), total_frames, split_size);
+    let done = extra_splits(vec![], total_frames, split_size);
     let expected_split_locations = vec![150];
 
     assert_eq!(expected_split_locations, done);
@@ -142,7 +138,7 @@ mod tests {
     let total_frames = 2000;
     let split_size = 130;
     let done = extra_splits(
-      (vec![150, 460, 728, 822, 876, 890, 1100, 1399, 1709]),
+      vec![150, 460, 728, 822, 876, 890, 1100, 1399, 1709],
       total_frames,
       split_size,
     );

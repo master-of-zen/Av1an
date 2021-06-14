@@ -1,4 +1,3 @@
-#![allow(unused)]
 #![feature(iter_zip)]
 
 #[macro_use]
@@ -7,11 +6,9 @@ extern crate av_format;
 extern crate av_ivf;
 extern crate failure;
 
-use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
-use std::{fs::File, io::Write};
 use sysinfo::SystemExt;
 
 pub mod concat;
@@ -88,6 +85,7 @@ impl FromStr for ChunkMethod {
   }
 }
 
+#[allow(unused)]
 pub struct EncodeConfig {
   frames: usize,
   counter: (),

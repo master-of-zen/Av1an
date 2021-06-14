@@ -9,8 +9,6 @@ from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene
 
 from av1an_pyo3 import log, extra_splits, read_scenes_from_file, write_scenes_to_file
 
-# TODO: organize to single segmenting/splitting module
-
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
     """

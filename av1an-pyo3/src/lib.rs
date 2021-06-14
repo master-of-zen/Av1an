@@ -3,6 +3,7 @@ use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
 
+use chrono::Utc;
 use once_cell::sync::OnceCell;
 
 use std::fs::File;
@@ -250,8 +251,9 @@ fn set_log(file: &str) -> PyResult<()> {
 #[pyfunction]
 fn log(msg: &str) {
   if let Some(mut file) = LOG_HANDLE.get() {
-    file.write_all(msg.as_bytes()).unwrap();
-    file.write_all(&[b'\n']).unwrap();
+    file
+      .write_all(format!("[{}] {}\n", Utc::now().to_rfc2822(), msg).as_bytes())
+      .unwrap();
   }
 }
 

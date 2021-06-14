@@ -1,3 +1,4 @@
+#![allow(clippy::mutex_atomic)]
 // This is a mostly drop-in reimplementation of vspipe.
 // The main difference is what the errors look like.
 

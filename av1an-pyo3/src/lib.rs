@@ -167,11 +167,8 @@ fn concatenate_ffmpeg(temp: String, output: String, encoder: String) -> PyResult
   let temp_path = Path::new(&temp);
   let output_path = Path::new(&output);
 
-  Ok(av1an_core::ffmpeg::concatenate_ffmpeg(
-    temp_path,
-    output_path,
-    encoder,
-  ))
+  av1an_core::ffmpeg::concatenate_ffmpeg(temp_path, output_path, encoder);
+  Ok(())
 }
 
 #[pyfunction]
@@ -183,7 +180,8 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
 fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
-  Ok(av1an_core::split::segment(input, temp, segments))
+  av1an_core::split::segment(input, temp, segments);
+  Ok(())
 }
 
 #[pyfunction]
@@ -196,7 +194,6 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
   let processed = av1an_core::file_validation::process_inputs(path_bufs);
 
   let out: Vec<String> = processed
-    .clone()
     .iter()
     .map(|x| x.as_path().to_str().unwrap().to_string())
     .collect();
@@ -212,7 +209,8 @@ fn write_scenes_to_file(
 ) -> PyResult<()> {
   let scene_path = PathBuf::from(scenes_path_string);
 
-  Ok(av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap())
+  av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap();
+  Ok(())
 }
 
 #[pyfunction]

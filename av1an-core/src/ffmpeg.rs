@@ -151,16 +151,14 @@ pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
   let concat = &temp.join("concat");
   let concat_file = concat.to_str().unwrap();
 
-  write_concat_file(&temp);
+  write_concat_file(temp);
 
   let audio_file = Path::new(&temp).join("audio.mkv");
 
   let mut audio_cmd = vec![];
 
-  if audio_file.exists() {
-    if audio_file.metadata().unwrap().len() > 1000 {
-      audio_cmd = vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"];
-    }
+  if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
+    audio_cmd = vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"];
   }
 
   let mut cmd = Command::new("ffmpeg");
@@ -182,7 +180,7 @@ pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "-safe",
         "0",
         "-i",
-        &concat_file,
+        concat_file,
       ])
       .args(audio_cmd)
       .args(&[
@@ -208,7 +206,7 @@ pub fn concatenate_ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "-safe",
         "0",
         "-i",
-        &concat_file,
+        concat_file,
       ])
       .args(audio_cmd)
       .args(["-c", "copy", output.to_str().unwrap()]),
@@ -246,7 +244,7 @@ pub fn get_frame_types(file: &Path) -> Vec<String> {
 
   let output = String::from_utf8(out.stderr).unwrap();
 
-  let str_vec = output.split("\n").collect::<Vec<_>>();
+  let str_vec = output.split('\n').collect::<Vec<_>>();
 
   let string_vec: Vec<String> = str_vec.iter().map(|x| x.to_string()).collect();
 

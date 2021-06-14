@@ -28,20 +28,14 @@ pub fn segment(input: &Path, temp: &Path, segments: Vec<usize>) {
     "0",
   ]);
 
-  if segments.len() > 0 {
+  if !segments.is_empty() {
     let segments_to_string = segments
-      .clone()
       .iter()
       .map(|x| x.to_string())
       .collect::<Vec<String>>();
     let segments_joined = segments_to_string.join(",");
 
-    cmd.args(&[
-      "-f",
-      "segment",
-      "-segment_frames",
-      &segments_joined.to_owned(),
-    ]);
+    cmd.args(&["-f", "segment", "-segment_frames", &segments_joined]);
     let split_path = Path::new(temp).join("split").join("%05d.mkv");
     let split_str = split_path.to_str().unwrap();
     cmd.arg(split_str);
@@ -61,7 +55,7 @@ pub fn extra_splits(
 ) -> Vec<usize> {
   let mut result_vec: Vec<usize> = split_locations.clone();
 
-  let mut total_length = split_locations.clone();
+  let mut total_length = split_locations;
   total_length.insert(0, 0);
   total_length.push(total_frames);
 
@@ -80,7 +74,7 @@ pub fn extra_splits(
     }
   }
 
-  result_vec.sort();
+  result_vec.sort_unstable();
 
   result_vec
 }

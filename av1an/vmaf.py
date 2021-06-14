@@ -13,7 +13,7 @@ import numpy as np
 from math import log10, ceil, floor
 from math import log as ln
 
-from av1an.logger import log
+from av1an_pyo3 import log
 
 try:
     import matplotlib
@@ -67,7 +67,8 @@ class VMAF:
             msg1, msg2 = f"VMAF validation error: {pipe.returncode}", "\n".join(
                 encoder_history
             )
-            log(msg1, msg2)
+            log(msg1)
+            log(msg2)
             print(f"::{msg1}\n::{msg2}")
             sys.exit()
 

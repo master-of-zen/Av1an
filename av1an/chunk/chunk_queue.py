@@ -5,7 +5,7 @@ from typing import List
 from av1an.project import Project
 from av1an.chunk import Chunk
 from av1an.encoder import ENCODERS
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an.resume import read_done_data
 from av1an_pyo3 import create_vs_file, get_keyframes, segment
 import sys

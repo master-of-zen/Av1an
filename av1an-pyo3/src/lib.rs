@@ -2,6 +2,10 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
+
+use chrono::Utc;
+use once_cell::sync::OnceCell;
+
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -23,12 +27,10 @@ fn get_keyframes(source: &str) -> PyResult<Vec<usize>> {
 }
 
 #[pyfunction]
-fn hash_path(path: &str) -> PyResult<String> {
+fn hash_path(path: &str) -> String {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
-  let hs = s.finish().to_string();
-  let out = hs[0..7].to_string();
-  Ok(out)
+  format!("{:x}", s.finish())[..7].to_string()
 }
 
 #[pyfunction]
@@ -167,11 +169,8 @@ fn concatenate_ffmpeg(temp: String, output: String, encoder: String) -> PyResult
   let temp_path = Path::new(&temp);
   let output_path = Path::new(&output);
 
-  Ok(av1an_core::ffmpeg::concatenate_ffmpeg(
-    temp_path,
-    output_path,
-    encoder,
-  ))
+  av1an_core::ffmpeg::concatenate_ffmpeg(temp_path, output_path, encoder);
+  Ok(())
 }
 
 #[pyfunction]
@@ -183,7 +182,8 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
 fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
-  Ok(av1an_core::split::segment(input, temp, segments))
+  av1an_core::split::segment(input, temp, segments);
+  Ok(())
 }
 
 #[pyfunction]
@@ -196,7 +196,6 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
   let processed = av1an_core::file_validation::process_inputs(path_bufs);
 
   let out: Vec<String> = processed
-    .clone()
     .iter()
     .map(|x| x.as_path().to_str().unwrap().to_string())
     .collect();
@@ -212,7 +211,8 @@ fn write_scenes_to_file(
 ) -> PyResult<()> {
   let scene_path = PathBuf::from(scenes_path_string);
 
-  Ok(av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap())
+  av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
@@ -235,6 +235,26 @@ fn default_args() -> String {
 #[pyfunction]
 fn vmaf_auto_threads(workers: usize) -> usize {
   av1an_core::target_quality::vmaf_auto_threads(workers)
+}
+
+static LOG_HANDLE: OnceCell<File> = OnceCell::new();
+
+#[pyfunction]
+fn set_log(file: &str) -> PyResult<()> {
+  LOG_HANDLE
+    .set(File::create(file).map_err(|e| {
+      pyo3::exceptions::PyOSError::new_err(format!("Failed to create file {:?}: {}", file, e))
+    })?)
+    .map_err(|_| pyo3::exceptions::PyValueError::new_err("Failed to set the global log handle"))
+}
+
+#[pyfunction]
+fn log(msg: &str) {
+  if let Some(mut file) = LOG_HANDLE.get() {
+    file
+      .write_all(format!("[{}] {}\n", Utc::now().to_rfc2822(), msg).as_bytes())
+      .unwrap();
+  }
 }
 
 #[pymodule]
@@ -261,6 +281,8 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(parse_args, m)?)?;
   m.add_function(wrap_pyfunction!(default_args, m)?)?;
   m.add_function(wrap_pyfunction!(vmaf_auto_threads, m)?)?;
+  m.add_function(wrap_pyfunction!(set_log, m)?)?;
+  m.add_function(wrap_pyfunction!(log, m)?)?;
 
   Ok(())
 }

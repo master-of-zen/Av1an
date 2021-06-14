@@ -1,6 +1,5 @@
 use crate::Encoder;
 use std::cmp;
-use std::str::FromStr;
 extern crate num_cpus;
 
 pub fn construct_target_quality_command(
@@ -53,11 +52,11 @@ pub fn construct_target_quality_command(
       "-s".into(),
       "10".into(),
       "--threads".into(),
-      format!("{}", threads),
+      threads,
       "--tiles".into(),
       "16".into(),
       "--quantizer".into(),
-      format!("{}", q),
+      q,
       "--low-latency".into(),
       "--rdo-lookahead-frames".into(),
       "5".into(),
@@ -82,13 +81,13 @@ pub fn construct_target_quality_command(
       "-i".into(),
       "stdin".into(),
       "--lp".into(),
-      format!("{}", threads),
+      threads,
       "--preset".into(),
       "8".into(),
       "--keyint".into(),
       "240".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
       "--tile-rows".into(),
       "1".into(),
       "--tile-columns".into(),
@@ -149,11 +148,11 @@ pub fn construct_target_quality_command(
       "-".into(),
       "--no-progress".into(),
       "--threads".into(),
-      format!("{}", threads),
+      threads,
       "--preset".into(),
       "medium".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
     ],
     Encoder::x265 => vec![
       "x265".into(),
@@ -162,13 +161,12 @@ pub fn construct_target_quality_command(
       "--no-progress".into(),
       "--y4m".into(),
       "--frame-threads".into(),
-      format!("{}", cmp::min(threads, 16.to_string())),
+      cmp::min(threads, "16".into()),
       "--preset".into(),
       "fast".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
     ],
-    _ => vec!["".into()],
   }
 }
 
@@ -179,12 +177,7 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
       "--passes=1".into(),
       format!("--cq-level={}", q),
     ],
-    Encoder::rav1e => vec![
-      "rav1e".into(),
-      "-y".into(),
-      "--quantizer".into(),
-      format!("{}", q),
-    ],
+    Encoder::rav1e => vec!["rav1e".into(), "-y".into(), "--quantizer".into(), q],
     Encoder::libvpx => vec![
       "vpxenc".into(),
       "--passes=1".into(),
@@ -196,7 +189,7 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
       "-i".into(),
       "stdin".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
     ],
     Encoder::x264 => vec![
       "x264".into(),
@@ -207,7 +200,7 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
       "-".into(),
       "--no-progress".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
     ],
     Encoder::x265 => vec![
       "x265".into(),
@@ -216,19 +209,19 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
       "--no-progress".into(),
       "--y4m".into(),
       "--crf".into(),
-      format!("{}", q),
+      q,
     ],
-    _ => vec!["".into()],
   }
 }
 
 pub fn vmaf_auto_threads(workers: usize) -> usize {
-  // logical cpu's
+  const OVER_PROVISION_FACTOR: f64 = 1.25;
+
+  // Logical CPUs
   let threads = num_cpus::get();
 
-  let over_provision_factor = 1.25;
-  let value = ((threads / workers) as f64 * over_provision_factor) as usize;
-  let minimum_threads = 1f64;
-
-  std::cmp::max(value, 1)
+  std::cmp::max(
+    ((threads / workers) as f64 * OVER_PROVISION_FACTOR) as usize,
+    1,
+  )
 }

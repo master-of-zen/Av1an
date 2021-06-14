@@ -8,7 +8,7 @@ import cv2
 from av1an.vapoursynth import is_vapoursynth
 from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count
 
-from av1an.logger import log
+from av1an_pyo3 import log
 
 
 def list_index_of_regex(lst: List[str], regex_str: str) -> int:

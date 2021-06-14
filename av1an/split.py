@@ -1,19 +1,13 @@
 #!/bin/env python
 
-import os
-import subprocess
-import json
 from pathlib import Path
-from subprocess import PIPE, STDOUT
-from typing import List, Tuple
-from numpy import linspace
+from typing import List
 import sys
 
 from .project import Project
 from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
-from .logger import log
 
-from av1an_pyo3 import extra_splits, read_scenes_from_file, write_scenes_to_file
+from av1an_pyo3 import log, extra_splits, read_scenes_from_file, write_scenes_to_file
 
 # TODO: organize to single segmenting/splitting module
 

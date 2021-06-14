@@ -1,15 +1,12 @@
+use av_format::buffer::AccReader;
 use av_format::demuxer::Context as DemuxerContext;
 use av_format::demuxer::Event;
 use av_format::muxer::Context as MuxerContext;
-use av_format::{buffer::AccReader, muxer::Muxer};
 use av_ivf::demuxer::*;
 use av_ivf::muxer::*;
-use std::fs::{self, DirEntry, File};
-use std::io;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-
-use anyhow::Context;
 
 pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   let mut files: Vec<PathBuf> = std::fs::read_dir(input)?

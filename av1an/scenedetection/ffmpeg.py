@@ -3,7 +3,7 @@ import subprocess
 import sys
 from subprocess import Popen
 
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an.vapoursynth import compose_vapoursynth_pipe
 
 if sys.platform == "linux":

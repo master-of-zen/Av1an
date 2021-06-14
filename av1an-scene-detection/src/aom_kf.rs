@@ -36,7 +36,7 @@ fn get_second_ref_usage_thresh(frame_count_so_far: u64) -> f64 {
   let second_ref_usage_thresh_max_delta = 0.035;
 
   if frame_count_so_far as f64 >= adapt_upto {
-    return min_second_ref_usage_thresh + second_ref_usage_thresh_max_delta;
+    min_second_ref_usage_thresh + second_ref_usage_thresh_max_delta
   } else {
     min_second_ref_usage_thresh
       + (frame_count_so_far as f64 / (adapt_upto - 1.0)) * second_ref_usage_thresh_max_delta

@@ -1,3 +1,4 @@
+#![allow(clippy::mutex_atomic)]
 // This is a mostly drop-in reimplementation of vspipe.
 // The main difference is what the errors look like.
 
@@ -16,7 +17,6 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, stdout, Stdout, Write};
-use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Instant;
@@ -558,6 +558,7 @@ fn output(
 }
 
 // TODO refactor this once it is used
+#[allow(unused)]
 fn run(args: &[&str]) -> Result<(), Error> {
   let matches = App::new("vspipe-rs")
     .about("A Rust implementation of vspipe")
@@ -871,6 +872,7 @@ fn run(args: &[&str]) -> Result<(), Error> {
 // no matter what, which does not happen if it's being called by
 // other rust code. I do not have the time to debug this, but this
 // should probably be reported to pyo3 at some point.
+#[allow(unused)]
 fn get_num_frames(path: &Path) -> Result<usize, Error> {
   // Open the output files.
   let mut output_target = OutputTarget::Stdout(stdout());

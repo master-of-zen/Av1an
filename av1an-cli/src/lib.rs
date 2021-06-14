@@ -161,8 +161,7 @@ pub fn parse_args() -> String {
   let commands = env::args();
   let cmds: Vec<String> = commands.into_iter().collect();
   let parsed = Args::parse_from(&cmds[1..]);
-  let args_json = serde_json::to_string(&parsed).unwrap();
-  args_json
+  serde_json::to_string(&parsed).unwrap()
 }
 
 /// Get default values of args

@@ -8,7 +8,8 @@ from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
-from av1an.logger import log, set_log
+
+from av1an_pyo3 import set_log, log
 from av1an.project.Project import Project
 from av1an.split import split_routine
 
@@ -84,7 +85,10 @@ class EncodingManager:
         """
 
         project.setup()
-        set_log(project.logging, project.temp)
+        if project.logging:
+            set_log(Path(project.logging).with_suffix(".log").as_posix())
+        else:
+            set_log((project.temp / "log.log").as_posix())
 
         # find split locations
         split_locations = split_routine(project, project.resume)

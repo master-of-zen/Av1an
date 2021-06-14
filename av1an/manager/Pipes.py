@@ -8,7 +8,7 @@ from av1an.chunk import Chunk
 from av1an.encoder import ENCODERS
 
 from av1an.project import Project
-from av1an.logger import log
+from av1an_pyo3 import log
 
 
 def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
@@ -29,7 +29,8 @@ def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
     if pipe.returncode != 0 and pipe.returncode != -2:
         msg1 = f"Encoder encountered an error: {pipe.returncode}"
         msg2 = f"Chunk: {chunk.index}" + "\n".join(encoder_history)
-        log(msg1, msg2)
+        log(msg1)
+        log(msg2)
         tb = sys.exc_info()[2]
         raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
 
@@ -68,7 +69,9 @@ def process_encoding_pipe(
         msg1 = f"Encoder encountered an error: {pipe.returncode}"
         msg2 = f"Chunk: {chunk.index}"
         msg3 = "\n".join(encoder_history)
-        log(msg1, msg2, msg3)
+        log(msg1)
+        log(msg2)
+        log(msg3)
         print(f"::{msg1}\n::{msg2}\n::{msg3}")
         tb = sys.exc_info()[2]
         raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)

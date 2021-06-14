@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from subprocess import PIPE
 
-from av1an.logger import log
+from av1an_pyo3 import log
 
 if platform.system() == "Linux":
     import resource

@@ -2,6 +2,9 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
+
+use once_cell::sync::OnceCell;
+
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -23,12 +26,10 @@ fn get_keyframes(source: &str) -> PyResult<Vec<usize>> {
 }
 
 #[pyfunction]
-fn hash_path(path: &str) -> PyResult<String> {
+fn hash_path(path: &str) -> String {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
-  let hs = s.finish().to_string();
-  let out = hs[0..7].to_string();
-  Ok(out)
+  format!("{:x}", s.finish())[..7].to_string()
 }
 
 #[pyfunction]
@@ -235,6 +236,25 @@ fn vmaf_auto_threads(workers: usize) -> usize {
   av1an_core::target_quality::vmaf_auto_threads(workers)
 }
 
+static LOG_HANDLE: OnceCell<File> = OnceCell::new();
+
+#[pyfunction]
+fn set_log(file: &str) -> PyResult<()> {
+  LOG_HANDLE
+    .set(File::create(file).map_err(|e| {
+      pyo3::exceptions::PyOSError::new_err(format!("Failed to create file {:?}: {}", file, e))
+    })?)
+    .map_err(|_| pyo3::exceptions::PyValueError::new_err("Failed to set the global log handle"))
+}
+
+#[pyfunction]
+fn log(msg: &str) {
+  if let Some(mut file) = LOG_HANDLE.get() {
+    file.write_all(msg.as_bytes()).unwrap();
+    file.write_all(&[b'\n']).unwrap();
+  }
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -259,6 +279,8 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(parse_args, m)?)?;
   m.add_function(wrap_pyfunction!(default_args, m)?)?;
   m.add_function(wrap_pyfunction!(vmaf_auto_threads, m)?)?;
+  m.add_function(wrap_pyfunction!(set_log, m)?)?;
+  m.add_function(wrap_pyfunction!(log, m)?)?;
 
   Ok(())
 }

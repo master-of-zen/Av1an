@@ -8,7 +8,7 @@ from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
 from av1an.resume import write_progress_file
 from av1an.chunk import Chunk
-from av1an.logger import log
+from av1an_pyo3 import log
 from pathlib import Path
 from .Pipes import tqdm_bar
 
@@ -103,7 +103,9 @@ class Queue:
                     f"Exception: {type(e)} {e}",
                     "Restarting chunk",
                 )
-                log(msg1, msg2, msg3)
+                log(msg1)
+                log(msg2)
+                log(msg3)
                 print(f"{msg1}\n::{msg2}\n::{msg3}")
                 traceback.print_exc()
                 restart_count += 1
@@ -112,7 +114,9 @@ class Queue:
             "FATAL",
             f"Chunk #{chunk.index} failed more than 3 times, shutting down thread",
         )
-        log(msg1, msg2)
+        log(msg1)
+        log(msg2)
+
         print(f"::{msg1}\n::{msg2}")
         self.status = "FATAL"
 

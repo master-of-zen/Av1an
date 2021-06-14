@@ -1,10 +1,5 @@
-#![feature(iter_zip)]
-
 #[macro_use]
 extern crate log;
-extern crate av_format;
-extern crate av_ivf;
-extern crate failure;
 
 use std::path::PathBuf;
 use std::process::{Command, Stdio};

@@ -7,7 +7,7 @@ import numpy as np
 from scipy import interpolate
 
 from av1an.vmaf import VMAF
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe

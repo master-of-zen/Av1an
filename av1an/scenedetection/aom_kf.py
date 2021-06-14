@@ -16,7 +16,7 @@ except ImportError:
     tqdm = None
 
 from av1an.commandtypes import CommandPair
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an.utils import frame_probe_fast
 from av1an.vapoursynth import compose_vapoursynth_pipe
 
@@ -300,7 +300,7 @@ def aom_keyframes(
 ):
     """[Get frame numbers for splits from aomenc 1 pass stat file]"""
 
-    log(f"Started aom_keyframes scenedetection")
+    log("Started aom_keyframes scenedetection")
     log(f"Params: {video_params}")
 
     total = frame_probe_fast(video_path, is_vs)

@@ -11,7 +11,7 @@ try:
 except ImportError:
     ContentDetector = None
 
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an.utils import frame_probe
 from av1an.vapoursynth import compose_vapoursynth_pipe
 
@@ -27,11 +27,11 @@ def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
 
     if ContentDetector is None:
         log(
-            f"Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use"
+            "Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use"
         )
         return []
 
-    log(f"Starting PySceneDetect:")
+    log("Starting PySceneDetect:")
     log(f"Threshold: {threshold}")
     log(f"Min scene length: {min_scene_len}")
     log(f"Is Vapoursynth input: {is_vs}")

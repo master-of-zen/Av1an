@@ -13,7 +13,7 @@ anyhow = "1.0.40"
 num_cpus = "1.13.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-sysinfo = "0.17.4"
+sysinfo = "0.18.2"
 vapoursynth = { version = "0.3.0", features = ["vsscript-functions", "vapoursynth-functions"] }
 clap = "2.33.3"
 num-rational = "0.4.0"

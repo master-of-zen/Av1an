@@ -6,7 +6,7 @@ from pathlib import Path
 from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
 from av1an.concat import concatenate_mkvmerge
-from av1an.logger import log
+from av1an_pyo3 import log
 from av1an_pyo3 import (
     get_ffmpeg_info,
     hash_path,
@@ -254,7 +254,7 @@ class Project(object):
 
             except Exception as e:
                 log(f"Vapoursynth not installed but vspipe reachable")
-                log(f"Error:{e}" + "Fallback to Hybrid")
+                log(f"Error: {e}" + "Fallback to Hybrid")
                 self.chunk_method = "hybrid"
 
     def check_exes(self):

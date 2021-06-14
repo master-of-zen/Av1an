@@ -10,7 +10,6 @@ from pathlib import Path
 from av1an.startup.validate_commands import validate_inputs
 from av1an.encoder import ENCODERS
 from av1an.project import Project
-from av1an.logger import log
 from av1an.vapoursynth import is_vapoursynth
 
 

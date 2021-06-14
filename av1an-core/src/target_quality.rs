@@ -215,11 +215,13 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec
 }
 
 pub fn vmaf_auto_threads(workers: usize) -> usize {
-  // logical cpu's
+  const OVER_PROVISION_FACTOR: f64 = 1.25;
+
+  // Logical CPUs
   let threads = num_cpus::get();
 
-  let over_provision_factor = 1.25;
-  let value = ((threads / workers) as f64 * over_provision_factor) as usize;
-
-  std::cmp::max(value, 1)
+  std::cmp::max(
+    ((threads / workers) as f64 * OVER_PROVISION_FACTOR) as usize,
+    1,
+  )
 }

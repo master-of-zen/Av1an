@@ -1,3 +1,4 @@
+use itertools::chain;
 use std::str::FromStr;
 
 macro_rules! into_vec {
@@ -39,6 +40,53 @@ impl FromStr for Encoder {
 }
 
 impl Encoder {
+  pub fn compose_1_pass(&self, params: Vec<String>, output: String) -> Vec<String> {
+    match &self {
+      Self::aom => chain!(
+        into_vec!["aomenc", "--passes=1"],
+        params,
+        into_vec!["-o", output, "-"],
+      )
+      .collect(),
+      Self::rav1e => chain!(
+        into_vec!["rav1e", "-", "-y"],
+        params,
+        into_vec!["--output", output]
+      )
+      .collect(),
+      Self::libvpx => chain!(
+        into_vec!["vpxenc", "--passes=1"],
+        params,
+        into_vec!["-o", output, "-"]
+      )
+      .collect(),
+      Self::svt_av1 => chain!(
+        into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2",],
+        params,
+        into_vec!["-b", output,],
+      )
+      .collect(),
+      Self::x264 => chain!(
+        into_vec![
+          "x264",
+          "--stitchable",
+          "--log-level",
+          "error",
+          "--demuxer",
+          "y4m",
+        ],
+        params,
+        into_vec!["-", "-o", output,]
+      )
+      .collect(),
+      Self::x265 => chain!(
+        into_vec!["x265", "--y4m",],
+        params,
+        into_vec!["-", "-o", output,]
+      )
+      .collect(),
+    }
+  }
   pub fn get_default_arguments(&self) -> Vec<&str> {
     match &self {
       Encoder::aom => into_vec![

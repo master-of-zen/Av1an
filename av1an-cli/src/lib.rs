@@ -120,7 +120,7 @@ pub struct Args {
   vmaf_threads: Option<usize>,
 
   /// Value to target
-  #[clap(short, long)]
+  #[clap(long)]
   target_quality: Option<f64>,
 
   /// Method selection for target quality

@@ -9,3 +9,4 @@ homepage = "https://github.com/master-of-zen/Av1an"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+itertools = "0.10.1"

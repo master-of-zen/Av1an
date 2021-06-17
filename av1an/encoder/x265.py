@@ -7,6 +7,7 @@ from av1an.commandtypes import MPCommands, CommandPair, Command
 from .encoder import Encoder
 from av1an.utils import list_index_of_regex
 from av1an_pyo3 import compose_ffmpeg_pipe
+from av1an_pyo3 import compose_1_pass as pass1
 
 
 class X265(Encoder):
@@ -14,16 +15,7 @@ class X265(Encoder):
         return [
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                [
-                    "x265",
-                    "--y4m",
-                    "--frames",
-                    str(c.frames),
-                    *a.video_params,
-                    "-",
-                    "-o",
-                    output,
-                ],
+                pass1(a.encoder, a.video_params, output),
             )
         ]
 

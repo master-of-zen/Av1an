@@ -7,6 +7,7 @@ from av1an.commandtypes import MPCommands, CommandPair, Command
 from .encoder import Encoder
 from av1an.utils import list_index_of_regex
 from av1an_pyo3 import compose_ffmpeg_pipe
+from av1an_pyo3 import compose_1_pass as pass1
 
 
 class Vpx(Encoder):
@@ -14,7 +15,7 @@ class Vpx(Encoder):
         return [
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                ["vpxenc", "--passes=1", *a.video_params, "-o", output, "-"],
+                pass1(a.encoder, a.video_params, output),
             )
         ]
 

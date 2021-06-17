@@ -56,12 +56,17 @@ fn construct_target_quality_command(
 }
 
 #[pyfunction]
-fn construct_target_quality_slow_command(encoder: String, q: String) -> PyResult<Vec<String>> {
+fn construct_target_quality_slow_command(encoder: &str, q: &str) -> PyResult<Vec<String>> {
   let encoder = Encoder::from_str(&encoder).map_err(|_| {
     pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
   })?;
 
-  Ok(av1an_core::target_quality::construct_target_quality_slow_command(encoder, q))
+  Ok(
+    av1an_core::target_quality::construct_target_quality_slow_command(encoder, q)
+      .iter()
+      .map(|s| s.to_string())
+      .collect(),
+  )
 }
 
 /// Creates vs pipe file

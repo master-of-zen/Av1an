@@ -183,45 +183,35 @@ pub fn construct_target_quality_command(
   }
 }
 
-pub fn construct_target_quality_slow_command(encoder: Encoder, q: String) -> Vec<String> {
+pub fn construct_target_quality_slow_command(encoder: Encoder, q: &str) -> Vec<Cow<str>> {
   match encoder {
-    Encoder::aom => vec![
-      "aomenc".into(),
-      "--passes=1".into(),
+    Encoder::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
+    Encoder::rav1e => into_vec!["rav1e", "-y", "--quantizer", q],
+    Encoder::libvpx => into_vec![
+      "vpxenc",
+      "--passes=1",
+      "--pass=1",
       format!("--cq-level={}", q),
     ],
-    Encoder::rav1e => vec!["rav1e".into(), "-y".into(), "--quantizer".into(), q],
-    Encoder::libvpx => vec![
-      "vpxenc".into(),
-      "--passes=1".into(),
-      "--pass=1".into(),
-      format!("--cq-level={}", q),
-    ],
-    Encoder::svt_av1 => vec![
-      "SvtAv1EncApp".into(),
-      "-i".into(),
-      "stdin".into(),
-      "--crf".into(),
+    Encoder::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q,],
+    Encoder::x264 => into_vec![
+      "x264",
+      "--log-level",
+      "error",
+      "--demuxer",
+      "y4m",
+      "-",
+      "--no-progress",
+      "--crf",
       q,
     ],
-    Encoder::x264 => vec![
-      "x264".into(),
-      "--log-level".into(),
-      "error".into(),
-      "--demuxer".into(),
-      "y4m".into(),
-      "-".into(),
-      "--no-progress".into(),
-      "--crf".into(),
-      q,
-    ],
-    Encoder::x265 => vec![
-      "x265".into(),
-      "--log-level".into(),
-      "0".into(),
-      "--no-progress".into(),
-      "--y4m".into(),
-      "--crf".into(),
+    Encoder::x265 => into_vec![
+      "x265",
+      "--log-level",
+      "0",
+      "--no-progress",
+      "--y4m",
+      "--crf",
       q,
     ],
   }

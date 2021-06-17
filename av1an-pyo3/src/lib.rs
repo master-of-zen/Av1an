@@ -35,15 +35,24 @@ fn hash_path(path: &str) -> String {
 
 #[pyfunction]
 fn construct_target_quality_command(
-  encoder: String,
-  threads: String,
-  q: String,
+  encoder: &str,
+  threads: &str,
+  q: &str,
 ) -> PyResult<Vec<String>> {
   let encoder = Encoder::from_str(&encoder).map_err(|_| {
     pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
   })?;
 
-  Ok(av1an_core::target_quality::construct_target_quality_command(encoder, threads, q))
+  Ok(
+    av1an_core::target_quality::construct_target_quality_command(
+      encoder,
+      threads.parse().unwrap(),
+      q,
+    )
+    .iter()
+    .map(|s| s.to_string())
+    .collect(),
+  )
 }
 
 #[pyfunction]

@@ -7,8 +7,7 @@ from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.encoder.encoder import Encoder
 from av1an.utils import list_index_of_regex
-from av1an_pyo3 import compose_ffmpeg_pipe
-from av1an_pyo3 import compose_1_pass as pass1
+from av1an_pyo3 import compose_ffmpeg_pipe, compose_1_1_pass, compose_1_2_pass
 
 
 class Aom(Encoder):
@@ -16,7 +15,7 @@ class Aom(Encoder):
         return [
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                pass1(a.encoder, a.video_params, output),
+                compose_1_1_pass(a.encoder, a.video_params, output),
             )
         ]
 
@@ -24,16 +23,7 @@ class Aom(Encoder):
         return [
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                [
-                    "aomenc",
-                    "--passes=2",
-                    "--pass=1",
-                    *a.video_params,
-                    f"--fpf={c.fpf}.log",
-                    "-o",
-                    os.devnull,
-                    "-",
-                ],
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
             ),
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),

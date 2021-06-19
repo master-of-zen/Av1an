@@ -1,6 +1,6 @@
 [package]
 name = "av1an-encoder-constructor"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 authors = ["Zen <46526140+master-of-zen@users.noreply.github.com>"]
 homepage = "https://github.com/master-of-zen/Av1an"

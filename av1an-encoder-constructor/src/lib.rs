@@ -40,32 +40,41 @@ impl FromStr for Encoder {
 }
 
 impl Encoder {
-  pub fn compose_1_pass(&self, params: Vec<String>, output: String) -> Vec<String> {
+  pub fn compose_1_1_pass(&self, params: Vec<String>, output: String) -> Vec<String> {
     match &self {
+      // Aomenc
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=1"],
         params,
         into_vec!["-o", output, "-"],
       )
       .collect(),
+
+      // Rav1e
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y"],
         params,
         into_vec!["--output", output]
       )
       .collect(),
+
+      // VPX
       Self::libvpx => chain!(
         into_vec!["vpxenc", "--passes=1"],
         params,
         into_vec!["-o", output, "-"]
       )
       .collect(),
+
+      // SVT-AV1
       Self::svt_av1 => chain!(
         into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2",],
         params,
         into_vec!["-b", output,],
       )
       .collect(),
+
+      // x264
       Self::x264 => chain!(
         into_vec![
           "x264",
@@ -79,6 +88,8 @@ impl Encoder {
         into_vec!["-", "-o", output,]
       )
       .collect(),
+
+      // x265
       Self::x265 => chain!(
         into_vec!["x265", "--y4m",],
         params,
@@ -87,8 +98,122 @@ impl Encoder {
       .collect(),
     }
   }
+
+  pub fn compose_1_2_pass(&self, params: Vec<String>, fpf: String) -> Vec<String> {
+    match &self {
+      // Aomenc
+      Self::aom => chain!(
+        into_vec!["aomenc", "--passes=2", "--pass=1"],
+        params,
+        into_vec![
+          format!("--fpf={}.log", fpf),
+          "-o",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+          "-"
+        ],
+      )
+      .collect(),
+
+      // Rav1e
+      Self::rav1e => chain!(
+        into_vec!["rav1e", "-", "-y", "-q"],
+        params,
+        into_vec![
+          "--first-pass",
+          format!("{}.stat", fpf),
+          "--output",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+        ]
+      )
+      .collect(),
+
+      // VPX
+      Self::libvpx => chain!(
+        into_vec!["vpxenc", "--passes=2", "--pass=1"],
+        params,
+        into_vec![
+          format!("--fpf={}.log", fpf),
+          "-o",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+          "-"
+        ],
+      )
+      .collect(),
+
+      // SVT-AV1
+      Self::svt_av1 => chain!(
+        into_vec![
+          "SvtAv1EncApp",
+          "-i",
+          "stdin",
+          "--progress",
+          "2",
+          "--irefresh-type",
+          "2",
+        ],
+        params,
+        into_vec![
+          "--pass",
+          "1",
+          "--stats",
+          format!("{}.stat", fpf),
+          "-b",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+        ],
+      )
+      .collect(),
+
+      // x264
+      Self::x264 => chain!(
+        into_vec![
+          "x264",
+          "--stitchable",
+          "--log-level",
+          "error",
+          "--pass",
+          "1",
+          "--demuxer",
+          "y4m",
+        ],
+        params,
+        into_vec![
+          "--stats",
+          format!("{}.log", fpf),
+          "-",
+          "-o",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+        ]
+      )
+      .collect(),
+
+      // x265
+      Self::x265 => chain!(
+        into_vec![
+          "x265",
+          "--stitchable",
+          "--log-level",
+          "error",
+          "--pass",
+          "1",
+          "--demuxer",
+          "y4m",
+        ],
+        params,
+        into_vec![
+          "--stats",
+          format!("{}.log", fpf),
+          "-",
+          "-o",
+          if cfg!(windows) { "nul" } else { "/dev/null" },
+        ]
+      )
+      .collect(),
+    }
+  }
+
   pub fn get_default_arguments(&self) -> Vec<&str> {
     match &self {
+      // Aomenc
       Encoder::aom => into_vec![
         "--threads=8",
         "-b",
@@ -99,6 +224,8 @@ impl Encoder {
         "--tile-columns=2",
         "--tile-rows=1",
       ],
+
+      // Rav1e
       Encoder::rav1e => into_vec![
         "--tiles",
         "8",
@@ -108,6 +235,8 @@ impl Encoder {
         "100",
         "--no-scene-detection",
       ],
+
+      //VPX
       Encoder::libvpx => into_vec![
         "--codec=vp9",
         "-b",
@@ -119,10 +248,16 @@ impl Encoder {
         "--cq-level=30",
         "--row-mt=1",
       ],
+
+      // SVT-AV1
       Encoder::svt_av1 => {
         into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25",]
       }
+
+      // x264
       Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
+
+      // x265
       Encoder::x265 => into_vec!["-p", "slow", "--crf", "25", "-D", "10"],
     }
   }

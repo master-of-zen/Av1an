@@ -353,6 +353,17 @@ fn compose_1_2_pass(encoder: String, params: Vec<String>, fpf: String) -> PyResu
   Ok(enc.compose_1_2_pass(params, fpf))
 }
 
+#[pyfunction]
+fn compose_2_2_pass(
+  encoder: String,
+  params: Vec<String>,
+  fpf: String,
+  output: String,
+) -> PyResult<Vec<String>> {
+  let enc = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+  Ok(enc.compose_2_2_pass(params, fpf, output))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -388,6 +399,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(compose_ffmpeg_pipe, m)?)?;
   m.add_function(wrap_pyfunction!(compose_1_1_pass, m)?)?;
   m.add_function(wrap_pyfunction!(compose_1_2_pass, m)?)?;
+  m.add_function(wrap_pyfunction!(compose_2_2_pass, m)?)?;
 
   Ok(())
 }

@@ -211,6 +211,91 @@ impl Encoder {
     }
   }
 
+  pub fn compose_2_2_pass(&self, params: Vec<String>, fpf: String, output: String) -> Vec<String> {
+    match &self {
+      // Aomenc
+      Self::aom => chain!(
+        into_vec!["aomenc", "--passes=2", "--pass=2"],
+        params,
+        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
+      )
+      .collect(),
+
+      // Rav1e
+      Self::rav1e => chain!(
+        into_vec!["rav1e", "-", "-y", "-q"],
+        params,
+        into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output,]
+      )
+      .collect(),
+
+      // VPX
+      Self::libvpx => chain!(
+        into_vec!["vpxenc", "--passes=2", "--pass=2"],
+        params,
+        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
+      )
+      .collect(),
+
+      // SVT-AV1
+      Self::svt_av1 => chain!(
+        into_vec![
+          "SvtAv1EncApp",
+          "-i",
+          "stdin",
+          "--progress",
+          "2",
+          "--irefresh-type",
+          "2",
+        ],
+        params,
+        into_vec![
+          "--pass",
+          "2",
+          "--stats",
+          format!("{}.stat", fpf),
+          "-b",
+          output,
+        ],
+      )
+      .collect(),
+
+      // x264
+      Self::x264 => chain!(
+        into_vec![
+          "x264",
+          "--stitchable",
+          "--log-level",
+          "error",
+          "--pass",
+          "2",
+          "--demuxer",
+          "y4m",
+        ],
+        params,
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output,]
+      )
+      .collect(),
+
+      // x265
+      Self::x265 => chain!(
+        into_vec![
+          "x265",
+          "--stitchable",
+          "--log-level",
+          "error",
+          "--pass",
+          "2",
+          "--demuxer",
+          "y4m",
+        ],
+        params,
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output,]
+      )
+      .collect(),
+    }
+  }
+
   pub fn get_default_arguments(&self) -> Vec<&str> {
     match &self {
       // Aomenc

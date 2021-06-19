@@ -7,7 +7,12 @@ from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.encoder.encoder import Encoder
 from av1an.utils import list_index_of_regex
-from av1an_pyo3 import compose_ffmpeg_pipe, compose_1_1_pass, compose_1_2_pass
+from av1an_pyo3 import (
+    compose_ffmpeg_pipe,
+    compose_1_1_pass,
+    compose_1_2_pass,
+    compose_2_2_pass,
+)
 
 
 class SvtAv1(Encoder):
@@ -27,22 +32,7 @@ class SvtAv1(Encoder):
             ),
             CommandPair(
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                [
-                    "SvtAv1EncApp",
-                    "-i",
-                    "stdin",
-                    "--progress",
-                    "2",
-                    "--irefresh-type",
-                    "2",
-                    *a.video_params,
-                    "--pass",
-                    "2",
-                    "--stats",
-                    f"{c.fpf}.stat",
-                    "-b",
-                    output,
-                ],
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
             ),
         ]
 

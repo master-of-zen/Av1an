@@ -5,7 +5,7 @@ from typing import Iterable
 from subprocess import Popen
 
 from av1an.chunk import Chunk
-from av1an.encoder import ENCODERS
+from av1an.encoder.encoder import ENCODERS
 
 from av1an.project import Project
 from av1an_pyo3 import log

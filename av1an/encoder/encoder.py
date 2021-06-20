@@ -1,3 +1,6 @@
+import sys
+import re
+
 from abc import ABC, abstractmethod
 from distutils.spawn import find_executable
 from typing import Tuple, Optional
@@ -6,7 +9,15 @@ from subprocess import PIPE, STDOUT
 from av1an.project import Project
 from chunk import Chunk
 from av1an.commandtypes import Command, MPCommands
-from av1an_pyo3 import encoder_bin, compose_ffmpeg_pipe
+from av1an_pyo3 import (
+    encoder_bin,
+    compose_ffmpeg_pipe,
+    compose_1_1_pass,
+    compose_1_2_pass,
+    compose_2_2_pass,
+)
+from av1an.commandtypes import MPCommands, CommandPair, Command
+from av1an.utils import list_index_of_regex
 
 
 class Encoder(ABC):
@@ -127,3 +138,295 @@ class Encoder(ABC):
         if not isinstance(o, Encoder):
             return False
         return encoder_bin(o.encoder) == o.encoder_bin
+
+
+class Aom(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                [
+                    "aomenc",
+                    "--passes=2",
+                    "--pass=2",
+                    *a.video_params,
+                    f"--fpf={c.fpf}.log",
+                    "-o",
+                    output,
+                    "-",
+                ],
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
+        adjusted_command[i] = f"--cq-level={q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        if "fatal" in line.lower():
+            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
+            sys.exit(1)
+        if "Pass 2/2" in line or "Pass 1/1" in line:
+            return re.search(r"frame.*?/([^ ]+?) ", line)
+
+
+class Rav1e(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"--quantizer")
+        adjusted_command[i + 1] = f"{q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        if "error" in line.lower():
+            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
+            sys.exit(1)
+        return re.search(r"encoded.*? ([^ ]+?) ", line)
+
+
+class SvtAv1(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
+        adjusted_command[i + 1] = f"{q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+        if "error" in line.lower():
+            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
+            sys.exit(1)
+        return re.search(r"Encoding frame\s+(\d+)", line)
+
+
+class Vpx(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
+        adjusted_command[i] = f"--cq-level={q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        if "fatal" in line.lower():
+            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
+            sys.exit(1)
+        if "Pass 2/2" in line or "Pass 1/1" in line:
+            return re.search(r"frame.*?/([^ ]+?) ", line)
+
+
+class X265(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"--crf")
+        adjusted_command[i + 1] = f"{q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        return re.search(r"^\[.*\]\s(\d+)\/\d+", line)
+
+
+class X264(Encoder):
+    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
+
+    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
+
+    def man_q(self, command: Command, q: int) -> Command:
+        """Return command with new cq value
+
+        :param command: old command
+        :param q: new cq value
+        :return: command with new cq value"""
+
+        adjusted_command = command.copy()
+
+        i = list_index_of_regex(adjusted_command, r"--crf")
+        adjusted_command[i + 1] = f"{q}"
+
+        return adjusted_command
+
+    def match_line(self, line: str):
+        """Extract number of encoded frames from line.
+
+        :param line: one line of text output from the encoder
+        :return: match object from re.search matching the number of encoded frames"""
+
+        return re.search(r"^[^\d]*(\d+)", line)
+
+
+ENCODERS = {
+    "aom": Aom(),
+    "rav1e": Rav1e(),
+    "svt_av1": SvtAv1(),
+    "vpx": Vpx(),
+    "x264": X264(),
+    "x265": X265(),
+}

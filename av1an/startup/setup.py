@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from av1an.startup.validate_commands import validate_inputs
-from av1an.encoder import ENCODERS
+from av1an.encoder.encoder import ENCODERS
 from av1an.project import Project
 from av1an.vapoursynth import is_vapoursynth
 from av1an_pyo3 import get_default_cq_range, get_default_pass, get_default_arguments

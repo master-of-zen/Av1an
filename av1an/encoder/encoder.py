@@ -6,32 +6,13 @@ from subprocess import PIPE, STDOUT
 from av1an.project import Project
 from chunk import Chunk
 from av1an.commandtypes import Command, MPCommands
-from av1an_pyo3 import encoder_bin
+from av1an_pyo3 import encoder_bin, compose_ffmpeg_pipe
 
 
 class Encoder(ABC):
     """
     An abstract class used for encoders
     """
-
-    @staticmethod
-    def compose_ffmpeg_pipe(a: Project) -> Command:
-        """
-        Creates an ffmpeg pipe command for the args
-
-        :param a: the Project
-        :return: an ffmpeg command that will pipe into the encoder
-        """
-        return [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            *a.ffmpeg_pipe,
-        ]
 
     @abstractmethod
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:

@@ -6,13 +6,14 @@ from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from .encoder import Encoder
 from av1an.utils import list_index_of_regex
+from av1an_pyo3 import compose_ffmpeg_pipe
 
 
 class Vpx(Encoder):
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 ["vpxenc", "--passes=1", *a.video_params, "-o", output, "-"],
             )
         ]
@@ -20,7 +21,7 @@ class Vpx(Encoder):
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 [
                     "vpxenc",
                     "--passes=2",
@@ -33,7 +34,7 @@ class Vpx(Encoder):
                 ],
             ),
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 [
                     "vpxenc",
                     "--passes=2",

@@ -7,13 +7,14 @@ from av1an.chunk import Chunk
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.encoder.encoder import Encoder
 from av1an.utils import list_index_of_regex
+from av1an_pyo3 import compose_ffmpeg_pipe
 
 
 class Rav1e(Encoder):
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 ["rav1e", "-", "-y", *a.video_params, "--output", output],
             )
         ]
@@ -21,7 +22,7 @@ class Rav1e(Encoder):
     def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 [
                     "rav1e",
                     "-",
@@ -35,7 +36,7 @@ class Rav1e(Encoder):
                 ],
             ),
             CommandPair(
-                Encoder.compose_ffmpeg_pipe(a),
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 [
                     "rav1e",
                     "-",

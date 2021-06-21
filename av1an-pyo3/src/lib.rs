@@ -336,12 +336,9 @@ fn output_extension(encoder: String) -> PyResult<String> {
 }
 
 #[pyfunction]
-fn compose_ffmpeg_pipe(encoder: String) -> PyResult<(usize, usize)> {
-  Ok(
-    av1an_encoder_constructor::Encoder::from_str(&encoder)
-      .unwrap()
-      .get_default_cq_range(),
-  )
+fn compose_ffmpeg_pipe(params: Vec<String>) -> PyResult<Vec<String>> {
+  let res = av1an_encoder_constructor::compose_ffmpeg_pipe(params);
+  Ok(res)
 }
 
 #[pymodule]

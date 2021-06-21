@@ -137,8 +137,8 @@ impl Encoder {
   }
 }
 
-pub fn compose_ffmpeg_pipe(params: Vec<&str>) -> Vec<&str> {
-  let mut p: Vec<&str> = vec![
+pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
+  let mut p: Vec<String> = into_vec![
     "ffmpeg",
     "-y",
     "-hide_banner",

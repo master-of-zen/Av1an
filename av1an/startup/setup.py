@@ -30,8 +30,6 @@ def set_target_quality(project):
             "Target quality with less than 4 probes is experimental and not recommended"
         )
 
-    encoder = ENCODERS[project.encoder]
-
     # setting range for q values
     if project.min_q is None:
         project.min_q, _ = get_default_cq_range(project.encoder)

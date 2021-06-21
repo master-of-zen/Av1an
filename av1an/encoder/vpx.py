@@ -9,26 +9,6 @@ from av1an.utils import list_index_of_regex
 
 
 class Vpx(Encoder):
-    def __init__(self):
-        super().__init__(
-            encoder_bin="vpxenc",
-            encoder_help="vpxenc --help",
-            default_args=[
-                "--codec=vp9",
-                "-b",
-                "10",
-                "--profile=2",
-                "--threads=4",
-                "--cpu-used=0",
-                "--end-usage=q",
-                "--cq-level=30",
-                "--row-mt=1",
-            ],
-            default_passes=2,
-            default_q_range=(15, 55),
-            output_extension="ivf",
-        )
-
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(

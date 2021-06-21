@@ -7,7 +7,7 @@ from av1an.chunk import Chunk
 from av1an.encoder import ENCODERS
 from av1an_pyo3 import log
 from av1an.resume import read_done_data
-from av1an_pyo3 import create_vs_file, get_keyframes, segment
+from av1an_pyo3 import create_vs_file, get_keyframes, segment, output_extension
 import sys
 
 
@@ -200,7 +200,7 @@ def create_vs_chunk(
         "-e",
         str(frame_end),
     ]
-    extension = ENCODERS[project.encoder].output_extension
+    extension = output_extension(project.encoder)
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
     chunk = Chunk(project.temp, index, vspipe_gen_cmd, extension, size, frames)
@@ -266,7 +266,7 @@ def create_select_chunk(
         "yuv4mpegpipe",
         "-",
     ]
-    extension = ENCODERS[project.encoder].output_extension
+    extension = output_extension(project.encoder)
     size = frames  # use the number of frames to prioritize which chunks encode first, since we don't have file size
 
     chunk = Chunk(project.temp, index, ffmpeg_gen_cmd, extension, size, frames)
@@ -332,7 +332,7 @@ def create_chunk_from_segment(project: Project, index: int, file: Path) -> Chunk
     ]
     file_size = file.stat().st_size
     frames = project.get_frames()
-    extension = ENCODERS[project.encoder].output_extension
+    extension = output_extension(project.encoder)
 
     chunk = Chunk(project.temp, index, ffmpeg_gen_cmd, extension, file_size, frames)
 

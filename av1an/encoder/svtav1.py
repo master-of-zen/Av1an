@@ -10,25 +10,6 @@ from av1an.utils import list_index_of_regex
 
 
 class SvtAv1(Encoder):
-    def __init__(self):
-        super(SvtAv1, self).__init__(
-            encoder_bin="SvtAv1EncApp",
-            encoder_help="SvtAv1EncApp --help",
-            default_args=[
-                "--preset",
-                "4",
-                "--keyint",
-                "240",
-                "--rc",
-                "0",
-                "--crf",
-                "25",
-            ],
-            default_passes=1,
-            default_q_range=(15, 50),
-            output_extension="ivf",
-        )
-
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(

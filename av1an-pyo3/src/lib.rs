@@ -5,13 +5,13 @@ use av1an_core::{ChunkMethod, Encoder};
 
 use chrono::Utc;
 use once_cell::sync::OnceCell;
-
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::usize;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
 #[pyfunction]
@@ -271,6 +271,79 @@ fn log(msg: &str) {
   }
 }
 
+#[pyfunction]
+fn get_default_pass(encoder: String) -> PyResult<usize> {
+  Ok(
+    av1an_encoder_constructor::Encoder::from_str(&encoder)
+      .unwrap()
+      .get_default_pass(),
+  )
+}
+
+#[pyfunction]
+fn get_default_cq_range(encoder: String) -> PyResult<(usize, usize)> {
+  Ok(
+    av1an_encoder_constructor::Encoder::from_str(&encoder)
+      .unwrap()
+      .get_default_cq_range(),
+  )
+}
+
+#[pyfunction]
+fn get_default_arguments(encoder: String) -> PyResult<Vec<String>> {
+  let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+  let default_arguments = encoder.get_default_arguments();
+
+  Ok(
+    default_arguments
+      .iter()
+      .map(|&s| s.to_string())
+      .collect::<Vec<String>>(),
+  )
+}
+
+#[pyfunction]
+fn help_command(encoder: String) -> PyResult<Vec<String>> {
+  let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+  let help_command = encoder.help_command();
+
+  Ok(
+    help_command
+      .iter()
+      .map(|&s| s.to_string())
+      .collect::<Vec<String>>(),
+  )
+}
+
+#[pyfunction]
+fn encoder_bin(encoder: String) -> PyResult<String> {
+  Ok(
+    av1an_encoder_constructor::Encoder::from_str(&encoder)
+      .unwrap()
+      .encoder_bin()
+      .into(),
+  )
+}
+
+#[pyfunction]
+fn output_extension(encoder: String) -> PyResult<String> {
+  Ok(
+    av1an_encoder_constructor::Encoder::from_str(&encoder)
+      .unwrap()
+      .output_extension()
+      .into(),
+  )
+}
+
+#[pyfunction]
+fn compose_ffmpeg_pipe(encoder: String) -> PyResult<(usize, usize)> {
+  Ok(
+    av1an_encoder_constructor::Encoder::from_str(&encoder)
+      .unwrap()
+      .get_default_cq_range(),
+  )
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -297,6 +370,13 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(vmaf_auto_threads, m)?)?;
   m.add_function(wrap_pyfunction!(set_log, m)?)?;
   m.add_function(wrap_pyfunction!(log, m)?)?;
+  m.add_function(wrap_pyfunction!(get_default_pass, m)?)?;
+  m.add_function(wrap_pyfunction!(get_default_cq_range, m)?)?;
+  m.add_function(wrap_pyfunction!(get_default_arguments, m)?)?;
+  m.add_function(wrap_pyfunction!(help_command, m)?)?;
+  m.add_function(wrap_pyfunction!(encoder_bin, m)?)?;
+  m.add_function(wrap_pyfunction!(output_extension, m)?)?;
+  m.add_function(wrap_pyfunction!(compose_ffmpeg_pipe, m)?)?;
 
   Ok(())
 }

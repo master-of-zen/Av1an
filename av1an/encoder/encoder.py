@@ -6,35 +6,13 @@ from subprocess import PIPE, STDOUT
 from av1an.project import Project
 from chunk import Chunk
 from av1an.commandtypes import Command, MPCommands
+from av1an_pyo3 import encoder_bin
 
 
 class Encoder(ABC):
     """
     An abstract class used for encoders
     """
-
-    def __init__(
-        self,
-        encoder_bin: str,
-        encoder_help: str,
-        default_args: Command,
-        default_passes: int,
-        default_q_range: Tuple[int, int],
-        output_extension: str,
-    ):
-        """
-        Encoder constructor
-
-        :param encoder_bin: the binary for the encoder
-        :param default_args: the default cli args for the encoder
-        :param output_extension: the output extension (no dot)
-        """
-        self.encoder_bin = encoder_bin
-        self.encoder_help = encoder_help
-        self.default_args = default_args
-        self.default_passes = default_passes
-        self.default_q_range = default_q_range
-        self.output_extension = output_extension
 
     @staticmethod
     def compose_ffmpeg_pipe(a: Project) -> Command:
@@ -151,19 +129,12 @@ class Encoder(ABC):
         :param project: the Project
         :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
         """
-        if not self.check_exists():
+        if not find_executable(encoder_bin(project.encoder)):
             return (
                 False,
-                f"Encoder {self.encoder_bin} not found. Is it installed in the system path?",
+                f"Encoder {encoder_bin(project.encoder)} not found. Is it installed in the system path?",
             )
         return True, None
-
-    def check_exists(self) -> bool:
-        """
-        Verifies that this encoder exists in the system path and is ok to use
-        :return: True if the encoder bin exists
-        """
-        return find_executable(self.encoder_bin) is not None
 
     def __eq__(self, o: object) -> bool:
         """
@@ -174,4 +145,4 @@ class Encoder(ABC):
         """
         if not isinstance(o, Encoder):
             return False
-        return self.encoder_bin == o.encoder_bin
+        return encoder_bin(o.encoder) == o.encoder_bin

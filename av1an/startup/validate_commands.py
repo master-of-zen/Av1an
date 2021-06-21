@@ -5,6 +5,7 @@ from subprocess import PIPE
 from av1an.encoder import ENCODERS
 from typing import List, Union
 from difflib import SequenceMatcher
+from av1an_pyo3 import help_command
 
 
 def run_command(command: List) -> str:
@@ -49,9 +50,10 @@ def suggest_fix(wrong_arg, arg_dictionary):
 
 
 def get_encoder_project(project):
-    help_command = ENCODERS[project.encoder].encoder_help.split()
 
-    help_text = run_command(help_command)
+    help = help_command(project.encoder)
+
+    help_text = run_command(help)
 
     matches = re.findall(r"\s+(-\w+|(?:--\w+(?:-\w+)*))", help_text)
     parameters = set(matches)

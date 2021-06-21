@@ -1,3 +1,9 @@
 [workspace]
 
-members = ["av1an-core", "av1an-pyo3", "av1an-scene-detection", "av1an-cli"]
+members = [
+    "av1an-core",
+    "av1an-pyo3",
+    "av1an-scene-detection",
+    "av1an-cli",
+    "av1an-encoder-constructor",
+]

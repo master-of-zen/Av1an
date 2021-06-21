@@ -10,24 +10,6 @@ from av1an.utils import list_index_of_regex
 
 
 class Rav1e(Encoder):
-    def __init__(self):
-        super().__init__(
-            encoder_bin="rav1e",
-            encoder_help="rav1e --fullhelp",
-            default_args=[
-                "--tiles",
-                "8",
-                "--speed",
-                "6",
-                "--quantizer",
-                "100",
-                "--no-scene-detection",
-            ],
-            default_passes=1,
-            default_q_range=(50, 140),
-            output_extension="ivf",
-        )
-
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(

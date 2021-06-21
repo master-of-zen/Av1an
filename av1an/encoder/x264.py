@@ -9,16 +9,6 @@ from av1an.utils import list_index_of_regex
 
 
 class X264(Encoder):
-    def __init__(self):
-        super().__init__(
-            encoder_bin="x264",
-            encoder_help="x264 --fullhelp",
-            default_args=["--preset", "slow", "--crf", "25"],
-            default_passes=1,
-            default_q_range=(15, 35),
-            output_extension="mkv",
-        )
-
     def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
         return [
             CommandPair(

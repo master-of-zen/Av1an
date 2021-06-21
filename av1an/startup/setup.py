@@ -11,6 +11,7 @@ from av1an.startup.validate_commands import validate_inputs
 from av1an.encoder import ENCODERS
 from av1an.project import Project
 from av1an.vapoursynth import is_vapoursynth
+from av1an_pyo3 import get_default_cq_range, get_default_pass, get_default_arguments
 
 
 def set_target_quality(project):
@@ -33,11 +34,11 @@ def set_target_quality(project):
 
     # setting range for q values
     if project.min_q is None:
-        project.min_q, _ = encoder.default_q_range
+        project.min_q, _ = get_default_cq_range(project.encoder)
         assert project.min_q > 1
 
     if project.max_q is None:
-        _, project.max_q = encoder.default_q_range
+        _, project.max_q = get_default_cq_range(project.encoder)
 
 
 def setup_encoder(project: Project):
@@ -54,10 +55,10 @@ def setup_encoder(project: Project):
         sys.exit(1)
 
     if project.passes is None:
-        project.passes = encoder.default_passes
+        project.passes = get_default_pass(project.encoder)
 
     project.video_params = (
-        encoder.default_args
+        get_default_arguments(project.encoder)
         if project.video_params is None
         else shlex.split(project.video_params)
     )

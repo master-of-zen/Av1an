@@ -25,29 +25,27 @@ class Encoder(ABC):
     An abstract class used for encoders
     """
 
-    @abstractmethod
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        """
-        Composes the commands needed for a 1 pass encode
+    @staticmethod
+    def compose_1_pass(a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_1_pass(a.encoder, a.video_params, output),
+            )
+        ]
 
-        :param a: the Project
-        :param c: the Chunk
-        :param output: path for encoded output
-        :return: a MPCommands object (a list of CommandPairs)
-        """
-        pass
-
-    @abstractmethod
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        """
-        Composes the commands needed for a 2 pass encode
-
-        :param a: the Project
-        :param c: the Chunk
-        :param output: path for encoded output
-        :return: a MPCommands object (a list of CommandPairs)
-        """
-        pass
+    @staticmethod
+    def compose_2_pass(a: Project, c: Chunk, output: str) -> MPCommands:
+        return [
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+            ),
+            CommandPair(
+                compose_ffmpeg_pipe(a.ffmpeg_pipe),
+                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+            ),
+        ]
 
     @abstractmethod
     def man_q(self, command: Command, q: int) -> Command:
@@ -90,7 +88,7 @@ class Encoder(ABC):
         :return: a Pipe attached to the encoders stdout
         """
         filter_cmd, enc_cmd = (
-            self.compose_1_pass(a, c, output)[0]
+            Encoder.compose_1_pass(a, c, output)[0]
             if passes == 1
             else self.compose_2_pass(a, c, output)[current_pass - 1]
         )
@@ -141,35 +139,6 @@ class Encoder(ABC):
 
 
 class Aom(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                [
-                    "aomenc",
-                    "--passes=2",
-                    "--pass=2",
-                    *a.video_params,
-                    f"--fpf={c.fpf}.log",
-                    "-o",
-                    output,
-                    "-",
-                ],
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value"""
 
@@ -194,26 +163,6 @@ class Aom(Encoder):
 
 
 class Rav1e(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
@@ -241,26 +190,6 @@ class Rav1e(Encoder):
 
 
 class SvtAv1(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
@@ -287,26 +216,6 @@ class SvtAv1(Encoder):
 
 
 class Vpx(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
@@ -335,26 +244,6 @@ class Vpx(Encoder):
 
 
 class X265(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 
@@ -379,26 +268,6 @@ class X265(Encoder):
 
 
 class X264(Encoder):
-    def compose_1_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
-        ]
-
-    def compose_2_pass(self, a: Project, c: Chunk, output: str) -> MPCommands:
-        return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
-            ),
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
-            ),
-        ]
-
     def man_q(self, command: Command, q: int) -> Command:
         """Return command with new cq value
 

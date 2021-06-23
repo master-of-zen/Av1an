@@ -1,33 +1,47 @@
 use core::f64;
+use std::fs::read;
+use std::mem::transmute;
+use std::path::{Path, PathBuf};
+use std::u64;
+
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-struct AomFirstPassStats {
-  frame: u64,                    // Frame number
-  weight: u64,                   // Weight assigned to this frame
+pub struct AomFirstPassStats {
+  frame: f64,                    // Frame number
+  weight: f64,                   // Weight assigned to this frame
   intra_error: f64,              // Intra prediction error.
-  frame_avg_wavelet_energy: u64, // Average wavelet energy computed using Discrete Wavelet Transform (DWT).
+  frame_avg_wavelet_energy: f64, // Average wavelet energy computed using Discrete Wavelet Transform (DWT).
   coded_error: f64,
-  sr_coded_error: u64,
-  tr_coded_error: u64,
+  sr_coded_error: f64,
+  tr_coded_error: f64,
   pcnt_inter: f64,
-  pcnt_motion: u64,
+  pcnt_motion: f64,
   pcnt_second_ref: f64,
-  pcnt_third_ref: u64,
+  pcnt_third_ref: f64,
   pcnt_neutral: f64,
-  intra_skip_pct: u64,
-  inactive_zone_rows: u64,
-  inactive_zone_cols: u64,
-  mvr: u64,
-  mvr_abs: u64,
-  mvrv: u64,
-  mvcv: u64,
-  mv_in_out_count: u64,
-  new_mv_count: u64,
-  duration: u64,
-  count: u64,
-  raw_error_stdev: u64,
-  is_flash: u64,
-  noise_var: u64,
-  cor_coeff: u64,
+  intra_skip_pct: f64,
+  inactive_zone_rows: f64,
+  inactive_zone_cols: f64,
+  mvr: f64,
+  mvr_abs: f64,
+  mvrv: f64,
+  mvcv: f64,
+  mv_in_out_count: f64,
+  new_mv_count: f64,
+  duration: f64,
+  count: f64,
+  raw_error_stdev: f64,
+  is_flash: f64,
+  noise_var: f64,
+  cor_coeff: f64,
+}
+
+pub fn read_aomenc_stats_struct(file: PathBuf) -> Vec<AomFirstPassStats> {
+  let raw_data: Vec<u8> = read(file).unwrap();
+  let frame_list: Vec<AomFirstPassStats> =
+    unsafe { std::ptr::read_unaligned(raw_data.as_ptr() as *const _) };
+  println!("{:#?}", frame_list);
+  frame_list
 }
 
 fn get_second_ref_usage_thresh(frame_count_so_far: u64) -> f64 {
@@ -130,6 +144,30 @@ fn test_candidate_kf(
   }
   return is_keyframe;
 }
-fn parse_fpfile() {}
 
-fn find_aom_keyframes() {}
+pub fn find_aom_keyframes(stat_file: PathBuf, min_keyframe: usize) -> Vec<usize> {
+  let stats = read_aomenc_stats_struct(stat_file);
+  println!("Stat 10 {:#?}", &stats[10]);
+
+  let mut keyframes: Vec<usize> = vec![];
+  let mut frame_count_so_far = 1usize;
+
+  println!("Frame count in stat {}", stats.len() / 232);
+  for current_frame_index in 1..(stats.len() / 232) {
+    let mut kf = false;
+
+    if frame_count_so_far > min_keyframe {
+      kf = test_candidate_kf(
+        stats.clone(),
+        current_frame_index as u64,
+        frame_count_so_far as u64,
+      );
+    }
+    if kf {
+      println!("{}", kf);
+      keyframes.push(current_frame_index);
+    }
+    frame_count_so_far = 1;
+  }
+  keyframes
+}

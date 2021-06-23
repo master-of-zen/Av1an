@@ -364,6 +364,12 @@ fn compose_2_2_pass(
   Ok(enc.compose_2_2_pass(params, fpf, output))
 }
 
+#[pyfunction]
+fn find_aom_keyframes(fl: String, min_kf_length: usize) -> Vec<usize> {
+  let file = PathBuf::from(fl);
+  av1an_scene_detection::aom_kf::find_aom_keyframes(file, min_kf_length)
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -400,6 +406,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(compose_1_1_pass, m)?)?;
   m.add_function(wrap_pyfunction!(compose_1_2_pass, m)?)?;
   m.add_function(wrap_pyfunction!(compose_2_2_pass, m)?)?;
+  m.add_function(wrap_pyfunction!(find_aom_keyframes, m)?)?;
 
   Ok(())
 }

@@ -37,3 +37,4 @@ chrono = "0.4.19"
 av1an-core = { path="../av1an-core" }
 av1an-cli = { path="../av1an-cli" }
 av1an-encoder-constructor = { path="../av1an-encoder-constructor" }
+av1an-scene-detection = { path="../av1an-scene-detection" }

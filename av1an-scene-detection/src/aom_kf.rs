@@ -24,6 +24,8 @@ pub struct AomFirstPassStats {
   inactive_zone_cols: f64,
   mvr: f64,
   mvr_abs: f64,
+  mvc: f64,
+  mvc_abs: f64,
   mvrv: f64,
   mvcv: f64,
   mv_in_out_count: f64,

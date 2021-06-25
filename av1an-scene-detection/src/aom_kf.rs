@@ -40,9 +40,7 @@ pub struct AomFirstPassStats {
 
 pub fn read_aomenc_stats_struct(file: PathBuf) -> Vec<AomFirstPassStats> {
   let raw_data: Vec<u8> = read(file).unwrap();
-  let frame_list: Vec<AomFirstPassStats> =
-    unsafe { std::ptr::read_unaligned(raw_data.as_ptr() as *const _) };
-  println!("{:#?}", frame_list);
+  let frame_list: Vec<AomFirstPassStats> = unsafe { transmute(raw_data) };
   frame_list
 }
 

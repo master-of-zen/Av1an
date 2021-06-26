@@ -10,3 +10,4 @@ homepage = "https://github.com/master-of-zen/Av1an"
 
 [dependencies]
 itertools = "0.10.1"
+regex = "1"

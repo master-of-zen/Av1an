@@ -370,6 +370,13 @@ fn find_aom_keyframes(fl: String, min_kf_length: usize) -> Vec<usize> {
   av1an_scene_detection::aom_kf::find_aom_keyframes(file, min_kf_length)
 }
 
+#[pyfunction]
+fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
+  let enc = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+
+  enc.man_command(params, q)
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -407,6 +414,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(compose_1_2_pass, m)?)?;
   m.add_function(wrap_pyfunction!(compose_2_2_pass, m)?)?;
   m.add_function(wrap_pyfunction!(find_aom_keyframes, m)?)?;
+  m.add_function(wrap_pyfunction!(man_command, m)?)?;
 
   Ok(())
 }

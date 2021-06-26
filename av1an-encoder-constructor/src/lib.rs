@@ -1,5 +1,6 @@
 use itertools::chain;
-use std::str::FromStr;
+use regex::Regex;
+use std::{str::FromStr, usize};
 
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
@@ -403,6 +404,38 @@ impl Encoder {
       Self::x265 => "mkv",
     }
   }
+
+  fn q_regex_str(&self) -> &str {
+    match &self {
+      Self::aom => r"--cq-level=.+",
+      Self::rav1e => r"--quantizer",
+      Self::libvpx => r"--cq-level=.+",
+      Self::svt_av1 => r"(--qp|-q|--crf)",
+      Self::x264 => r"--crf",
+      Self::x265 => r"--crf",
+    }
+  }
+
+  fn replace_q(&self, index: usize, q: usize) -> (usize, String) {
+    match &self {
+      Self::aom => (index, format!("--cq-level={}", q)),
+      Self::rav1e => (index + 1, q.to_string()),
+      Self::libvpx => (index, format!("--cq-level={}", q)),
+      Self::svt_av1 => (index + 1, q.to_string()),
+      Self::x264 => (index + 1, q.to_string()),
+      Self::x265 => (index + 1, q.to_string()),
+    }
+  }
+
+  pub fn man_command(&self, params: Vec<String>, q: usize) -> Vec<String> {
+    let index = list_index_of_regex(params.clone(), self.q_regex_str()).unwrap();
+
+    let mut new_params = params.clone();
+    let (replace_index, replace_q) = self.replace_q(index, q);
+    new_params[replace_index] = replace_q;
+
+    new_params
+  }
 }
 
 pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
@@ -419,4 +452,20 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
   p.extend(params);
 
   p
+}
+
+pub fn list_index_of_regex(params: Vec<String>, regex_str: &str) -> Option<usize> {
+  let re = Regex::new(regex_str).unwrap();
+
+  assert!(
+    params.len() > 0,
+    "List index of regex got empty list of params"
+  );
+
+  for (i, cmd) in params.iter().enumerate() {
+    if re.is_match(&cmd) {
+      return Some(i);
+    }
+  }
+  panic!("No match found for params: {:#?}", params)
 }

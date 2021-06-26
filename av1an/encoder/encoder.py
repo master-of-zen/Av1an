@@ -15,6 +15,7 @@ from av1an_pyo3 import (
     compose_1_1_pass,
     compose_1_2_pass,
     compose_2_2_pass,
+    man_command,
 )
 from av1an.commandtypes import MPCommands, CommandPair, Command
 from av1an.utils import list_index_of_regex
@@ -46,15 +47,6 @@ class Encoder(ABC):
                 compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
             ),
         ]
-
-    @abstractmethod
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-        pass
 
     @abstractmethod
     def match_line(self, line: str):
@@ -93,9 +85,9 @@ class Encoder(ABC):
             else self.compose_2_pass(a, c, output)[current_pass - 1]
         )
         if man_q:
-            enc_cmd = self.man_q(enc_cmd, man_q)
+            enc_cmd = man_command(a.encoder, enc_cmd, man_q)
         elif c.per_shot_target_quality_cq:
-            enc_cmd = self.man_q(enc_cmd, c.per_shot_target_quality_cq)
+            enc_cmd = man_command(a.encoder, enc_cmd, c.per_shot_target_quality_cq)
 
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
         ffmpeg_pipe = subprocess.Popen(
@@ -139,16 +131,6 @@ class Encoder(ABC):
 
 
 class Aom(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
-        adjusted_command[i] = f"--cq-level={q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
@@ -163,20 +145,6 @@ class Aom(Encoder):
 
 
 class Rav1e(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"--quantizer")
-        adjusted_command[i + 1] = f"{q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
@@ -190,20 +158,6 @@ class Rav1e(Encoder):
 
 
 class SvtAv1(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"(--qp|-q|--crf)")
-        adjusted_command[i + 1] = f"{q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
@@ -216,20 +170,6 @@ class SvtAv1(Encoder):
 
 
 class Vpx(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"--cq-level=.+")
-        adjusted_command[i] = f"--cq-level={q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
@@ -244,20 +184,6 @@ class Vpx(Encoder):
 
 
 class X265(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"--crf")
-        adjusted_command[i + 1] = f"{q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 
@@ -268,20 +194,6 @@ class X265(Encoder):
 
 
 class X264(Encoder):
-    def man_q(self, command: Command, q: int) -> Command:
-        """Return command with new cq value
-
-        :param command: old command
-        :param q: new cq value
-        :return: command with new cq value"""
-
-        adjusted_command = command.copy()
-
-        i = list_index_of_regex(adjusted_command, r"--crf")
-        adjusted_command[i + 1] = f"{q}"
-
-        return adjusted_command
-
     def match_line(self, line: str):
         """Extract number of encoded frames from line.
 

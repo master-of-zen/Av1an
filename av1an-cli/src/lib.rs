@@ -131,10 +131,6 @@ pub struct Args {
   #[clap(long, default_value = "4")]
   probes: usize,
 
-  /// Use encoding settings for probes
-  #[clap(long)]
-  probe_slow: bool,
-
   /// Framerate for probes, 1 - original
   #[clap(long, default_value = "4")]
   probing_rate: usize,

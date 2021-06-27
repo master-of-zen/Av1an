@@ -48,17 +48,17 @@ def process_encoding_pipe(
         if len(line) == 0:
             continue
 
+        if len(line) > 1:
+            encoder_history.append(line)
+
         if "fatal" in line.lower() or "error" in line.lower():
-            print("\n\nERROR IN ENCODING PROCESS\n\n")
+            print("ERROR IN ENCODING PROCESS")
             print("\n".join(encoder_history))
             sys.exit(1)
         new = match_line(encoder, line)
         if new > frame:
             counter.update(new - frame)
             frame = new
-
-        if len(line) > 1:
-            encoder_history.append(line)
 
     for u_pipe in utility:
         if u_pipe.poll() is None:

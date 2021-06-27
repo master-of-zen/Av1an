@@ -5,8 +5,7 @@ from typing import Iterable
 from subprocess import Popen
 
 from av1an.chunk import Chunk
-from av1an.encoder.encoder import ENCODERS
-
+from av1an.encoder.encoder import Encoder
 from av1an.project import Project
 from av1an_pyo3 import log, match_line
 
@@ -80,6 +79,6 @@ def process_encoding_pipe(
 def tqdm_bar(
     a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass
 ):
-    enc = ENCODERS[encoder]
-    pipe, utility = enc.make_pipes(a, c, passes, current_pass, c.output)
+    enc = Encoder()
+    pipe, utility = enc.make_pipes(a, c, passes, current_pass, output=c.output)
     process_encoding_pipe(pipe, encoder, counter, c, utility)

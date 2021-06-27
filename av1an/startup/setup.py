@@ -8,10 +8,15 @@ import sys
 from pathlib import Path
 
 from av1an.startup.validate_commands import validate_inputs
-from av1an.encoder.encoder import ENCODERS
 from av1an.project import Project
 from av1an.vapoursynth import is_vapoursynth
-from av1an_pyo3 import get_default_cq_range, get_default_pass, get_default_arguments
+from av1an_pyo3 import (
+    get_default_cq_range,
+    get_default_pass,
+    get_default_arguments,
+    encoder_bin,
+)
+from distutils.spawn import find_executable
 
 
 def set_target_quality(project):
@@ -44,12 +49,15 @@ def setup_encoder(project: Project):
     Setup encoder params and passes
     :param project: the Project
     """
-    encoder = ENCODERS[project.encoder]
 
     # validate encoder settings
-    settings_valid, error_msg = encoder.is_valid(project)
+
+    settings_valid = find_executable(encoder_bin(project.encoder))
+
     if not settings_valid:
-        print(error_msg)
+        print(
+            f"Encoder {encoder_bin(project.encoder)} not found. Is it installed in the system path?"
+        )
         sys.exit(1)
 
     if project.passes is None:

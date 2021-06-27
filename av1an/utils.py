@@ -6,25 +6,7 @@ from pathlib import Path
 import cv2
 
 from av1an.vapoursynth import is_vapoursynth
-from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count
-
-from av1an_pyo3 import log
-
-
-def list_index_of_regex(lst: List[str], regex_str: str) -> int:
-    """
-    Gets the first index of the list where regex_str matches
-
-    :param lst: the list
-    :param regex_str: the regex as a string
-    :return: the index where regex_str appears in the list
-    :raises ValueError: if regex_str is not found
-    """
-    reg = re.compile(regex_str)
-    for i, elem in enumerate(lst):
-        if reg.match(elem):
-            return i
-    raise ValueError(f"{reg} is not in list")
+from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count, log
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):

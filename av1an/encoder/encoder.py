@@ -18,12 +18,11 @@ from av1an_pyo3 import (
     man_command,
 )
 from av1an.commandtypes import MPCommands, CommandPair, Command
-from av1an.utils import list_index_of_regex
 
 
-class Encoder(ABC):
+class Encoder:
     """
-    An abstract class used for encoders
+    class used for encoders
     """
 
     @staticmethod
@@ -47,17 +46,6 @@ class Encoder(ABC):
                 compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
             ),
         ]
-
-    @abstractmethod
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-        pass
-
-    def mod_command(self, command, chunk):
-        return None
 
     def make_pipes(
         self,
@@ -104,20 +92,6 @@ class Encoder(ABC):
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         return pipe, utility
 
-    def is_valid(self, project: Project) -> Tuple[bool, Optional[str]]:
-        """
-        Determines if the encoder is properly set up. Checkes to make sure executable exists and project are all
-        compatible with this encoder.
-        :param project: the Project
-        :return: A tuple of (status, error). Status is false and error is set if encoder is not valid
-        """
-        if not find_executable(encoder_bin(project.encoder)):
-            return (
-                False,
-                f"Encoder {encoder_bin(project.encoder)} not found. Is it installed in the system path?",
-            )
-        return True, None
-
     def __eq__(self, o: object) -> bool:
         """
         Supports equality of encoders based on encoder_bin
@@ -128,72 +102,3 @@ class Encoder(ABC):
         if not isinstance(o, Encoder):
             return False
         return encoder_bin(o.encoder) == o.encoder_bin
-
-
-class Aom(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-
-        if "Pass 2/2" in line or "Pass 1/1" in line:
-            return re.search(r"frame.*?/([^ ]+?) ", line)
-
-
-class Rav1e(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-        return re.search(r"encoded.*? ([^ ]+?) ", line)
-
-
-class SvtAv1(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-        return re.search(r"Encoding frame\s+(\d+)", line)
-
-
-class Vpx(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-        if "Pass 2/2" in line or "Pass 1/1" in line:
-            return re.search(r"frame.*?/([^ ]+?) ", line)
-
-
-class X265(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-
-        return re.search(r"^\[.*\]\s(\d+)\/\d+", line)
-
-
-class X264(Encoder):
-    def match_line(self, line: str):
-        """Extract number of encoded frames from line.
-
-        :param line: one line of text output from the encoder
-        :return: match object from re.search matching the number of encoded frames"""
-
-        return re.search(r"^[^\d]*(\d+)", line)
-
-
-ENCODERS = {
-    "aom": Aom(),
-    "rav1e": Rav1e(),
-    "svt_av1": SvtAv1(),
-    "vpx": Vpx(),
-    "x264": X264(),
-    "x265": X265(),
-}

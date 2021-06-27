@@ -91,14 +91,3 @@ class Encoder:
 
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         return pipe, utility
-
-    def __eq__(self, o: object) -> bool:
-        """
-        Supports equality of encoders based on encoder_bin
-
-        :param o: other object
-        :return: True iff o is an EncoderBC and self.encoder_bin == o.encoder_bin
-        """
-        if not isinstance(o, Encoder):
-            return False
-        return encoder_bin(o.encoder) == o.encoder_bin

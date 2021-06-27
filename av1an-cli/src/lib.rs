@@ -143,10 +143,6 @@ pub struct Args {
   #[clap(long)]
   max_q: Option<u8>,
 
-  /// Make plots of probes in temp folder
-  #[clap(long)]
-  vmaf_plots: bool,
-
   /// Filter applied to source at vmaf calcualation, use if you crop source
   #[clap(long)]
   vmaf_filter: Option<String>,

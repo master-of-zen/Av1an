@@ -444,7 +444,7 @@ impl Encoder {
       Self::libvpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
       Self::svt_av1 => r"Encoding frame\s+(\d+)",
       Self::x264 => r"^[^\d]*(\d+)",
-      Self::x265 => r"^\[.*\]\s(\d+)\/\d+",
+      Self::x265 => r"^\[.*\]\s(\d+)\d+",
     }
   }
 

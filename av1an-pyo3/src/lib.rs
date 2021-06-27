@@ -377,6 +377,13 @@ fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
   enc.man_command(params, q)
 }
 
+#[pyfunction]
+fn match_line(encoder: String, line: String) -> PyResult<usize> {
+  let enc = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+
+  Ok(enc.match_line(line).unwrap())
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -415,6 +422,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(compose_2_2_pass, m)?)?;
   m.add_function(wrap_pyfunction!(find_aom_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(man_command, m)?)?;
+  m.add_function(wrap_pyfunction!(match_line, m)?)?;
 
   Ok(())
 }

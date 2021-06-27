@@ -8,7 +8,7 @@ from av1an.chunk import Chunk
 from av1an.encoder.encoder import ENCODERS
 
 from av1an.project import Project
-from av1an_pyo3 import log
+from av1an_pyo3 import log, match_line
 
 
 def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
@@ -40,7 +40,6 @@ def process_encoding_pipe(
 ):
     encoder_history = deque(maxlen=20)
     frame = 0
-    enc = ENCODERS[encoder]
     while True:
         line = pipe.stdout.readline().strip()
 
@@ -50,15 +49,16 @@ def process_encoding_pipe(
         if len(line) == 0:
             continue
 
-        match = enc.match_line(line)
+        if "fatal" in line.lower() or "error" in line.lower():
+            print("\n\nERROR IN ENCODING PROCESS\n\n")
+            print("\n".join(encoder_history))
+            sys.exit(1)
+        new = match_line(encoder, line)
+        if new > frame:
+            counter.update(new - frame)
+            frame = new
 
-        if match:
-            new = int(match.group(1))
-            if new > frame:
-                counter.update(new - frame)
-                frame = new
-
-        if line:
+        if len(line) > 1:
             encoder_history.append(line)
 
     for u_pipe in utility:

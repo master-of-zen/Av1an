@@ -436,6 +436,32 @@ impl Encoder {
 
     new_params
   }
+
+  fn pipe_match(&self) -> &str {
+    match &self {
+      Self::aom => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
+      Self::rav1e => r"encoded.*? ([^ ]+?) ",
+      Self::libvpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
+      Self::svt_av1 => r"Encoding frame\s+(\d+)",
+      Self::x264 => r"^[^\d]*(\d+)",
+      Self::x265 => r"^\[.*\]\s(\d+)\/\d+",
+    }
+  }
+
+  pub fn match_line(&self, line: String) -> Option<usize> {
+    let encoder_regex = Regex::new(self.pipe_match()).unwrap();
+    if !encoder_regex.is_match(&line) {
+      return Some(0);
+    }
+    let captures = encoder_regex
+      .captures(&line)
+      .unwrap()
+      .get(1)
+      .unwrap()
+      .as_str();
+    let result = captures.parse::<usize>().unwrap();
+    Some(result)
+  }
 }
 
 pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {

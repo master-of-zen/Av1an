@@ -137,9 +137,6 @@ class Aom(Encoder):
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
 
-        if "fatal" in line.lower():
-            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            sys.exit(1)
         if "Pass 2/2" in line or "Pass 1/1" in line:
             return re.search(r"frame.*?/([^ ]+?) ", line)
 
@@ -150,10 +147,6 @@ class Rav1e(Encoder):
 
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
-
-        if "error" in line.lower():
-            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            sys.exit(1)
         return re.search(r"encoded.*? ([^ ]+?) ", line)
 
 
@@ -163,9 +156,6 @@ class SvtAv1(Encoder):
 
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
-        if "error" in line.lower():
-            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            sys.exit(1)
         return re.search(r"Encoding frame\s+(\d+)", line)
 
 
@@ -175,10 +165,6 @@ class Vpx(Encoder):
 
         :param line: one line of text output from the encoder
         :return: match object from re.search matching the number of encoded frames"""
-
-        if "fatal" in line.lower():
-            print("\n\nERROR IN ENCODING PROCESS\n\n", line)
-            sys.exit(1)
         if "Pass 2/2" in line or "Pass 1/1" in line:
             return re.search(r"frame.*?/([^ ]+?) ", line)
 

@@ -15,7 +15,6 @@ try:
 except ImportError:
     tqdm = None
 
-from av1an.commandtypes import CommandPair
 from av1an_pyo3 import log
 from av1an.utils import frame_probe_fast
 from av1an.vapoursynth import compose_vapoursynth_pipe
@@ -247,7 +246,7 @@ def find_aom_keyframes(stat_file: Path, key_freq_min: int):
 
 def compose_aomsplit_first_pass_command(
     video_path: Path, stat_file: Path, ffmpeg_pipe, video_params, is_vs
-) -> CommandPair:
+):
     """
     Generates the command for the first pass of the entire video used for aom keyframe split
 
@@ -292,7 +291,7 @@ def compose_aomsplit_first_pass_command(
         os.devnull,
         "-",
     ]
-    return CommandPair(f, e)
+    return (f, e)
 
 
 def aom_keyframes(

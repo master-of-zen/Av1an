@@ -3,7 +3,6 @@ import os
 import shutil
 from distutils.spawn import find_executable
 from pathlib import Path
-from av1an.commandtypes import Command
 from av1an.utils import frame_probe_fast
 from av1an.concat import concatenate_mkvmerge
 from av1an_pyo3 import log

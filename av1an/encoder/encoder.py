@@ -8,7 +8,6 @@ import subprocess
 from subprocess import PIPE, STDOUT
 from av1an.project import Project
 from chunk import Chunk
-from av1an.commandtypes import Command, MPCommands
 from av1an_pyo3 import (
     encoder_bin,
     compose_ffmpeg_pipe,
@@ -17,7 +16,6 @@ from av1an_pyo3 import (
     compose_2_2_pass,
     man_command,
 )
-from av1an.commandtypes import MPCommands, CommandPair, Command
 
 
 class Encoder:
@@ -26,22 +24,20 @@ class Encoder:
     """
 
     @staticmethod
-    def compose_1_pass(a: Project, c: Chunk, output: str) -> MPCommands:
+    def compose_1_pass(a: Project, c: Chunk, output: str):
         return [
-            CommandPair(
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_1_pass(a.encoder, a.video_params, output),
-            )
+            compose_ffmpeg_pipe(a.ffmpeg_pipe),
+            compose_1_1_pass(a.encoder, a.video_params, output),
         ]
 
     @staticmethod
-    def compose_2_pass(a: Project, c: Chunk, output: str) -> MPCommands:
+    def compose_2_pass(a: Project, c: Chunk, output: str):
         return [
-            CommandPair(
+            (
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 compose_1_2_pass(a.encoder, a.video_params, c.fpf),
             ),
-            CommandPair(
+            (
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
                 compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
             ),

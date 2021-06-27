@@ -8,7 +8,6 @@ from scipy import interpolate
 
 from av1an.vmaf import VMAF
 from av1an_pyo3 import log
-from av1an.commandtypes import CommandPair, Command
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 from av1an_pyo3 import (
@@ -195,9 +194,7 @@ class TargetQuality:
         )
         return fl
 
-    def probe_cmd(
-        self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads
-    ) -> CommandPair:
+    def probe_cmd(self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads):
         """
         Generate and return commands for probes at set Q values
         These are specifically not the commands that are generated
@@ -224,27 +221,27 @@ class TargetQuality:
 
         if encoder == "aom":
             params = construct_target_quality_command("aom", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
+            cmd = (pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "x265":
             params = construct_target_quality_command("x265", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
+            cmd = (pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "rav1e":
             params = construct_target_quality_command("rav1e", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
+            cmd = (pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "vpx":
             params = construct_target_quality_command("vpx", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
+            cmd = (pipe, [*params, "-o", probe_name, "-"])
 
         elif encoder == "svt_av1":
             params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-b", probe_name])
+            cmd = (pipe, [*params, "-b", probe_name])
 
         elif encoder == "x264":
             params = construct_target_quality_command("x264", str(n_threads), str(q))
-            cmd = CommandPair(pipe, [*params, "-o", probe_name, "-"])
+            cmd = (pipe, [*params, "-o", probe_name, "-"])
 
         return cmd
 
@@ -278,7 +275,7 @@ class TargetQuality:
         """
         return chunk.fake_input_path.with_name(f"v_{q}{chunk.name}").with_suffix(".ivf")
 
-    def make_pipes(self, ffmpeg_gen_cmd: Command, command: CommandPair):
+    def make_pipes(self, ffmpeg_gen_cmd, command):
 
         ffmpeg_gen_pipe = subprocess.Popen(
             ffmpeg_gen_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT

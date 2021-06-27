@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Dict, Any
 
-from av1an.commandtypes import Command
-
 
 class Chunk:
     """
@@ -14,7 +12,7 @@ class Chunk:
         self,
         temp: Path,
         index: int,
-        ffmpeg_gen_cmd: Command,
+        ffmpeg_gen_cmd: list[str],
         output_ext: str,
         size: int,
         frames: int,
@@ -32,7 +30,7 @@ class Chunk:
         :param frames: the number of frames in this chunk
         """
         self.index: int = index
-        self.ffmpeg_gen_cmd: Command = ffmpeg_gen_cmd
+        self.ffmpeg_gen_cmd: str = ffmpeg_gen_cmd
         self.size: int = size
         self.temp: Path = temp
         self.frames: int = frames

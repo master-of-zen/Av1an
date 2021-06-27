@@ -2,6 +2,7 @@ extern crate num_cpus;
 
 use std::borrow::Cow;
 use std::cmp;
+use std::usize;
 
 use crate::Encoder;
 
@@ -214,6 +215,25 @@ pub fn construct_target_quality_slow_command(encoder: Encoder, q: &str) -> Vec<C
       "--crf",
       q,
     ],
+  }
+}
+
+pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
+  let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
+  let dif2 = (transform_vmaf(target as f64) - transform_vmaf(vmaf1)).abs();
+
+  let tot = dif1 + dif2;
+
+  let new_point = (num1 * (dif1 / tot) + (num2 * (dif2 / tot))).round() as usize;
+  new_point
+}
+
+pub fn transform_vmaf(vmaf: f64) -> f64 {
+  let x: f64 = 1.0 - vmaf / 100.0;
+  if vmaf < 99.99 {
+    -x.ln()
+  } else {
+    return 9.2;
   }
 }
 

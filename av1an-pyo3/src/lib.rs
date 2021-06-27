@@ -384,6 +384,13 @@ fn match_line(encoder: String, line: String) -> PyResult<usize> {
   Ok(enc.match_line(line).unwrap())
 }
 
+#[pyfunction]
+fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> PyResult<usize> {
+  Ok(av1an_core::target_quality::weighted_search(
+    num1, vmaf1, num2, vmaf2, target,
+  ))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -423,6 +430,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(find_aom_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(man_command, m)?)?;
   m.add_function(wrap_pyfunction!(match_line, m)?)?;
+  m.add_function(wrap_pyfunction!(weighted_search, m)?)?;
 
   Ok(())
 }

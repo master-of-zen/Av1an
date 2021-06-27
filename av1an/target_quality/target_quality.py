@@ -16,6 +16,7 @@ from av1an_pyo3 import (
     construct_target_quality_command,
     construct_target_quality_slow_command,
     vmaf_auto_threads,
+    weighted_search,
 )
 
 try:
@@ -129,7 +130,7 @@ class TargetQuality:
 
         # VMAF search
         for _ in range(self.probes - 2):
-            new_point = self.weighted_search(
+            new_point = weighted_search(
                 vmaf_cq_lower, vmaf_lower, vmaf_cq_upper, vmaf_upper, self.target
             )
             if new_point in [x[1] for x in vmaf_cq]:
@@ -174,26 +175,6 @@ class TargetQuality:
         q = min(tl, key=lambda l: abs(l[1] - target_quality))
 
         return int(q[0]), round(q[1], 3)
-
-    def weighted_search(self, num1, vmaf1, num2, vmaf2, target):
-        """
-        Returns weighted value closest to searched
-
-        :param num1: Q of first probe
-        :param vmaf1: VMAF of first probe
-        :param num2: Q of second probe
-        :param vmaf2: VMAF of first probe
-        :param target: VMAF target
-        :return: Q for new probe
-        """
-
-        dif1 = abs(VMAF.transform_vmaf(target) - VMAF.transform_vmaf(vmaf2))
-        dif2 = abs(VMAF.transform_vmaf(target) - VMAF.transform_vmaf(vmaf1))
-
-        tot = dif1 + dif2
-
-        new_point = int(round(num1 * (dif1 / tot) + (num2 * (dif2 / tot))))
-        return new_point
 
     def vmaf_probe(self, chunk: Chunk, q):
         """

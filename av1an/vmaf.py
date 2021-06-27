@@ -171,14 +171,6 @@ class VMAF:
         return d0 + d1
 
     @staticmethod
-    def transform_vmaf(vmaf):
-        if vmaf < 99.99:
-            return -ln(1 - vmaf / 100)
-        else:
-            # return -ln(1-99.99/100)
-            return 9.210340371976184
-
-    @staticmethod
     def read_weighted_vmaf(file, percentile=0):
         """Reads vmaf file with vmaf scores in it and return N percentile score from it.
 

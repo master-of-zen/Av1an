@@ -151,10 +151,6 @@ class TargetQuality:
         q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
         self.log_probes(vmaf_cq, frames, chunk.name, q, q_vmaf)
 
-        # Plot Probes
-        if self.make_plots and len(vmaf_cq) > 3:
-            self.plot_probes(vmaf_cq, chunk, frames)
-
         return q
 
     def get_target_q(self, scores, target_quality):
@@ -252,24 +248,6 @@ class TargetQuality:
 
         return cmd
 
-    def search(self, q1, v1, q2, v2, target):
-
-        if abs(target - v2) < 0.5:
-            return q2
-
-        if v1 > target and v2 > target:
-            return min(q1, q2)
-        if v1 < target and v2 < target:
-            return max(q1, q2)
-
-        dif1 = abs(target - v2)
-        dif2 = abs(target - v1)
-
-        tot = dif1 + dif2
-
-        new_point = int(round(q1 * (dif1 / tot) + (q2 * (dif2 / tot))))
-        return new_point
-
     def interpolate_data(self, vmaf_cq: list, target_quality):
         x = [x[1] for x in sorted(vmaf_cq)]
         y = [float(x[0]) for x in sorted(vmaf_cq)]
@@ -323,35 +301,3 @@ class TargetQuality:
 
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         return pipe, utility
-
-    def plot_probes(self, vmaf_cq, chunk: Chunk, frames):
-        """
-        Makes graph with probe decisions
-        """
-        if plt is None:
-            log(
-                "Matplotlib is not installed or could not be loaded\
-            . Unable to plot probes."
-            )
-            return
-        # Saving plot of vmaf calculation
-
-        x = [x[1] for x in sorted(vmaf_cq)]
-        y = [float(x[0]) for x in sorted(vmaf_cq)]
-
-        cq, tl, f, xnew = self.interpolate_data(vmaf_cq, self.target)
-        matplotlib.use("agg")
-        plt.ioff()
-        plt.plot(xnew, f(xnew), color="tab:blue", alpha=1)
-        plt.plot(x, y, "p", color="tab:green", alpha=1)
-        plt.plot(cq[0], cq[1], "o", color="red", alpha=1)
-        plt.grid(True)
-        plt.xlim(self.min_q, self.max_q)
-        vmafs = [int(x[1]) for x in tl if isinstance(x[1], float) and not isnan(x[1])]
-        plt.ylim(min(vmafs), max(vmafs) + 1)
-        plt.ylabel("VMAF")
-        plt.title(f"Chunk: {chunk.name}, Frames: {frames}")
-        plt.xticks(np.arange(self.min_q, self.max_q + 1, 1.0))
-        temp = self.temp / chunk.name
-        plt.savefig(f"{temp}.png", dpi=200, format="png")
-        plt.close()

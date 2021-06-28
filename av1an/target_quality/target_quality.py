@@ -13,7 +13,6 @@ from av1an.manager.Pipes import process_pipe
 from av1an_pyo3 import (
     adapt_probing_rate,
     construct_target_quality_command,
-    construct_target_quality_slow_command,
     vmaf_auto_threads,
     weighted_search,
 )

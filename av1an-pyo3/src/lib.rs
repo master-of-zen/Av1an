@@ -39,30 +39,13 @@ fn construct_target_quality_command(
   threads: &str,
   q: &str,
 ) -> PyResult<Vec<String>> {
-  let encoder = Encoder::from_str(&encoder).map_err(|_| {
+  let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).map_err(|_| {
     pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
   })?;
 
   Ok(
-    av1an_core::target_quality::construct_target_quality_command(
-      encoder,
-      threads.parse().unwrap(),
-      q,
-    )
-    .iter()
-    .map(|s| s.to_string())
-    .collect(),
-  )
-}
-
-#[pyfunction]
-fn construct_target_quality_slow_command(encoder: &str, q: &str) -> PyResult<Vec<String>> {
-  let encoder = Encoder::from_str(&encoder).map_err(|_| {
-    pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
-  })?;
-
-  Ok(
-    av1an_core::target_quality::construct_target_quality_slow_command(encoder, q)
+    encoder
+      .construct_target_quality_command(threads.parse().unwrap(), q.to_string())
       .iter()
       .map(|s| s.to_string())
       .collect(),
@@ -403,7 +386,6 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_keyframes, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ivf, m)?)?;
   m.add_function(wrap_pyfunction!(construct_target_quality_command, m)?)?;
-  m.add_function(wrap_pyfunction!(construct_target_quality_slow_command, m)?)?;
   m.add_function(wrap_pyfunction!(concatenate_ffmpeg, m)?)?;
   m.add_function(wrap_pyfunction!(extract_audio, m)?)?;
   m.add_function(wrap_pyfunction!(get_frame_types, m)?)?;

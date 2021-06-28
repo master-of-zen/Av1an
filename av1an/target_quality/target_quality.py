@@ -189,9 +189,8 @@ class TargetQuality:
         )
         pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
         process_pipe(pipe, chunk, utility)
-        fl = self.vmaf_runner.call_vmaf(
-            chunk, self.gen_probes_names(chunk, q), vmaf_rate=self.probing_rate
-        )
+        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
+        fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
         return fl
 
     def probe_cmd(self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads):
@@ -217,7 +216,7 @@ class TargetQuality:
             *ffmpeg_pipe,
         ]
 
-        probe_name = self.gen_probes_names(chunk, q).with_suffix(".ivf").as_posix()
+        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
 
         if encoder == "aom":
             params = construct_target_quality_command("aom", str(n_threads), str(q))
@@ -268,12 +267,6 @@ class TargetQuality:
         :return: None
         """
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)
-
-    def gen_probes_names(self, chunk: Chunk, q):
-        """
-        Make name of vmaf probe
-        """
-        return chunk.fake_input_path.with_name(f"v_{q}{chunk.name}").with_suffix(".ivf")
 
     def make_pipes(self, ffmpeg_gen_cmd, command):
 

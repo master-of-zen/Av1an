@@ -5,8 +5,8 @@ from distutils.spawn import find_executable
 from pathlib import Path
 from av1an.utils import frame_probe_fast
 from av1an.concat import concatenate_mkvmerge
-from av1an_pyo3 import log
 from av1an_pyo3 import (
+    log,
     get_ffmpeg_info,
     hash_path,
     create_vs_file,
@@ -45,12 +45,12 @@ class Project(object):
 
         # Encoding
         self.passes = None
-        self.video_params: Command = None
+        self.video_params = None
         self.encoder: str = None
         self.workers: int = None
 
         # FFmpeg params
-        self.ffmpeg_pipe: Command = None
+        self.ffmpeg_pipe = None
         self.ffmpeg: str = None
         self.audio_params = None
         self.pix_format = None

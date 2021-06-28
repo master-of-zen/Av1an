@@ -53,16 +53,6 @@ class Chunk:
         }
 
     @property
-    def fake_input_path(self) -> Path:
-        """
-        Returns the mkv chunk file that would have been for this chunk in the old chunk system.
-        Ex: .temp/split/00000.mkv
-
-        :return: a path
-        """
-        return (self.temp / "split") / f"{self.name}.mkv"
-
-    @property
     def output_path(self) -> Path:
         """
         Gets the path of this chunk after being encoded with an extension
@@ -124,3 +114,13 @@ class Chunk:
         )
         chunk.per_shot_target_quality_cq = d["per_shot_target_quality_cq"]
         return chunk
+
+
+def fake_input_path(temp: Path, name) -> Path:
+    """
+    Returns the mkv chunk file that would have been for this chunk in the old chunk system.
+    Ex: .temp/split/00000.mkv
+
+    :return: a path
+    """
+    return (temp / "split") / f"{name}.mkv"

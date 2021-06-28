@@ -7,14 +7,15 @@ import numpy as np
 from scipy import interpolate
 
 from av1an.vmaf import VMAF
-from av1an_pyo3 import log
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 from av1an_pyo3 import (
+    log,
     adapt_probing_rate,
     construct_target_quality_command,
     vmaf_auto_threads,
     weighted_search,
+    probe_cmd,
 )
 
 try:
@@ -183,65 +184,20 @@ class TargetQuality:
         n_threads = (
             self.n_threads if self.n_threads else vmaf_auto_threads(self.workers)
         )
-        cmd = self.probe_cmd(
-            chunk, q, self.ffmpeg_pipe, self.encoder, self.probing_rate, n_threads
+        cmd = probe_cmd(
+            self.encoder,
+            str(self.temp.as_posix()),
+            chunk.name,
+            str(q),
+            self.ffmpeg_pipe,
+            str(self.probing_rate),
+            str(n_threads),
         )
         pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
         process_pipe(pipe, chunk, utility)
         probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
         fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
         return fl
-
-    def probe_cmd(self, chunk: Chunk, q, ffmpeg_pipe, encoder, probing_rate, n_threads):
-        """
-        Generate and return commands for probes at set Q values
-        These are specifically not the commands that are generated
-        by the user or encoder defaults, since these
-        should be faster than the actual encoding commands.
-        These should not be moved into encoder classes at this point.
-        """
-        pipe = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            "-",
-            "-vf",
-            f"select=not(mod(n\\,{probing_rate}))",
-            "-vsync",
-            "0",
-            *ffmpeg_pipe,
-        ]
-
-        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
-
-        if encoder == "aom":
-            params = construct_target_quality_command("aom", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-o", probe_name, "-"])
-
-        elif encoder == "x265":
-            params = construct_target_quality_command("x265", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-o", probe_name, "-"])
-
-        elif encoder == "rav1e":
-            params = construct_target_quality_command("rav1e", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-o", probe_name, "-"])
-
-        elif encoder == "vpx":
-            params = construct_target_quality_command("vpx", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-o", probe_name, "-"])
-
-        elif encoder == "svt_av1":
-            params = construct_target_quality_command("svt_av1", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-b", probe_name])
-
-        elif encoder == "x264":
-            params = construct_target_quality_command("x264", str(n_threads), str(q))
-            cmd = (pipe, [*params, "-o", probe_name, "-"])
-
-        return cmd
 
     def interpolate_data(self, vmaf_cq: list, target_quality):
         x = [x[1] for x in sorted(vmaf_cq)]

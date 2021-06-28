@@ -2,8 +2,8 @@ use itertools::chain;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cmp;
+use std::path::PathBuf;
 use std::{str::FromStr, usize};
-
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
     vec![
@@ -465,7 +465,7 @@ impl Encoder {
     Some(result)
   }
 
-  pub fn construct_target_quality_command(&self, threads: usize, q: String) -> Vec<Cow<str>> {
+  pub fn construct_target_quality_command(&self, threads: String, q: String) -> Vec<Cow<str>> {
     match &self {
       Self::aom => into_vec![
         "aomenc",
@@ -620,13 +620,60 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--frame-threads",
-        cmp::min(threads, 16).to_string(),
+        cmp::min(threads.parse().unwrap(), 16).to_string(),
         "--preset",
         "fast",
         "--crf",
         q,
       ],
     }
+  }
+  pub fn probe_cmd(
+    &self,
+    temp: String,
+    name: String,
+    q: String,
+    ffmpeg_pipe: Vec<String>,
+    probing_rate: String,
+    n_threads: String,
+  ) -> (Vec<String>, Vec<String>) {
+    let pipe: Vec<String> = chain!(
+      into_vec![
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        "-",
+        "-vf",
+        format!("select=not(mod(n\\,{}))", probing_rate).as_str(),
+        "-vsync",
+        "0",
+      ],
+      ffmpeg_pipe
+    )
+    .collect();
+
+    let probe_name = format!("v_{}{}.ivf", q, name);
+    let mut probe = PathBuf::from(temp);
+    probe.push("split");
+    probe.push(&probe_name);
+    let probe_path = probe.into_os_string().into_string().unwrap();
+
+    let ps = self.construct_target_quality_command(n_threads, q);
+    let params = ps.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+
+    let output: Vec<String> = match &self {
+      Self::aom => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::rav1e => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
+      Self::libvpx => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::x264 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::x265 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+    };
+
+    (pipe, output)
   }
   pub fn construct_target_quality_slow_command(&self, q: String) -> Vec<Cow<str>> {
     match &self {

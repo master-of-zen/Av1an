@@ -374,6 +374,20 @@ fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) ->
   ))
 }
 
+#[pyfunction]
+fn probe_cmd(
+  encoder: String,
+  temp: String,
+  name: String,
+  q: String,
+  ffmpeg_pipe: Vec<String>,
+  probing_rate: String,
+  n_threads: String,
+) -> PyResult<(Vec<String>, Vec<String>)> {
+  let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+  Ok(encoder.probe_cmd(temp, name, q, ffmpeg_pipe, probing_rate, n_threads))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -413,6 +427,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(man_command, m)?)?;
   m.add_function(wrap_pyfunction!(match_line, m)?)?;
   m.add_function(wrap_pyfunction!(weighted_search, m)?)?;
+  m.add_function(wrap_pyfunction!(probe_cmd, m)?)?;
 
   Ok(())
 }

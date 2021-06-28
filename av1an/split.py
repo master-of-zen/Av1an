@@ -5,7 +5,7 @@ from typing import List
 import sys
 
 from .project import Project
-from .scenedetection import aom_keyframes, AOM_KEYFRAMES_DEFAULT_PARAMS, pyscene, ffmpeg
+from .scenedetection import pyscene, ffmpeg
 
 from av1an_pyo3 import log, extra_splits, read_scenes_from_file, write_scenes_to_file
 
@@ -66,11 +66,6 @@ def calc_split_locations(project: Project) -> List[int]:
     :return: A list of frame numbers
     """
     # inherit video params from aom encode unless we are using a different encoder, then use defaults
-    aom_keyframes_params = (
-        project.video_params
-        if (project.encoder == "aom")
-        else AOM_KEYFRAMES_DEFAULT_PARAMS
-    )
 
     sc = []
 
@@ -92,19 +87,6 @@ def calc_split_locations(project: Project) -> List[int]:
             log(f"Error in PySceneDetect: {e}")
             print(f"Error in PySceneDetect: {e}")
             sys.exit(1)
-
-    # Splitting based on aom keyframe placement
-    elif project.split_method == "aom_keyframes":
-        stat_file = project.temp / "keyframes.log"
-        sc = aom_keyframes(
-            project.input,
-            stat_file,
-            project.min_scene_len,
-            project.ffmpeg_pipe,
-            aom_keyframes_params,
-            project.is_vs,
-            project.quiet,
-        )
 
     elif project.split_method == "ffmpeg":
         sc = ffmpeg(

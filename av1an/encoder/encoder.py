@@ -32,17 +32,6 @@ class Encoder:
         output: str,
         man_q: int = None,
     ):
-        """
-        Creates a pipe for the given chunk with the given args
-
-        :param a: the Project
-        :param c: the Chunk
-        :param passes: the total number of passes (1 or 2)
-        :param current_pass: the current_pass
-        :param output: path posix string for encoded output
-        :param man_q: use a different quality
-        :return: a Pipe attached to the encoders stdout
-        """
 
         fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
 

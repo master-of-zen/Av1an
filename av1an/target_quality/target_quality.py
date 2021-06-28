@@ -48,16 +48,6 @@ class TargetQuality:
         self.video_params = project.video_params
 
     def log_probes(self, vmaf_cq, frames, name, target_q, target_vmaf, skip=None):
-        """
-        Logs probes result
-        :type vmaf_cq: list probe measurements (q_vmaf, q)
-        :type frames: int frame count of chunk
-        :type name: str chunk name
-        :type skip: str None if normal results, else "high" or "low"
-        :type target_q: int Calculated q to be used
-        :type target_vmaf: float Calculated VMAF that would be achieved by using the q
-        :return: None
-        """
         if skip == "high":
             sk = " Early Skip High CQ"
         elif skip == "low":
@@ -172,14 +162,6 @@ class TargetQuality:
         return int(q[0]), round(q[1], 3)
 
     def vmaf_probe(self, chunk: Chunk, q):
-        """
-        Calculates vmaf and returns path to json file
-
-        :param chunk: the Chunk
-        :param q: Value to make probe
-        :param project: the Project
-        :return : path to json file with vmaf scores
-        """
 
         n_threads = (
             self.n_threads if self.n_threads else vmaf_auto_threads(self.workers)

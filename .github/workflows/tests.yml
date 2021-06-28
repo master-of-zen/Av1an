@@ -57,9 +57,6 @@ jobs:
           - name: extra_splits
             enc: aom
             flags: -x 10
-          - name: split_aom_keyframes
-            enc: aom
-            flags: --split-method aom_keyframes
           - name: video_settings
             enc: aom
             flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "

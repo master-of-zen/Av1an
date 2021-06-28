@@ -47,14 +47,11 @@ class Encoder:
         fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
 
         if passes == 1:
-            filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
             enc_cmd = compose_1_1_pass(a.encoder, a.video_params, output)
         if passes == 2:
             if current_pass == 1:
-                filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
                 enc_cmd = compose_1_2_pass(a.encoder, a.video_params, fpf_file)
             if current_pass == 2:
-                filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
                 enc_cmd = compose_2_2_pass(a.encoder, a.video_params, fpf_file, output)
 
         if man_q:
@@ -64,7 +61,10 @@ class Encoder:
 
         ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
         ffmpeg_pipe = subprocess.Popen(
-            filter_cmd, stdin=ffmpeg_gen_pipe.stdout, stdout=PIPE, stderr=STDOUT
+            compose_ffmpeg_pipe(a.ffmpeg_pipe),
+            stdin=ffmpeg_gen_pipe.stdout,
+            stdout=PIPE,
+            stderr=STDOUT,
         )
         pipe = subprocess.Popen(
             enc_cmd,

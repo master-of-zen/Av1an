@@ -12,7 +12,7 @@ class Chunk:
         self,
         temp: Path,
         index: int,
-        ffmpeg_gen_cmd: list[str],
+        ffmpeg_gen_cmd: list,
         output_ext: str,
         size: int,
         frames: int,

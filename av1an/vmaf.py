@@ -13,7 +13,7 @@ import numpy as np
 from math import log10, ceil, floor
 from math import log as ln
 
-from av1an_pyo3 import log
+from av1an_pyo3 import log, get_percentile
 
 try:
     import matplotlib
@@ -150,27 +150,6 @@ class VMAF:
         return fl_path
 
     @staticmethod
-    def get_percentile(scores, percent):
-        """
-        Find the percentile of a list of values.
-        :param scores: - is a list of values. Note N MUST BE already sorted.
-        :param percent: - a float value from 0.0 to 1.0.
-        :return: - the percentile of the values
-        """
-        scores = sorted(scores)
-        key = lambda x: x
-
-        k = (len(scores) - 1) * percent
-        f = floor(k)
-        c = ceil(k)
-        if f == c:
-            return key(scores[int(k)])
-
-        d0 = (scores[int(f)]) * (c - k)
-        d1 = (scores[int(c)]) * (k - f)
-        return d0 + d1
-
-    @staticmethod
     def read_weighted_vmaf(file, percentile=0):
         """Reads vmaf file with vmaf scores in it and return N percentile score from it.
 
@@ -183,7 +162,7 @@ class VMAF:
         vmafs = sorted([x["metrics"]["vmaf"] for x in jsn["frames"]])
 
         percentile = percentile if percentile != 0 else 0.25
-        score = VMAF.get_percentile(vmafs, percentile)
+        score = get_percentile(vmafs, percentile)
 
         return round(score, 2)
 

@@ -388,6 +388,11 @@ fn probe_cmd(
   Ok(encoder.probe_cmd(temp, name, q, ffmpeg_pipe, probing_rate, n_threads))
 }
 
+#[pyfunction]
+pub fn get_percentile(scores: Vec<f64>, percent: f64) -> PyResult<f64> {
+  Ok(av1an_core::get_percentile(scores, percent))
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -428,6 +433,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(match_line, m)?)?;
   m.add_function(wrap_pyfunction!(weighted_search, m)?)?;
   m.add_function(wrap_pyfunction!(probe_cmd, m)?)?;
+  m.add_function(wrap_pyfunction!(get_percentile, m)?)?;
 
   Ok(())
 }

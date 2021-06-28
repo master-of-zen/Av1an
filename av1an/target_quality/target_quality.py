@@ -213,14 +213,6 @@ class TargetQuality:
         return target_quality_cq, tl, f, xnew
 
     def per_shot_target_quality_routine(self, chunk: Chunk):
-        """
-        Applies per_shot_target_quality to this chunk. Determines what the cq value should be and sets the
-        per_shot_target_quality_cq for this chunk
-
-        :param project: the Project
-        :param chunk: the Chunk
-        :return: None
-        """
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)
 
     def make_pipes(self, ffmpeg_gen_cmd, command):

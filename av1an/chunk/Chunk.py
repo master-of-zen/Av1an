@@ -74,17 +74,6 @@ class Chunk:
         return self.output_path.as_posix()
 
     @property
-    def fpf(self) -> str:
-        """
-        Gets the posix string of this chunks first pass file without an extension
-        Ex: '.temp/split/00000_fpf'
-
-        :return: the string of this chunk's first pass file (no extension)
-        """
-        fpf_file = (self.temp / "split") / f"{self.name}_fpf"
-        return fpf_file.as_posix()
-
-    @property
     def name(self) -> str:
         """
         Gets the name of this chunk. It is the index zero padded to length 5 as a string.
@@ -114,13 +103,3 @@ class Chunk:
         )
         chunk.per_shot_target_quality_cq = d["per_shot_target_quality_cq"]
         return chunk
-
-
-def fake_input_path(temp: Path, name) -> Path:
-    """
-    Returns the mkv chunk file that would have been for this chunk in the old chunk system.
-    Ex: .temp/split/00000.mkv
-
-    :return: a path
-    """
-    return (temp / "split") / f"{name}.mkv"

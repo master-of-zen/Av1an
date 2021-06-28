@@ -32,14 +32,15 @@ class Encoder:
 
     @staticmethod
     def compose_2_pass(a: Project, c: Chunk, output: str):
+        fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
         return [
             (
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, c.fpf),
+                compose_1_2_pass(a.encoder, a.video_params, fpf_file),
             ),
             (
                 compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, c.fpf, output),
+                compose_2_2_pass(a.encoder, a.video_params, fpf_file, output),
             ),
         ]
 

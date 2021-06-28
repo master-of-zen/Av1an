@@ -23,27 +23,6 @@ class Encoder:
     class used for encoders
     """
 
-    @staticmethod
-    def compose_1_pass(a: Project, c: Chunk, output: str):
-        return [
-            compose_ffmpeg_pipe(a.ffmpeg_pipe),
-            compose_1_1_pass(a.encoder, a.video_params, output),
-        ]
-
-    @staticmethod
-    def compose_2_pass(a: Project, c: Chunk, output: str):
-        fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
-        return [
-            (
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_1_2_pass(a.encoder, a.video_params, fpf_file),
-            ),
-            (
-                compose_ffmpeg_pipe(a.ffmpeg_pipe),
-                compose_2_2_pass(a.encoder, a.video_params, fpf_file, output),
-            ),
-        ]
-
     def make_pipes(
         self,
         a: Project,
@@ -64,11 +43,20 @@ class Encoder:
         :param man_q: use a different quality
         :return: a Pipe attached to the encoders stdout
         """
-        filter_cmd, enc_cmd = (
-            Encoder.compose_1_pass(a, c, output)[0]
-            if passes == 1
-            else self.compose_2_pass(a, c, output)[current_pass - 1]
-        )
+
+        fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
+
+        if passes == 1:
+            filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
+            enc_cmd = compose_1_1_pass(a.encoder, a.video_params, output)
+        if passes == 2:
+            if current_pass == 1:
+                filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
+                enc_cmd = compose_1_2_pass(a.encoder, a.video_params, fpf_file)
+            if current_pass == 2:
+                filter_cmd = compose_ffmpeg_pipe(a.ffmpeg_pipe)
+                enc_cmd = compose_2_2_pass(a.encoder, a.video_params, fpf_file, output)
+
         if man_q:
             enc_cmd = man_command(a.encoder, enc_cmd, man_q)
         elif c.per_shot_target_quality_cq:

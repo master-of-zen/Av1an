@@ -1,11 +1,11 @@
 import json
+import sys
 from pathlib import Path
 from typing import List
 
+from av1an_pyo3 import create_vs_file, get_keyframes, segment, output_extension, log
 from av1an.project import Project
 from av1an.chunk import Chunk
-from av1an_pyo3 import create_vs_file, get_keyframes, segment, output_extension, log
-import sys
 
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:

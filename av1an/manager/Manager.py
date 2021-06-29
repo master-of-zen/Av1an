@@ -8,13 +8,11 @@ from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
-
-from av1an_pyo3 import set_log, log
 from av1an.project.Project import Project
 from av1an.split import split_routine
-
 from av1an.vmaf import VMAF
-from av1an_pyo3 import extract_audio, process_inputs
+from av1an_pyo3 import extract_audio, log, process_inputs, set_log
+
 from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
 

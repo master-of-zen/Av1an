@@ -4,19 +4,18 @@ import atexit
 import os
 import shlex
 import sys
-
+from distutils.spawn import find_executable
 from pathlib import Path
 
-from av1an.startup.validate_commands import validate_inputs
 from av1an.project import Project
+from av1an.startup.validate_commands import validate_inputs
 from av1an.vapoursynth import is_vapoursynth
 from av1an_pyo3 import (
+    encoder_bin,
+    get_default_arguments,
     get_default_cq_range,
     get_default_pass,
-    get_default_arguments,
-    encoder_bin,
 )
-from distutils.spawn import find_executable
 
 
 def set_target_quality(project):

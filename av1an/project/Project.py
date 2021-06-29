@@ -1,20 +1,14 @@
-import sys
 import os
 import shutil
+import sys
 from distutils.spawn import find_executable
 from pathlib import Path
-from av1an.utils import frame_probe_fast
+
 from av1an.concat import concatenate_mkvmerge
-from av1an_pyo3 import (
-    log,
-    get_ffmpeg_info,
-    hash_path,
-    create_vs_file,
-    determine_workers as determine_workers_rust,
-    frame_probe_vspipe,
-    concatenate_ivf,
-    concatenate_ffmpeg,
-)
+from av1an.utils import frame_probe_fast
+from av1an_pyo3 import concatenate_ffmpeg, concatenate_ivf, create_vs_file
+from av1an_pyo3 import determine_workers as determine_workers_rust
+from av1an_pyo3 import frame_probe_vspipe, get_ffmpeg_info, hash_path, log
 
 
 class Project(object):

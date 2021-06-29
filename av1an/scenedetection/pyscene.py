@@ -5,15 +5,15 @@ from subprocess import Popen
 
 try:
     from scenedetect.detectors import ContentDetector
+    from scenedetect.frame_timecode import FrameTimecode
     from scenedetect.scene_manager import SceneManager
     from scenedetect.video_manager import VideoManager
-    from scenedetect.frame_timecode import FrameTimecode
 except ImportError:
     ContentDetector = None
 
-from av1an_pyo3 import log
 from av1an.utils import frame_probe
 from av1an.vapoursynth import compose_vapoursynth_pipe
+from av1an_pyo3 import log
 
 if sys.platform == "linux":
     from os import mkfifo

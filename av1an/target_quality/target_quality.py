@@ -1,22 +1,21 @@
-import subprocess
-import os
 import fnmatch
-
+import os
+import subprocess
 from math import isnan
-import numpy as np
-from scipy import interpolate
 
-from av1an.vmaf import VMAF
+import numpy as np
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
+from av1an.vmaf import VMAF
 from av1an_pyo3 import (
-    log,
     adapt_probing_rate,
     construct_target_quality_command,
+    log,
+    probe_cmd,
     vmaf_auto_threads,
     weighted_search,
-    probe_cmd,
 )
+from scipy import interpolate
 
 try:
     import matplotlib

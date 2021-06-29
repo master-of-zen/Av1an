@@ -1,9 +1,10 @@
 import re
 import subprocess
 import sys
+from difflib import SequenceMatcher
 from subprocess import PIPE
 from typing import List, Union
-from difflib import SequenceMatcher
+
 from av1an_pyo3 import help_command
 
 

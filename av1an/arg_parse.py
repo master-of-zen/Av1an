@@ -1,9 +1,11 @@
 #!/bin/env python
-import sys
 import json
+import sys
 from pathlib import Path
+
+from av1an_pyo3 import default_args, parse_args
+
 from .project import Project
-from av1an_pyo3 import parse_args, default_args
 
 
 class Args:

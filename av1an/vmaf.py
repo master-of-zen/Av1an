@@ -1,31 +1,17 @@
-#!/bin/env python
-
 import json
 import shlex
 import subprocess
 import sys
 from collections import deque
-
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
-from math import log10, ceil, floor
-from math import log as ln
+from av1an_pyo3 import get_percentile, log
+from matplotlib import pyplot as plt
 
-from av1an_pyo3 import log, get_percentile
-
-try:
-    import matplotlib
-    from matplotlib import pyplot as plt
-
-    matplotlib.use("Agg")
-except ImportError:
-    matplotlib = None
-    plt = None
-
-from av1an.manager.Pipes import process_pipe
 from av1an.chunk import Chunk
+from av1an.manager.Pipes import process_pipe
 
 
 class VMAF:

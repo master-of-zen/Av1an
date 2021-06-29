@@ -1,16 +1,16 @@
-import time
-import sys
 import concurrent
 import concurrent.futures
-import traceback
 import json
+import sys
+import time
+import traceback
+from pathlib import Path
 
-
+from av1an.chunk import Chunk
 from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
-from av1an.chunk import Chunk
 from av1an_pyo3 import log
-from pathlib import Path
+
 from .Pipes import tqdm_bar
 
 

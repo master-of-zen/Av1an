@@ -1,8 +1,7 @@
 import sys
-
 from collections import deque
-from typing import Iterable
 from subprocess import Popen
+from typing import Iterable
 
 from av1an.chunk import Chunk
 from av1an.encoder.encoder import Encoder

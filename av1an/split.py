@@ -1,13 +1,13 @@
 #!/bin/env python
 
+import sys
 from pathlib import Path
 from typing import List
-import sys
+
+from av1an_pyo3 import extra_splits, log, read_scenes_from_file, write_scenes_to_file
 
 from .project import Project
-from .scenedetection import pyscene, ffmpeg
-
-from av1an_pyo3 import log, extra_splits, read_scenes_from_file, write_scenes_to_file
+from .scenedetection import ffmpeg, pyscene
 
 
 def split_routine(project: Project, resuming: bool) -> List[int]:

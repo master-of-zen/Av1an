@@ -1,12 +1,13 @@
 #!/bin/env python
 
 import re
-from typing import List
 from pathlib import Path
+from typing import List
+
 import cv2
+from av1an_pyo3 import ffmpeg_get_frame_count, frame_probe_vspipe, log
 
 from av1an.vapoursynth import is_vapoursynth
-from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count, log
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):

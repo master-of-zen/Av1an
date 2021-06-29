@@ -51,9 +51,6 @@ jobs:
           - name: vmaf
             enc: aom
             flags: --vmaf
-          - name: vmaf-plots
-            enc: aom
-            flags: --vmaf-plots
           - name: extra_splits
             enc: aom
             flags: -x 10

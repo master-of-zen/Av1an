@@ -4,7 +4,6 @@ from typing import List
 
 from av1an.project import Project
 from av1an.chunk import Chunk
-from av1an.resume import read_done_data
 from av1an_pyo3 import create_vs_file, get_keyframes, segment, output_extension, log
 import sys
 
@@ -49,7 +48,11 @@ def load_or_gen_chunk_queue(
     # if resuming, read chunks from file and remove those already done
     if resuming:
         chunk_queue = read_chunk_queue(project.temp)
-        done_chunk_names = read_done_data(project.temp)["done"].keys()
+
+        done_path = project.temp / "done.json"
+        with open(done_path) as done_file:
+            data = json.load(done_file)
+        done_chunk_names = data["done"].keys()
         chunk_queue = [c for c in chunk_queue if c.name not in done_chunk_names]
         return chunk_queue
 

@@ -3,6 +3,8 @@ import sys
 import concurrent
 import concurrent.futures
 import traceback
+import json
+
 
 from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
@@ -88,9 +90,12 @@ class Queue:
 
                 # write this chunk as done if it encoded correctly
                 if encoded_frames == chunk_frames:
-                    write_progress_file(
-                        Path(self.project.temp / "done.json"), chunk, encoded_frames
-                    )
+                    progress_file = self.project.temp / "done.json"
+                    with progress_file.open() as f:
+                        d = json.load(f)
+                        d["done"][chunk.name] = encoded_frames
+                        with progress_file.open("w") as f:
+                            json.dump(d, f)
 
                 enc_time = round(time.time() - st_time, 2)
                 log(f"Done: {chunk.index} Fr: {encoded_frames}/{chunk_frames}")

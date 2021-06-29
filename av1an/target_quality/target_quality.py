@@ -149,12 +149,7 @@ class TargetQuality:
         """
         x = [x[1] for x in sorted(scores)]
         y = [float(x[0]) for x in sorted(scores)]
-
-        if len(x) > 2:
-            interpolation = "quadratic"
-        else:
-            interpolation = "linear"
-        f = interpolate.interp1d(x, y, kind=interpolation)
+        f = interpolate.interp1d(x, y, kind="linear")
         xnew = np.linspace(min(x), max(x), max(x) - min(x))
         tl = list(zip(xnew, f(xnew)))
         q = min(tl, key=lambda l: abs(l[1] - target_quality))

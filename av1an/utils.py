@@ -10,12 +10,6 @@ from av1an_pyo3 import frame_probe_vspipe, ffmpeg_get_frame_count, log
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):
-    """
-    Consolidated function to retrieve the number of frames from the input quickly,
-    falls back on a slower (but accurate) frame count if a quick count cannot be found.
-
-    Handles vapoursynth input as well.
-    """
     total = 0
     if not is_vs:
         try:
@@ -42,12 +36,6 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
 
 
 def frame_probe(source: Path):
-    """
-    Determines the total number of frames in a given input.
-
-    Differentiates between a Vapoursynth script and standard video
-    and delegates to vspipe or ffmpeg respectively.
-    """
     if is_vapoursynth(source):
         return frame_probe_vspipe(source)
 

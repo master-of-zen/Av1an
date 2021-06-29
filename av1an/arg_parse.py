@@ -7,11 +7,6 @@ from av1an_pyo3 import parse_args, default_args
 
 
 class Args:
-    """
-    Class responsible for arg parsing
-    Creation of original project file
-    """
-
     def __init__(self):
 
         self.defaults = json.loads(default_args())

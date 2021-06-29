@@ -11,14 +11,6 @@ if sys.platform == "linux":
 
 
 def ffmpeg(video, threshold, min_scene_len, total_frames, is_vs, temp):
-    """
-    Running FFMPEG detection on source video for segmenting.
-    Usually the optimal threshold is 0.1 - 0.3 but it can vary a lot
-    based on your source content.
-
-    Threshold value increased by x100 for matching with pyscene range
-    """
-
     log(f"Starting FFMPEG detection:")
     log(f"Threshold: {threshold}")
     log(f"Is Vapoursynth input: {is_vs}")

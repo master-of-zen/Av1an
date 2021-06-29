@@ -20,11 +20,6 @@ if sys.platform == "linux":
 
 
 def pyscene(video, threshold, min_scene_len, is_vs, temp, quiet):
-    """
-    Running PySceneDetect detection on source video for segmenting.
-    Optimal threshold settings 15-50
-    """
-
     if ContentDetector is None:
         log(
             "Unable to start PySceneDetect because it was not found. Please install scenedetect[opencv] to use"

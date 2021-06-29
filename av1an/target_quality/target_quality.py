@@ -60,10 +60,6 @@ class TargetQuality:
         log(f"Target Q: {target_q} VMAF: {round(target_vmaf, 2)}")
 
     def per_shot_target_quality(self, chunk: Chunk):
-        """
-        :type: Chunk chunk to probe
-        :rtype: int q to use
-        """
         vmaf_cq = []
         frames = chunk.frames
         self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
@@ -143,10 +139,6 @@ class TargetQuality:
         return q
 
     def get_target_q(self, scores, target_quality):
-        """
-        Interpolating scores to get Q closest to target
-        Interpolation type for 2 probes changes to linear
-        """
         x = [x[1] for x in sorted(scores)]
         y = [float(x[0]) for x in sorted(scores)]
         f = interpolate.interp1d(x, y, kind="linear")

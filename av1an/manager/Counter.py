@@ -16,10 +16,6 @@ def Manager():
 
 
 class Counter:
-    """
-    Frame Counter
-    """
-
     def __init__(self, total, initial, use_tqdm=True):
         self.first_update = True
         self.initial = initial

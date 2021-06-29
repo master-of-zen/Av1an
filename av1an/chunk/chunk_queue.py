@@ -9,25 +9,12 @@ import sys
 
 
 def save_chunk_queue(temp: Path, chunk_queue: List[Chunk]) -> None:
-    """
-    Writes the chunk queue to the chunks.json file
-
-    :param temp: the temp directory
-    :param chunk_queue: the chunk queue
-    :return: None
-    """
     chunk_dicts = [c.to_dict() for c in chunk_queue]
     with open(temp / "chunks.json", "w") as file:
         json.dump(chunk_dicts, file)
 
 
 def read_chunk_queue(temp: Path) -> List[Chunk]:
-    """
-    Reads the chunk queue from the chunks.json file
-
-    :param temp: the temp directory
-    :return: the chunk queue
-    """
     with open(temp / "chunks.json", "r") as file:
         chunk_dicts = json.load(file)
     return [Chunk.create_from_dict(cd, temp) for cd in chunk_dicts]
@@ -36,15 +23,6 @@ def read_chunk_queue(temp: Path) -> List[Chunk]:
 def load_or_gen_chunk_queue(
     project: Project, resuming: bool, split_locations: List[int]
 ) -> List[Chunk]:
-    """
-    If resuming, loads the chunk queue and removes already done chunks or
-    creates a chunk queue and saves it for resuming later.
-
-    :param project: the Project
-    :param resuming: if we are resuming
-    :param split_locations: a list of frames to split on
-    :return: A chunk queue (list of chunks)
-    """
     # if resuming, read chunks from file and remove those already done
     if resuming:
         chunk_queue = read_chunk_queue(project.temp)
@@ -64,13 +42,6 @@ def load_or_gen_chunk_queue(
 
 
 def create_encoding_queue(project: Project, split_locations: List[int]) -> List[Chunk]:
-    """
-    Creates a list of chunks using the cli option chunk_method specified
-
-    :param project: Project
-    :param split_locations: a list of frames to split on
-    :return: A list of chunks
-    """
     chunk_method_gen = {
         "segment": create_video_queue_segment,
         "select": create_video_queue_select,
@@ -88,13 +59,6 @@ def create_encoding_queue(project: Project, split_locations: List[int]) -> List[
 def create_video_queue_hybrid(
     project: Project, split_locations: List[int]
 ) -> List[Chunk]:
-    """
-    Create list of chunks using hybrid segment-select approach
-
-    :param project: the Project
-    :param split_locations: a list of frames to split on
-    :return: A list of chunks
-    """
     keyframes = get_keyframes(str(project.input.resolve()))
 
     end = [project.get_frames()]
@@ -142,15 +106,6 @@ def create_video_queue_vslsmash(
 
 
 def create_video_queue_vs(project: Project, split_locations: List[int]) -> List[Chunk]:
-    """
-    Create a list of chunks using vspipe and ffms2 for frame accurate seeking
-
-    :param project: the Project
-    :param split_locations: a list of frames to split on
-    :param script: source filter script to use with vspipe (ignored with vs input)
-    :return: A list of chunks
-    """
-    # add first frame and last frame
     last_frame = project.get_frames()
     split_locs_fl = [0] + split_locations + [last_frame]
 
@@ -176,16 +131,6 @@ def create_video_queue_vs(project: Project, split_locations: List[int]) -> List[
 def create_vs_chunk(
     project: Project, index: int, vs_script: Path, frame_start: int, frame_end: int
 ) -> Chunk:
-    """
-    Creates a chunk using vspipe
-
-    :param project: the Project
-    :param load_script: the path to the .vpy script for vspipe
-    :param index: the index of the chunk
-    :param frame_start: frame that this chunk should start on (0-based, inclusive)
-    :param frame_end: frame that this chunk should end on (0-based, exclusive)
-    :return: a Chunk
-    """
     assert frame_end > frame_start, "Can't make a chunk with <= 0 frames!"
 
     frames = frame_end - frame_start
@@ -212,13 +157,6 @@ def create_vs_chunk(
 def create_video_queue_select(
     project: Project, split_locations: List[int]
 ) -> List[Chunk]:
-    """
-    Create a list of chunks using the select filter
-
-    :param project: the Project
-    :param split_locations: a list of frames to split on
-    :return: A list of chunks
-    """
     # add first frame and last frame
     last_frame = project.get_frames()
     split_locs_fl = [0] + split_locations + [last_frame]
@@ -237,16 +175,6 @@ def create_video_queue_select(
 def create_select_chunk(
     project: Project, index: int, src_path: Path, frame_start: int, frame_end: int
 ) -> Chunk:
-    """
-    Creates a chunk using ffmpeg's select filter
-
-    :param project: the Project
-    :param src_path: the path of the entire unchunked source file
-    :param index: the index of the chunk
-    :param frame_start: frame that this chunk should start on (0-based, inclusive)
-    :param frame_end: frame that this chunk should end on (0-based, exclusive)
-    :return: a Chunk
-    """
     assert frame_end > frame_start, "Can't make a chunk with <= 0 frames!"
 
     frames = frame_end - frame_start
@@ -278,15 +206,6 @@ def create_select_chunk(
 def create_video_queue_segment(
     project: Project, split_locations: List[int]
 ) -> List[Chunk]:
-    """
-    Create a list of chunks using segmented files
-
-    :param project: Project
-    :param split_locations: a list of frames to split on
-    :return: A list of chunks
-    """
-
-    # segment into separate files
     log("Split Video")
     segment(project.input, project.temp, split_locations)
     log("Split Done")
@@ -310,14 +229,6 @@ def create_video_queue_segment(
 
 
 def create_chunk_from_segment(project: Project, index: int, file: Path) -> Chunk:
-    """
-    Creates a Chunk object from a segment file generated by ffmpeg
-
-    :param project: the Project
-    :param index: the index of the chunk
-    :param file: the segmented file
-    :return: A Chunk
-    """
     ffmpeg_gen_cmd = [
         "ffmpeg",
         "-y",

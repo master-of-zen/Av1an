@@ -83,17 +83,11 @@ class Project(object):
         self.load_project(initial_data)
 
     def load_project(self, initial_data):
-        """
-        Loads project attributes to this class
-        """
         # Set all initial values
         for key in initial_data:
             setattr(self, key, initial_data[key])
 
     def get_frames(self):
-        """
-        Get total frame count of input file, returning total_frames from project if already exists
-        """
         # TODO: Unify get frames with vs pipe cache generation
 
         if self.frames > 0:
@@ -121,17 +115,9 @@ class Project(object):
         return self.frames
 
     def set_frames(self, frame_count: int):
-        """
-        Setting total frame count for project
-        """
         self.frames = frame_count
 
     def outputs_filenames(self):
-        """
-        Set output filename and promts overwrite if file exists
-
-        :param project: the Project
-        """
         if self.webm:
             suffix = ".webm"
         else:
@@ -166,14 +152,12 @@ class Project(object):
                 sys.exit()
 
     def determine_workers(self):
-        """Returns number of workers that machine can handle with selected encoder."""
         if self.workers:
             return self.workers
 
         self.workers = determine_workers_rust(self.encoder)
 
     def setup(self):
-        """Creating temporally folders when needed."""
 
         hash = str(hash_path(str(self.input)))
 
@@ -197,12 +181,6 @@ class Project(object):
         (self.temp / "encode").mkdir(exist_ok=True)
 
     def concat_routine(self):
-        """
-        Runs the concatenation routine with project
-
-        :param project: the Project
-        :return: None
-        """
         try:
             log("Concatenating")
             if self.output_ivf:
@@ -227,9 +205,6 @@ class Project(object):
             sys.exit(1)
 
     def select_best_chunking_method(self):
-        """
-        Selecting best chunking method based on available methods
-        """
         if not find_executable("vspipe"):
             self.chunk_method = "hybrid"
             log("Set Chunking Method: Hybrid")
@@ -257,10 +232,6 @@ class Project(object):
                 self.chunk_method = "hybrid"
 
     def check_exes(self):
-        """
-        Checking required executables
-        """
-
         if not find_executable("ffmpeg"):
             print("No ffmpeg")
             sys.exit(1)

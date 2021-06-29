@@ -13,14 +13,6 @@ if platform.system() == "Linux":
 
 
 def concatenate_mkvmerge(temp: Path, output):
-    """
-    Uses mkvmerge to concatenate encoded segments into the final file
-
-    :param temp: the temp directory
-    :param output: the final output file
-    :return: None
-    """
-
     output = shlex.quote(output.as_posix())
 
     encode_files = sorted(

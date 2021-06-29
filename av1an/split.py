@@ -11,13 +11,6 @@ from av1an_pyo3 import log, extra_splits, read_scenes_from_file, write_scenes_to
 
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
-    """
-    Performs the split routine. Runs pyscenedetect/aom keyframes and adds in extra splits if needed
-
-    :param project: the Project
-    :param resuming: if the encode is being resumed
-    :return: A list of frames to split on
-    """
     scene_file = project.temp / "scenes.json"
 
     if resuming:
@@ -59,14 +52,6 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
 
 def calc_split_locations(project: Project) -> List[int]:
-    """
-    Determines a list of frame numbers to split on with pyscenedetect or aom keyframes
-
-    :param project: the Project
-    :return: A list of frame numbers
-    """
-    # inherit video params from aom encode unless we are using a different encoder, then use defaults
-
     sc = []
 
     # Splitting using PySceneDetect

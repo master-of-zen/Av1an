@@ -74,12 +74,6 @@ class VMAF:
 
     @staticmethod
     def read_json(file):
-        """
-        Reads file and return dictionary of it's contents
-
-        :return: Vmaf file dictionary
-        :rtype: dict
-        """
         with open(file, "r") as f:
             fl = json.load(f)
             return fl
@@ -87,9 +81,6 @@ class VMAF:
     def call_vmaf(
         self, chunk: Chunk, encoded: Path, vmaf_rate: int = None, fl_path: Path = None
     ):
-        """
-        Runs vmaf for Av1an
-        """
         cmd = ""
 
         if fl_path is None:
@@ -151,12 +142,6 @@ class VMAF:
 
     @staticmethod
     def read_weighted_vmaf(file, percentile=0):
-        """Reads vmaf file with vmaf scores in it and return N percentile score from it.
-
-        :return: N percentile score
-        :rtype: float
-        """
-
         jsn = VMAF.read_json(file)
 
         vmafs = sorted([x["metrics"]["vmaf"] for x in jsn["frames"]])
@@ -167,10 +152,6 @@ class VMAF:
         return round(score, 2)
 
     def get_vmaf_file(self, source: Path, encoded: Path):
-        """
-        Running vmaf on 2 files and returning file
-        """
-
         if not all((isinstance(source, Path), isinstance(encoded, Path))):
             source = Path(source)
             encoded = Path(encoded)
@@ -197,29 +178,16 @@ class VMAF:
         return scores
 
     def get_vmaf_json(self, source: Path, encoded: Path):
-        """
-        Returning dictionary from vmaf json
-        """
         fl = self.get_vmaf_file(source, encoded)
         js = self.read_json(fl)
         return js
 
     def get_vmaf_score(self, source: Path, encoded: Path, percentile=50):
-        """
-        Returning calculated vmaf score
-        Posible to set percentile, default 50
-
-        :rtype: float
-        """
         js = self.get_vmaf_json(source, encoded)
         score = np.average([x["metrics"]["vmaf"] for x in js["frames"]])
         return score
 
     def plot_vmaf(self, source: Path, encoded: Path, args):
-        """
-        Making VMAF plot after encode is done
-        """
-
         print(":: VMAF Run..", end="\r")
 
         fl_path = encoded.with_name(f"{encoded.stem}_vmaflog").with_suffix(".json")
@@ -252,9 +220,6 @@ class VMAF:
         self.plot_vmaf_score_file(scores, file_path)
 
     def plot_vmaf_score_file(self, scores: Path, plot_path: Path):
-        """
-        Read vmaf json and plot VMAF values for each frame
-        """
         if plt is None:
             log(
                 f"Matplotlib is not installed or could not be loaded, aborting plot_vmaf"

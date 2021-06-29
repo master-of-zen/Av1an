@@ -30,9 +30,6 @@ class Main:
         self.projects = self.create_project_list()
 
     def create_project_list(self):
-        """
-        Returns list of initialized Project objects with single input
-        """
         queue = []
         for file in self.file_queue:
             project = Project(vars(self.args))
@@ -43,9 +40,6 @@ class Main:
         return queue
 
     def run(self):
-        """
-        Run encoding in queue or single file
-        """
         for i, proj in enumerate(self.projects):
             if proj.output_file.exists() and len(self.projects) > 1:
                 print(
@@ -77,13 +71,6 @@ class EncodingManager:
         self.initial_frames = 0
 
     def encode_file(self, project: Project):
-        """
-        Encodes a single video file on the local machine.
-
-        :param project: The project for this encode
-        :return: None
-        """
-
         project.setup()
         if project.logging:
             set_log(Path(project.logging).with_suffix(".log").as_posix())

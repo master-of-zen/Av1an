@@ -20,11 +20,6 @@ from distutils.spawn import find_executable
 
 
 def set_target_quality(project):
-    """
-    Av1an setup for target_quality
-
-    :param project: the Project
-    """
     if project.vmaf_path:
         if not Path(project.vmaf_path).exists():
             print(f"No model with this path: {Path(project.vmaf_path).as_posix()}")
@@ -45,13 +40,6 @@ def set_target_quality(project):
 
 
 def setup_encoder(project: Project):
-    """
-    Setup encoder params and passes
-    :param project: the Project
-    """
-
-    # validate encoder settings
-
     settings_valid = find_executable(encoder_bin(project.encoder))
 
     if not settings_valid:
@@ -73,10 +61,6 @@ def setup_encoder(project: Project):
 
 
 def startup_check(project: Project):
-    """
-    Performing essential checks at startup_check
-    Set constant values
-    """
     if sys.version_info < (3, 6):
         print("Python 3.6+ required")
         sys.exit()

@@ -19,10 +19,6 @@ from av1an_pyo3 import (
 
 
 class Encoder:
-    """
-    class used for encoders
-    """
-
     def make_pipes(
         self,
         a: Project,

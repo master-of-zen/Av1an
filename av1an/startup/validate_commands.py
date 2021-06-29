@@ -13,11 +13,6 @@ def run_command(command: List) -> str:
 
 
 def sort_params(params: List) -> List:
-    """
-    Sort arguments to 2 list based on -/--
-    Return 2 lists of arguments
-    """
-    # Sort Params
     one_params = []
     two_params = []
 
@@ -31,9 +26,6 @@ def sort_params(params: List) -> List:
 
 
 def match_commands(params: List, valid_options: List) -> Union[str, bool]:
-    """
-    Check is parameter present in options list
-    """
     invalid = []
     for pr in params:
         if not any(opt == pr for opt in valid_options):

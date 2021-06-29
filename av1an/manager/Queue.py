@@ -8,7 +8,6 @@ import json
 
 from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
-from av1an.resume import write_progress_file
 from av1an.chunk import Chunk
 from av1an_pyo3 import log
 from pathlib import Path
@@ -16,10 +15,6 @@ from .Pipes import tqdm_bar
 
 
 class Queue:
-    """
-    Queue manager with ability to add/remove/restart jobs
-    """
-
     def __init__(self, project, chunk_queue):
         self.chunk_queue = chunk_queue
         self.queue = []
@@ -47,13 +42,6 @@ class Queue:
         self.project.counter.close()
 
     def encode_chunk(self, chunk: Chunk):
-        """
-        Encodes a chunk. If chunk fails, restarts it limited amount of times.
-        Return if executed just fine, sets status fatal for queue if failed
-
-        :param chunk: The chunk to encode
-        :return: None
-        """
         restart_count = 0
 
         while restart_count < 3:

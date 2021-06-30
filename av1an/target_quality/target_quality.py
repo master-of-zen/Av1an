@@ -8,6 +8,7 @@ from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 from av1an.vmaf import VMAF
 from av1an_pyo3 import (
+    read_weighted_vmaf,
     adapt_probing_rate,
     construct_target_quality_command,
     log,
@@ -70,7 +71,7 @@ class TargetQuality:
         q_list.append(middle_point)
         last_q = middle_point
 
-        score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, last_q))
+        score = read_weighted_vmaf(str(self.vmaf_probe(chunk, last_q).as_posix()), 0.25)
         vmaf_cq.append((score, last_q))
 
         # Initialize search boundary
@@ -88,7 +89,7 @@ class TargetQuality:
             q_list.append(self.max_q)
 
         # Edge case check
-        score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, next_q))
+        score = read_weighted_vmaf(str(self.vmaf_probe(chunk, next_q).as_posix()), 0.25)
         vmaf_cq.append((score, next_q))
 
         if (next_q == self.min_q and score < self.target) or (
@@ -121,7 +122,9 @@ class TargetQuality:
                 break
 
             q_list.append(new_point)
-            score = VMAF.read_weighted_vmaf(self.vmaf_probe(chunk, new_point))
+            score = read_weighted_vmaf(
+                str(self.vmaf_probe(chunk, new_point).as_posix()), 0.25
+            )
             vmaf_cq.append((score, new_point))
 
             # Update boundary

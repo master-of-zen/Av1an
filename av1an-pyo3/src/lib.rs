@@ -393,6 +393,13 @@ pub fn get_percentile(scores: Vec<f64>, percent: f64) -> PyResult<f64> {
   Ok(av1an_core::get_percentile(scores, percent))
 }
 
+#[pyfunction]
+pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
+  let file = PathBuf::from(fl);
+  let val = av1an_core::read_weighted_vmaf(file, percentile).unwrap();
+  Ok(val)
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
@@ -434,6 +441,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(weighted_search, m)?)?;
   m.add_function(wrap_pyfunction!(probe_cmd, m)?)?;
   m.add_function(wrap_pyfunction!(get_percentile, m)?)?;
+  m.add_function(wrap_pyfunction!(read_weighted_vmaf, m)?)?;
 
   Ok(())
 }

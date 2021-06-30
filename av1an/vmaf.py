@@ -10,7 +10,7 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
-from av1an_pyo3 import get_percentile, log
+from av1an_pyo3 import get_percentile, log, read_weighted_vmaf
 from matplotlib import pyplot as plt
 
 from av1an.chunk import Chunk
@@ -129,17 +129,6 @@ class VMAF:
 
         return fl_path
 
-    @staticmethod
-    def read_weighted_vmaf(file, percentile=0):
-        jsn = VMAF.read_json(file)
-
-        vmafs = sorted([x["metrics"]["vmaf"] for x in jsn["frames"]])
-
-        percentile = percentile if percentile != 0 else 0.25
-        score = get_percentile(vmafs, percentile)
-
-        return round(score, 2)
-
     def get_vmaf_file(self, source: Path, encoded: Path):
         if not all((isinstance(source, Path), isinstance(encoded, Path))):
             source = Path(source)
@@ -215,10 +204,10 @@ class VMAF:
             )
             return
 
-        perc_1 = self.read_weighted_vmaf(scores, 0.01)
-        perc_25 = self.read_weighted_vmaf(scores, 0.25)
-        perc_75 = self.read_weighted_vmaf(scores, 0.75)
-        mean = self.read_weighted_vmaf(scores, 0.50)
+        perc_1 = read_weighted_vmaf(scores, 0.01)
+        perc_25 = read_weighted_vmaf(scores, 0.25)
+        perc_75 = read_weighted_vmaf(scores, 0.75)
+        mean = read_weighted_vmaf(scores, 0.50)
 
         with open(scores) as f:
             file = json.load(f)

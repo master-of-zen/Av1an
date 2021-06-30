@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate log;
-
-use std::path::PathBuf;
+use serde::Deserialize;
+use serde_json::de::IoRead;
+use serde_json::Value;
+use std::fmt::Error;
+use std::fs::{self, File};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use sysinfo::SystemExt;
-
 pub mod concat;
 pub mod ffmpeg;
 pub mod file_validation;
@@ -176,12 +179,12 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   )
 }
 
-pub fn get_percentile(scores: Vec<f64>, percent: f64) -> f64 {
+pub fn get_percentile(scores: Vec<f64>, percentile: f64) -> f64 {
   // Calculates percentile from vector of valuees
   let mut sorted = scores.clone();
   sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-  let k = (sorted.len() - 1) as f64 * percent;
+  let k = (sorted.len() - 1) as f64 * percentile;
   let f = k.floor();
   let c = k.ceil();
 
@@ -189,4 +192,38 @@ pub fn get_percentile(scores: Vec<f64>, percent: f64) -> f64 {
   let d1 = scores[f as usize] as f64 * (k - f);
 
   d0 + d1
+}
+
+#[derive(Deserialize, PartialOrd, Ord, PartialEq, Eq, Debug)]
+pub struct VmafWhatever;
+
+#[derive(Deserialize, Debug)]
+struct Foo {
+  vmaf: f64,
+}
+
+#[derive(Deserialize, Debug)]
+struct Bar {
+  metrics: Foo,
+}
+
+#[derive(Deserialize, Debug)]
+struct Baz {
+  frames: Vec<Bar>,
+}
+
+pub fn read_file_to_string(file: PathBuf) -> Result<String, Error> {
+  Ok(fs::read_to_string(&file).expect(format!("Can't open file {:?}", file).as_str()))
+}
+
+pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {
+  let json_str = read_file_to_string(file).unwrap();
+  let bazs = serde_json::from_str::<Baz>(&json_str)?;
+  let v = bazs
+    .frames
+    .into_iter()
+    .map(|x| x.metrics.vmaf)
+    .collect::<Vec<_>>();
+
+  Ok(get_percentile(v, percentile))
 }

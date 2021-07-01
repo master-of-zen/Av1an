@@ -4,9 +4,19 @@ from subprocess import Popen
 from typing import Iterable
 
 from av1an.chunk import Chunk
-from av1an.encoder.encoder import Encoder
 from av1an.project import Project
 from av1an_pyo3 import log, match_line
+from av1an_pyo3 import (
+    encoder_bin,
+    compose_ffmpeg_pipe,
+    compose_1_1_pass,
+    compose_1_2_pass,
+    compose_2_2_pass,
+    man_command,
+)
+
+import subprocess
+from subprocess import PIPE, STDOUT
 
 
 def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
@@ -78,6 +88,34 @@ def process_encoding_pipe(
 def tqdm_bar(
     a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass
 ):
-    enc = Encoder()
-    pipe, utility = enc.make_pipes(a, c, passes, current_pass, output=c.output)
+
+    fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
+
+    if passes == 1:
+        enc_cmd = compose_1_1_pass(a.encoder, a.video_params, c.output)
+    if passes == 2:
+        if current_pass == 1:
+            enc_cmd = compose_1_2_pass(a.encoder, a.video_params, fpf_file)
+        if current_pass == 2:
+            enc_cmd = compose_2_2_pass(a.encoder, a.video_params, fpf_file, c.output)
+
+    if c.per_shot_target_quality_cq:
+        enc_cmd = man_command(a.encoder, enc_cmd, c.per_shot_target_quality_cq)
+
+    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+    ffmpeg_pipe = subprocess.Popen(
+        compose_ffmpeg_pipe(a.ffmpeg_pipe),
+        stdin=ffmpeg_gen_pipe.stdout,
+        stdout=PIPE,
+        stderr=STDOUT,
+    )
+    pipe = subprocess.Popen(
+        enc_cmd,
+        stdin=ffmpeg_pipe.stdout,
+        stdout=PIPE,
+        stderr=STDOUT,
+        universal_newlines=True,
+    )
+
+    utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
     process_encoding_pipe(pipe, encoder, counter, c, utility)

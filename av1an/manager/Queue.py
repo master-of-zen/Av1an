@@ -70,11 +70,7 @@ class Queue:
                     )
 
                 # get the number of encoded frames, if no check assume it worked and encoded same number of frames
-                encoded_frames = (
-                    chunk_frames
-                    if self.project.no_check
-                    else self.frame_check_output(chunk, chunk_frames)
-                )
+                encoded_frames = self.frame_check_output(chunk, chunk_frames)
 
                 # write this chunk as done if it encoded correctly
                 if encoded_frames == chunk_frames:

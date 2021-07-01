@@ -83,10 +83,6 @@ pub struct Args {
   #[clap(short, long, default_value = "0")]
   workers: usize,
 
-  /// Do not check encodings
-  #[clap(long)]
-  no_check: bool,
-
   /// Force encoding if input args seen as invalid
   #[clap(long)]
   force: bool,

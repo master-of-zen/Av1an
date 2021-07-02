@@ -117,13 +117,13 @@ fn test_candidate_kf(
       // Cumulative effect of decay in prediction quality.
 
       if lnf.pcnt_inter > 0.85 {
-        decay_accumulator = decay_accumulator * lnf.pcnt_inter
+        decay_accumulator *= lnf.pcnt_inter
       } else {
-        let decay_accumulator = decay_accumulator * ((0.85 + lnf.pcnt_inter) / 2.0);
+        decay_accumulator *= ((0.85 + lnf.pcnt_inter) / 2.0);
       }
 
       // Keep a running total.
-      boost_score = boost_score + decay_accumulator * next_iiratio;
+      boost_score += decay_accumulator * next_iiratio;
 
       // Test various breakout clauses.
       if ((lnf.pcnt_inter < 0.05)
@@ -142,7 +142,7 @@ fn test_candidate_kf(
       }
     }
   }
-  return is_keyframe;
+  is_keyframe
 }
 
 pub fn find_aom_keyframes(stat_file: PathBuf, min_keyframe: usize) -> Vec<usize> {

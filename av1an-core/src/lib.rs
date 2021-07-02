@@ -1,11 +1,9 @@
 #[macro_use]
 extern crate log;
 use serde::Deserialize;
-use serde_json::de::IoRead;
-use serde_json::Value;
 use std::fmt::Error;
-use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use sysinfo::SystemExt;
@@ -117,7 +115,6 @@ pub struct EncodeConfig {
   quiet: bool,
   logging: (),
   resume: bool,
-  no_check: bool,
   keep: bool,
   force: bool,
 
@@ -194,9 +191,6 @@ pub fn get_percentile(scores: Vec<f64>, percentile: f64) -> f64 {
   d0 + d1
 }
 
-#[derive(Deserialize, PartialOrd, Ord, PartialEq, Eq, Debug)]
-pub struct VmafWhatever;
-
 #[derive(Deserialize, Debug)]
 struct Foo {
   vmaf: f64,
@@ -213,7 +207,7 @@ struct Baz {
 }
 
 pub fn read_file_to_string(file: PathBuf) -> Result<String, Error> {
-  Ok(fs::read_to_string(&file).expect(format!("Can't open file {:?}", file).as_str()))
+  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!(" Can't open file {:?}", file)))
 }
 
 pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {

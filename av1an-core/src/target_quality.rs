@@ -8,8 +8,7 @@ pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64
 
   let tot = dif1 + dif2;
 
-  let new_point = (num1 * (dif1 / tot) + (num2 * (dif2 / tot))).round() as usize;
-  new_point
+  (num1 * (dif1 / tot) + (num2 * (dif2 / tot))).round() as usize
 }
 
 pub fn transform_vmaf(vmaf: f64) -> f64 {
@@ -17,7 +16,7 @@ pub fn transform_vmaf(vmaf: f64) -> f64 {
   if vmaf < 99.99 {
     -x.ln()
   } else {
-    return 9.2;
+    9.2
   }
 }
 

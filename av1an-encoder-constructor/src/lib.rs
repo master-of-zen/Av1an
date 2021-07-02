@@ -432,7 +432,7 @@ impl Encoder {
   pub fn man_command(&self, params: Vec<String>, q: usize) -> Vec<String> {
     let index = list_index_of_regex(params.clone(), self.q_regex_str()).unwrap();
 
-    let mut new_params = params.clone();
+    let mut new_params = params;
     let (replace_index, replace_q) = self.replace_q(index, q);
     new_params[replace_index] = replace_q;
 
@@ -511,7 +511,7 @@ impl Encoder {
         "-s",
         "10",
         "--threads",
-        threads.to_string(),
+        threads,
         "--tiles",
         "16",
         "--quantizer",
@@ -540,7 +540,7 @@ impl Encoder {
         "-i",
         "stdin",
         "--lp",
-        threads.to_string(),
+        threads,
         "--preset",
         "8",
         "--keyint",
@@ -607,7 +607,7 @@ impl Encoder {
         "-",
         "--no-progress",
         "--threads",
-        threads.to_string(),
+        threads,
         "--preset",
         "medium",
         "--crf",
@@ -730,12 +730,12 @@ pub fn list_index_of_regex(params: Vec<String>, regex_str: &str) -> Option<usize
   let re = Regex::new(regex_str).unwrap();
 
   assert!(
-    params.len() > 0,
+    !params.is_empty(),
     "List index of regex got empty list of params"
   );
 
   for (i, cmd) in params.iter().enumerate() {
-    if re.is_match(&cmd) {
+    if re.is_match(cmd) {
       return Some(i);
     }
   }

@@ -171,20 +171,3 @@ pub fn find_aom_keyframes(stat_file: PathBuf, min_keyframe: usize) -> Vec<usize>
   }
   keyframes
 }
-
-#[cfg(test)]
-mod tests {
-  use crate::aom_kf::AomFirstPassStats;
-
-  #[test]
-  fn sound_transmute() {
-    assert_eq!(
-      std::mem::size_of::<Vec<AomFirstPassStats>>(),
-      std::mem::size_of::<Vec<u8>>()
-    );
-    assert_eq!(
-      std::mem::align_of::<Vec<AomFirstPassStats>>(),
-      std::mem::align_of::<Vec<u8>>()
-    );
-  }
-}

@@ -12,19 +12,22 @@ def Manager():
 
 
 class Counter:
-    def __init__(self, total, initial, quiet):
+    def __init__(self, total, initial, quiet=False):
         self.first_update = True
         self.initial = initial
         self.left = total - initial
         self.current = 0
         self.quiet = quiet
-        init_progress_bar(total)
+        if not self.quiet:
+            init_progress_bar(total)
 
     def update(self, value):
-        update_bar(value)
+        if not self.quiet:
+            update_bar(value)
 
     def close(self):
-        finish_progress_bar()
+        if not self.quiet:
+            finish_progress_bar()
 
     def get_frames(self):
         return self.current

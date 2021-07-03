@@ -20,7 +20,6 @@ REQUIRES = [
     "vapoursynth",
     "scenedetect[opencv]",
     "opencv-python",
-    "tqdm",
     "psutil",
     "scipy",
     "matplotlib",

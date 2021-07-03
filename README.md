@@ -59,13 +59,9 @@ With your own parameters:
                             splitting, so resuming only possible after actual encoding is started.
                             Temp folder must be present to resume.
 
-    --no_check              Skip checking numbers of frames for source and encoded chunks.
-                            Needed if framerate changes to avoid console spam.
-                            By default, any differences in frames of encoded files will be reported.
-
     --keep                  Doesn't delete temporary folders after encode has finished.
 
-    -q --quiet              Do not print tqdm to the terminal.
+    -q --quiet              Do not print a progress bar to the terminal.
 
     -l --logging          Path to .log file(By default created in temp folder)
 

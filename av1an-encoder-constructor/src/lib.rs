@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::cmp;
 use std::path::PathBuf;
 use std::{str::FromStr, usize};
+
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
     vec![
@@ -216,31 +217,24 @@ impl Encoder {
 
   pub fn compose_2_2_pass(&self, params: Vec<String>, fpf: String, output: String) -> Vec<String> {
     match &self {
-      // Aomenc
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=2"],
         params,
         into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
       )
       .collect(),
-
-      // Rav1e
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y", "-q"],
         params,
         into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output,]
       )
       .collect(),
-
-      // VPX
       Self::libvpx => chain!(
         into_vec!["vpxenc", "--passes=2", "--pass=2"],
         params,
         into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
       )
       .collect(),
-
-      // SVT-AV1
       Self::svt_av1 => chain!(
         into_vec![
           "SvtAv1EncApp",
@@ -262,8 +256,6 @@ impl Encoder {
         ],
       )
       .collect(),
-
-      // x264
       Self::x264 => chain!(
         into_vec![
           "x264",
@@ -279,8 +271,6 @@ impl Encoder {
         into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output,]
       )
       .collect(),
-
-      // x265
       Self::x265 => chain!(
         into_vec![
           "x265",
@@ -301,7 +291,6 @@ impl Encoder {
 
   pub fn get_default_arguments(&self) -> Vec<&str> {
     match &self {
-      // Aomenc
       Encoder::aom => into_vec![
         "--threads=8",
         "-b",
@@ -312,8 +301,6 @@ impl Encoder {
         "--tile-columns=2",
         "--tile-rows=1",
       ],
-
-      // Rav1e
       Encoder::rav1e => into_vec![
         "--tiles",
         "8",
@@ -323,8 +310,6 @@ impl Encoder {
         "100",
         "--no-scene-detection",
       ],
-
-      //VPX
       Encoder::libvpx => into_vec![
         "--codec=vp9",
         "-b",
@@ -336,16 +321,8 @@ impl Encoder {
         "--cq-level=30",
         "--row-mt=1",
       ],
-
-      // SVT-AV1
-      Encoder::svt_av1 => {
-        into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25",]
-      }
-
-      // x264
+      Encoder::svt_av1 => into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"],
       Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
-
-      // x265
       Encoder::x265 => into_vec!["-p", "slow", "--crf", "25", "-D", "10"],
     }
   }
@@ -432,7 +409,7 @@ impl Encoder {
   pub fn man_command(&self, params: Vec<String>, q: usize) -> Vec<String> {
     let index = list_index_of_regex(params.clone(), self.q_regex_str()).unwrap();
 
-    let mut new_params = params.clone();
+    let mut new_params = params;
     let (replace_index, replace_q) = self.replace_q(index, q);
     new_params[replace_index] = replace_q;
 
@@ -450,7 +427,7 @@ impl Encoder {
     }
   }
 
-  pub fn match_line(&self, line: String) -> Option<usize> {
+  pub fn match_line(&self, line: &str) -> Option<usize> {
     let encoder_regex = Regex::new(self.pipe_match()).unwrap();
     if !encoder_regex.is_match(&line) {
       return Some(0);
@@ -511,7 +488,7 @@ impl Encoder {
         "-s",
         "10",
         "--threads",
-        threads.to_string(),
+        threads,
         "--tiles",
         "16",
         "--quantizer",
@@ -540,7 +517,7 @@ impl Encoder {
         "-i",
         "stdin",
         "--lp",
-        threads.to_string(),
+        threads,
         "--preset",
         "8",
         "--keyint",
@@ -607,7 +584,7 @@ impl Encoder {
         "-",
         "--no-progress",
         "--threads",
-        threads.to_string(),
+        threads,
         "--preset",
         "medium",
         "--crf",
@@ -628,6 +605,7 @@ impl Encoder {
       ],
     }
   }
+
   pub fn probe_cmd(
     &self,
     temp: String,
@@ -675,6 +653,7 @@ impl Encoder {
 
     (pipe, output)
   }
+
   pub fn construct_target_quality_slow_command(&self, q: String) -> Vec<Cow<str>> {
     match &self {
       Encoder::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
@@ -730,12 +709,12 @@ pub fn list_index_of_regex(params: Vec<String>, regex_str: &str) -> Option<usize
   let re = Regex::new(regex_str).unwrap();
 
   assert!(
-    params.len() > 0,
+    !params.is_empty(),
     "List index of regex got empty list of params"
   );
 
   for (i, cmd) in params.iter().enumerate() {
-    if re.is_match(&cmd) {
+    if re.is_match(cmd) {
       return Some(i);
     }
   }

@@ -39,7 +39,7 @@ pub struct AomFirstPassStats {
 }
 
 pub fn read_aomenc_stats_struct(file: PathBuf) -> Vec<AomFirstPassStats> {
-  let raw_data: Vec<u8> = read(file).unwrap();
+  let mut raw_data: Vec<u8> = read(file).unwrap();
   let frame_list: Vec<AomFirstPassStats> = unsafe { transmute(raw_data) };
   frame_list
 }
@@ -70,9 +70,9 @@ fn test_candidate_kf(
   current_frame_index: u64,
   frame_count_so_far: u64,
 ) -> bool {
-  let p: AomFirstPassStats = dict_list[(current_frame_index - 1) as usize];
-  let c: AomFirstPassStats = dict_list[(current_frame_index) as usize];
-  let f: AomFirstPassStats = dict_list[(current_frame_index + 1) as usize];
+  let p = dict_list[(current_frame_index - 1) as usize];
+  let c = dict_list[(current_frame_index) as usize];
+  let f = dict_list[(current_frame_index + 1) as usize];
 
   let boost_factor = 12.5;
   let min_intra_level = 0.25;
@@ -108,7 +108,7 @@ fn test_candidate_kf(
     let mut old_boost_score = 0.0;
     let mut decay_accumulator = 1.0;
     for i in 0..16 {
-      let lnf: AomFirstPassStats = dict_list[(current_frame_index + 1 + i) as usize];
+      let lnf = dict_list[(current_frame_index + 1 + i) as usize];
       let mut next_iiratio = boost_factor * lnf.intra_error / double_divide_check(lnf.coded_error);
 
       if next_iiratio > kf_ii_max {
@@ -117,13 +117,13 @@ fn test_candidate_kf(
       // Cumulative effect of decay in prediction quality.
 
       if lnf.pcnt_inter > 0.85 {
-        decay_accumulator = decay_accumulator * lnf.pcnt_inter
+        decay_accumulator *= lnf.pcnt_inter
       } else {
-        let decay_accumulator = decay_accumulator * ((0.85 + lnf.pcnt_inter) / 2.0);
+        decay_accumulator *= ((0.85 + lnf.pcnt_inter) / 2.0);
       }
 
       // Keep a running total.
-      boost_score = boost_score + decay_accumulator * next_iiratio;
+      boost_score += decay_accumulator * next_iiratio;
 
       // Test various breakout clauses.
       if ((lnf.pcnt_inter < 0.05)
@@ -136,13 +136,13 @@ fn test_candidate_kf(
       }
       old_boost_score = boost_score;
 
-      // If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame && move on
+      // If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
       if boost_score > 30.0 && (i > 3) {
         is_keyframe = true;
       }
     }
   }
-  return is_keyframe;
+  is_keyframe
 }
 
 pub fn find_aom_keyframes(stat_file: PathBuf, min_keyframe: usize) -> Vec<usize> {
@@ -170,4 +170,21 @@ pub fn find_aom_keyframes(stat_file: PathBuf, min_keyframe: usize) -> Vec<usize>
     frame_count_so_far = 1;
   }
   keyframes
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::aom_kf::AomFirstPassStats;
+
+  #[test]
+  fn sound_transmute() {
+    assert_eq!(
+      std::mem::size_of::<Vec<AomFirstPassStats>>(),
+      std::mem::size_of::<Vec<u8>>()
+    );
+    assert_eq!(
+      std::mem::align_of::<Vec<AomFirstPassStats>>(),
+      std::mem::align_of::<Vec<u8>>()
+    );
+  }
 }

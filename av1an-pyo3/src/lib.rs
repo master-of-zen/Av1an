@@ -401,8 +401,8 @@ pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
   let val = av1an_core::read_weighted_vmaf(file, percentile).unwrap();
   Ok(val)
 }
-
-const INDICATIF_PROGRESS_TEMPLATE: &str = "{spinner:.green} [{elapsed_precise}] [{bar:60.cyan/blue}] {percent:>3.bold}% {pos}/{len} ({fps:.bold}, eta {eta})";
+const INDICATIF_PROGRESS_TEMPLATE: &str =
+  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps}, eta {eta})";
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 

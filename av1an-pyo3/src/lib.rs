@@ -415,6 +415,7 @@ pub fn init_progress_bar(len: u64) {
         .template(INDICATIF_PROGRESS_TEMPLATE)
         .progress_chars("#>-"),
     );
+    bar.enable_steady_tick(100);
     bar
   });
 }

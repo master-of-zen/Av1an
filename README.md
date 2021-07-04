@@ -61,7 +61,7 @@ With your own parameters:
 
     --keep                  Doesn't delete temporary folders after encode has finished.
 
-    -q --quiet              Do not print tqdm to the terminal.
+    -q --quiet              Do not print a progress bar to the terminal.
 
     -l --logging          Path to .log file(By default created in temp folder)
 

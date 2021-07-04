@@ -207,7 +207,7 @@ struct Baz {
 }
 
 pub fn read_file_to_string(file: PathBuf) -> Result<String, Error> {
-  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!(" Can't open file {:?}", file)))
+  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file)))
 }
 
 pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {

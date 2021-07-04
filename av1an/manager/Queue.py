@@ -4,14 +4,13 @@ import json
 import sys
 import time
 import traceback
-from pathlib import Path
 
 from av1an.chunk import Chunk
 from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
 from av1an_pyo3 import log
 
-from .Pipes import tqdm_bar
+from .Pipes import create_pipes
 
 
 class Queue:
@@ -59,7 +58,7 @@ class Queue:
 
                 # Run all passes for this chunk
                 for current_pass in range(1, self.project.passes + 1):
-                    tqdm_bar(
+                    create_pipes(
                         self.project,
                         chunk,
                         self.project.encoder,

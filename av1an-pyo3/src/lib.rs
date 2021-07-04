@@ -1,3 +1,5 @@
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -361,7 +363,7 @@ fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
 }
 
 #[pyfunction]
-fn match_line(encoder: String, line: String) -> PyResult<usize> {
+fn match_line(encoder: &str, line: &str) -> PyResult<usize> {
   let enc = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
 
   Ok(enc.match_line(line).unwrap())
@@ -400,8 +402,45 @@ pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
   Ok(val)
 }
 
+const INDICATIF_PROGRESS_TEMPLATE: &str = "{spinner:.green} [{elapsed_precise}] [{bar:60.cyan/blue}] {percent:>3.bold}% {pos}/{len} ({fps:.bold}, eta {eta})";
+
+static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
+
+#[pyfunction]
+pub fn init_progress_bar(len: u64) {
+  PROGRESS_BAR.get_or_init(|| {
+    let bar = ProgressBar::new(len);
+    bar.set_style(
+      ProgressStyle::default_bar()
+        .template(INDICATIF_PROGRESS_TEMPLATE)
+        .progress_chars("#>-"),
+    );
+    bar
+  });
+}
+
+#[pyfunction]
+pub fn update_bar(inc: u64) {
+  PROGRESS_BAR
+    .get()
+    .expect("The progress bar was not initialized!")
+    .inc(inc)
+}
+
+#[pyfunction]
+pub fn finish_progress_bar() {
+  PROGRESS_BAR
+    .get()
+    .expect("The progress bar was not initialized!")
+    .finish();
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
+  m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
+  m.add_function(wrap_pyfunction!(update_bar, m)?)?;
+  m.add_function(wrap_pyfunction!(finish_progress_bar, m)?)?;
+
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
   m.add_function(wrap_pyfunction!(determine_workers, m)?)?;
   m.add_function(wrap_pyfunction!(create_vs_file, m)?)?;

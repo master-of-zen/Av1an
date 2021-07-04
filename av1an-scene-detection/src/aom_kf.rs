@@ -39,7 +39,7 @@ pub struct AomFirstPassStats {
 }
 
 pub fn read_aomenc_stats_struct(file: PathBuf) -> Vec<AomFirstPassStats> {
-  let raw_data: Vec<u8> = read(file).unwrap();
+  let mut raw_data: Vec<u8> = read(file).unwrap();
   let frame_list: Vec<AomFirstPassStats> = unsafe { transmute(raw_data) };
   frame_list
 }
@@ -70,9 +70,9 @@ fn test_candidate_kf(
   current_frame_index: u64,
   frame_count_so_far: u64,
 ) -> bool {
-  let p: AomFirstPassStats = dict_list[(current_frame_index - 1) as usize];
-  let c: AomFirstPassStats = dict_list[(current_frame_index) as usize];
-  let f: AomFirstPassStats = dict_list[(current_frame_index + 1) as usize];
+  let p = dict_list[(current_frame_index - 1) as usize];
+  let c = dict_list[(current_frame_index) as usize];
+  let f = dict_list[(current_frame_index + 1) as usize];
 
   let boost_factor = 12.5;
   let min_intra_level = 0.25;
@@ -108,7 +108,7 @@ fn test_candidate_kf(
     let mut old_boost_score = 0.0;
     let mut decay_accumulator = 1.0;
     for i in 0..16 {
-      let lnf: AomFirstPassStats = dict_list[(current_frame_index + 1 + i) as usize];
+      let lnf = dict_list[(current_frame_index + 1 + i) as usize];
       let mut next_iiratio = boost_factor * lnf.intra_error / double_divide_check(lnf.coded_error);
 
       if next_iiratio > kf_ii_max {
@@ -136,7 +136,7 @@ fn test_candidate_kf(
       }
       old_boost_score = boost_score;
 
-      // If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame && move on
+      // If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
       if boost_score > 30.0 && (i > 3) {
         is_keyframe = true;
       }

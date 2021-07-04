@@ -85,7 +85,7 @@ def process_encoding_pipe(
         raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
 
 
-def tqdm_bar(
+def create_pipes(
     a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass
 ):
 

@@ -144,6 +144,6 @@ class EncodingManager:
         )
         BaseManager.register("Counter", Counter)
         counter = Manager().Counter(
-            project.get_frames(), self.initial_frames, not project.quiet
+            project.get_frames(), self.initial_frames, project.quiet
         )
         project.counter = counter

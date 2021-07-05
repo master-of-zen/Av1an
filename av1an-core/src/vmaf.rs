@@ -1,5 +1,7 @@
 use crate::{read_vmaf_file, read_weighted_vmaf};
+use anyhow::Error;
 use plotters::prelude::*;
+use std::process::{Command, Stdio};
 use std::{path::PathBuf, u32};
 
 pub fn plot_vmaf_score_file(
@@ -72,6 +74,50 @@ pub fn plot_vmaf_score_file(
     .draw()?;
 
   root.present().expect("Unable to write result plot to file");
+
+  Ok(())
+}
+
+pub fn validate_libvmaf() -> Result<(), Error> {
+  let lib_check = "--enable-libvmaf";
+  let mut cmd = Command::new("ffmpeg");
+  cmd.args(["-h"]);
+
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  let out = cmd.output()?;
+
+  let stdr = String::from_utf8(out.stderr)?;
+  if !stdr.contains(lib_check) {
+    panic!("FFmpeg doesn't have --enable-libvmaf");
+  }
+  Ok(())
+}
+
+pub fn validate_vmaf_test_run(model: String) -> Result<(), Error> {
+  let mut cmd = Command::new("ffmpeg");
+
+  cmd.args(["-hide_banner", "-filter_complex"]);
+  cmd.args([format!("testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{}", model).as_str()]);
+  cmd.args(["-t", "1", "-f", "null", "-"]);
+
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  let out = cmd.output()?;
+
+  let stdr = String::from_utf8(out.stderr)?;
+
+  match out.status.success() {
+    true => Ok(()),
+    false => panic!("Test vmaf run failed : \n{:#?}", stdr),
+  }
+}
+
+pub fn validate_vmaf(vmaf_model: String) -> Result<(), Error> {
+  validate_libvmaf()?;
+  validate_vmaf_test_run(vmaf_model)?;
 
   Ok(())
 }

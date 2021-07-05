@@ -443,6 +443,11 @@ pub fn plot_vmaf_score_file(scores_file_string: String, plot_path_string: String
   av1an_core::vmaf::plot_vmaf_score_file(scores_file, plot_path).unwrap()
 }
 
+#[pyfunction]
+pub fn validate_vmaf(model: String) -> PyResult<()> {
+  Ok(av1an_core::vmaf::validate_vmaf(model).unwrap())
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -489,6 +494,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(get_percentile, m)?)?;
   m.add_function(wrap_pyfunction!(read_weighted_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(plot_vmaf_score_file, m)?)?;
+  m.add_function(wrap_pyfunction!(validate_vmaf, m)?)?;
 
   Ok(())
 }

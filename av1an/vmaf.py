@@ -10,7 +10,13 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
-from av1an_pyo3 import get_percentile, log, read_weighted_vmaf, plot_vmaf_score_file
+from av1an_pyo3 import (
+    get_percentile,
+    log,
+    read_weighted_vmaf,
+    plot_vmaf_score_file,
+    validate_vmaf,
+)
 from matplotlib import pyplot as plt
 
 from av1an.chunk import Chunk
@@ -23,49 +29,7 @@ class VMAF:
         self.model = f":model_path={model}" if model else ""
         self.res = res if res else "1920x1080"
         self.vmaf_filter = vmaf_filter + "," if vmaf_filter else ""
-        self.validate_vmaf()
-
-    def validate_vmaf(self):
-        """
-        Test run of ffmpeg for validating that ffmpeg/libmaf/models properly setup
-        """
-
-        if self.model or self.n_threads:
-            add = f"={self.model}{self.n_threads}"
-        else:
-            add = ""
-
-        cmd = f" ffmpeg -hide_banner -filter_complex testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{add} -t 1  -f null - ".split()
-
-        pipe = subprocess.Popen(
-            cmd, stdout=PIPE, stderr=STDOUT, universal_newlines=True
-        )
-
-        encoder_history = deque(maxlen=30)
-
-        while True:
-            line = pipe.stdout.readline().strip()
-            if len(line) == 0 and pipe.poll() is not None:
-                break
-            if len(line) == 0:
-                continue
-            if line:
-                encoder_history.append(line)
-
-        if pipe.returncode != 0 and pipe.returncode != -2:
-            msg1, msg2 = f"VMAF validation error: {pipe.returncode}", "\n".join(
-                encoder_history
-            )
-            log(msg1)
-            log(msg2)
-            print(f"::{msg1}\n::{msg2}")
-            sys.exit()
-
-    @staticmethod
-    def read_json(file):
-        with open(file, "r") as f:
-            fl = json.load(f)
-            return fl
+        validate_vmaf(self.model)
 
     def call_vmaf(
         self, chunk: Chunk, encoded: Path, vmaf_rate: int = None, fl_path: Path = None

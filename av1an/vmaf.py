@@ -10,7 +10,7 @@ from pathlib import Path
 from subprocess import PIPE, STDOUT
 
 import numpy as np
-from av1an_pyo3 import get_percentile, log, read_weighted_vmaf
+from av1an_pyo3 import get_percentile, log, read_weighted_vmaf, plot_vmaf_score_file
 from matplotlib import pyplot as plt
 
 from av1an.chunk import Chunk
@@ -195,62 +195,4 @@ class VMAF:
             sys.exit()
 
         file_path = encoded.with_name(f"{encoded.stem}_plot").with_suffix(".png")
-        self.plot_vmaf_score_file(scores, file_path)
-
-    def plot_vmaf_score_file(self, scores: Path, plot_path: Path):
-        if plt is None:
-            log(
-                f"Matplotlib is not installed or could not be loaded, aborting plot_vmaf"
-            )
-            return
-
-        perc_1 = read_weighted_vmaf(str(scores.as_posix()), 0.01)
-        perc_25 = read_weighted_vmaf(str(scores.as_posix()), 0.25)
-        perc_75 = read_weighted_vmaf(str(scores.as_posix()), 0.75)
-        mean = read_weighted_vmaf(str(scores.as_posix()), 0.50)
-
-        with open(scores) as f:
-            file = json.load(f)
-            vmafs = [x["metrics"]["vmaf"] for x in file["frames"]]
-            plot_size = len(vmafs)
-
-        figure_width = 3 + round((4 * log10(plot_size)))
-        plt.figure(figsize=(figure_width, 5))
-
-        plt.plot([1, plot_size], [perc_1, perc_1], "-", color="red")
-        plt.annotate(f"1%: {perc_1}", xy=(0, perc_1), color="red")
-
-        plt.plot([1, plot_size], [perc_25, perc_25], ":", color="orange")
-        plt.annotate(f"25%: {perc_25}", xy=(0, perc_25), color="orange")
-
-        plt.plot([1, plot_size], [perc_75, perc_75], ":", color="green")
-        plt.annotate(f"75%: {perc_75}", xy=(0, perc_75), color="green")
-
-        plt.plot([1, plot_size], [mean, mean], ":", color="black")
-        plt.annotate(f"Mean: {mean}", xy=(0, mean), color="black")
-
-        for i in range(0, 100):
-            plt.axhline(i, color="grey", linewidth=0.4)
-            if i % 5 == 0:
-                plt.axhline(i, color="black", linewidth=0.6)
-
-        plt.plot(
-            range(plot_size),
-            vmafs,
-            label=f"Frames: {plot_size}\nMean:{mean}\n"
-            f"1%: {perc_1} \n25%: {perc_25} \n75%: {perc_75}",
-            linewidth=0.7,
-        )
-        plt.ylabel("VMAF")
-        plt.legend(
-            loc="lower right",
-            markerscale=0,
-            handlelength=0,
-            fancybox=True,
-        )
-        plt.ylim(int(perc_1), 100)
-        plt.tight_layout()
-        plt.margins(0)
-
-        # Save
-        plt.savefig(plot_path, dpi=250)
+        plot_vmaf_score_file(str(scores.as_posix()), str(file_path.as_posix()))

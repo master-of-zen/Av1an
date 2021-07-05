@@ -436,12 +436,18 @@ pub fn finish_progress_bar() {
     .finish();
 }
 
+#[pyfunction]
+pub fn plot_vmaf_score_file(scores_file_string: String, plot_path_string: String) {
+  let scores_file = PathBuf::from(scores_file_string);
+  let plot_path = PathBuf::from(plot_path_string);
+  av1an_core::vmaf::plot_vmaf_score_file(scores_file, plot_path).unwrap()
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
   m.add_function(wrap_pyfunction!(update_bar, m)?)?;
   m.add_function(wrap_pyfunction!(finish_progress_bar, m)?)?;
-
   m.add_function(wrap_pyfunction!(get_ffmpeg_info, m)?)?;
   m.add_function(wrap_pyfunction!(determine_workers, m)?)?;
   m.add_function(wrap_pyfunction!(create_vs_file, m)?)?;
@@ -482,6 +488,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(probe_cmd, m)?)?;
   m.add_function(wrap_pyfunction!(get_percentile, m)?)?;
   m.add_function(wrap_pyfunction!(read_weighted_vmaf, m)?)?;
+  m.add_function(wrap_pyfunction!(plot_vmaf_score_file, m)?)?;
 
   Ok(())
 }

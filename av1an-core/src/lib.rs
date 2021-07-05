@@ -13,6 +13,7 @@ pub mod file_validation;
 pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;
+pub mod vmaf;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -214,7 +215,7 @@ pub fn read_file_to_string(file: PathBuf) -> Result<String, Error> {
   Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file)))
 }
 
-pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {
+pub fn read_vmaf_file(file: PathBuf) -> Result<Vec<f64>, serde_json::Error> {
   let json_str = read_file_to_string(file).unwrap();
   let bazs = serde_json::from_str::<Baz>(&json_str)?;
   let v = bazs
@@ -223,5 +224,11 @@ pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_j
     .map(|x| x.metrics.vmaf)
     .collect::<Vec<_>>();
 
-  Ok(get_percentile(v, percentile))
+  Ok(v)
+}
+
+pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {
+  let scores = read_vmaf_file(file).unwrap();
+
+  Ok(get_percentile(scores, percentile))
 }

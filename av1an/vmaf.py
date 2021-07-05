@@ -155,16 +155,6 @@ class VMAF:
         scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
         return scores
 
-    def get_vmaf_json(self, source: Path, encoded: Path):
-        fl = self.get_vmaf_file(source, encoded)
-        js = self.read_json(fl)
-        return js
-
-    def get_vmaf_score(self, source: Path, encoded: Path, percentile=50):
-        js = self.get_vmaf_json(source, encoded)
-        score = np.average([x["metrics"]["vmaf"] for x in js["frames"]])
-        return score
-
     def plot_vmaf(self, source: Path, encoded: Path, args):
         print(":: VMAF Run..", end="\r")
 

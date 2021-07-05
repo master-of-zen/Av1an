@@ -185,6 +185,10 @@ pub fn get_percentile(scores: Vec<f64>, percentile: f64) -> f64 {
   let f = k.floor();
   let c = k.ceil();
 
+  if f == c {
+    return sorted[k as usize];
+  }
+
   let d0 = sorted[f as usize] as f64 * (c - k);
   let d1 = sorted[f as usize] as f64 * (k - f);
 

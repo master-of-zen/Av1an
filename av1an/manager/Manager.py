@@ -8,10 +8,20 @@ from typing import List
 
 from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
+from av1an.concat import concatenate_mkvmerge
 from av1an.project.Project import Project
 from av1an.split import split_routine
 from av1an.vmaf import VMAF
-from av1an_pyo3 import extract_audio, log, process_inputs, set_log, plot_vmaf
+from av1an_pyo3 import (
+    concatenate_ffmpeg,
+    concatenate_ivf,
+    create_vs_file,
+    extract_audio,
+    log,
+    plot_vmaf,
+    process_inputs,
+    set_log,
+)
 
 from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
@@ -66,7 +76,6 @@ class EncodingManager:
     def __init__(self):
         self.workers = None
         self.vmaf = None
-        self.initial_frames = 0
 
     def encode_file(self, project: Project):
         project.setup()
@@ -81,7 +90,23 @@ class EncodingManager:
         # create a chunk queue
         chunk_queue = load_or_gen_chunk_queue(project, project.resume, split_locations)
 
-        self.done_file(project, chunk_queue)
+        done_path = project.temp / "done.json"
+        if project.resume and done_path.exists():
+            log("Resuming...")
+            with open(done_path) as done_file:
+                data = json.load(done_file)
+
+            project.set_frames(data["frames"])
+            done = len(data["done"])
+            initial_frames = sum(data["done"].values())
+            log(f"Resumed with {done} encoded clips done")
+        else:
+            initial_frames = 0
+            total = project.get_frames()
+            d = {"frames": total, "done": {}}
+            with open(done_path, "w") as done_file:
+                json.dump(d, done_file)
+
         if not project.resume:
             extract_audio(
                 str(project.input.resolve()),
@@ -91,7 +116,15 @@ class EncodingManager:
 
         # do encoding loop
         project.determine_workers()
-        self.startup(project, chunk_queue)
+        clips = len(chunk_queue)
+        project.workers = min(project.workers, clips)
+        print(
+            f"\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n"
+            f'Params: {" ".join(project.video_params)}'
+        )
+        BaseManager.register("Counter", Counter)
+        counter = Manager().Counter(project.get_frames(), initial_frames, project.quiet)
+        project.counter = counter
         queue = Queue(project, chunk_queue)
         queue.encoding_loop()
 
@@ -102,7 +135,20 @@ class EncodingManager:
             sys.exit(1)
 
         # concat
-        project.concat_routine()
+        log("Concatenating")
+        if project.output_ivf:
+            concatenate_ivf(
+                str((project.temp / "encode").resolve()),
+                str(project.output_file.with_suffix(".ivf").resolve()),
+            )
+        elif project.mkvmerge:
+            concatenate_mkvmerge(project.temp, project.output_file)
+        else:
+            concatenate_ffmpeg(
+                str(str(project.temp.resolve())),
+                str(str(project.output_file.resolve())),
+                project.encoder,
+            )
 
         if project.vmaf or project.vmaf_plots:
             self.vmaf = VMAF(
@@ -116,34 +162,3 @@ class EncodingManager:
         # Delete temp folders
         if not project.keep:
             shutil.rmtree(project.temp)
-
-    def done_file(self, project: Project, chunk_queue: List[Chunk]):
-        done_path = project.temp / "done.json"
-        if project.resume and done_path.exists():
-            log("Resuming...")
-            with open(done_path) as done_file:
-                data = json.load(done_file)
-
-            project.set_frames(data["frames"])
-            done = len(data["done"])
-            self.initial_frames = sum(data["done"].values())
-            log(f"Resumed with {done} encoded clips done")
-        else:
-            self.initial_frames = 0
-            total = project.get_frames()
-            d = {"frames": total, "done": {}}
-            with open(done_path, "w") as done_file:
-                json.dump(d, done_file)
-
-    def startup(self, project: Project, chunk_queue: List[Chunk]):
-        clips = len(chunk_queue)
-        project.workers = min(project.workers, clips)
-        print(
-            f"\rQueue: {clips} Workers: {project.workers} Passes: {project.passes}\n"
-            f'Params: {" ".join(project.video_params)}'
-        )
-        BaseManager.register("Counter", Counter)
-        counter = Manager().Counter(
-            project.get_frames(), self.initial_frames, project.quiet
-        )
-        project.counter = counter

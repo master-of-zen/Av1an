@@ -4,9 +4,8 @@ import sys
 from distutils.spawn import find_executable
 from pathlib import Path
 
-from av1an.concat import concatenate_mkvmerge
 from av1an.utils import frame_probe_fast
-from av1an_pyo3 import concatenate_ffmpeg, concatenate_ivf, create_vs_file
+from av1an_pyo3 import create_vs_file
 from av1an_pyo3 import determine_workers as determine_workers_rust
 from av1an_pyo3 import frame_probe_vspipe, get_ffmpeg_info, hash_path, log
 
@@ -172,30 +171,6 @@ class Project(object):
 
         (self.temp / "split").mkdir(parents=True, exist_ok=True)
         (self.temp / "encode").mkdir(exist_ok=True)
-
-    def concat_routine(self):
-        try:
-            log("Concatenating")
-            if self.output_ivf:
-                concatenate_ivf(
-                    str((self.temp / "encode").resolve()),
-                    str(self.output_file.with_suffix(".ivf").resolve()),
-                )
-            elif self.mkvmerge:
-                concatenate_mkvmerge(self.temp, self.output_file)
-            else:
-                concatenate_ffmpeg(
-                    str(str(self.temp.resolve())),
-                    str(str(self.output_file.resolve())),
-                    self.encoder,
-                )
-        except Exception as e:
-            _, _, exc_tb = sys.exc_info()
-            print(
-                f"Concatenation failed, error At line: {exc_tb.tb_lineno}\nError:{str(e)}"
-            )
-            log(f"Concatenation failed, aborting, error: {e}")
-            sys.exit(1)
 
     def select_best_chunking_method(self):
         if not find_executable("vspipe"):

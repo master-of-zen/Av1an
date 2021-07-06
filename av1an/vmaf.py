@@ -14,7 +14,6 @@ from av1an_pyo3 import (
     get_percentile,
     log,
     read_weighted_vmaf,
-    plot_vmaf_score_file,
     validate_vmaf,
 )
 from matplotlib import pyplot as plt
@@ -92,61 +91,3 @@ class VMAF:
         process_pipe(pipe, chunk, utility)
 
         return fl_path
-
-    def get_vmaf_file(self, source: Path, encoded: Path):
-        if not all((isinstance(source, Path), isinstance(encoded, Path))):
-            source = Path(source)
-            encoded = Path(encoded)
-
-        fl_path = encoded.with_name(f"{encoded.stem}_vmaflog").with_suffix(".json")
-
-        # call_vmaf takes a chunk, so make a chunk of the entire source
-        ffmpeg_gen_cmd = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            source.as_posix(),
-            "-f",
-            "yuv4mpegpipe",
-            "-",
-        ]
-
-        input_chunk = Chunk("", 0, ffmpeg_gen_cmd, "", 0, 0)
-
-        scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
-        return scores
-
-    def plot_vmaf(self, source: Path, encoded: Path, args):
-        print(":: VMAF Run..", end="\r")
-
-        fl_path = encoded.with_name(f"{encoded.stem}_vmaflog").with_suffix(".json")
-
-        # call_vmaf takes a chunk, so make a chunk of the entire source
-        ffmpeg_gen_cmd = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            source.as_posix(),
-            *args.pix_format,
-            "-f",
-            "yuv4mpegpipe",
-            "-",
-        ]
-
-        input_chunk = Chunk(args.temp, 0, ffmpeg_gen_cmd, "", 0, 0)
-
-        scores = self.call_vmaf(input_chunk, encoded, 0, fl_path=fl_path)
-
-        if not scores.exists():
-
-            print(f"Vmaf calculation failed for chunks:\n {source.name} {encoded.stem}")
-            sys.exit()
-
-        file_path = encoded.with_name(f"{encoded.stem}_plot").with_suffix(".png")
-        plot_vmaf_score_file(str(scores.as_posix()), str(file_path.as_posix()))

@@ -11,7 +11,7 @@ from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.project.Project import Project
 from av1an.split import split_routine
 from av1an.vmaf import VMAF
-from av1an_pyo3 import extract_audio, log, process_inputs, set_log
+from av1an_pyo3 import extract_audio, log, process_inputs, set_log, plot_vmaf
 
 from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
@@ -111,7 +111,7 @@ class EncodingManager:
                 res=project.vmaf_res,
                 vmaf_filter=project.vmaf_filter,
             )
-            self.vmaf.plot_vmaf(project.input, project.output_file, project)
+            plot_vmaf(str(project.input), str(project.output_file.as_posix()))
 
         # Delete temp folders
         if not project.keep:

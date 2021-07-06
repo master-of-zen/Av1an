@@ -121,3 +121,42 @@ pub fn validate_vmaf(vmaf_model: String) -> Result<(), Error> {
 
   Ok(())
 }
+
+pub fn run_vmaf_on_files(source: PathBuf, output: PathBuf) -> Result<PathBuf, Error> {
+  let mut cmd = Command::new("ffmpeg");
+
+  cmd.args(["-y", "-hide_banner", "-loglevel", "error"]);
+  cmd.args(["-r", "60", "-i", output.as_os_str().to_str().unwrap()]);
+  cmd.args(["-r", "60", "-i", source.as_os_str().to_str().unwrap()]);
+  cmd.args(["-filter_complex"]);
+
+  let res = "1920x1080";
+  let vmaf_filter = "";
+  let file_path = output.with_extension("json");
+  let model = "";
+  let threads = "";
+
+  cmd.args([format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}", res, vmaf_filter, res, file_path.as_os_str().to_str().unwrap(), model, threads )]);
+
+  cmd.args(["-f", "null", "-"]);
+
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  let out = cmd.output()?;
+
+  let stdr = String::from_utf8(out.stderr)?;
+
+  match out.status.success() {
+    true => Ok(file_path),
+    false => panic!("VMAF calculation failed: \n{:#?}", stdr),
+  }
+}
+
+pub fn plot_vmaf(source: PathBuf, output: PathBuf) -> Result<(), Error> {
+  println!("::VMAF Run..");
+
+  let json_file = run_vmaf_on_files(source, output.clone())?;
+  let plot_path = output.with_extension("png");
+  Ok(plot_vmaf_score_file(json_file, plot_path).unwrap())
+}

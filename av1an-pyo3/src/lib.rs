@@ -448,6 +448,13 @@ pub fn validate_vmaf(model: String) -> PyResult<()> {
   Ok(av1an_core::vmaf::validate_vmaf(model).unwrap())
 }
 
+#[pyfunction]
+pub fn plot_vmaf(source: &str, output: &str) -> PyResult<()> {
+  let input = PathBuf::from(source);
+  let out = PathBuf::from(output);
+  Ok(av1an_core::vmaf::plot_vmaf(input, out).unwrap())
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -495,6 +502,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(read_weighted_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(plot_vmaf_score_file, m)?)?;
   m.add_function(wrap_pyfunction!(validate_vmaf, m)?)?;
+  m.add_function(wrap_pyfunction!(plot_vmaf, m)?)?;
 
   Ok(())
 }

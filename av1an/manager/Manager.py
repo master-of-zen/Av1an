@@ -56,7 +56,7 @@ class Main:
                     print(f":: Encoding file {proj.input.name}")
                 EncodingManager().encode_file(proj)
 
-                print(f"Finished: {round(time.time() - tm, 1)}s\n")
+                print(f"Finished: {round(time.time() - tm, 1)}s")
             except KeyboardInterrupt:
                 print("Encoding stopped")
                 sys.exit()

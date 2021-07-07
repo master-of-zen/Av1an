@@ -15,6 +15,8 @@ from av1an_pyo3 import (
     probe_cmd,
     vmaf_auto_threads,
     weighted_search,
+    validate_vmaf,
+    interpolate_target_q,
 )
 from scipy import interpolate
 
@@ -28,6 +30,8 @@ except ImportError:
 
 class TargetQuality:
     def __init__(self, project):
+
+        validate_vmaf(project.vmaf_path if project.vmaf_path else "")
         self.vmaf_runner = VMAF(
             n_threads=project.n_threads,
             model=project.vmaf_path,
@@ -46,6 +50,7 @@ class TargetQuality:
         self.temp = project.temp
         self.workers = project.workers
         self.video_params = project.video_params
+        self.probing_rate = adapt_probing_rate(self.probing_rate, 20)
 
     def log_probes(self, vmaf_cq, frames, name, target_q, target_vmaf, skip=None):
         if skip == "high":
@@ -57,12 +62,11 @@ class TargetQuality:
 
         log(f"Chunk: {name}, Rate: {self.probing_rate}, Fr: {frames}")
         log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}{sk}")
-        log(f"Target Q: {target_q} VMAF: {round(target_vmaf, 2)}")
+        log(f"Target Q: {int(target_q)} VMAF: {round(target_vmaf, 2)}")
 
     def per_shot_target_quality(self, chunk: Chunk):
         vmaf_cq = []
         frames = chunk.frames
-        self.probing_rate = adapt_probing_rate(self.probing_rate, frames)
 
         q_list = []
 
@@ -135,20 +139,10 @@ class TargetQuality:
                 vmaf_upper = score
                 vmaf_cq_upper = new_point
 
-        q, q_vmaf = self.get_target_q(vmaf_cq, self.target)
+        q, q_vmaf = interpolate_target_q(vmaf_cq, self.target)
         self.log_probes(vmaf_cq, frames, chunk.name, q, q_vmaf)
 
-        return q
-
-    def get_target_q(self, scores, target_quality):
-        x = [x[1] for x in sorted(scores)]
-        y = [float(x[0]) for x in sorted(scores)]
-        f = interpolate.interp1d(x, y, kind="linear")
-        xnew = np.linspace(min(x), max(x), max(x) - min(x))
-        tl = list(zip(xnew, f(xnew)))
-        q = min(tl, key=lambda l: abs(l[1] - target_quality))
-
-        return int(q[0]), round(q[1], 3)
+        return int(q)
 
     def vmaf_probe(self, chunk: Chunk, q):
 
@@ -169,19 +163,6 @@ class TargetQuality:
         probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
         fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
         return fl
-
-    def interpolate_data(self, vmaf_cq: list, target_quality):
-        x = [x[1] for x in sorted(vmaf_cq)]
-        y = [float(x[0]) for x in sorted(vmaf_cq)]
-
-        # Interpolate data
-        f = interpolate.interp1d(x, y, kind="quadratic")
-        xnew = np.linspace(min(x), max(x), max(x) - min(x))
-
-        # Getting value closest to target
-        tl = list(zip(xnew, f(xnew)))
-        target_quality_cq = min(tl, key=lambda l: abs(l[1] - target_quality))
-        return target_quality_cq, tl, f, xnew
 
     def per_shot_target_quality_routine(self, chunk: Chunk):
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)

@@ -11,7 +11,6 @@ from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.concat import concatenate_mkvmerge
 from av1an.project.Project import Project
 from av1an.split import split_routine
-from av1an.vmaf import VMAF
 from av1an_pyo3 import (
     concatenate_ffmpeg,
     concatenate_ivf,
@@ -72,8 +71,9 @@ def encode_file(project: Project):
         f'Params: {" ".join(project.video_params)}'
     )
     BaseManager.register("Counter", Counter)
-    counter = Manager().Counter(project.get_frames(), initial_frames, project.quiet)
-    project.counter = counter
+    project.counter = Manager().Counter(
+        project.get_frames(), initial_frames, project.quiet
+    )
     queue = Queue(project, chunk_queue)
     queue.encoding_loop()
 

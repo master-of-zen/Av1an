@@ -1,6 +1,6 @@
 extern crate num_cpus;
-
-use std::usize;
+use splines::{Interpolation, Key, Spline};
+use std::{fmt::Error, u32, usize};
 
 pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
   let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
@@ -30,4 +30,34 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
     ((threads / workers) as f64 * OVER_PROVISION_FACTOR) as usize,
     1,
   )
+}
+
+pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64, Error> {
+  let mut sorted = scores;
+  sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+  let keys = sorted
+    .clone()
+    .iter()
+    .map(|f| Key::new(f.0 as f64, f.1 as f64, Interpolation::Linear))
+    .collect();
+
+  let spline = Spline::from_vec(keys);
+
+  Ok(spline.sample(target).unwrap())
+}
+
+pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, Error> {
+  let mut sorted = scores;
+  sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+  let keys = sorted
+    .clone()
+    .iter()
+    .map(|f| Key::new(f.1 as f64, f.0 as f64, Interpolation::Linear))
+    .collect();
+
+  let spline = Spline::from_vec(keys);
+
+  Ok(spline.sample(q).unwrap())
 }

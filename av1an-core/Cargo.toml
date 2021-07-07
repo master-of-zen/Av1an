@@ -8,13 +8,13 @@ edition = "2018"
 [dependencies]
 log = "0.4.14"
 av-format = "0.3.1"
-av-ivf = { git = "https://github.com/rust-av/ivf-rs", rev = "031aab76d1fc70a4b8518dc2ef5c3f4f1d839721" }
+av-ivf = { git="https://github.com/rust-av/ivf-rs", rev="031aab76d1fc70a4b8518dc2ef5c3f4f1d839721" }
 anyhow = "1.0.40"
 num_cpus = "1.13.0"
 serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version="1.0", features=["derive"] }
 sysinfo = "0.18.2"
-vapoursynth = { version = "0.3.0", features = ["vsscript-functions", "vapoursynth-functions"] }
+vapoursynth = { version="0.3.0", features=["vsscript-functions", "vapoursynth-functions"] }
 clap = "2.33.3"
 num-rational = "0.4.0"
 failure = "0.1.8"

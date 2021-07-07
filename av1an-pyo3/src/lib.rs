@@ -1,12 +1,8 @@
-use indicatif::ProgressBar;
-use indicatif::ProgressStyle;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use av1an_core::{ChunkMethod, Encoder};
 
-use chrono::Utc;
-use once_cell::sync::OnceCell;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -236,24 +232,14 @@ fn vmaf_auto_threads(workers: usize) -> usize {
   av1an_core::target_quality::vmaf_auto_threads(workers)
 }
 
-static LOG_HANDLE: OnceCell<File> = OnceCell::new();
-
 #[pyfunction]
 fn set_log(file: &str) -> PyResult<()> {
-  LOG_HANDLE
-    .set(File::create(file).map_err(|e| {
-      pyo3::exceptions::PyOSError::new_err(format!("Failed to create file {:?}: {}", file, e))
-    })?)
-    .map_err(|_| pyo3::exceptions::PyValueError::new_err("Failed to set the global log handle"))
+  Ok(av1an_core::logger::set_log(file).unwrap())
 }
 
 #[pyfunction]
-fn log(msg: &str) {
-  if let Some(mut file) = LOG_HANDLE.get() {
-    file
-      .write_all(format!("[{}] {}\n", Utc::now().to_rfc2822(), msg).as_bytes())
-      .unwrap();
-  }
+fn log(msg: &str) -> PyResult<()> {
+  Ok(av1an_core::logger::log(msg))
 }
 
 #[pyfunction]
@@ -401,39 +387,20 @@ pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
   let val = av1an_core::read_weighted_vmaf(file, percentile).unwrap();
   Ok(val)
 }
-const INDICATIF_PROGRESS_TEMPLATE: &str =
-  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps}, eta {eta})";
-
-static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 
 #[pyfunction]
-pub fn init_progress_bar(len: u64) {
-  PROGRESS_BAR.get_or_init(|| {
-    let bar = ProgressBar::new(len);
-    bar.set_style(
-      ProgressStyle::default_bar()
-        .template(INDICATIF_PROGRESS_TEMPLATE)
-        .progress_chars("#>-"),
-    );
-    bar.enable_steady_tick(100);
-    bar
-  });
+pub fn init_progress_bar(len: u64) -> PyResult<()> {
+  Ok(av1an_core::progress_bar::init_progress_bar(len).unwrap())
 }
 
 #[pyfunction]
-pub fn update_bar(inc: u64) {
-  PROGRESS_BAR
-    .get()
-    .expect("The progress bar was not initialized!")
-    .inc(inc)
+pub fn update_bar(inc: u64) -> PyResult<()> {
+  Ok(av1an_core::progress_bar::update_bar(inc).unwrap())
 }
 
 #[pyfunction]
-pub fn finish_progress_bar() {
-  PROGRESS_BAR
-    .get()
-    .expect("The progress bar was not initialized!")
-    .finish();
+pub fn finish_progress_bar() -> PyResult<()> {
+  Ok(av1an_core::progress_bar::finish_progress_bar().unwrap())
 }
 
 #[pyfunction]

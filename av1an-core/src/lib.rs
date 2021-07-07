@@ -10,6 +10,8 @@ use sysinfo::SystemExt;
 pub mod concat;
 pub mod ffmpeg;
 pub mod file_validation;
+pub mod logger;
+pub mod progress_bar;
 pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;

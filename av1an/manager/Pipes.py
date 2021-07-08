@@ -1,22 +1,21 @@
+import subprocess
 import sys
 from collections import deque
-from subprocess import Popen
+from subprocess import PIPE, STDOUT, Popen
 from typing import Iterable
 
 from av1an.chunk import Chunk
 from av1an.project import Project
-from av1an_pyo3 import log, match_line
 from av1an_pyo3 import (
-    encoder_bin,
-    compose_ffmpeg_pipe,
     compose_1_1_pass,
     compose_1_2_pass,
     compose_2_2_pass,
+    compose_ffmpeg_pipe,
+    encoder_bin,
+    log,
     man_command,
+    match_line,
 )
-
-import subprocess
-from subprocess import PIPE, STDOUT
 
 
 def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):

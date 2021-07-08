@@ -20,6 +20,8 @@ from av1an_pyo3 import (
     plot_vmaf,
     process_inputs,
     set_log,
+    determine_workers,
+    hash_path,
 )
 
 from .Counter import BaseManager, Counter, Manager
@@ -27,7 +29,26 @@ from .Queue import Queue
 
 
 def encode_file(project: Project):
-    project.setup()
+    hash = str(hash_path(str(project.input)))
+
+    if project.temp:
+        if project.temp[-1] in ("\\", "/"):
+            project.temp = Path(f"{project.temp}{'.' + hash}")
+        else:
+            project.temp = Path(str(project.temp))
+    else:
+        project.temp = Path("." + hash)
+
+    log(f"File hash: {hash}")
+    # Checking is resume possible
+    done_path = project.temp / "done.json"
+    project.resume = project.resume and done_path.exists()
+
+    if not project.resume and project.temp.is_dir():
+        shutil.rmtree(project.temp)
+
+    (project.temp / "split").mkdir(parents=True, exist_ok=True)
+    (project.temp / "encode").mkdir(exist_ok=True)
     if project.logging:
         set_log(Path(project.logging).with_suffix(".log").as_posix())
     else:
@@ -64,7 +85,9 @@ def encode_file(project: Project):
         )
 
     # do encoding loop
-    project.determine_workers()
+    project.workers = (
+        project.workers if project.workers else determine_workers(project.encoder)
+    )
     project.workers = min(project.workers, len(chunk_queue))
     print(
         f"\rQueue: {len(chunk_queue)} Workers: {project.workers} Passes: {project.passes}\n"

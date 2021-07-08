@@ -6,7 +6,6 @@ from pathlib import Path
 
 from av1an.utils import frame_probe_fast
 from av1an_pyo3 import create_vs_file
-from av1an_pyo3 import determine_workers as determine_workers_rust
 from av1an_pyo3 import frame_probe_vspipe, get_ffmpeg_info, hash_path, log
 
 
@@ -142,35 +141,6 @@ class Project(object):
             else:
                 print("Stopping")
                 sys.exit()
-
-    def determine_workers(self):
-        if self.workers:
-            return self.workers
-
-        self.workers = determine_workers_rust(self.encoder)
-
-    def setup(self):
-
-        hash = str(hash_path(str(self.input)))
-
-        if self.temp:
-            if self.temp[-1] in ("\\", "/"):
-                self.temp = Path(f"{self.temp}{'.' + hash}")
-            else:
-                self.temp = Path(str(self.temp))
-        else:
-            self.temp = Path("." + hash)
-
-        log(f"File hash: {hash}")
-        # Checking is resume possible
-        done_path = self.temp / "done.json"
-        self.resume = self.resume and done_path.exists()
-
-        if not self.resume and self.temp.is_dir():
-            shutil.rmtree(self.temp)
-
-        (self.temp / "split").mkdir(parents=True, exist_ok=True)
-        (self.temp / "encode").mkdir(exist_ok=True)
 
     def select_best_chunking_method(self):
         if not find_executable("vspipe"):

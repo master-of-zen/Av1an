@@ -148,30 +148,19 @@ class TargetQuality:
             str(self.probing_rate),
             str(n_threads),
         )
-        pipe, utility = self.make_pipes(chunk.ffmpeg_gen_cmd, cmd)
-        process_pipe(pipe, chunk, utility)
-        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
-        fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
-        return fl
-
-    def per_shot_target_quality_routine(self, chunk: Chunk):
-        chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)
-
-    def make_pipes(self, ffmpeg_gen_cmd, command):
-
         ffmpeg_gen_pipe = subprocess.Popen(
-            ffmpeg_gen_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            chunk.ffmpeg_gen_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
 
         ffmpeg_pipe = subprocess.Popen(
-            command[0],
+            cmd[0],
             stdin=ffmpeg_gen_pipe.stdout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
 
         pipe = subprocess.Popen(
-            command[1],
+            cmd[1],
             stdin=ffmpeg_pipe.stdout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -179,4 +168,10 @@ class TargetQuality:
         )
 
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
-        return pipe, utility
+        process_pipe(pipe, chunk, utility)
+        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
+        fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
+        return fl
+
+    def per_shot_target_quality_routine(self, chunk: Chunk):
+        chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)

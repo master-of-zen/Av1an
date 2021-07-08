@@ -17,6 +17,7 @@ from av1an_pyo3 import (
     weighted_search,
     validate_vmaf,
     interpolate_target_q,
+    log_probes,
 )
 from scipy import interpolate
 
@@ -51,18 +52,6 @@ class TargetQuality:
         self.workers = project.workers
         self.video_params = project.video_params
         self.probing_rate = adapt_probing_rate(self.probing_rate, 20)
-
-    def log_probes(self, vmaf_cq, frames, name, target_q, target_vmaf, skip=None):
-        if skip == "high":
-            sk = " Early Skip High CQ"
-        elif skip == "low":
-            sk = " Early Skip Low CQ"
-        else:
-            sk = ""
-
-        log(f"Chunk: {name}, Rate: {self.probing_rate}, Fr: {frames}")
-        log(f"Probes: {str(sorted(vmaf_cq))[1:-1]}{sk}")
-        log(f"Target Q: {int(target_q)} VMAF: {round(target_vmaf, 2)}")
 
     def per_shot_target_quality(self, chunk: Chunk):
         vmaf_cq = []
@@ -99,9 +88,10 @@ class TargetQuality:
         if (next_q == self.min_q and score < self.target) or (
             next_q == self.max_q and score > self.target
         ):
-            self.log_probes(
+            log_probes(
                 vmaf_cq,
                 frames,
+                self.probing_rate,
                 chunk.name,
                 next_q,
                 score,
@@ -140,7 +130,7 @@ class TargetQuality:
                 vmaf_cq_upper = new_point
 
         q, q_vmaf = interpolate_target_q(vmaf_cq, self.target)
-        self.log_probes(vmaf_cq, frames, chunk.name, q, q_vmaf)
+        log_probes(vmaf_cq, frames, self.probing_rate, chunk.name, int(q), q_vmaf, "")
 
         return int(q)
 

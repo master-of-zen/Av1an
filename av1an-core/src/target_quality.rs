@@ -1,7 +1,7 @@
 extern crate num_cpus;
+use crate::logger::log;
 use splines::{Interpolation, Key, Spline};
 use std::{fmt::Error, u32, usize};
-
 pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
   let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
   let dif2 = (transform_vmaf(target as f64) - transform_vmaf(vmaf1)).abs();
@@ -60,4 +60,27 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
   let spline = Spline::from_vec(keys);
 
   Ok(spline.sample(q).unwrap())
+}
+
+pub fn log_probes(
+  vmaf_cq_scores: Vec<(f64, u32)>,
+  frames: u32,
+  probing_rate: u32,
+  name: String,
+  target_q: u32,
+  target_vmaf: f64,
+  skip: String,
+) {
+  let skip_string = match skip.as_str() {
+    "high" => "Early Skip High Q".to_string(),
+    "low" => "Early Skip Low Q".to_string(),
+    _ => "".to_string(),
+  };
+
+  let mut scores_sorted = vmaf_cq_scores.clone();
+  scores_sorted.sort_by_key(|x| x.1);
+
+  log(format!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames).as_str());
+  log(format!("Probes {:?} {}", scores_sorted, skip_string).as_str());
+  log(format!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf).as_str());
 }

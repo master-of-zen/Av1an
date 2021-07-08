@@ -436,6 +436,26 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, target: f64) -> PyResult
   Ok(av1an_core::target_quality::interpolate_target_vmaf(scores, target).unwrap())
 }
 
+#[pyfunction]
+pub fn log_probes(
+  vmaf_cq_scores: Vec<(f64, u32)>,
+  frames: u32,
+  probing_rate: u32,
+  name: String,
+  target_q: u32,
+  target_vmaf: f64,
+  skip: String,
+) -> PyResult<()> {
+  Ok(av1an_core::target_quality::log_probes(
+    vmaf_cq_scores,
+    frames,
+    probing_rate,
+    name,
+    target_q,
+    target_vmaf,
+    skip,
+  ))
+}
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -486,6 +506,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(plot_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(interpolate_target_q, m)?)?;
   m.add_function(wrap_pyfunction!(interpolate_target_vmaf, m)?)?;
+  m.add_function(wrap_pyfunction!(log_probes, m)?)?;
 
   Ok(())
 }

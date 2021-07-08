@@ -168,37 +168,3 @@ class Project(object):
                 log(f"Vapoursynth not installed but vspipe reachable")
                 log(f"Error: {e}" + "Fallback to Hybrid")
                 self.chunk_method = "hybrid"
-
-    def check_exes(self):
-        if not find_executable("ffmpeg"):
-            print("No ffmpeg")
-            sys.exit(1)
-        else:
-            log(get_ffmpeg_info())
-
-        if self.chunk_method in ["vs_ffms2", "vs_lsmash"]:
-            if not find_executable("vspipe"):
-                print("vspipe executable not found")
-                sys.exit(1)
-
-            try:
-                import vapoursynth
-
-                plugins = vapoursynth.get_core().get_plugins()
-
-                if (
-                    self.chunk_method == "vs_lsmash"
-                    and "systems.innocent.lsmas" not in plugins
-                ):
-                    print("lsmas is not installed")
-                    sys.exit(1)
-
-                if (
-                    self.chunk_method == "vs_ffms2"
-                    and "com.vapoursynth.ffms2" not in plugins
-                ):
-                    print("ffms2 is not installed")
-                    sys.exit(1)
-            except ModuleNotFoundError:
-                print("Vapoursynth is not installed")
-                sys.exit(1)

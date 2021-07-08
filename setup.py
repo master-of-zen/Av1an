@@ -22,7 +22,6 @@ REQUIRES = [
     "opencv-python",
     "psutil",
     "scipy",
-    "matplotlib",
     "maturin",
     "setuptools_rust",
 ]

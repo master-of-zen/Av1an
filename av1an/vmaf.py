@@ -16,7 +16,6 @@ from av1an_pyo3 import (
     read_weighted_vmaf,
     validate_vmaf,
 )
-from matplotlib import pyplot as plt
 
 from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe

@@ -15,7 +15,6 @@ requires-dist = [
     "opencv-python",
     "psutil",
     "scipy",
-    "matplotlib",
     "vapoursynth",
 ]
 

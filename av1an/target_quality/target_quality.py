@@ -21,13 +21,6 @@ from av1an_pyo3 import (
 )
 from scipy import interpolate
 
-try:
-    import matplotlib
-    from matplotlib import pyplot as plt
-except ImportError:
-    matplotlib = None
-    plt = None
-
 
 class TargetQuality:
     def __init__(self, project):

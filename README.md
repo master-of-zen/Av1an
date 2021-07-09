@@ -233,11 +233,11 @@ With your own parameters:
 Av1an can be run in a Docker container with the following command if you are in the current directory
 Linux
 ```bash
-docker run -v "$(pwd)":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+docker run --privileged -v "$(pwd):/videos" --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 Windows
 ```powershell
-docker run -v ${PWD}:/videos -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 Docker can also be built by using
 
@@ -248,7 +248,7 @@ docker build -t "av1an" .
 To specify a different directory to use you would replace $(pwd) with the directory
 
 ```bash
-docker run -v /c/Users/masterofzen/Videos:/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+docker run --privileged -v "/c/Users/masterofzen/Videos":/videos --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 
 The --user flag is required on linux to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.

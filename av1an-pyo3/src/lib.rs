@@ -1751,7 +1751,7 @@ impl Project {
     }
     self.workers = cmp::min(self.workers, chunk_queue.len());
     println!(
-      "Queue: {} Workers: {} Passes: {}\nParams: {}",
+      "Queue: {} Workers: {} Passes: {}\nParams: {}\n",
       chunk_queue.len(),
       self.workers,
       self.passes,

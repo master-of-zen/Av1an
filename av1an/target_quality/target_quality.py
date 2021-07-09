@@ -44,6 +44,7 @@ class TargetQuality:
         self.temp = project.temp
         self.workers = project.workers
         self.video_params = project.video_params
+        self.probe_slow = project.probe_slow
         self.probing_rate = adapt_probing_rate(self.probing_rate, 20)
 
     def per_shot_target_quality(self, chunk: Chunk):
@@ -140,6 +141,8 @@ class TargetQuality:
             self.ffmpeg_pipe,
             str(self.probing_rate),
             str(n_threads),
+            self.video_params,
+            self.probe_slow,
         )
         ffmpeg_gen_pipe = subprocess.Popen(
             chunk.ffmpeg_gen_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT

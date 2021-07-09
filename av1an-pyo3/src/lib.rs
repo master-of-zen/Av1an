@@ -371,9 +371,11 @@ fn probe_cmd(
   ffmpeg_pipe: Vec<String>,
   probing_rate: String,
   n_threads: String,
+  video_params: Vec<String>,
+  probe_slow: bool,
 ) -> PyResult<(Vec<String>, Vec<String>)> {
   let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
-  Ok(encoder.probe_cmd(temp, name, q, ffmpeg_pipe, probing_rate, n_threads))
+  Ok(encoder.probe_cmd(temp, name, q, ffmpeg_pipe, probing_rate, n_threads, video_params, probe_slow))
 }
 
 #[pyfunction]

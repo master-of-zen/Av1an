@@ -606,6 +606,77 @@ impl Encoder {
     }
   }
 
+  pub fn construct_target_quality_command_probe_slow(&self, q: String) -> Vec<Cow<str>> {
+    match &self {
+      Self::aom => into_vec![
+        "aomenc",
+        "--passes=1",
+        format!("--cq-level={}", q),
+      ],
+      Self::rav1e => into_vec![
+        "rav1e",
+        "-y",
+        "--quantizer",
+        q,
+      ],
+      Self::libvpx => into_vec![
+        "vpxenc",
+        "--passes=1",
+        "--pass=1",
+        "--codec=vp9",
+        "--end-usage=q",
+        format!("--cq-level={}", q),
+      ],
+      Self::svt_av1 => into_vec![
+        "SvtAv1EncApp",
+        "-i",
+        "stdin",
+        "--crf",
+        q,
+      ],
+      Self::x264 => into_vec![
+        "x264",
+        "--log-level",
+        "error",
+        "--demuxer",
+        "y4m",
+        "-",
+        "--no-progress",
+        "--crf",
+        q,
+      ],
+      Self::x265 => into_vec![
+        "x265",
+        "--log-level",
+        "0",
+        "--no-progress",
+        "--y4m",
+        "--crf",
+        q,
+      ],
+    }
+  }
+
+  // Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
+  pub fn remove_patterns(&self, args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
+    let mut out = args.clone();
+    for pattern in patterns {
+      if let Some(index) = out.iter().position(|value| value.contains(&pattern)) {
+        out.remove(index);
+        // If pattern does not contain =, we need to remove the index that follows.
+        if pattern.contains("=") == false {
+          out.remove(index);
+        }
+      }
+    }
+    out
+  }
+
+  // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
+  pub fn decow_strings(&self, args: Vec<Cow<str>>) -> Vec<String> {
+    args.iter().map(|s| s.to_string()).collect::<Vec<String>>()
+ }
+
   pub fn probe_cmd(
     &self,
     temp: String,
@@ -614,6 +685,8 @@ impl Encoder {
     ffmpeg_pipe: Vec<String>,
     probing_rate: String,
     n_threads: String,
+    video_params: Vec<String>,
+    probe_slow: bool,
   ) -> (Vec<String>, Vec<String>) {
     let pipe: Vec<String> = chain!(
       into_vec![
@@ -639,8 +712,18 @@ impl Encoder {
     probe.push(&probe_name);
     let probe_path = probe.into_os_string().into_string().unwrap();
 
-    let ps = self.construct_target_quality_command(n_threads, q);
-    let params = ps.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+    let mut params;
+    if probe_slow {
+      let mut args = video_params.clone();
+      let patterns = into_vec!["--cq-level=", "--passes=", "--pass=", "--crf", "--quantizer"];
+      args = self.remove_patterns(args, patterns);
+      let ps = self.construct_target_quality_command_probe_slow(q);
+      params = self.decow_strings(ps);
+      params.append(&mut args)
+    } else {
+      let ps = self.construct_target_quality_command(n_threads, q);
+      params = self.decow_strings(ps);
+    }
 
     let output: Vec<String> = match &self {
       Self::aom => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
@@ -652,40 +735,6 @@ impl Encoder {
     };
 
     (pipe, output)
-  }
-
-  pub fn construct_target_quality_slow_command(&self, q: String) -> Vec<Cow<str>> {
-    match &self {
-      Encoder::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
-      Encoder::rav1e => into_vec!["rav1e", "-y", "--quantizer", q],
-      Encoder::libvpx => into_vec![
-        "vpxenc",
-        "--passes=1",
-        "--pass=1",
-        format!("--cq-level={}", q),
-      ],
-      Encoder::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q,],
-      Encoder::x264 => into_vec![
-        "x264",
-        "--log-level",
-        "error",
-        "--demuxer",
-        "y4m",
-        "-",
-        "--no-progress",
-        "--crf",
-        q,
-      ],
-      Encoder::x265 => into_vec![
-        "x265",
-        "--log-level",
-        "0",
-        "--no-progress",
-        "--y4m",
-        "--crf",
-        q,
-      ],
-    }
   }
 }
 

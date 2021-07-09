@@ -131,6 +131,10 @@ pub struct Args {
   #[clap(long, default_value = "4")]
   probing_rate: usize,
 
+   /// Use encoding settings for probes
+   #[clap(long)]
+   probe_slow: bool,
+
   /// Min q for target_quality
   #[clap(long)]
   min_q: Option<u8>,

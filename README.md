@@ -25,9 +25,9 @@ Example with default parameters:
 
 With your own parameters:
 
-    av1an -i input -enc aom -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --split_method aom_keyframes --target_quality 95 --vmaf_path "vmaf_v0.6.1.pkl"
-    -min_q 20 -max_q 60 -ff "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k"
+    av1an -i input -e aom -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10
+    --split-method aom_keyframes --target-quality 95 --vmaf-path "vmaf_v0.6.1.pkl"
+    -min-q 20 -max-q 60 -f "-vf scale=-1:1080" -a "-c:a libopus -ac 2 -b:a 192k"
     -s scenes.csv -log my_log -o output
 
 
@@ -37,15 +37,15 @@ With your own parameters:
     -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script
                             (relative or absolute path)
 
-    -o   --output_file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
+    -o   --output-file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
 
-    -enc --encoder          Encoder to use
+    -e --encoder            Encoder to use
                             (`aom`,`rav1e`,`svt_av1`,`vpx`,`x265`, `x264`)
                             Default: aom
                             Example: -enc rav1e
 
-    -v   --video_params     Encoder settings flags (If not set, will be used default parameters.)
+    -v   --video-params     Encoder settings flags (If not set, will be used default parameters.)
                             Must be inside ' ' or " "
 
     -p   --passes           Set number of passes for encoding
@@ -63,35 +63,35 @@ With your own parameters:
 
     -q --quiet              Do not print a progress bar to the terminal.
 
-    -l --logging          Path to .log file(By default created in temp folder)
+    -l --logging            Path to .log file(By default created in temp folder)
 
     --temp                  Set path for the temporary folder. Default: .temp
 
-    --mkvmerge              Use mkvmerge for concatenating instead of FFmpeg.
-                            Use when concatenation fails.
+    -c --concat             Concatenation method to use for splits Default: ffmpeg
+                            [possible values: ffmpeg, mkvmerge, ivf]
 
     --webm                  Outputs webm file.
                             Use only if you're sure the source video and audio are compatible.
 
 <h3 align="center">FFmpeg options</h3>
 
-    -a   --audio_params     FFmpeg audio settings (Default: copy audio from source to output)
+    -a   --audio-params     FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -ff  --ffmpeg           FFmpeg options video options.
+    -f  --ffmpeg           FFmpeg options video options.
                             Applied to each encoding segment individually.
                             (Warning: Cropping doesn't work with Target VMAF mode
-                            without specifying it in --vmaf_filter)
+                            without specifying it in --vmaf-filter)
                             Example:
                             --ff " -vf scale=320:240 "
 
-    -fmt --pix_format       Setting custom pixel/bit format for piping
+    --pix-format            Setting custom pixel/bit format for piping
                             (Default: 'yuv420p10le')
                             Options should be adjusted accordingly, based on the encoder.
 
 <h3 align="center">Segmenting</h3>
 
-    --split_method          Method used for generating splits.(Default: PySceneDetect)
+    --split-method          Method used for generating splits.(Default: PySceneDetect)
                             Options: `pyscene`, `aom_keyframes`, `none`
                             `pyscene` - PyScenedetect, content based scenedetection
                             with threshold.
@@ -103,14 +103,14 @@ With your own parameters:
                             fewer dependencies.
                             `none` -  skips scenedetection. Useful for splitting by time
 
-    -cm  --chunk_method     Determine the method in which chunks are made for encoding.
+    -m  --chunk-method      Determine the method in which chunks are made for encoding.
                             By default the best method is selected automatically in this order:
                             vs_ffms2 > vs_lsmash > hybrid.
                             vs_ffms2 or vs_lsmash are recommended.
                             ['hybrid'(default), 'select', 'vs_ffms2', 'vs_lsmash']
 
 
-    -tr  --threshold        PySceneDetect threshold for scene detection Default: 35
+    -t  --threshold         PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
                             If the file doesn't exist, a new file will be generated
@@ -118,17 +118,17 @@ With your own parameters:
                             First run to generate stamps, all next reuse it.
                             Example: "-s scenes.csv"
 
-    -xs  --extra_split      Adding extra splits if frame distance between splits bigger than the
+    -x  --extra-split       Adding extra splits if frame distance between splits bigger than the
                             given value. Pair with none for time based splitting or with any
                             other splitting method to break up massive scenes.
                             Example: 1000 frames video with a single scene,
                             -xs 200 will add splits at 200,400,600,800.
 
-    --min_scene_len         Specifies the minimum number of frames in each split.
+    --min-scene-len         Specifies the minimum number of frames in each split.
 
 <h3 align="center">Target Quality</h3>
 
-    --target_quality        Quality value to target.
+    --target-quality        Quality value to target.
                             VMAF used as substructure for algorithms.
                             Supported in all encoders supported by Av1an.
                             Best works in range 85-97.
@@ -137,27 +137,23 @@ With your own parameters:
                             and some quantizer option provided. (This value will be replaced)
                             `--crf`,`--cq-level`,`--quantizer` etc
 
-    --target_quality_method Type of algorithm for use.
+    --target-quality-method Type of algorithm for use.
                             Options: per_shot
 
-    --min_q, --max_q        Min,Max Q values limits
+    --min-q, --max-q        Min,Max Q values limits
                             If not set by the user, the default for encoder range will be used.
 
     --vmaf                  Calculate VMAF after encoding is done and make a plot.
 
-    --vmaf_plots            Make plots for target quality search decisions
-                            (Exception: early skips)
-                            Saved in the temp folder by default.
-
-    --vmaf_path             Custom path to libvmaf models.
-                            example: --vmaf_path "vmaf_v0.6.1.pkl"
+    --vmaf-path             Custom path to libvmaf models.
+                            example: --vmaf-path "vmaf_v0.6.1.pkl"
                             Recommended to place both files in encoding folder
                             (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
                             (Required if VMAF calculation doesn't work by default)
 
-    --vmaf_res              Resolution scaling for VMAF calculation,
+    --vmaf-res              Resolution scaling for VMAF calculation,
                             vmaf_v0.6.1.pkl is 1920x1080 (by default),
-                            vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf_path)
+                            vmaf_4k_v0.6.1.pkl is 3840x2160 (don't forget about vmaf-path)
 
     --probes                Number of probes for interpolation.
                             1 and 2 probes have special cases to try to work with few data points.
@@ -166,14 +162,14 @@ With your own parameters:
     --probe-slow            Use video encoding parameters for vmaf probes to get a more 
                             accurate Q at the cost of speed.
 
-    --vmaf_filter           Filter used for VMAF calculation. The passed format is filter_complex.
+    --vmaf-filter           Filter used for VMAF calculation. The passed format is filter_complex.
                             So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
-                            `--vmaf_filter` must be : ` --vmaf_filter "crop=200:1000:0:0"`
+                            `--vmaf-filter` must be : ` --vmaf-filter "crop=200:1000:0:0"`
 
-    --probing_rate          Setting rate for VMAF probes (Every N frame used in probe, Default: 4)
+    --probing-rate          Setting rate for VMAF probes (Every N frame used in probe, Default: 4)
 
-    --n_threads             Limit number of threads that are used for VMAF calculation
-                            Example: --n_threads 12
+    --vmaf-threads          Limit number of threads that are used for VMAF calculation
+                            Example: --vmaf-threads 12
                             (Required if VMAF calculation gives error on high core counts)
 
 <h2 align="center">Main Features</h2>

@@ -1755,7 +1755,7 @@ impl Project {
       chunk_queue.len(),
       self.workers,
       self.passes,
-      self.video_params.join("\n")
+      self.video_params.join(" ")
     );
 
     init_progress_bar((self.frames - initial_frames) as u64).unwrap();

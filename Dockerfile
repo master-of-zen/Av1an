@@ -31,7 +31,7 @@ COPY --chown=app_user requirements.txt /Av1an/requirements.txt
 WORKDIR /Av1an
 
 # Create virtualenv required for maturin develop
-ENV VIRTUAL_ENV=/Av1an/venv
+ENV VIRTUAL_ENV=/Av1an/.venv
 RUN python3 -m venv "${VIRTUAL_ENV}"
 ENV PATH="$VIRTUAL_ENV/bin:/home/app_user/.cargo/bin:$PATH"
 

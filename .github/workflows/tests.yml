@@ -24,12 +24,16 @@ jobs:
       fail-fast: false
       matrix:
         enc: [aom, rav1e, svt_av1, vpx, x265, x264]
-        name: [baseline, target-quality]
+        name: [baseline, baseline-select, target-quality, probe-slow]
         include:
           - name: baseline
             flags: ""
+          - name: baseline-select
+            flags: "--chunk-method select"
           - name: target-quality
             flags: --target-quality 95
+          - name: probe-slow
+            flags: --target-quality 95 --probe-slow
           - name: chunk_hybrid
             enc: aom
             flags: --chunk-method hybrid

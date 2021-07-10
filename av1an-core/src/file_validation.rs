@@ -2,13 +2,13 @@ use std::path::PathBuf;
 use std::process::exit;
 
 /// Returns file if it have suffix of media file
-fn match_file_type(input: PathBuf) -> bool {
+fn match_file_type(input: &PathBuf) -> bool {
   ["mkv", "mp4", "mov", "avi", "flv", "m2ts", "y4m"]
     .iter()
     .any(|&v| input.extension().map_or(false, |u| v == u))
 }
 
-fn validate_files(files: Vec<PathBuf>) -> Vec<PathBuf> {
+fn validate_files(files: &[PathBuf]) -> Vec<PathBuf> {
   let valid: Vec<PathBuf> = files
     .iter()
     .cloned()
@@ -19,7 +19,7 @@ fn validate_files(files: Vec<PathBuf>) -> Vec<PathBuf> {
 
 /// Process given input file/dir
 /// Returns vector of files to process
-pub fn process_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
+pub fn process_inputs(inputs: &[PathBuf]) -> Vec<PathBuf> {
   if inputs.is_empty() {
     println!("No inputs");
     exit(0);
@@ -29,7 +29,7 @@ pub fn process_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
 
   // Process all inputs (folders and files)
   // into single path vector
-  for fl in &inputs {
+  for fl in inputs {
     if fl.as_path().is_dir() {
       for file in fl.as_path().read_dir().unwrap() {
         let entry = file.unwrap();
@@ -42,12 +42,12 @@ pub fn process_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
   }
 
   // Check are all files real
-  let valid_input = validate_files(input_files);
+  let valid_input = validate_files(&input_files);
   // Match files to media file extensions
   let result: Vec<PathBuf> = valid_input
     .iter()
     .cloned()
-    .filter(|x| match_file_type(x.to_path_buf()))
+    .filter(|x| match_file_type(x))
     .collect();
 
   if result.is_empty() {

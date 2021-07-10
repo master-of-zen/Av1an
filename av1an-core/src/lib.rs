@@ -1,9 +1,11 @@
+#![warn(clippy::needless_pass_by_value)]
+
 #[macro_use]
 extern crate log;
 use serde::Deserialize;
 use std::fmt::Error;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use sysinfo::SystemExt;
@@ -213,12 +215,12 @@ struct Baz {
   frames: Vec<Bar>,
 }
 
-pub fn read_file_to_string(file: PathBuf) -> Result<String, Error> {
+pub fn read_file_to_string(file: &Path) -> Result<String, Error> {
   Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file)))
 }
 
 pub fn read_vmaf_file(file: PathBuf) -> Result<Vec<f64>, serde_json::Error> {
-  let json_str = read_file_to_string(file).unwrap();
+  let json_str = read_file_to_string(&file).unwrap();
   let bazs = serde_json::from_str::<Baz>(&json_str)?;
   let v = bazs
     .frames

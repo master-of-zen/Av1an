@@ -114,7 +114,7 @@ pub fn have_audio(file: &Path) -> bool {
 }
 
 /// Extracting audio
-pub fn extract_audio(input: &Path, temp: &Path, audio_params: Vec<String>) {
+pub fn extract_audio(input: &Path, temp: &Path, audio_params: &[String]) {
   let have_audio = have_audio(input);
 
   if have_audio {

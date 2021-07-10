@@ -64,12 +64,12 @@ pub fn log_probes(
   vmaf_cq_scores: Vec<(f64, u32)>,
   frames: u32,
   probing_rate: u32,
-  name: String,
+  name: &str,
   target_q: u32,
   target_vmaf: f64,
-  skip: String,
+  skip: &str,
 ) {
-  let skip_string = match skip.as_str() {
+  let skip_string = match skip {
     "high" => "Early Skip High Q".to_string(),
     "low" => "Early Skip Low Q".to_string(),
     _ => "".to_string(),

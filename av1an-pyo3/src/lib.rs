@@ -141,7 +141,7 @@ fn frame_probe_vspipe(source: &str) -> PyResult<usize> {
 fn extract_audio(input: String, temp: String, audio_params: Vec<String>) {
   let input_path = Path::new(&input);
   let temp_path = Path::new(&temp);
-  av1an_core::ffmpeg::extract_audio(input_path, temp_path, audio_params);
+  av1an_core::ffmpeg::extract_audio(input_path, temp_path, &audio_params);
 }
 
 #[pyfunction]
@@ -177,7 +177,7 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
 fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
-  av1an_core::split::segment(input, temp, segments);
+  av1an_core::split::segment(input, temp, &segments);
   Ok(())
 }
 
@@ -188,7 +188,7 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
     .map(|x| PathBuf::from_str(x.as_str()).unwrap())
     .collect();
 
-  let processed = av1an_core::file_validation::process_inputs(path_bufs);
+  let processed = av1an_core::file_validation::process_inputs(&path_bufs);
 
   let out: Vec<String> = processed
     .iter()
@@ -423,7 +423,7 @@ pub fn finish_progress_bar() -> PyResult<()> {
 pub fn plot_vmaf_score_file(scores_file_string: String, plot_path_string: String) {
   let scores_file = PathBuf::from(scores_file_string);
   let plot_path = PathBuf::from(plot_path_string);
-  av1an_core::vmaf::plot_vmaf_score_file(scores_file, plot_path).unwrap()
+  av1an_core::vmaf::plot_vmaf_score_file(scores_file, &plot_path).unwrap()
 }
 
 #[pyfunction]
@@ -436,7 +436,7 @@ pub fn validate_vmaf(model: String) -> PyResult<()> {
 pub fn plot_vmaf(source: &str, output: &str) -> PyResult<()> {
   let input = PathBuf::from(source);
   let out = PathBuf::from(output);
-  av1an_core::vmaf::plot_vmaf(input, out).unwrap();
+  av1an_core::vmaf::plot_vmaf(input, &out).unwrap();
   Ok(())
 }
 
@@ -468,10 +468,10 @@ pub fn log_probes(
     vmaf_cq_scores,
     frames,
     probing_rate,
-    name,
+    &name,
     target_q,
     target_vmaf,
-    skip,
+    &skip,
   );
   Ok(())
 }

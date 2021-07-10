@@ -17,7 +17,7 @@ pub fn plot_vmaf_score_file(
   let perc_1 = read_weighted_vmaf(scores_file.clone(), 0.01).unwrap();
   let perc_25 = read_weighted_vmaf(scores_file.clone(), 0.25).unwrap();
   let perc_75 = read_weighted_vmaf(scores_file.clone(), 0.75).unwrap();
-  let perc_mean = read_weighted_vmaf(scores_file.clone(), 0.50).unwrap();
+  let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
 
   let root =
     BitMapBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
@@ -158,5 +158,6 @@ pub fn plot_vmaf(source: PathBuf, output: PathBuf) -> Result<(), Error> {
 
   let json_file = run_vmaf_on_files(source, output.clone())?;
   let plot_path = output.with_extension("png");
-  Ok(plot_vmaf_score_file(json_file, plot_path).unwrap())
+  plot_vmaf_score_file(json_file, plot_path).unwrap();
+  Ok(())
 }

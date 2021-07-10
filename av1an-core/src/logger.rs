@@ -8,7 +8,8 @@ use std::{
 static LOG_HANDLE: OnceCell<File> = OnceCell::new();
 
 pub fn set_log(file: &str) -> Result<(), Error> {
-  Ok(LOG_HANDLE.set(File::create(file).unwrap()).unwrap())
+  LOG_HANDLE.set(File::create(file).unwrap()).unwrap();
+  Ok(())
 }
 
 pub fn log(msg: &str) {

@@ -181,7 +181,7 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
 
 pub fn get_percentile(scores: Vec<f64>, percentile: f64) -> f64 {
   // Calculates percentile from vector of valuees
-  let mut sorted = scores.clone();
+  let mut sorted = scores;
   sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
   let k = (sorted.len() - 1) as f64 * percentile;

@@ -24,19 +24,17 @@ pub fn init_progress_bar(len: u64) -> Result<(), Box<dyn error::Error>> {
 }
 
 pub fn update_bar(inc: u64) -> Result<(), Box<dyn error::Error>> {
-  Ok(
-    PROGRESS_BAR
-      .get()
-      .expect("The progress bar was not initialized!")
-      .inc(inc),
-  )
+  PROGRESS_BAR
+    .get()
+    .expect("The progress bar was not initialized!")
+    .inc(inc);
+  Ok(())
 }
 
 pub fn finish_progress_bar() -> Result<(), Box<dyn error::Error>> {
-  Ok(
-    PROGRESS_BAR
-      .get()
-      .expect("The progress bar was not initialized!")
-      .finish(),
-  )
+  PROGRESS_BAR
+    .get()
+    .expect("The progress bar was not initialized!")
+    .finish();
+  Ok(())
 }

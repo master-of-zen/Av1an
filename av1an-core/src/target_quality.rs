@@ -37,7 +37,6 @@ pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64,
   sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
   let keys = sorted
-    .clone()
     .iter()
     .map(|f| Key::new(f.0 as f64, f.1 as f64, Interpolation::Linear))
     .collect();
@@ -52,7 +51,6 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
   sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
   let keys = sorted
-    .clone()
     .iter()
     .map(|f| Key::new(f.1 as f64, f.0 as f64, Interpolation::Linear))
     .collect();
@@ -77,7 +75,7 @@ pub fn log_probes(
     _ => "".to_string(),
   };
 
-  let mut scores_sorted = vmaf_cq_scores.clone();
+  let mut scores_sorted = vmaf_cq_scores;
   scores_sorted.sort_by_key(|x| x.1);
 
   log(format!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames).as_str());

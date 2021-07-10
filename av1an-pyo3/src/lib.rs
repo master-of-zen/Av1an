@@ -43,22 +43,6 @@ pub fn hash_path(path: &str) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn construct_target_quality_command(
-  encoder: Encoder,
-  threads: &str,
-  q: &str,
-) -> anyhow::Result<Vec<String>> {
-  Ok(
-    encoder
-      .construct_target_quality_command(threads.parse().unwrap(), q.to_string())
-      .iter()
-      .map(|s| s.to_string())
-      .collect(),
-  )
-}
-
-/// Creates vs pipe file
-
 fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> anyhow::Result<String> {
   // only for python code, remove if being called by rust
   let temp = Path::new(temp);
@@ -116,19 +100,8 @@ fn get_ffmpeg_info() -> String {
   av1an_core::get_ffmpeg_info()
 }
 
-fn get_frame_types(file: String) -> Vec<String> {
-  let input_file = Path::new(&file);
-
-  av1an_core::ffmpeg::get_frame_types(input_file)
-}
-
 fn determine_workers(encoder: Encoder) -> anyhow::Result<u64> {
   Ok(av1an_core::determine_workers(encoder))
-}
-
-fn frame_probe_vspipe(source: &str) -> anyhow::Result<usize> {
-  let frames = av1an_core::vapoursynth::num_frames(Path::new(source));
-  frames
 }
 
 // same as frame_probe, but you can call it without the python GIL
@@ -151,43 +124,11 @@ fn ffmpeg_get_frame_count(source: &str) -> usize {
   av1an_core::ffmpeg::ffmpeg_get_frame_count(Path::new(source))
 }
 
-fn concatenate_ivf(input: &str, output: &str) -> anyhow::Result<()> {
-  av1an_core::concat::concat_ivf(Path::new(input), Path::new(output))
-}
-
-fn concatenate_ffmpeg(temp: String, output: String, encoder: Encoder) -> anyhow::Result<()> {
-  let temp_path = Path::new(&temp);
-  let output_path = Path::new(&output);
-
-  av1an_core::ffmpeg::concatenate_ffmpeg(temp_path, output_path, encoder);
-  Ok(())
-}
-
-fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: usize) -> Vec<usize> {
-  av1an_core::split::extra_splits(split_locations, total_frames, split_size)
-}
-
 fn segment(input: &str, temp: &str, segments: Vec<usize>) -> anyhow::Result<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
   av1an_core::split::segment(input, temp, &segments);
   Ok(())
-}
-
-fn process_inputs(input: Vec<String>) -> Vec<String> {
-  let path_bufs: Vec<PathBuf> = input
-    .into_iter()
-    .map(|x| PathBuf::from_str(x.as_str()).unwrap())
-    .collect();
-
-  let processed = av1an_core::file_validation::process_inputs(&path_bufs);
-
-  let out: Vec<String> = processed
-    .iter()
-    .map(|x| x.as_path().to_str().unwrap().to_string())
-    .collect();
-
-  out
 }
 
 fn write_scenes_to_file(
@@ -199,12 +140,6 @@ fn write_scenes_to_file(
 
   av1an_core::split::write_scenes_to_file(&scenes, frames, &scene_path).unwrap();
   Ok(())
-}
-
-fn read_scenes_from_file(scenes_path_string: &str) -> (Vec<usize>, usize) {
-  let scene_path = PathBuf::from(scenes_path_string);
-
-  av1an_core::split::read_scenes_from_file(&scene_path).unwrap()
 }
 
 fn vmaf_auto_threads(workers: usize) -> usize {
@@ -219,10 +154,6 @@ fn set_log(file: &str) -> anyhow::Result<()> {
 fn log(msg: &str) -> anyhow::Result<()> {
   av1an_core::logger::log(msg);
   Ok(())
-}
-
-fn get_default_pass(encoder: &str) -> anyhow::Result<u8> {
-  Ok(Encoder::from_str(&encoder).unwrap().get_default_pass())
 }
 
 fn get_default_cq_range(encoder: &str) -> anyhow::Result<(usize, usize)> {
@@ -297,11 +228,6 @@ fn compose_2_2_pass(
 ) -> anyhow::Result<Vec<String>> {
   let enc = Encoder::from_str(&encoder).unwrap();
   Ok(enc.compose_2_2_pass(params, fpf, output))
-}
-
-fn find_aom_keyframes(fl: String, min_kf_length: usize) -> Vec<usize> {
-  let file = PathBuf::from(fl);
-  av1an_scene_detection::aom_kf::find_aom_keyframes(file, min_kf_length)
 }
 
 fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
@@ -896,25 +822,6 @@ struct Chunk {
 }
 
 impl Chunk {
-  fn new(
-    temp: String,
-    index: usize,
-    ffmpeg_gen_cmd: Vec<String>,
-    output_ext: String,
-    size: usize,
-    frames: usize,
-  ) -> Self {
-    Chunk {
-      temp,
-      index,
-      ffmpeg_gen_cmd,
-      output_ext,
-      size,
-      frames,
-      ..Default::default()
-    }
-  }
-
   fn name(&self) -> String {
     format!("{:05}", self.index)
   }
@@ -1176,10 +1083,6 @@ Chunk: {}
 }
 
 impl Project {
-  fn new(project: Project) -> Self {
-    project
-  }
-
   fn get_frames(&mut self) -> usize {
     if self.frames != 0 {
       return self.frames;

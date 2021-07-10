@@ -42,10 +42,10 @@ jobs:
             flags: --chunk-method select
           - name: chunk_ffms2
             enc: aom
-            flags: --chunk-method vs_ffms2
+            flags: --chunk-method ffms2
           - name: chunk_lsmash
             enc: aom
-            flags: --chunk-method vs_lsmash
+            flags: --chunk-method lsmash
           - name: scenes
             enc: aom
             flags: -s scenes.json

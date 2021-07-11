@@ -71,10 +71,6 @@ class Project(object):
         self.vmaf_filter: str = None
 
         # Set all initial values
-        self.load_project(initial_data)
-
-    def load_project(self, initial_data):
-        # Set all initial values
         for key in initial_data:
             setattr(self, key, initial_data[key])
 
@@ -126,21 +122,6 @@ class Project(object):
                 self.output_file = Path(self.output_file).with_suffix(suffix)
         else:
             self.output_file = Path(f"{self.input.stem}_{self.encoder}{suffix}")
-
-    def promt_output_overwrite(self):
-        if self.output_file.exists():
-            print(
-                f":: Output file {self.output_file} exist, overwrite? [y/n or enter]:",
-                end="",
-            )
-
-            promt = input()
-
-            if "y" in promt.lower() or promt.strip() == "":
-                pass
-            else:
-                print("Stopping")
-                sys.exit()
 
     def select_best_chunking_method(self):
         if not find_executable("vspipe"):

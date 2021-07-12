@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate log;
 use serde::Deserialize;
+use std::cmp::Ordering;
 use std::fmt::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -181,21 +182,20 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   )
 }
 
-pub fn get_percentile(scores: Vec<f64>, percentile: f64) -> f64 {
+pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
   // Calculates percentile from vector of valuees
-  let mut sorted = scores;
-  sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+  scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-  let k = (sorted.len() - 1) as f64 * percentile;
+  let k = (scores.len() - 1) as f64 * percentile;
   let f = k.floor();
   let c = k.ceil();
 
   if f == c {
-    return sorted[k as usize];
+    return scores[k as usize];
   }
 
-  let d0 = sorted[f as usize] as f64 * (c - k);
-  let d1 = sorted[f as usize] as f64 * (k - f);
+  let d0 = scores[f as usize] as f64 * (c - k);
+  let d1 = scores[f as usize] as f64 * (k - f);
 
   d0 + d1
 }
@@ -232,7 +232,7 @@ pub fn read_vmaf_file(file: &Path) -> Result<Vec<f64>, serde_json::Error> {
 }
 
 pub fn read_weighted_vmaf(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
-  let scores = read_vmaf_file(file).unwrap();
+  let mut scores = read_vmaf_file(file).unwrap();
 
-  Ok(get_percentile(scores, percentile))
+  Ok(get_percentile(&mut scores, percentile))
 }

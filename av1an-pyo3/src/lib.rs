@@ -391,7 +391,9 @@ fn probe_cmd(
 
 #[pyfunction]
 pub fn get_percentile(scores: Vec<f64>, percent: f64) -> PyResult<f64> {
-  Ok(av1an_core::get_percentile(scores, percent))
+  // pyo3 doesn't seem to support `mut` in function declarations, so this is necessary
+  let mut scores = scores;
+  Ok(av1an_core::get_percentile(&mut scores, percent))
 }
 
 #[pyfunction]

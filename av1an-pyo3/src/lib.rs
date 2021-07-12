@@ -37,7 +37,7 @@ fn construct_target_quality_command(
   threads: &str,
   q: &str,
 ) -> PyResult<Vec<String>> {
-  let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).map_err(|_| {
+  let encoder = av1an_encoder_constructor::Encoder::from_str(encoder).map_err(|_| {
     pyo3::exceptions::PyTypeError::new_err(format!("Unknown or unsupported encoder '{}'", encoder))
   })?;
 
@@ -141,7 +141,7 @@ fn frame_probe_vspipe(source: &str) -> PyResult<usize> {
 fn extract_audio(input: String, temp: String, audio_params: Vec<String>) {
   let input_path = Path::new(&input);
   let temp_path = Path::new(&temp);
-  av1an_core::ffmpeg::extract_audio(input_path, temp_path, audio_params);
+  av1an_core::ffmpeg::extract_audio(input_path, temp_path, &audio_params);
 }
 
 #[pyfunction]
@@ -177,7 +177,7 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
 fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
-  av1an_core::split::segment(input, temp, segments);
+  av1an_core::split::segment(input, temp, &segments);
   Ok(())
 }
 
@@ -188,7 +188,7 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
     .map(|x| PathBuf::from_str(x.as_str()).unwrap())
     .collect();
 
-  let processed = av1an_core::file_validation::process_inputs(path_bufs);
+  let processed = av1an_core::file_validation::process_inputs(&path_bufs);
 
   let out: Vec<String> = processed
     .iter()
@@ -234,12 +234,14 @@ fn vmaf_auto_threads(workers: usize) -> usize {
 
 #[pyfunction]
 fn set_log(file: &str) -> PyResult<()> {
-  Ok(av1an_core::logger::set_log(file).unwrap())
+  av1an_core::logger::set_log(file).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
 fn log(msg: &str) -> PyResult<()> {
-  Ok(av1an_core::logger::log(msg))
+  av1an_core::logger::log(msg);
+  Ok(())
 }
 
 #[pyfunction]
@@ -350,7 +352,7 @@ fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
 
 #[pyfunction]
 fn match_line(encoder: &str, line: &str) -> PyResult<usize> {
-  let enc = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
+  let enc = av1an_encoder_constructor::Encoder::from_str(encoder).unwrap();
 
   Ok(enc.match_line(line).unwrap())
 }
@@ -375,7 +377,16 @@ fn probe_cmd(
   probe_slow: bool,
 ) -> PyResult<(Vec<String>, Vec<String>)> {
   let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
-  Ok(encoder.probe_cmd(temp, name, q, ffmpeg_pipe, probing_rate, n_threads, video_params, probe_slow))
+  Ok(encoder.probe_cmd(
+    temp,
+    name,
+    q,
+    ffmpeg_pipe,
+    probing_rate,
+    n_threads,
+    video_params,
+    probe_slow,
+  ))
 }
 
 #[pyfunction]
@@ -392,36 +403,41 @@ pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
 
 #[pyfunction]
 pub fn init_progress_bar(len: u64) -> PyResult<()> {
-  Ok(av1an_core::progress_bar::init_progress_bar(len).unwrap())
+  av1an_core::progress_bar::init_progress_bar(len).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
 pub fn update_bar(inc: u64) -> PyResult<()> {
-  Ok(av1an_core::progress_bar::update_bar(inc).unwrap())
+  av1an_core::progress_bar::update_bar(inc).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
 pub fn finish_progress_bar() -> PyResult<()> {
-  Ok(av1an_core::progress_bar::finish_progress_bar().unwrap())
+  av1an_core::progress_bar::finish_progress_bar().unwrap();
+  Ok(())
 }
 
 #[pyfunction]
 pub fn plot_vmaf_score_file(scores_file_string: String, plot_path_string: String) {
   let scores_file = PathBuf::from(scores_file_string);
   let plot_path = PathBuf::from(plot_path_string);
-  av1an_core::vmaf::plot_vmaf_score_file(scores_file, plot_path).unwrap()
+  av1an_core::vmaf::plot_vmaf_score_file(scores_file, &plot_path).unwrap()
 }
 
 #[pyfunction]
 pub fn validate_vmaf(model: String) -> PyResult<()> {
-  Ok(av1an_core::vmaf::validate_vmaf(model).unwrap())
+  av1an_core::vmaf::validate_vmaf(model).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
 pub fn plot_vmaf(source: &str, output: &str) -> PyResult<()> {
   let input = PathBuf::from(source);
   let out = PathBuf::from(output);
-  Ok(av1an_core::vmaf::plot_vmaf(input, out).unwrap())
+  av1an_core::vmaf::plot_vmaf(input, &out).unwrap();
+  Ok(())
 }
 
 #[pyfunction]
@@ -448,16 +464,63 @@ pub fn log_probes(
   target_vmaf: f64,
   skip: String,
 ) -> PyResult<()> {
-  Ok(av1an_core::target_quality::log_probes(
+  av1an_core::target_quality::log_probes(
     vmaf_cq_scores,
     frames,
     probing_rate,
-    name,
+    &name,
     target_q,
     target_vmaf,
-    skip,
-  ))
+    &skip,
+  );
+  Ok(())
 }
+
+#[pyfunction]
+pub fn av_scenechange_detect(
+  input: &str,
+  total_frames: u64,
+  min_scene_len: usize,
+  quiet: bool,
+  is_vs: bool,
+) -> PyResult<Vec<usize>> {
+  if !quiet {
+    println!("Scene detection");
+    av1an_core::progress_bar::init_progress_bar(total_frames).unwrap();
+  }
+
+  let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
+    Path::new(input),
+    if quiet {
+      None
+    } else {
+      Some(Box::new(|frames, _keyframes| {
+        let _ = av1an_core::progress_bar::set_pos(frames as u64);
+      }))
+    },
+    min_scene_len,
+    is_vs,
+  )
+  .map_err(|e| {
+    pyo3::exceptions::PyChildProcessError::new_err(format!(
+      "Error in av-scenechange detection: {}",
+      e
+    ))
+  });
+
+  let _ = av1an_core::progress_bar::finish_progress_bar();
+
+  if let Ok(ref mut frames) = frames {
+    if frames[0] == 0 {
+      // TODO refactor the chunk creation to not require this
+      // Currently, this is required for compatibility with create_video_queue_vs
+      frames.remove(0);
+    }
+  }
+
+  frames
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -509,6 +572,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(interpolate_target_q, m)?)?;
   m.add_function(wrap_pyfunction!(interpolate_target_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(log_probes, m)?)?;
+  m.add_function(wrap_pyfunction!(av_scenechange_detect, m)?)?;
 
   Ok(())
 }

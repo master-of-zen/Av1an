@@ -6,7 +6,7 @@ use std::{path::PathBuf, u32};
 
 pub fn plot_vmaf_score_file(
   scores_file: PathBuf,
-  plot_path: PathBuf,
+  plot_path: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
   let scores = read_vmaf_file(scores_file.clone()).unwrap();
 
@@ -17,7 +17,7 @@ pub fn plot_vmaf_score_file(
   let perc_1 = read_weighted_vmaf(scores_file.clone(), 0.01).unwrap();
   let perc_25 = read_weighted_vmaf(scores_file.clone(), 0.25).unwrap();
   let perc_75 = read_weighted_vmaf(scores_file.clone(), 0.75).unwrap();
-  let perc_mean = read_weighted_vmaf(scores_file.clone(), 0.50).unwrap();
+  let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
 
   let root =
     BitMapBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
@@ -95,7 +95,7 @@ pub fn validate_libvmaf() -> Result<(), Error> {
   Ok(())
 }
 
-pub fn validate_vmaf_test_run(model: String) -> Result<(), Error> {
+pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.args(["-hide_banner", "-filter_complex"]);
@@ -117,12 +117,12 @@ pub fn validate_vmaf_test_run(model: String) -> Result<(), Error> {
 
 pub fn validate_vmaf(vmaf_model: String) -> Result<(), Error> {
   validate_libvmaf()?;
-  validate_vmaf_test_run(vmaf_model)?;
+  validate_vmaf_test_run(&vmaf_model)?;
 
   Ok(())
 }
 
-pub fn run_vmaf_on_files(source: PathBuf, output: PathBuf) -> Result<PathBuf, Error> {
+pub fn run_vmaf_on_files(source: &PathBuf, output: PathBuf) -> Result<PathBuf, Error> {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.args(["-y", "-hide_banner", "-loglevel", "error"]);
@@ -153,10 +153,11 @@ pub fn run_vmaf_on_files(source: PathBuf, output: PathBuf) -> Result<PathBuf, Er
   }
 }
 
-pub fn plot_vmaf(source: PathBuf, output: PathBuf) -> Result<(), Error> {
+pub fn plot_vmaf(source: PathBuf, output: &PathBuf) -> Result<(), Error> {
   println!("::VMAF Run..");
 
-  let json_file = run_vmaf_on_files(source, output.clone())?;
+  let json_file = run_vmaf_on_files(&source, output.clone())?;
   let plot_path = output.with_extension("png");
-  Ok(plot_vmaf_score_file(json_file, plot_path).unwrap())
+  plot_vmaf_score_file(json_file, &plot_path).unwrap();
+  Ok(())
 }

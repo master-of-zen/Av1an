@@ -429,11 +429,11 @@ impl Encoder {
 
   pub fn match_line(&self, line: &str) -> Option<usize> {
     let encoder_regex = Regex::new(self.pipe_match()).unwrap();
-    if !encoder_regex.is_match(&line) {
+    if !encoder_regex.is_match(line) {
       return Some(0);
     }
     let captures = encoder_regex
-      .captures(&line)
+      .captures(line)
       .unwrap()
       .get(1)
       .unwrap()
@@ -608,17 +608,8 @@ impl Encoder {
 
   pub fn construct_target_quality_command_probe_slow(&self, q: String) -> Vec<Cow<str>> {
     match &self {
-      Self::aom => into_vec![
-        "aomenc",
-        "--passes=1",
-        format!("--cq-level={}", q),
-      ],
-      Self::rav1e => into_vec![
-        "rav1e",
-        "-y",
-        "--quantizer",
-        q,
-      ],
+      Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
+      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q,],
       Self::libvpx => into_vec![
         "vpxenc",
         "--passes=1",
@@ -627,13 +618,7 @@ impl Encoder {
         "--end-usage=q",
         format!("--cq-level={}", q),
       ],
-      Self::svt_av1 => into_vec![
-        "SvtAv1EncApp",
-        "-i",
-        "stdin",
-        "--crf",
-        q,
-      ],
+      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q,],
       Self::x264 => into_vec![
         "x264",
         "--log-level",
@@ -659,12 +644,12 @@ impl Encoder {
 
   // Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
   pub fn remove_patterns(&self, args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
-    let mut out = args.clone();
+    let mut out = args;
     for pattern in patterns {
       if let Some(index) = out.iter().position(|value| value.contains(&pattern)) {
         out.remove(index);
         // If pattern does not contain =, we need to remove the index that follows.
-        if pattern.contains("=") == false {
+        if !pattern.contains('=') {
           out.remove(index);
         }
       }
@@ -675,7 +660,7 @@ impl Encoder {
   // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
   pub fn decow_strings(&self, args: Vec<Cow<str>>) -> Vec<String> {
     args.iter().map(|s| s.to_string()).collect::<Vec<String>>()
- }
+  }
 
   pub fn probe_cmd(
     &self,
@@ -714,8 +699,14 @@ impl Encoder {
 
     let mut params;
     if probe_slow {
-      let mut args = video_params.clone();
-      let patterns = into_vec!["--cq-level=", "--passes=", "--pass=", "--crf", "--quantizer"];
+      let mut args = video_params;
+      let patterns = into_vec![
+        "--cq-level=",
+        "--passes=",
+        "--pass=",
+        "--crf",
+        "--quantizer"
+      ];
       args = self.remove_patterns(args, patterns);
       let ps = self.construct_target_quality_command_probe_slow(q);
       params = self.decow_strings(ps);

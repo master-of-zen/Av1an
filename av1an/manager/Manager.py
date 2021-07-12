@@ -1,12 +1,9 @@
 import json
 import shutil
 import sys
-import time
 from multiprocessing.managers import BaseManager
 from pathlib import Path
-from typing import List
 
-from av1an.chunk import Chunk
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.concat import concatenate_mkvmerge
 from av1an.project.Project import Project
@@ -14,11 +11,9 @@ from av1an.split import split_routine
 from av1an_pyo3 import (
     concatenate_ffmpeg,
     concatenate_ivf,
-    create_vs_file,
     extract_audio,
     log,
     plot_vmaf,
-    process_inputs,
     set_log,
     determine_workers,
     hash_path,

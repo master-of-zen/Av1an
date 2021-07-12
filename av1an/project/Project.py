@@ -90,7 +90,7 @@ class Project(object):
                     self.chunk_method,
                 )
             )
-            fr = frame_probe_vspipe(vs)
+            fr = frame_probe_vspipe(str(vs))
             if fr > 0:
                 self.frames = fr
                 return fr

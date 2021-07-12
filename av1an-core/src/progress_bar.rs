@@ -1,42 +1,47 @@
-use indicatif::ProgressBar;
-use indicatif::ProgressStyle;
-use once_cell::sync::OnceCell;
+// TODO move this functionality to av1an-cli (and without global variables) when
+// Python code is removed. This is only here (and implemented this way) for
+// interoperability with Python.
+
+use indicatif::{ProgressBar, ProgressStyle};
 use std::error;
+use std::sync::Mutex;
+
+use once_cell::sync::Lazy;
 
 const INDICATIF_PROGRESS_TEMPLATE: &str =
   "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps}, eta {eta})";
 
-static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
+static PROGRESS_BAR: Lazy<Mutex<ProgressBar>> = Lazy::new(|| Mutex::new(ProgressBar::new(0)));
 
 pub fn init_progress_bar(len: u64) -> Result<(), Box<dyn error::Error>> {
-  PROGRESS_BAR.get_or_init(|| {
-    let bar = ProgressBar::new(len);
-    bar.set_style(
-      ProgressStyle::default_bar()
-        .template(INDICATIF_PROGRESS_TEMPLATE)
-        .progress_chars("#>-"),
-    );
-    bar.enable_steady_tick(100);
-    bar
-  });
+  let pb = PROGRESS_BAR.lock().unwrap();
+
+  pb.reset_elapsed();
+  pb.reset_eta();
+  pb.set_position(0);
+  pb.set_length(len);
+  pb.reset();
+  pb.set_style(
+    ProgressStyle::default_bar()
+      .template(INDICATIF_PROGRESS_TEMPLATE)
+      .progress_chars("#>-"),
+  );
+  pb.enable_steady_tick(100);
 
   Ok(())
 }
 
 pub fn update_bar(inc: u64) -> Result<(), Box<dyn error::Error>> {
-  Ok(
-    PROGRESS_BAR
-      .get()
-      .expect("The progress bar was not initialized!")
-      .inc(inc),
-  )
+  PROGRESS_BAR.lock().unwrap().inc(inc);
+  Ok(())
+}
+
+pub fn set_pos(pos: u64) -> Result<(), Box<dyn error::Error>> {
+  PROGRESS_BAR.lock().unwrap().set_position(pos);
+  Ok(())
 }
 
 pub fn finish_progress_bar() -> Result<(), Box<dyn error::Error>> {
-  Ok(
-    PROGRESS_BAR
-      .get()
-      .expect("The progress bar was not initialized!")
-      .finish(),
-  )
+  PROGRESS_BAR.lock().unwrap().finish();
+  Ok(())
 }

@@ -138,7 +138,7 @@ def create_vs_chunk(
 
     vspipe_gen_cmd = [
         "vspipe",
-        vs_script,
+        str(vs_script),
         "-y",
         "-",
         "-s",

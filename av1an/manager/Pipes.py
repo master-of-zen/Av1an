@@ -33,53 +33,12 @@ def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
             u_pipe.kill()
 
     if pipe.returncode != 0 and pipe.returncode != -2:
-        msg1 = f"Encoder encountered an error: {pipe.returncode}"
-        msg2 = f"Chunk: {chunk.index}" + "\n".join(encoder_history)
+        msg1 = (
+            f"Encoder encountered an error: {pipe.returncode}\n"
+            + f"Chunk: {chunk.index}"
+            + "\n".join(encoder_history)
+        )
         log(msg1)
-        log(msg2)
-        tb = sys.exc_info()[2]
-        raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
-
-
-def process_encoding_pipe(
-    pipe, encoder, counter, chunk: Chunk, utility: Iterable[Popen]
-):
-    encoder_history = deque(maxlen=20)
-    frame = 0
-    while True:
-        line = pipe.stdout.readline().strip()
-
-        if len(line) == 0 and pipe.poll() is not None:
-            break
-
-        if len(line) == 0:
-            continue
-
-        if len(line) > 1:
-            encoder_history.append(line)
-
-        if "fatal" in line.lower() or "error" in line.lower():
-            print("ERROR IN ENCODING PROCESS")
-            print("\n".join(encoder_history))
-            sys.exit(1)
-
-        new = match_line(encoder, line)
-        if new > frame:
-            counter(new - frame)
-            frame = new
-
-    for u_pipe in utility:
-        if u_pipe.poll() is None:
-            u_pipe.kill()
-
-    if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
-        msg1 = f"Encoder encountered an error: {pipe.returncode}"
-        msg2 = f"Chunk: {chunk.index}"
-        msg3 = "\n".join(encoder_history)
-        log(msg1)
-        log(msg2)
-        log(msg3)
-        print(f"::{msg1}\n::{msg2}\n::{msg3}")
         tb = sys.exc_info()[2]
         raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
 
@@ -116,5 +75,41 @@ def create_pipes(
         universal_newlines=True,
     )
 
-    utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
-    process_encoding_pipe(pipe, encoder, a.counter_update, c, utility)
+    encoder_history = deque(maxlen=20)
+    frame = 0
+    while True:
+        line = pipe.stdout.readline().strip()
+
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+
+        if len(line) == 0:
+            continue
+
+        if len(line) > 1:
+            encoder_history.append(line)
+
+        new = match_line(encoder, line)
+        if new > frame:
+            a.counter_update(new - frame)
+            frame = new
+    if pipe.returncode != 0:
+
+        print("ERROR IN ENCODING PROCESS")
+        print("\n".join(encoder_history))
+        sys.exit(1)
+
+    for u_pipe in (ffmpeg_gen_pipe, ffmpeg_pipe):
+        if u_pipe.poll() is None:
+            u_pipe.kill()
+
+    if pipe.returncode != 0 and pipe.returncode != -2:  # -2 is Ctrl+C for aom
+        msg = (
+            f"Encoder encountered an error: {pipe.returncode}\n"
+            + f"Chunk: {c.index}\n"
+            + "\n".join(encoder_history)
+        )
+        log(msg)
+        print(msg)
+        tb = sys.exc_info()[2]
+        raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)

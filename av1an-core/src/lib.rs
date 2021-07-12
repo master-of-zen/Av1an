@@ -166,8 +166,8 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   system.refresh_memory();
 
   let cpu = num_cpus::get() as u64;
-  // get_total_memory returns kb, convert to gb
-  let ram_gb = system.get_total_memory() / 10u64.pow(6);
+  // available_memory returns kb, convert to gb
+  let ram_gb = system.available_memory() / 10u64.pow(6);
 
   std::cmp::max(
     match encoder {

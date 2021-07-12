@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "maturin"
-requires = ["setuptools", "maturin"]
+requires = ["setuptools", "maturin>=0.11,<0.12"]
 
 [tool.maturin]
 # cargo-extra-args = ["--release"]

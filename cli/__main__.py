@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 from av1an.arg_parse import Args
-from av1an.manager import Manager
 from av1an.startup.setup import startup_check
 from pathlib import Path
 import sys
-from av1an_pyo3 import (
-    process_inputs,
-)
+from av1an_pyo3 import process_inputs, hash_path
 
 import time
 
@@ -49,6 +46,9 @@ def main():
 
             if len(queue) > 1:
                 print(f":: Encoding file {proj.input.name}")
+            if (project.temp is None) and project.keep:
+                print(f":: Temp dir: '.{str(hash_path(str(project.input[i])))}'")
+
             encode_file(proj)
 
             print(f"Finished: {round(time.time() - tm, 1)}s")

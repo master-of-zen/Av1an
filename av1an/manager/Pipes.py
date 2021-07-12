@@ -11,7 +11,6 @@ from av1an_pyo3 import (
     compose_1_2_pass,
     compose_2_2_pass,
     compose_ffmpeg_pipe,
-    encoder_bin,
     log,
     man_command,
     match_line,

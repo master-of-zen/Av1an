@@ -475,6 +475,52 @@ pub fn log_probes(
   );
   Ok(())
 }
+
+#[pyfunction]
+pub fn av_scenechange_detect(
+  input: &str,
+  total_frames: u64,
+  min_scene_len: usize,
+  quiet: bool,
+  is_vs: bool,
+) -> PyResult<Vec<usize>> {
+  if !quiet {
+    println!("Scene detection");
+    av1an_core::progress_bar::init_progress_bar(total_frames).unwrap();
+  }
+
+  let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
+    Path::new(input),
+    if quiet {
+      None
+    } else {
+      Some(Box::new(|frames, _keyframes| {
+        let _ = av1an_core::progress_bar::set_pos(frames as u64);
+      }))
+    },
+    min_scene_len,
+    is_vs,
+  )
+  .map_err(|e| {
+    pyo3::exceptions::PyChildProcessError::new_err(format!(
+      "Error in av-scenechange detection: {}",
+      e
+    ))
+  });
+
+  let _ = av1an_core::progress_bar::finish_progress_bar();
+
+  if let Ok(ref mut frames) = frames {
+    if frames[0] == 0 {
+      // TODO refactor the chunk creation to not require this
+      // Currently, this is required for compatibility with create_video_queue_vs
+      frames.remove(0);
+    }
+  }
+
+  frames
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -526,6 +572,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(interpolate_target_q, m)?)?;
   m.add_function(wrap_pyfunction!(interpolate_target_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(log_probes, m)?)?;
+  m.add_function(wrap_pyfunction!(av_scenechange_detect, m)?)?;
 
   Ok(())
 }

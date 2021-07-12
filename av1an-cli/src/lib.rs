@@ -53,8 +53,8 @@ pub struct Args {
   scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long, possible_values = &["ffmpeg", "pyscene"])]
-  split_method: Option<String>,
+  #[clap(long, possible_values = &["ffmpeg", "pyscene", "av-scenechange", "none"], default_value = "av-scenechange")]
+  split_method: String,
 
   /// Number of frames after which make split
   #[clap(short = 'x', long, default_value = "240")]
@@ -120,7 +120,7 @@ pub struct Args {
   target_quality: Option<f64>,
 
   /// Method selection for target quality
-  #[clap(long, possible_values = &[ "per_shot"], default_value = "per_shot")]
+  #[clap(long, possible_values = &["per_shot"], default_value = "per_shot")]
   target_quality_method: String,
 
   /// Number of probes to make for target_quality

@@ -3,9 +3,11 @@ use std::process::exit;
 
 /// Returns file if it have suffix of media file
 fn match_file_type(input: &PathBuf) -> bool {
-  ["mkv", "mp4", "mov", "avi", "flv", "m2ts", "y4m"]
-    .iter()
-    .any(|&v| input.extension().map_or(false, |u| v == u))
+  [
+    "mkv", "mp4", "mov", "avi", "flv", "m2ts", "y4m", "py", "vpy",
+  ]
+  .iter()
+  .any(|&v| input.extension().map_or(false, |u| v == u))
 }
 
 fn validate_files(files: &[PathBuf]) -> Vec<PathBuf> {

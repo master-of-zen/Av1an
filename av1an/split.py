@@ -4,7 +4,13 @@ import sys
 from pathlib import Path
 from typing import List
 
-from av1an_pyo3 import extra_splits, log, read_scenes_from_file, write_scenes_to_file
+from av1an_pyo3 import (
+    extra_splits,
+    log,
+    read_scenes_from_file,
+    write_scenes_to_file,
+    av_scenechange_detect,
+)
 
 from .project import Project
 from .scenedetection import ffmpeg, pyscene
@@ -45,7 +51,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
         log("Applying extra splits")
         log(f"Split distance: {project.extra_split}")
         scenes = extra_splits(scenes, project.get_frames(), project.extra_split)
-        log(f"New splits:{len(scenes)}")
+        log(f"New splits: {len(scenes)}")
 
     # write scenes for resuming later if needed
     return scenes
@@ -72,7 +78,14 @@ def calc_split_locations(project: Project) -> List[int]:
             log(f"Error in PySceneDetect: {e}")
             print(f"Error in PySceneDetect: {e}")
             sys.exit(1)
-
+    elif project.split_method == "av-scenechange":
+        sc = av_scenechange_detect(
+            project.input.as_posix(),
+            project.get_frames(),
+            project.min_scene_len,
+            project.quiet,
+            project.is_vs,
+        )
     elif project.split_method == "ffmpeg":
         sc = ffmpeg(
             project.input,

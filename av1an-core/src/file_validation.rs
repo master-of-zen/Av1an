@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 /// Returns file if it have suffix of media file
-fn match_file_type(input: &PathBuf) -> bool {
+fn match_file_type(input: &Path) -> bool {
   [
     "mkv", "mp4", "mov", "avi", "flv", "m2ts", "y4m", "py", "vpy",
   ]

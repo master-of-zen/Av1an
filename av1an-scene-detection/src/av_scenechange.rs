@@ -10,7 +10,7 @@ use std::{
 pub fn scene_detect(
   src: &Path,
   callback: Option<Box<dyn Fn(usize, usize)>>,
-  min: usize,
+  min_scene_len: usize,
   is_vs: bool,
 ) -> anyhow::Result<Vec<usize>> {
   Ok(
@@ -68,7 +68,7 @@ pub fn scene_detect(
       })?,
       DetectionOptions {
         ignore_flashes: true,
-        min_scenecut_distance: Some(12),
+        min_scenecut_distance: Some(min_scene_len),
         ..Default::default()
       },
       callback,

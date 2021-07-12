@@ -13,7 +13,7 @@ from av1an_pyo3 import (
 )
 
 from .project import Project
-from .scenedetection import ffmpeg, pyscene
+from .scenedetection import pyscene
 
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
@@ -85,15 +85,6 @@ def calc_split_locations(project: Project) -> List[int]:
             project.min_scene_len,
             project.quiet,
             project.is_vs,
-        )
-    elif project.split_method == "ffmpeg":
-        sc = ffmpeg(
-            project.input,
-            project.threshold,
-            project.min_scene_len,
-            project.get_frames(),
-            project.is_vs,
-            project.temp,
         )
 
     # Write scenes to file

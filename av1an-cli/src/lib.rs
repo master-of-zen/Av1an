@@ -53,7 +53,7 @@ pub struct Args {
   scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long, possible_values = &["ffmpeg", "pyscene", "av-scenechange", "none"], default_value = "av-scenechange")]
+  #[clap(long, possible_values = &["pyscene", "av-scenechange", "none"], default_value = "av-scenechange")]
   split_method: String,
 
   /// Number of frames after which make split

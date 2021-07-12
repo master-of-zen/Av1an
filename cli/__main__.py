@@ -27,7 +27,17 @@ def main():
         pj = Project(vars(project))
         pj.input = file
         pj.outputs_filenames()
-        pj.promt_output_overwrite()
+        if pj.output_file.exists():
+            print(
+                f":: Output file {pj.output_file} exist, overwrite? [y/n or enter]:",
+                end="",
+            )
+            promt = input()
+            if "y" in promt.lower() or promt.strip() == "":
+                pass
+            else:
+                print("Stopping")
+                sys.exit()
         queue.append(pj)
 
     for i, proj in enumerate(queue):

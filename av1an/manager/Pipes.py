@@ -62,6 +62,7 @@ def process_encoding_pipe(
             print("ERROR IN ENCODING PROCESS")
             print("\n".join(encoder_history))
             sys.exit(1)
+
         new = match_line(encoder, line)
         if new > frame:
             counter.update(new - frame)
@@ -100,19 +101,19 @@ def create_pipes(
     if c.per_shot_target_quality_cq:
         enc_cmd = man_command(a.encoder, enc_cmd, c.per_shot_target_quality_cq)
 
-    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=STDOUT)
+    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE)
     ffmpeg_pipe = subprocess.Popen(
         compose_ffmpeg_pipe(a.ffmpeg_pipe),
         stdin=ffmpeg_gen_pipe.stdout,
         stdout=PIPE,
-        stderr=STDOUT,
+        stderr=STDOUT
     )
     pipe = subprocess.Popen(
         enc_cmd,
         stdin=ffmpeg_pipe.stdout,
         stdout=PIPE,
         stderr=STDOUT,
-        universal_newlines=True,
+        universal_newlines=True
     )
 
     utility = (ffmpeg_gen_pipe, ffmpeg_pipe)

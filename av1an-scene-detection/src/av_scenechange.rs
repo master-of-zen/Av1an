@@ -17,7 +17,6 @@ pub fn scene_detect(
     detect_scene_changes::<_, u8>(
       &mut y4m::Decoder::new(if is_vs {
         {
-          // vspipe -y .b8a0d8d/split/loadscript.vpy - | ffmpeg -i pipe: -f yuv4mpegpipe -pix_fmt yuv420p -vf scale=360:-2 - | mpv -
           let vspipe = Command::new("vspipe")
             .arg("-y")
             .arg(src)

@@ -219,7 +219,7 @@ pub fn read_file_to_string(file: &Path) -> Result<String, Error> {
   Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file)))
 }
 
-pub fn read_vmaf_file(file: PathBuf) -> Result<Vec<f64>, serde_json::Error> {
+pub fn read_vmaf_file(file: &Path) -> Result<Vec<f64>, serde_json::Error> {
   let json_str = read_file_to_string(&file).unwrap();
   let bazs = serde_json::from_str::<Baz>(&json_str)?;
   let v = bazs
@@ -231,7 +231,7 @@ pub fn read_vmaf_file(file: PathBuf) -> Result<Vec<f64>, serde_json::Error> {
   Ok(v)
 }
 
-pub fn read_weighted_vmaf(file: PathBuf, percentile: f64) -> Result<f64, serde_json::Error> {
+pub fn read_weighted_vmaf(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
   let scores = read_vmaf_file(file).unwrap();
 
   Ok(get_percentile(scores, percentile))

@@ -2,46 +2,48 @@
 // Python code is removed. This is only here (and implemented this way) for
 // interoperability with Python.
 
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use std::error;
-use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
 const INDICATIF_PROGRESS_TEMPLATE: &str =
   "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps}, eta {eta})";
 
-static PROGRESS_BAR: Lazy<Mutex<ProgressBar>> = Lazy::new(|| Mutex::new(ProgressBar::new(0)));
-
-pub fn init_progress_bar(len: u64) -> Result<(), Box<dyn error::Error>> {
-  let pb = PROGRESS_BAR.lock().unwrap();
-
-  pb.reset_elapsed();
-  pb.reset_eta();
-  pb.set_position(0);
-  pb.set_length(len);
-  pb.reset();
+static PROGRESS_BAR: Lazy<ProgressBar> = Lazy::new(|| {
+  let pb = ProgressBar::hidden();
   pb.set_style(
     ProgressStyle::default_bar()
       .template(INDICATIF_PROGRESS_TEMPLATE)
       .progress_chars("#>-"),
   );
-  pb.enable_steady_tick(100);
+  pb.set_draw_target(ProgressDrawTarget::stderr());
+
+  pb
+});
+
+pub fn init_progress_bar(len: u64) -> Result<(), Box<dyn error::Error>> {
+  PROGRESS_BAR.enable_steady_tick(100);
+  PROGRESS_BAR.reset_elapsed();
+  PROGRESS_BAR.reset_eta();
+  PROGRESS_BAR.set_position(0);
+  PROGRESS_BAR.set_length(len);
+  PROGRESS_BAR.reset();
 
   Ok(())
 }
 
 pub fn update_bar(inc: u64) -> Result<(), Box<dyn error::Error>> {
-  PROGRESS_BAR.lock().unwrap().inc(inc);
+  PROGRESS_BAR.inc(inc);
   Ok(())
 }
 
 pub fn set_pos(pos: u64) -> Result<(), Box<dyn error::Error>> {
-  PROGRESS_BAR.lock().unwrap().set_position(pos);
+  PROGRESS_BAR.set_position(pos);
   Ok(())
 }
 
 pub fn finish_progress_bar() -> Result<(), Box<dyn error::Error>> {
-  PROGRESS_BAR.lock().unwrap().finish();
+  PROGRESS_BAR.finish();
   Ok(())
 }

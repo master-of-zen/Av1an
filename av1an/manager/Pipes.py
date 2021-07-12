@@ -1,7 +1,7 @@
 import subprocess
 import sys
 from collections import deque
-from subprocess import PIPE, STDOUT, Popen
+from subprocess import PIPE, STDOUT, DEVNULL, Popen
 from typing import Iterable
 
 from av1an.chunk import Chunk
@@ -101,19 +101,19 @@ def create_pipes(
     if c.per_shot_target_quality_cq:
         enc_cmd = man_command(a.encoder, enc_cmd, c.per_shot_target_quality_cq)
 
-    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE)
+    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
     ffmpeg_pipe = subprocess.Popen(
         compose_ffmpeg_pipe(a.ffmpeg_pipe),
         stdin=ffmpeg_gen_pipe.stdout,
         stdout=PIPE,
-        stderr=STDOUT
+        stderr=STDOUT,
     )
     pipe = subprocess.Popen(
         enc_cmd,
         stdin=ffmpeg_pipe.stdout,
         stdout=PIPE,
         stderr=STDOUT,
-        universal_newlines=True
+        universal_newlines=True,
     )
 
     utility = (ffmpeg_gen_pipe, ffmpeg_pipe)

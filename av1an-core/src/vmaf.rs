@@ -1,23 +1,29 @@
 use crate::{read_vmaf_file, read_weighted_vmaf};
 use anyhow::Error;
 use plotters::prelude::*;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{path::PathBuf, u32};
 
-pub fn plot_vmaf_score_file(
-  scores_file: PathBuf,
-  plot_path: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-  let scores = read_vmaf_file(scores_file.clone()).unwrap();
+#[inline]
+fn printable_base10_digits(x: usize) -> u32 {
+  (((x as f64).log10() + 1.0).floor() as u32).max(1)
+}
 
-  let plot_width = 2560 + ((scores.len() as f64).log10() as u32 * 200);
+pub fn plot_vmaf_score_file(
+  scores_file: &Path,
+  plot_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+  let scores = read_vmaf_file(&scores_file).unwrap();
+
+  let plot_width = 2560 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 1440;
 
   let length = scores.len() as u32;
-  let perc_1 = read_weighted_vmaf(scores_file.clone(), 0.01).unwrap();
-  let perc_25 = read_weighted_vmaf(scores_file.clone(), 0.25).unwrap();
-  let perc_75 = read_weighted_vmaf(scores_file.clone(), 0.75).unwrap();
-  let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
+  let perc_1 = read_weighted_vmaf(&scores_file, 0.01).unwrap();
+  let perc_25 = read_weighted_vmaf(&scores_file, 0.25).unwrap();
+  let perc_75 = read_weighted_vmaf(&scores_file, 0.75).unwrap();
+  let perc_mean = read_weighted_vmaf(&scores_file, 0.50).unwrap();
 
   let root =
     BitMapBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
@@ -115,14 +121,14 @@ pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
   }
 }
 
-pub fn validate_vmaf(vmaf_model: String) -> Result<(), Error> {
+pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
   validate_libvmaf()?;
   validate_vmaf_test_run(&vmaf_model)?;
 
   Ok(())
 }
 
-pub fn run_vmaf_on_files(source: &PathBuf, output: PathBuf) -> Result<PathBuf, Error> {
+pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error> {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.args(["-y", "-hide_banner", "-loglevel", "error"]);
@@ -153,11 +159,11 @@ pub fn run_vmaf_on_files(source: &PathBuf, output: PathBuf) -> Result<PathBuf, E
   }
 }
 
-pub fn plot_vmaf(source: PathBuf, output: &PathBuf) -> Result<(), Error> {
+pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
   println!("::VMAF Run..");
 
-  let json_file = run_vmaf_on_files(&source, output.clone())?;
+  let json_file = run_vmaf_on_files(&source, output)?;
   let plot_path = output.with_extension("png");
-  plot_vmaf_score_file(json_file, &plot_path).unwrap();
+  plot_vmaf_score_file(&json_file, &plot_path).unwrap();
   Ok(())
 }

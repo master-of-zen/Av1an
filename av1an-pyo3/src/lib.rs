@@ -391,13 +391,15 @@ fn probe_cmd(
 
 #[pyfunction]
 pub fn get_percentile(scores: Vec<f64>, percent: f64) -> PyResult<f64> {
-  Ok(av1an_core::get_percentile(scores, percent))
+  // pyo3 doesn't seem to support `mut` in function declarations, so this is necessary
+  let mut scores = scores;
+  Ok(av1an_core::get_percentile(&mut scores, percent))
 }
 
 #[pyfunction]
 pub fn read_weighted_vmaf(fl: String, percentile: f64) -> PyResult<f64> {
   let file = PathBuf::from(fl);
-  let val = av1an_core::read_weighted_vmaf(file, percentile).unwrap();
+  let val = av1an_core::read_weighted_vmaf(&file, percentile).unwrap();
   Ok(val)
 }
 
@@ -423,12 +425,12 @@ pub fn finish_progress_bar() -> PyResult<()> {
 pub fn plot_vmaf_score_file(scores_file_string: String, plot_path_string: String) {
   let scores_file = PathBuf::from(scores_file_string);
   let plot_path = PathBuf::from(plot_path_string);
-  av1an_core::vmaf::plot_vmaf_score_file(scores_file, &plot_path).unwrap()
+  av1an_core::vmaf::plot_vmaf_score_file(&scores_file, &plot_path).unwrap()
 }
 
 #[pyfunction]
-pub fn validate_vmaf(model: String) -> PyResult<()> {
-  av1an_core::vmaf::validate_vmaf(model).unwrap();
+pub fn validate_vmaf(model: &str) -> PyResult<()> {
+  av1an_core::vmaf::validate_vmaf(&model).unwrap();
   Ok(())
 }
 
@@ -436,7 +438,7 @@ pub fn validate_vmaf(model: String) -> PyResult<()> {
 pub fn plot_vmaf(source: &str, output: &str) -> PyResult<()> {
   let input = PathBuf::from(source);
   let out = PathBuf::from(output);
-  av1an_core::vmaf::plot_vmaf(input, &out).unwrap();
+  av1an_core::vmaf::plot_vmaf(&input, &out).unwrap();
   Ok(())
 }
 

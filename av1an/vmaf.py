@@ -35,7 +35,7 @@ class VMAF:
         cmd = ""
 
         if fl_path is None:
-            fl_path = (chunk.temp / "split") / f"{chunk.name}.json"
+            fl_path = (Path(chunk.temp) / "split") / f"{chunk.name}.json"
         fl = fl_path.as_posix()
 
         cmd_in = (

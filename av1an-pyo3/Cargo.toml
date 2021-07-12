@@ -36,3 +36,7 @@ av1an-core = { path="../av1an-core" }
 av1an-cli = { path="../av1an-cli" }
 av1an-encoder-constructor = { path="../av1an-encoder-constructor" }
 av1an-scene-detection = { path="../av1an-scene-detection" }
+dict_derive = "0.3.1"
+which = "4.1.0"
+regex = "1.5.4"
+strsim = "0.10.0"

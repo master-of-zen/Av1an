@@ -1,6 +1,5 @@
 #!/bin/env python
 
-import sys
 from pathlib import Path
 from typing import List
 
@@ -10,13 +9,12 @@ from av1an_pyo3 import (
     read_scenes_from_file,
     write_scenes_to_file,
     av_scenechange_detect,
+    Project,
 )
-
-from .project import Project
 
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
-    scene_file = project.temp / "scenes.json"
+    scene_file = Path(project.temp) / "scenes.json"
 
     if resuming:
         scenes, frames = read_scenes_from_file(str(scene_file.resolve()))
@@ -32,7 +30,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
     if project.scenes and Path(project.scenes).exists():
         log("Using Saved Scenes")
         scenes, frames = read_scenes_from_file(str(Path(project.scenes).resolve()))
-        project.set_frames(frames)
+        project.frames = frames
 
     else:
         scenes = calc_split_locations(project)
@@ -59,7 +57,7 @@ def calc_split_locations(project: Project) -> List[int]:
     sc = []
     if project.split_method == "av-scenechange":
         sc = av_scenechange_detect(
-            project.input.as_posix(),
+            project.input,
             project.get_frames(),
             project.min_scene_len,
             project.quiet,

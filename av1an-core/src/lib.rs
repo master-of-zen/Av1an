@@ -87,6 +87,17 @@ impl FromStr for ChunkMethod {
   }
 }
 
+impl ToString for ChunkMethod {
+  fn to_string(&self) -> String {
+    match self {
+      Self::FFMS2 => "vs_ffms2".to_string(),
+      Self::LSMASH => "vs_lsmash".to_string(),
+      Self::Hybrid => "hybrid".to_string(),
+      Self::Select => "select".to_string(),
+    }
+  }
+}
+
 #[allow(unused)]
 pub struct EncodeConfig {
   frames: usize,

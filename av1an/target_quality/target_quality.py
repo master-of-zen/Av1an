@@ -1,6 +1,5 @@
-import fnmatch
-import os
 import subprocess
+from pathlib import Path
 from math import isnan
 
 import numpy as np
@@ -135,7 +134,7 @@ class TargetQuality:
         )
         cmd = probe_cmd(
             self.encoder,
-            str(self.temp.as_posix()),
+            str(Path(self.temp).as_posix()),
             chunk.name,
             str(q),
             self.ffmpeg_pipe,
@@ -165,7 +164,7 @@ class TargetQuality:
 
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         process_pipe(pipe, chunk.index, utility)
-        probe_name = chunk.temp / "split" / f"v_{q}{chunk.name}.ivf"
+        probe_name = Path(chunk.temp) / "split" / f"v_{q}{chunk.name}.ivf"
         fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
         return fl
 

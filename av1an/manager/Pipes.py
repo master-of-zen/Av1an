@@ -65,7 +65,7 @@ def process_encoding_pipe(
 
         new = match_line(encoder, line)
         if new > frame:
-            counter.update(new - frame)
+            counter(new - frame)
             frame = new
 
     for u_pipe in utility:
@@ -117,4 +117,4 @@ def create_pipes(
     )
 
     utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
-    process_encoding_pipe(pipe, encoder, counter, c, utility)
+    process_encoding_pipe(pipe, encoder, a.counter_update, c, utility)

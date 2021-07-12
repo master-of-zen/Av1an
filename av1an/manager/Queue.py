@@ -38,7 +38,7 @@ class Queue:
                         _, _, exc_tb = sys.exc_info()
                         print(f"Encoding error {exc}\nAt line {exc_tb.tb_lineno}")
                         sys.exit(1)
-        self.project.counter.close()
+        self.project.finish_progress_bar()
 
     def encode_chunk(self, chunk: Chunk):
         restart_count = 0

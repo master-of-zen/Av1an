@@ -17,9 +17,11 @@ from av1an_pyo3 import (
     set_log,
     determine_workers,
     hash_path,
+    init_progress_bar,
+    update_bar,
+    finish_progress_bar,
 )
 
-from .Counter import BaseManager, Counter, Manager
 from .Queue import Queue
 
 
@@ -86,12 +88,11 @@ def encode_file(project: Project):
     project.workers = min(project.workers, len(chunk_queue))
     print(
         f"\rQueue: {len(chunk_queue)} Workers: {project.workers} Passes: {project.passes}\n"
-        f'Params: {" ".join(project.video_params)}'
+        f'Params: {" ".join(project.video_params)}\n'
     )
-    BaseManager.register("Counter", Counter)
-    project.counter = Manager().Counter(
-        project.get_frames(), initial_frames, project.quiet
-    )
+    init_progress_bar(project.get_frames() - initial_frames)
+    project.counter_update = update_bar
+    project.finish_progress_bar = finish_progress_bar
     queue = Queue(project, chunk_queue)
     queue.encoding_loop()
 

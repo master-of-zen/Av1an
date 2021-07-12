@@ -5,13 +5,18 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{path::PathBuf, u32};
 
+#[inline]
+fn printable_base10_digits(x: usize) -> u32 {
+  (((x as f64).log10() + 1.0).floor() as u32).max(1)
+}
+
 pub fn plot_vmaf_score_file(
   scores_file: &Path,
   plot_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
   let scores = read_vmaf_file(&scores_file).unwrap();
 
-  let plot_width = 2560 + ((scores.len() as f64).log10() as u32 * 200);
+  let plot_width = 2560 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 1440;
 
   let length = scores.len() as u32;

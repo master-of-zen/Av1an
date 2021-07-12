@@ -118,7 +118,7 @@ jobs:
 
       - name: Testing ${{ matrix.name }}
         run: |
-          ./av1an.py -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an -t 20 --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          ./av1an.py -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
 

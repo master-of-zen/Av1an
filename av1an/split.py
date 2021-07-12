@@ -13,7 +13,6 @@ from av1an_pyo3 import (
 )
 
 from .project import Project
-from .scenedetection import pyscene
 
 
 def split_routine(project: Project, resuming: bool) -> List[int]:
@@ -36,7 +35,6 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
         project.set_frames(frames)
 
     else:
-        # determines split frames with pyscenedetect or aom keyframes
         scenes = calc_split_locations(project)
         if project.scenes and Path(project.scenes).exists():
             write_scenes_to_file(
@@ -59,26 +57,7 @@ def split_routine(project: Project, resuming: bool) -> List[int]:
 
 def calc_split_locations(project: Project) -> List[int]:
     sc = []
-
-    # Splitting using PySceneDetect
-    if project.split_method == "pyscene":
-        log(
-            f"Starting scene detection Threshold: {project.threshold}, Min_scene_length: {project.min_scene_len}"
-        )
-        try:
-            sc = pyscene(
-                project.input,
-                project.threshold,
-                project.min_scene_len,
-                project.is_vs,
-                project.temp,
-                project.quiet,
-            )
-        except Exception as e:
-            log(f"Error in PySceneDetect: {e}")
-            print(f"Error in PySceneDetect: {e}")
-            sys.exit(1)
-    elif project.split_method == "av-scenechange":
+    if project.split_method == "av-scenechange":
         sc = av_scenechange_detect(
             project.input.as_posix(),
             project.get_frames(),

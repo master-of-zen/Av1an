@@ -29,7 +29,6 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
             video = cv2.VideoCapture(source.as_posix())
             total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
             video.release()
-            log("Can't open input with Pyscenedetect OpenCV")
     if is_vs or total < 1:
         total = frame_probe(source)
 

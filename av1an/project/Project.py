@@ -32,9 +32,6 @@ class Project(object):
         self.extra_split: int = None
         self.min_scene_len: int = None
 
-        # PySceneDetect split
-        self.threshold: float = None
-
         # Encoding
         self.passes = None
         self.video_params = None

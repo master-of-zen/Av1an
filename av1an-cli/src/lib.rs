@@ -53,16 +53,12 @@ pub struct Args {
   scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long, possible_values = &["pyscene", "av-scenechange", "none"], default_value = "av-scenechange")]
+  #[clap(long, possible_values = &["av-scenechange", "none"], default_value = "av-scenechange")]
   split_method: String,
 
   /// Number of frames after which make split
   #[clap(short = 'x', long, default_value = "240")]
   extra_split: usize,
-
-  /// PySceneDetect Threshold
-  #[clap(short, long, default_value = "35.0")]
-  threshold: f64,
 
   /// Minimum number of frames in a split
   #[clap(long, default_value = "60")]

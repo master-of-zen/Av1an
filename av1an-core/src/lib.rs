@@ -103,8 +103,6 @@ pub struct EncodeConfig {
   split_method: SplitMethod,
   extra_split: usize,
   min_scene_len: usize,
-  // PySceneDetect split
-  threshold: f32,
 
   // Encoding
   passes: (),

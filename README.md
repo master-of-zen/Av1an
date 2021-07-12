@@ -91,16 +91,8 @@ With your own parameters:
 
 <h3 align="center">Segmenting</h3>
 
-    --split-method          Method used for generating splits.(Default: PySceneDetect)
-                            Options: `pyscene`, `aom_keyframes`, `none`
-                            `pyscene` - PyScenedetect, content based scenedetection
-                            with threshold.
-                            `aom_keyframes` - using stat file of 1 pass of aomenc encode
-                            to get exact place where encoder will place new keyframes.
-                            (Keep in mind that speed also depends on set aomenc parameters)
-                            `ffmpeg` - Uses FFmpeg built in content based scene detection
-                            with threshold. Slower and less precise than pyscene but requires
-                            fewer dependencies.
+    --split-method          Method used for generating splits.(Default: av-scenedetect)
+                            Options: `av-scenedetect`, `none`
                             `none` -  skips scenedetection. Useful for splitting by time
 
     -m  --chunk-method      Determine the method in which chunks are made for encoding.
@@ -108,9 +100,6 @@ With your own parameters:
                             vs_ffms2 > vs_lsmash > hybrid.
                             vs_ffms2 or vs_lsmash are recommended.
                             ['hybrid'(default), 'select', 'vs_ffms2', 'vs_lsmash']
-
-
-    -t  --threshold         PySceneDetect threshold for scene detection Default: 35
 
     -s   --scenes           Path to file with scenes timestamps.
                             If the file doesn't exist, a new file will be generated
@@ -176,7 +165,6 @@ With your own parameters:
 
 **Splitting video by scenes for parallel encoding** because AV1 encoders are currently not very good at multithreading and encoding is limited to a very limited number of threads.
 
--   [PySceneDetect](https://pyscenedetect.readthedocs.io/en/latest/) used for splitting video by scenes and running multiple encoders.
 -   [Vapoursynth](http://www.vapoursynth.com) script input support.
 -   Fastest way to encode AV1 without losing quality, as fast as many CPU cores you have :).
 -   Target Quality mode. Targeting end result reference visual quality. VMAF used as a substructure

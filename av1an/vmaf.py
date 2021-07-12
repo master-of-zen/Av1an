@@ -87,6 +87,6 @@ class VMAF:
             universal_newlines=True,
         )
         utility = (ffmpeg_gen_pipe,)
-        process_pipe(pipe, chunk, utility)
+        process_pipe(pipe, chunk.index, utility)
 
         return fl_path

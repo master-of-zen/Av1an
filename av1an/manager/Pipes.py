@@ -17,7 +17,7 @@ from av1an_pyo3 import (
 )
 
 
-def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
+def process_pipe(pipe, chunk_index, utility: Iterable[Popen]):
     encoder_history = deque(maxlen=20)
     while True:
         line = pipe.stdout.readline().strip()
@@ -35,7 +35,7 @@ def process_pipe(pipe, chunk: Chunk, utility: Iterable[Popen]):
     if pipe.returncode != 0 and pipe.returncode != -2:
         msg1 = (
             f"Encoder encountered an error: {pipe.returncode}\n"
-            + f"Chunk: {chunk.index}"
+            + f"Chunk: {chunk_index}"
             + "\n".join(encoder_history)
         )
         log(msg1)

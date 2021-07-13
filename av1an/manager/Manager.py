@@ -5,7 +5,7 @@ from pathlib import Path
 
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.concat import concatenate_mkvmerge
-from av1an.split import split_routine
+
 from av1an_pyo3 import (
     concatenate_ffmpeg,
     concatenate_ivf,
@@ -51,7 +51,7 @@ def encode_file(project: Project):
         set_log((Path(project.temp) / "log.log").as_posix())
 
     # find split locations
-    split_locations = split_routine(project, project.resume)
+    split_locations = project.split_routine()
 
     # create a chunk queue
     chunk_queue = load_or_gen_chunk_queue(project, project.resume, split_locations)

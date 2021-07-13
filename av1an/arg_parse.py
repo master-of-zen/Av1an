@@ -32,11 +32,12 @@ class Args:
         if self.parsed["video_params"] is None:
             self.parsed["video_params"] = []
         else:
-            self.parsed["video_params"] = shlex.split(
-                self.parsed["video_params"])
+            self.parsed["video_params"] = shlex.split(self.parsed["video_params"])
 
         if self.parsed["output_file"] is None:
-            self.parsed["output_file"] = f"{self.parsed['input']}_{self.parsed['encoder']}.mkv"
+            self.parsed[
+                "output_file"
+            ] = f"{Path(self.parsed['input']).stem}_{self.parsed['encoder']}.mkv"
 
         self.parsed["audio_params"] = shlex.split(self.parsed["audio_params"])
         self.parsed["ffmpeg_pipe"] = []

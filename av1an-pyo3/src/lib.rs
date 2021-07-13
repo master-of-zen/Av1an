@@ -209,19 +209,19 @@ fn process_inputs(input: Vec<String>) -> Vec<String> {
 fn write_scenes_to_file(
   scenes: Vec<usize>,
   frames: usize,
-  scenes_path_string: String,
+  scenes_path_string: &str,
 ) -> PyResult<()> {
   let scene_path = PathBuf::from(scenes_path_string);
 
-  av1an_core::split::write_scenes_to_file(scenes, frames, scene_path).unwrap();
+  av1an_core::split::write_scenes_to_file(&scenes, frames, &scene_path).unwrap();
   Ok(())
 }
 
 #[pyfunction]
-fn read_scenes_from_file(scenes_path_string: String) -> (Vec<usize>, usize) {
+fn read_scenes_from_file(scenes_path_string: &str) -> (Vec<usize>, usize) {
   let scene_path = PathBuf::from(scenes_path_string);
 
-  av1an_core::split::read_scenes_from_file(scene_path).unwrap()
+  av1an_core::split::read_scenes_from_file(&scene_path).unwrap()
 }
 
 #[pyfunction]
@@ -488,14 +488,14 @@ pub fn log_probes(
 #[pyfunction]
 pub fn av_scenechange_detect(
   input: &str,
-  total_frames: u64,
+  total_frames: usize,
   min_scene_len: usize,
   quiet: bool,
   is_vs: bool,
 ) -> PyResult<Vec<usize>> {
   if !quiet {
     println!("Scene detection");
-    av1an_core::progress_bar::init_progress_bar(total_frames).unwrap();
+    av1an_core::progress_bar::init_progress_bar(total_frames as u64).unwrap();
   }
 
   let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
@@ -539,7 +539,7 @@ fn is_vapoursynth(s: &str) -> bool {
 #[derive(Default, FromPyObject)]
 struct Project {
   #[pyo3(get, set)]
-  frames: u32,
+  frames: usize,
   #[pyo3(get, set)]
   is_vs: bool,
 
@@ -563,9 +563,9 @@ struct Project {
   #[pyo3(get, set)]
   split_method: String,
   #[pyo3(get, set)]
-  extra_split: u32,
+  extra_split: usize,
   #[pyo3(get, set)]
-  min_scene_len: u32,
+  min_scene_len: usize,
 
   #[pyo3(get, set)]
   passes: u8,
@@ -658,13 +658,13 @@ impl Project {
     project
   }
 
-  fn get_frames(&mut self, py: Python) -> u32 {
+  fn get_frames(&mut self, py: Python) -> usize {
     if self.frames != 0 {
       return self.frames;
     }
 
     self.frames = if self.is_vs {
-      py.allow_threads(|| vapoursynth::num_frames(Path::new(&self.input)).unwrap() as u32)
+      py.allow_threads(|| vapoursynth::num_frames(Path::new(&self.input)).unwrap())
     } else {
       if ["vs_ffms2", "vs_lsmash"].contains(&self.chunk_method.as_ref().unwrap().as_str()) {
         let vs = if self.is_vs {
@@ -677,14 +677,14 @@ impl Project {
           )
           .unwrap()
         };
-        let fr = py.allow_threads(|| vapoursynth::num_frames(Path::new(&vs)).unwrap() as u32);
+        let fr = py.allow_threads(|| vapoursynth::num_frames(Path::new(&vs)).unwrap());
         if fr > 0 {
-          fr as u32
+          fr
         } else {
           panic!("vapoursynth reported 0 frames")
         }
       } else {
-        ffmpeg_get_frame_count(&self.input) as u32
+        ffmpeg_get_frame_count(&self.input)
       }
     };
 
@@ -829,6 +829,81 @@ impl Project {
     ]);
 
     Ok(())
+  }
+
+  fn calc_split_locations(&self) -> Vec<usize> {
+    let mut sc = vec![];
+
+    if self.split_method == "av-scenechange" {
+      sc = av_scenechange_detect(
+        &self.input,
+        self.frames,
+        self.min_scene_len,
+        self.quiet,
+        self.is_vs,
+      )
+      .unwrap();
+    }
+
+    let default = Path::new(&self.temp).join("scenes.json");
+    av1an_core::split::write_scenes_to_file(
+      &sc,
+      self.frames,
+      if let Some(ref scenes) = self.scenes {
+        Path::new(scenes)
+      } else {
+        &default
+      },
+    )
+    .unwrap();
+
+    sc
+  }
+
+  // TODO refactor
+  fn split_routine(&mut self, py: Python) -> Vec<usize> {
+    // TODO make self.frames impossible to misuse
+    let _ = self.get_frames(py);
+
+    let scene_file = Path::new(&self.temp).join("scenes.json");
+
+    let mut scenes = vec![];
+
+    if self.resume {
+      let (scenes, frames) =
+        av1an_core::split::read_scenes_from_file(scene_file.as_path()).unwrap();
+      self.frames = frames;
+      return scenes;
+    }
+
+    if self.split_method == "none" {
+      log("Skipping scene detection");
+    }
+
+    if let Some(ref scenes_file) = self.scenes {
+      if Path::new(scenes_file).exists() {
+        let (scenes_inner, frames) =
+          av1an_core::split::read_scenes_from_file(Path::new(scenes_file)).unwrap();
+        scenes = scenes_inner;
+
+        self.frames = frames;
+      }
+    } else {
+      let scenes = self.calc_split_locations();
+      if let Some(ref scenes_file) = self.scenes {
+        if Path::new(scenes_file).exists() {
+          av1an_core::split::write_scenes_to_file(&scenes, self.frames, Path::new(scenes_file));
+        }
+      }
+    }
+
+    if self.extra_split != 0 {
+      log("Applying extra splits");
+      log(format!("Split distance: {}", self.extra_split).as_str());
+      scenes = av1an_core::split::extra_splits(scenes, self.frames, self.extra_split);
+    }
+
+    scenes
   }
 }
 

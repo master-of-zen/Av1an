@@ -3,7 +3,7 @@ use std::error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 pub fn segment(input: &Path, temp: &Path, segments: &[usize]) {
@@ -86,12 +86,15 @@ struct ScenesData {
 }
 
 pub fn write_scenes_to_file(
-  scenes: Vec<usize>,
+  scenes: &[usize],
   frames: usize,
-  scene_path: PathBuf,
+  scene_path: &Path,
 ) -> std::io::Result<()> {
   // Writes a list of scenes and frame count to the file
-  let data = ScenesData { scenes, frames };
+  let data = ScenesData {
+    scenes: scenes.to_vec(),
+    frames,
+  };
 
   let serialized = serde_json::to_string(&data).unwrap();
 
@@ -101,8 +104,9 @@ pub fn write_scenes_to_file(
 
   Ok(())
 }
+
 pub fn read_scenes_from_file(
-  scene_path: PathBuf,
+  scene_path: &Path,
 ) -> Result<(Vec<usize>, usize), Box<dyn error::Error>> {
   let file = File::open(scene_path)?;
 

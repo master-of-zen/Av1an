@@ -29,7 +29,7 @@ def main():
     if Path(project.output_file).exists():
         print(
             f":: Output file {project.output_file} exist, overwrite? [y/n or enter]: ",
-            end="",
+            end="\r",
         )
         promt = input()
         if "y" in promt.lower() or promt.strip() == "":
@@ -40,12 +40,6 @@ def main():
 
     try:
         tm = time.time()
-
-        print(f":: Encoding file {project.input}")
-
-        if project.keep:
-            print(f":: Temp dir: '{project.temp}'")
-
         encode_file(project)
 
         print(f"Finished: {round(time.time() - tm, 1)}s")

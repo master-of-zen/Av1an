@@ -17,23 +17,8 @@ from av1an_pyo3 import (
 class Args:
     def __init__(self):
         self.defaults = json.loads(default_args())
-        self.parsed = None
-        self.project = None
 
     def get_project(self):
-        """
-        Create and return project object with all parameters
-        """
-        self.parse()
-
-        self.project = Project(self.parsed)
-
-        return self.project
-
-    def parse(self):
-        """
-        Parse command line parameters provided by user
-        """
         self.parsed = json.loads(parse_args())
         self.parsed["ffmpeg"] = self.parsed["ffmpeg"] if self.parsed["ffmpeg"] else ""
         if self.parsed["temp"] is None:
@@ -47,7 +32,11 @@ class Args:
         if self.parsed["video_params"] is None:
             self.parsed["video_params"] = []
         else:
-            self.parsed["video_params"] = shlex.split(self.parsed["video_params"])
+            self.parsed["video_params"] = shlex.split(
+                self.parsed["video_params"])
+
+        if self.parsed["output_file"] is None:
+            self.parsed["output_file"] = f"{self.parsed['input']}_{self.parsed['encoder']}.mkv"
 
         self.parsed["audio_params"] = shlex.split(self.parsed["audio_params"])
         self.parsed["ffmpeg_pipe"] = []
@@ -61,3 +50,5 @@ class Args:
         if not self.parsed["input"]:
             print("No input")
             sys.exit()
+
+        return Project(self.parsed)

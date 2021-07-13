@@ -1,12 +1,10 @@
 import json
 import shutil
 import sys
-from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 from av1an.chunk.chunk_queue import load_or_gen_chunk_queue
 from av1an.concat import concatenate_mkvmerge
-from av1an.project.Project import Project
 from av1an.split import split_routine
 from av1an_pyo3 import (
     concatenate_ffmpeg,
@@ -20,6 +18,7 @@ from av1an_pyo3 import (
     init_progress_bar,
     update_bar,
     finish_progress_bar,
+    Project,
 )
 
 from .Queue import Queue
@@ -32,24 +31,24 @@ def encode_file(project: Project):
         if project.temp[-1] in ("\\", "/"):
             project.temp = Path(f"{project.temp}{'.' + hash}")
         else:
-            project.temp = Path(str(project.temp))
+            project.temp = Path(str(project.temp)).as_posix()
     else:
         project.temp = Path("." + hash)
 
     log(f"File hash: {hash}")
     # Checking is resume possible
-    done_path = project.temp / "done.json"
+    done_path = Path(project.temp) / "done.json"
     project.resume = project.resume and done_path.exists()
 
-    if not project.resume and project.temp.is_dir():
+    if not project.resume and Path(project.temp).is_dir():
         shutil.rmtree(project.temp)
 
-    (project.temp / "split").mkdir(parents=True, exist_ok=True)
-    (project.temp / "encode").mkdir(exist_ok=True)
+    (Path(project.temp) / "split").mkdir(parents=True, exist_ok=True)
+    (Path(project.temp) / "encode").mkdir(exist_ok=True)
     if project.logging:
         set_log(Path(project.logging).with_suffix(".log").as_posix())
     else:
-        set_log((project.temp / "log.log").as_posix())
+        set_log((Path(project.temp) / "log.log").as_posix())
 
     # find split locations
     split_locations = split_routine(project, project.resume)
@@ -57,7 +56,7 @@ def encode_file(project: Project):
     # create a chunk queue
     chunk_queue = load_or_gen_chunk_queue(project, project.resume, split_locations)
 
-    done_path = project.temp / "done.json"
+    done_path = Path(project.temp) / "done.json"
     if project.resume and done_path.exists():
         log("Resuming...")
         with open(done_path) as done_file:
@@ -76,8 +75,8 @@ def encode_file(project: Project):
 
     if not project.resume:
         extract_audio(
-            str(project.input.resolve()),
-            str(project.temp.resolve()),
+            str(Path(project.input).resolve()),
+            str(Path(project.temp).resolve()),
             project.audio_params,
         )
 
@@ -106,20 +105,20 @@ def encode_file(project: Project):
     log("Concatenating")
     if project.output_ivf:
         concatenate_ivf(
-            str((project.temp / "encode").resolve()),
-            str(project.output_file.with_suffix(".ivf").resolve()),
+            str((Path(project.temp) / "encode").resolve()),
+            str(Path(project.output_file).with_suffix(".ivf").resolve()),
         )
     elif project.mkvmerge:
         concatenate_mkvmerge(project.temp, project.output_file)
     else:
         concatenate_ffmpeg(
-            str(str(project.temp.resolve())),
-            str(str(project.output_file.resolve())),
+            str(Path(project.temp).resolve()),
+            str(Path(project.output_file).resolve()),
             project.encoder,
         )
 
     if project.vmaf:
-        plot_vmaf(str(project.input), str(project.output_file.as_posix()))
+        plot_vmaf(Path(project.input).as_posix(), Path(project.output_file).as_posix())
 
     # Delete temp folders
     if not project.keep:

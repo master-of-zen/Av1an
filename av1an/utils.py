@@ -1,13 +1,9 @@
 #!/bin/env python
 
-import re
 from pathlib import Path
-from typing import List
 
 import cv2
-from av1an_pyo3 import ffmpeg_get_frame_count, frame_probe_vspipe, log
-
-from av1an.vapoursynth import is_vapoursynth
+from av1an_pyo3 import ffmpeg_get_frame_count, frame_probe_vspipe, log, is_vapoursynth
 
 
 def frame_probe_fast(source: Path, is_vs: bool = False):
@@ -36,7 +32,7 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
 
 
 def frame_probe(source: Path):
-    if is_vapoursynth(source):
-        return frame_probe_vspipe(source)
+    if is_vapoursynth(source.as_posix()):
+        return frame_probe_vspipe(source.resolve().as_posix())
 
-    return ffmpeg_get_frame_count(str(source.resolve()))
+    return ffmpeg_get_frame_count(source.resolve().as_posix())

@@ -4,6 +4,7 @@ import json
 import sys
 import time
 import traceback
+from pathlib import Path
 
 from av1an.chunk import Chunk
 from av1an.target_quality import TargetQuality
@@ -62,7 +63,6 @@ class Queue:
                         self.project,
                         chunk,
                         self.project.encoder,
-                        self.project.counter,
                         chunk_frames,
                         self.project.passes,
                         current_pass,
@@ -73,7 +73,7 @@ class Queue:
 
                 # write this chunk as done if it encoded correctly
                 if encoded_frames == chunk_frames:
-                    progress_file = self.project.temp / "done.json"
+                    progress_file = Path(self.project.temp) / "done.json"
                     with progress_file.open() as f:
                         d = json.load(f)
                         d["done"][chunk.name] = encoded_frames

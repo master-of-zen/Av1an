@@ -33,16 +33,14 @@ class Chunk:
 
     @property
     def output_path(self) -> Path:
-        return (self.temp / "encode") / f"{self.name}.{self.output_ext}"
+        return (Path(self.temp) / "encode") / f"{self.name}.{self.output_ext}"
 
     @property
     def output(self) -> str:
-
         return self.output_path.as_posix()
 
     @property
     def name(self) -> str:
-
         return str(self.index).zfill(5)
 
     @staticmethod

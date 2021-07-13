@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-from av1an.arg_parse import Args
-from av1an.startup.setup import startup_check
 from pathlib import Path
+from av1an.arg_parse import Args
 import sys
-from av1an_pyo3 import process_inputs, hash_path
+import os
+import atexit
 
 import time
 
-from av1an.project.Project import Project
 from av1an.manager.Manager import encode_file
 
 
@@ -15,56 +14,44 @@ def main():
     """
     Running Av1an CLI
     """
+
     parser = Args()
     project = parser.get_project()
-    startup_check(project)
-    inputs = [str(x).strip() for x in project.input]
-    input_paths = [Path(x) for x in process_inputs(inputs)]
+    project.startup_check()
 
-    file_queue = input_paths
-    queue = []
-    for file in file_queue:
-        pj = Project(vars(project))
-        pj.input = file
-        pj.outputs_filenames()
-        if pj.output_file.exists():
-            print(
-                f":: Output file {pj.output_file} exist, overwrite? [y/n or enter]:",
-                end="",
-            )
-            promt = input()
-            if "y" in promt.lower() or promt.strip() == "":
-                pass
-            else:
-                print("Stopping")
-                sys.exit()
-        queue.append(pj)
+    if sys.platform == "linux":
 
-    for i, proj in enumerate(queue):
-        if proj.output_file.exists() and len(queue) > 1:
-            print(
-                f":: Skipping file {proj.input.name}\n:: Outputfile {proj.output_file.name} exists"
-            )
+        def restore_term():
+            os.system("stty sane")
 
-            # Don't print new line on last project to console
-            if i + 1 < len(queue):
-                print()
+        atexit.register(restore_term)
 
-            continue
-        try:
-            tm = time.time()
-
-            if len(queue) > 1:
-                print(f":: Encoding file {proj.input.name}")
-            if (project.temp is None) and project.keep:
-                print(f":: Temp dir: '.{str(hash_path(str(project.input[i])))}'")
-
-            encode_file(proj)
-
-            print(f"Finished: {round(time.time() - tm, 1)}s")
-        except KeyboardInterrupt:
-            print("Encoding stopped")
+    if Path(project.output_file).exists():
+        print(
+            f":: Output file {project.output_file} exist, overwrite? [y/n or enter]: ",
+            end="",
+        )
+        promt = input()
+        if "y" in promt.lower() or promt.strip() == "":
+            pass
+        else:
+            print("Stopping")
             sys.exit()
+
+    try:
+        tm = time.time()
+
+        print(f":: Encoding file {project.input}")
+
+        if project.keep:
+            print(f":: Temp dir: '{project.temp}'")
+
+        encode_file(project)
+
+        print(f"Finished: {round(time.time() - tm, 1)}s")
+    except KeyboardInterrupt:
+        print("Encoding stopped")
+        sys.exit()
 
 
 if __name__ == "__main__":

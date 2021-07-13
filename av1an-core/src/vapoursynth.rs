@@ -12,7 +12,7 @@ extern crate vapoursynth;
 
 use clap::{App, Arg};
 use std::cmp;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::File;
@@ -867,23 +867,42 @@ fn run(args: &[&str]) -> Result<(), Error> {
   Ok(())
 }
 
-// TODO Use this implementation when there is no python code left,
-// unfortunately, if you call it through pyo3, it seems to segfault
-// no matter what, which does not happen if it's being called by
-// other rust code. I do not have the time to debug this, but this
-// should probably be reported to pyo3 at some point.
-#[allow(unused)]
-fn get_num_frames(path: &Path) -> Result<usize, Error> {
-  // Open the output files.
-  let mut output_target = OutputTarget::Stdout(stdout());
-
+pub fn select_chunk_method() -> Result<ChunkMethod, Error> {
   // Create a new VSScript environment.
-  let mut environment = Environment::new().context("Couldn't create the VSScript environment")?;
+  let environment = Environment::new().context("Couldn't create the VSScript environment")?;
+  let core = environment
+    .get_core()
+    .context("Couldn't get the VapourSynth core")?;
+
+  let plugins = core.plugins();
+  let plugins: HashSet<&str> = plugins
+    .keys()
+    .filter_map(|plugin| {
+      plugins
+        .get::<&[u8]>(plugin)
+        .ok()
+        .and_then(|slice| std::str::from_utf8(slice).ok())
+        .and_then(|s| s.split(';').nth(1))
+    })
+    .collect();
+
+  if plugins.contains("systems.innocent.lsmas") {
+    Ok(ChunkMethod::LSMASH)
+  } else if plugins.contains("com.vapoursynth.ffms2") {
+    Ok(ChunkMethod::FFMS2)
+  } else {
+    Ok(ChunkMethod::Hybrid)
+  }
+}
+
+pub fn num_frames(path: &Path) -> anyhow::Result<usize> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
 
   // Evaluate the script.
   environment
     .eval_file(path, EvalFlags::SetWorkingDir)
-    .context("Script evaluation failed")?;
+    .unwrap();
 
   // Get the output node.
   let output_index = 0;
@@ -894,25 +913,19 @@ fn get_num_frames(path: &Path) -> Result<usize, Error> {
     output_index
   ))?;
   #[cfg(not(feature = "gte-vsscript-api-31"))]
-  let (node, alpha_node) = (
-    environment.get_output(output_index).context(format!(
-      "Couldn't get the output node at index {}",
-      output_index
-    ))?,
-    None::<Node>,
-  );
+  let (node, _) = (environment.get_output(output_index).unwrap(), None::<Node>);
 
   let num_frames = {
     let info = node.info();
 
     if let Property::Variable = info.format {
-      bail!("Cannot output clips with varying format");
+      panic!("Cannot output clips with varying format");
     }
     if let Property::Variable = info.resolution {
-      bail!("Cannot output clips with varying dimensions");
+      panic!("Cannot output clips with varying dimensions");
     }
     if let Property::Variable = info.framerate {
-      bail!("Cannot output clips with varying framerate");
+      panic!("Cannot output clips with varying framerate");
     }
 
     #[cfg(feature = "gte-vapoursynth-api-32")]
@@ -923,7 +936,7 @@ fn get_num_frames(path: &Path) -> Result<usize, Error> {
       match info.num_frames {
         Property::Variable => {
           // TODO: make it possible?
-          bail!("Cannot output clips with unknown length");
+          panic!("Cannot output clips with unknown length");
         }
         Property::Constant(x) => x,
       }
@@ -933,28 +946,4 @@ fn get_num_frames(path: &Path) -> Result<usize, Error> {
   };
 
   Ok(num_frames)
-}
-
-// TODO delete this implementation eventually, link to C api
-pub fn frame_probe_vspipe(source: &Path) -> anyhow::Result<usize> {
-  use regex::Regex;
-
-  let output = String::from_utf8(
-    Command::new("vspipe")
-      .arg("-i")
-      .arg(source)
-      .arg("-")
-      .output()?
-      .stdout,
-  )?;
-
-  let re = Regex::new(r#"Frames:\s*([0-9]+)\s"#)?;
-  Ok(
-    re.captures(&output)
-      .unwrap()
-      .get(1)
-      .unwrap()
-      .as_str()
-      .parse::<usize>()?,
-  )
 }

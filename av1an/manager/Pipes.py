@@ -3,9 +3,9 @@ import sys
 from collections import deque
 from subprocess import PIPE, STDOUT, DEVNULL, Popen
 from typing import Iterable
+from pathlib import Path
 
 from av1an.chunk import Chunk
-from av1an.project import Project
 from av1an_pyo3 import (
     compose_1_1_pass,
     compose_1_2_pass,
@@ -14,6 +14,7 @@ from av1an_pyo3 import (
     log,
     man_command,
     match_line,
+    Project,
 )
 
 
@@ -44,10 +45,10 @@ def process_pipe(pipe, chunk_index, utility: Iterable[Popen]):
 
 
 def create_pipes(
-    a: Project, c: Chunk, encoder, counter, frame_probe_source, passes, current_pass
+    a: Project, c: Chunk, encoder, frame_probe_source, passes, current_pass
 ):
 
-    fpf_file = str(((c.temp / "split") / f"{c.name}_fpf").as_posix())
+    fpf_file = str(((Path(c.temp) / "split") / f"{c.name}_fpf").as_posix())
 
     if passes == 1:
         enc_cmd = compose_1_1_pass(a.encoder, a.video_params, c.output)

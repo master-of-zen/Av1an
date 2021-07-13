@@ -1,8 +1,13 @@
+use once_cell::sync::Lazy;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use av1an_core::vapoursynth;
 use av1an_core::{ChunkMethod, Encoder};
+use regex::Regex;
 
+use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -11,6 +16,8 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::usize;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
+
+use dict_derive::FromPyObject;
 
 #[pyfunction]
 fn adapt_probing_rate(rate: usize, _frames: usize) -> usize {
@@ -132,9 +139,9 @@ fn determine_workers(encoder: &str) -> PyResult<u64> {
 }
 
 #[pyfunction]
-fn frame_probe_vspipe(source: &str) -> PyResult<usize> {
-  av1an_core::vapoursynth::frame_probe_vspipe(Path::new(source))
-    .map_err(|e| pyo3::exceptions::PyTypeError::new_err(format!("{}", e)))
+fn frame_probe_vspipe(py: Python, source: &str) -> PyResult<usize> {
+  let frames = py.allow_threads(|| av1an_core::vapoursynth::num_frames(Path::new(source)));
+  frames.map_err(|e| pyo3::exceptions::PyTypeError::new_err(format!("{}", e)))
 }
 
 #[pyfunction]
@@ -245,7 +252,7 @@ fn log(msg: &str) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn get_default_pass(encoder: String) -> PyResult<usize> {
+fn get_default_pass(encoder: &str) -> PyResult<usize> {
   Ok(
     av1an_encoder_constructor::Encoder::from_str(&encoder)
       .unwrap()
@@ -254,7 +261,7 @@ fn get_default_pass(encoder: String) -> PyResult<usize> {
 }
 
 #[pyfunction]
-fn get_default_cq_range(encoder: String) -> PyResult<(usize, usize)> {
+fn get_default_cq_range(encoder: &str) -> PyResult<(usize, usize)> {
   Ok(
     av1an_encoder_constructor::Encoder::from_str(&encoder)
       .unwrap()
@@ -263,7 +270,7 @@ fn get_default_cq_range(encoder: String) -> PyResult<(usize, usize)> {
 }
 
 #[pyfunction]
-fn get_default_arguments(encoder: String) -> PyResult<Vec<String>> {
+fn get_default_arguments(encoder: &str) -> PyResult<Vec<String>> {
   let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
   let default_arguments = encoder.get_default_arguments();
 
@@ -276,7 +283,7 @@ fn get_default_arguments(encoder: String) -> PyResult<Vec<String>> {
 }
 
 #[pyfunction]
-fn help_command(encoder: String) -> PyResult<Vec<String>> {
+fn help_command(encoder: &str) -> PyResult<Vec<String>> {
   let encoder = av1an_encoder_constructor::Encoder::from_str(&encoder).unwrap();
   let help_command = encoder.help_command();
 
@@ -289,7 +296,7 @@ fn help_command(encoder: String) -> PyResult<Vec<String>> {
 }
 
 #[pyfunction]
-fn encoder_bin(encoder: String) -> PyResult<String> {
+fn encoder_bin(encoder: &str) -> PyResult<String> {
   Ok(
     av1an_encoder_constructor::Encoder::from_str(&encoder)
       .unwrap()
@@ -299,7 +306,7 @@ fn encoder_bin(encoder: String) -> PyResult<String> {
 }
 
 #[pyfunction]
-fn output_extension(encoder: String) -> PyResult<String> {
+fn output_extension(encoder: &str) -> PyResult<String> {
   Ok(
     av1an_encoder_constructor::Encoder::from_str(&encoder)
       .unwrap()
@@ -523,6 +530,308 @@ pub fn av_scenechange_detect(
   frames
 }
 
+#[pyfunction]
+fn is_vapoursynth(s: &str) -> bool {
+  [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
+}
+
+#[pyclass(dict)]
+#[derive(Default, FromPyObject)]
+struct Project {
+  #[pyo3(get, set)]
+  frames: u32,
+  #[pyo3(get, set)]
+  is_vs: bool,
+
+  #[pyo3(get, set)]
+  input: String,
+  #[pyo3(get, set)]
+  temp: String,
+  #[pyo3(get, set)]
+  output_file: String,
+  #[pyo3(get, set)]
+  mkvmerge: bool,
+  #[pyo3(get, set)]
+  output_ivf: bool,
+  #[pyo3(get, set)]
+  webm: bool,
+
+  #[pyo3(get, set)]
+  chunk_method: Option<String>,
+  #[pyo3(get, set)]
+  scenes: Option<String>,
+  #[pyo3(get, set)]
+  split_method: String,
+  #[pyo3(get, set)]
+  extra_split: u32,
+  #[pyo3(get, set)]
+  min_scene_len: u32,
+
+  #[pyo3(get, set)]
+  passes: u8,
+  #[pyo3(get, set)]
+  video_params: Vec<String>,
+  #[pyo3(get, set)]
+  encoder: String,
+  #[pyo3(get, set)]
+  workers: usize,
+
+  // FFmpeg params
+  #[pyo3(get, set)]
+  ffmpeg_pipe: Vec<String>,
+  #[pyo3(get, set)]
+  ffmpeg: Vec<String>,
+  #[pyo3(get, set)]
+  audio_params: Vec<String>,
+  #[pyo3(get, set)]
+  pix_format: String,
+
+  #[pyo3(get, set)]
+  quiet: bool,
+  #[pyo3(get, set)]
+  logging: String,
+  #[pyo3(get, set)]
+  resume: bool,
+  #[pyo3(get, set)]
+  keep: bool,
+  #[pyo3(get, set)]
+  force: bool,
+
+  #[pyo3(get, set)]
+  vmaf: bool,
+  #[pyo3(get, set)]
+  vmaf_path: Option<String>,
+  #[pyo3(get, set)]
+  vmaf_res: Option<String>,
+
+  #[pyo3(get, set)]
+  target_quality: Option<f32>,
+  #[pyo3(get, set)]
+  probes: u32,
+  #[pyo3(get, set)]
+  probe_slow: bool,
+  #[pyo3(get, set)]
+  min_q: Option<u32>,
+  #[pyo3(get, set)]
+  max_q: Option<u32>,
+  #[pyo3(get, set)]
+  vmaf_plots: Option<bool>,
+  #[pyo3(get, set)]
+  probing_rate: u32,
+  #[pyo3(get, set)]
+  target_quality_method: Option<String>,
+  #[pyo3(get, set)]
+  n_threads: Option<u32>,
+  #[pyo3(get, set)]
+  vmaf_filter: Option<String>,
+}
+
+static HELP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+(-\w+|(?:--\w+(?:-\w+)*))").unwrap());
+
+// TODO refactor to make types generic
+fn invalid_params<'a>(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
+  params
+    .iter()
+    .filter_map(|param| {
+      if valid_options.contains(param) {
+        None
+      } else {
+        Some(param)
+      }
+    })
+    .map(|s| s.to_string())
+    .collect()
+}
+
+fn suggest_fix(wrong_arg: &str, arg_dictionary: &HashSet<String>) -> Option<String> {
+  arg_dictionary
+    .iter()
+    .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
+    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
+    .map(|(s, _)| (*s).to_owned())
+}
+
+#[pymethods]
+impl Project {
+  #[new]
+  fn new(project: Project) -> Self {
+    project
+  }
+
+  fn get_frames(&mut self, py: Python) -> u32 {
+    if self.frames != 0 {
+      return self.frames;
+    }
+
+    self.frames = if self.is_vs {
+      py.allow_threads(|| vapoursynth::num_frames(Path::new(&self.input)).unwrap() as u32)
+    } else {
+      if ["vs_ffms2", "vs_lsmash"].contains(&self.chunk_method.as_ref().unwrap().as_str()) {
+        let vs = if self.is_vs {
+          self.input.clone()
+        } else {
+          create_vs_file(
+            &self.temp,
+            &self.input,
+            &self.chunk_method.as_ref().unwrap(),
+          )
+          .unwrap()
+        };
+        let fr = py.allow_threads(|| vapoursynth::num_frames(Path::new(&vs)).unwrap() as u32);
+        if fr > 0 {
+          fr as u32
+        } else {
+          panic!("vapoursynth reported 0 frames")
+        }
+      } else {
+        ffmpeg_get_frame_count(&self.input) as u32
+      }
+    };
+
+    self.frames
+  }
+
+  fn select_best_chunking_method(&mut self, py: Python) {
+    // You have to wrap vapoursynth calls with `allow_threads`, otherwise
+    // a fatal Python interpreter error occurs relating to the GIL state.
+    let chunk_method = py.allow_threads(|| av1an_core::vapoursynth::select_chunk_method().unwrap());
+
+    self.chunk_method = Some(chunk_method.to_string());
+  }
+
+  /// returns a list of valid parameters
+  #[must_use]
+  fn valid_encoder_params(&self) -> HashSet<String> {
+    let help = help_command(&self.encoder).unwrap();
+
+    let help_text = String::from_utf8(
+      Command::new(&help[0])
+        .args(&help[1..])
+        .output()
+        .unwrap()
+        .stdout,
+    )
+    .unwrap();
+
+    HELP_REGEX
+      .find_iter(&help_text)
+      .filter_map(|m| {
+        m.as_str()
+          .split_ascii_whitespace()
+          .next()
+          .map(|s| s.to_owned())
+      })
+      .collect::<HashSet<String>>()
+  }
+
+  // TODO remove all of these extra allocations
+  fn validate_inputs(&self) {
+    let video_params: Vec<String> = self
+      .video_params
+      .as_slice()
+      .iter()
+      .filter_map(|param| {
+        if param.starts_with('-') {
+          param.split('=').next()
+        } else {
+          None
+        }
+      })
+      .map(|s| s.to_owned())
+      .collect();
+
+    let valid_params = self.valid_encoder_params();
+
+    let mut invalid_param_found = false;
+    for wrong_param in invalid_params(video_params.as_slice(), &valid_params) {
+      if let Some(suggestion) = suggest_fix(&wrong_param, &valid_params) {
+        println!(
+          "'{}' isn't a valid parameter for {}. Did you mean '{}'?",
+          wrong_param, self.encoder, suggestion,
+        );
+        invalid_param_found = true;
+      }
+    }
+
+    if invalid_param_found {
+      panic!("To continue anyway, run Av1an with --force");
+    }
+  }
+
+  fn startup_check(&mut self, py: Python) -> PyResult<()> {
+    if ["rav1e", "aom", "svt_av1", "vpx"].contains(&self.encoder.as_str()) && self.output_ivf {
+      panic!(".ivf only supports VP8, VP9, and AV1");
+    }
+
+    if self.chunk_method.is_none() {
+      self.select_best_chunking_method(py);
+    }
+
+    assert!(
+      Path::new(&self.input).exists(),
+      "Input file {:?} does not exist!",
+      self.input
+    );
+
+    self.is_vs = is_vapoursynth(&self.input);
+
+    if which::which("ffmpeg").is_err() {
+      panic!("No FFmpeg");
+    }
+
+    let _ = log(&get_ffmpeg_info());
+
+    if let Some(ref vmaf_path) = self.vmaf_path {
+      assert!(Path::new(vmaf_path).exists());
+    }
+
+    if self.probes < 4 {
+      println!("Target quality with less than 4 probes is experimental and not recommended");
+    }
+
+    if let Ok((min, max)) = get_default_cq_range(&self.encoder) {
+      match self.min_q {
+        None => {
+          self.min_q = Some(min as u32);
+        }
+        Some(min_q) => assert!(min_q > 1),
+      }
+      if let None = self.max_q {
+        self.max_q = Some(max as u32);
+      }
+    }
+
+    let encoder_bin = encoder_bin(&self.encoder).unwrap();
+    let settings_valid = which::which(&encoder_bin).is_ok();
+
+    if !settings_valid {
+      panic!(
+        "Encoder {} not found. Is it installed in the system path?",
+        encoder_bin
+      );
+    }
+
+    if self.video_params.is_empty() {
+      self.video_params = get_default_arguments(&self.encoder).unwrap();
+    }
+
+    self.validate_inputs();
+
+    self.ffmpeg_pipe = self.ffmpeg.clone();
+    self.ffmpeg_pipe.extend([
+      "-strict".into(),
+      "-1".into(),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ]);
+
+    Ok(())
+  }
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -575,6 +884,9 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(interpolate_target_vmaf, m)?)?;
   m.add_function(wrap_pyfunction!(log_probes, m)?)?;
   m.add_function(wrap_pyfunction!(av_scenechange_detect, m)?)?;
+  m.add_function(wrap_pyfunction!(is_vapoursynth, m)?)?;
+
+  m.add_class::<Project>()?;
 
   Ok(())
 }

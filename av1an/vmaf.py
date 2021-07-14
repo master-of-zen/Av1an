@@ -1,23 +1,10 @@
-import json
 import shlex
 import subprocess
-import sys
-from collections import deque
-from math import ceil, floor
-from math import log as ln
-from math import log10
 from pathlib import Path
 from subprocess import PIPE, STDOUT
 
-import numpy as np
-from av1an_pyo3 import (
-    get_percentile,
-    log,
-    read_weighted_vmaf,
-    validate_vmaf,
-)
+from av1an_pyo3 import validate_vmaf, Chunk
 
-from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 
 

@@ -7,8 +7,6 @@ import atexit
 
 import time
 
-from av1an.manager.Manager import encode_file
-
 
 def main():
     """
@@ -28,10 +26,11 @@ def main():
 
     if Path(project.output_file).exists():
         print(
-            f":: Output file {project.output_file} exist, overwrite? [y/n or enter]: ",
-            end="\r",
+            f":: Output file '{project.output_file}' exists, overwrite? [y/n or enter]: ",
+            end="",
         )
         promt = input()
+        print("\r\033[1A\033[0K", end="")
         if "y" in promt.lower() or promt.strip() == "":
             pass
         else:
@@ -40,7 +39,7 @@ def main():
 
     try:
         tm = time.time()
-        encode_file(project)
+        project.encode_file()
 
         print(f"Finished: {round(time.time() - tm, 1)}s")
     except KeyboardInterrupt:

@@ -1,7 +1,5 @@
 numpy
-scenedetect[opencv]
 opencv-python
-psutil
 scipy
 matplotlib
 setuptools_rust

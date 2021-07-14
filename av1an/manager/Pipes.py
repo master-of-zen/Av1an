@@ -5,7 +5,6 @@ from subprocess import PIPE, STDOUT, DEVNULL, Popen
 from typing import Iterable
 from pathlib import Path
 
-from av1an.chunk import Chunk
 from av1an_pyo3 import (
     compose_1_1_pass,
     compose_1_2_pass,
@@ -15,6 +14,8 @@ from av1an_pyo3 import (
     man_command,
     match_line,
     Project,
+    Chunk,
+    update_bar,
 )
 
 
@@ -92,7 +93,7 @@ def create_pipes(
 
         new = match_line(encoder, line)
         if new > frame:
-            a.counter_update(new - frame)
+            update_bar(new - frame)
             frame = new
     if pipe.returncode != 0:
 

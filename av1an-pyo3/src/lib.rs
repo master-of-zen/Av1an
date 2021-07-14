@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -6,11 +7,18 @@ use av1an_core::vapoursynth;
 use av1an_core::{ChunkMethod, Encoder};
 use regex::Regex;
 
-use std::cmp::Ordering;
+use serde::{Deserialize, Serialize};
+
+use std::cmp;
+use std::cmp::{Ordering, Reverse};
+use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io;
 use std::io::Write;
+use std::iter;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -145,7 +153,7 @@ fn frame_probe_vspipe(py: Python, source: &str) -> PyResult<usize> {
 }
 
 #[pyfunction]
-fn extract_audio(input: String, temp: String, audio_params: Vec<String>) {
+fn extract_audio(input: &str, temp: &str, audio_params: Vec<String>) {
   let input_path = Path::new(&input);
   let temp_path = Path::new(&temp);
   av1an_core::ffmpeg::extract_audio(input_path, temp_path, &audio_params);
@@ -181,7 +189,7 @@ fn extra_splits(split_locations: Vec<usize>, total_frames: usize, split_size: us
 }
 
 #[pyfunction]
-fn segment(input: String, temp: String, segments: Vec<usize>) -> PyResult<()> {
+fn segment(input: &str, temp: &str, segments: Vec<usize>) -> PyResult<()> {
   let input = Path::new(&input);
   let temp = Path::new(&temp);
   av1an_core::split::segment(input, temp, &segments);
@@ -536,6 +544,76 @@ fn is_vapoursynth(s: &str) -> bool {
 }
 
 #[pyclass(dict)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+struct Chunk {
+  #[pyo3(get, set)]
+  temp: String,
+  #[pyo3(get, set)]
+  index: usize,
+  #[pyo3(get, set)]
+  ffmpeg_gen_cmd: Vec<String>,
+  #[pyo3(get, set)]
+  output_ext: String,
+  #[pyo3(get, set)]
+  size: usize,
+  #[pyo3(get, set)]
+  frames: usize,
+  #[pyo3(get, set)]
+  per_shot_target_quality_cq: Option<u32>,
+}
+
+#[pymethods]
+impl Chunk {
+  #[new]
+  fn new(
+    temp: String,
+    index: usize,
+    ffmpeg_gen_cmd: Vec<String>,
+    output_ext: String,
+    size: usize,
+    frames: usize,
+  ) -> Self {
+    Chunk {
+      temp,
+      index,
+      ffmpeg_gen_cmd,
+      output_ext,
+      size,
+      frames,
+      ..Default::default()
+    }
+  }
+
+  #[getter]
+  fn name(&self) -> String {
+    format!("{:05}", self.index)
+  }
+
+  #[getter]
+  fn output(&self) -> String {
+    self.output_path()
+  }
+
+  #[getter]
+  fn output_path(&self) -> String {
+    Path::new(&self.temp)
+      .join("encode")
+      .join(format!("{}.{}", self.name(), self.output_ext))
+      .to_string_lossy()
+      .to_string()
+  }
+}
+
+#[pyfunction]
+fn save_chunk_queue(temp: &str, chunk_queue: Vec<Chunk>) {
+  let mut file = fs::File::create(Path::new(temp).join("chunks.json")).unwrap();
+
+  file
+    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
+    .unwrap();
+}
+
+#[pyclass(dict)]
 #[derive(Default, FromPyObject)]
 struct Project {
   #[pyo3(get, set)]
@@ -605,6 +683,9 @@ struct Project {
   vmaf_res: Option<String>,
 
   #[pyo3(get, set)]
+  concat: String,
+
+  #[pyo3(get, set)]
   target_quality: Option<f32>,
   #[pyo3(get, set)]
   probes: u32,
@@ -649,6 +730,39 @@ fn suggest_fix(wrong_arg: &str, arg_dictionary: &HashSet<String>) -> Option<Stri
     .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
     .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
     .map(|(s, _)| (*s).to_owned())
+}
+
+#[pyfunction]
+fn read_chunk_queue(temp: &str) -> Vec<Chunk> {
+  let contents = fs::read_to_string(Path::new(temp).join("chunks.json")).unwrap();
+
+  serde_json::from_str(&contents).unwrap()
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct DoneJson {
+  frames: usize,
+  done: HashMap<String, usize>,
+}
+
+impl Project {
+  fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
+    let mut queue_files = fs::read_dir(&source_path)
+      .unwrap()
+      .map(|res| res.map(|e| e.path()))
+      .collect::<Result<Vec<_>, _>>()
+      .unwrap();
+    queue_files.retain(|file| file.is_file());
+    queue_files.retain(
+      |file| match Path::new(&file).extension().map(|x| x == "mkv") {
+        Some(true) => true,
+        _ => false,
+      },
+    );
+    av1an_core::concat::sort_files_by_filename(&mut queue_files);
+
+    queue_files
+  }
 }
 
 #[pymethods]
@@ -831,79 +945,473 @@ impl Project {
     Ok(())
   }
 
-  fn calc_split_locations(&self) -> Vec<usize> {
-    let mut sc = vec![];
+  fn create_encoding_queue(&mut self, splits: Vec<usize>, py: Python) -> Vec<Chunk> {
+    let mut chunks = match self.chunk_method.as_ref().unwrap().as_str() {
+      "vs_ffms2" | "vs_lsmash" => self.create_video_queue_vs(splits, py),
+      "hybrid" => self.create_video_queue_hybrid(splits, py),
+      "select" => self.create_video_queue_select(splits, py),
+      "segment" => self.create_video_queue_segment(splits, py),
+      _ => unreachable!(),
+    };
 
-    if self.split_method == "av-scenechange" {
-      sc = av_scenechange_detect(
+    chunks.sort_unstable_by_key(|chunk| Reverse(chunk.size));
+
+    chunks
+  }
+
+  fn calc_split_locations(&self) -> Vec<usize> {
+    match self.split_method.as_str() {
+      "av-scenechange" => av_scenechange_detect(
         &self.input,
         self.frames,
         self.min_scene_len,
         self.quiet,
         self.is_vs,
       )
-      .unwrap();
+      .unwrap(),
+      "none" => Vec::with_capacity(0),
+      _ => unreachable!(),
     }
-
-    let default = Path::new(&self.temp).join("scenes.json");
-    av1an_core::split::write_scenes_to_file(
-      &sc,
-      self.frames,
-      if let Some(ref scenes) = self.scenes {
-        Path::new(scenes)
-      } else {
-        &default
-      },
-    )
-    .unwrap();
-
-    sc
   }
 
-  // TODO refactor
+  // If we are not resuming, then do scene detection. Otherwise: get scenes from
+  // scenes.json and return that.
   fn split_routine(&mut self, py: Python) -> Vec<usize> {
     // TODO make self.frames impossible to misuse
     let _ = self.get_frames(py);
 
     let scene_file = Path::new(&self.temp).join("scenes.json");
 
-    let mut scenes = vec![];
-
-    if self.resume {
-      let (scenes, frames) =
-        av1an_core::split::read_scenes_from_file(scene_file.as_path()).unwrap();
-      self.frames = frames;
-      return scenes;
-    }
-
-    if self.split_method == "none" {
-      log("Skipping scene detection");
-    }
-
-    if let Some(ref scenes_file) = self.scenes {
-      if Path::new(scenes_file).exists() {
-        let (scenes_inner, frames) =
-          av1an_core::split::read_scenes_from_file(Path::new(scenes_file)).unwrap();
-        scenes = scenes_inner;
-
-        self.frames = frames;
-      }
+    let scenes = if self.resume {
+      av1an_core::split::read_scenes_from_file(scene_file.as_path())
+        .unwrap()
+        .0
     } else {
-      let scenes = self.calc_split_locations();
-      if let Some(ref scenes_file) = self.scenes {
-        if Path::new(scenes_file).exists() {
-          av1an_core::split::write_scenes_to_file(&scenes, self.frames, Path::new(scenes_file));
+      self.calc_split_locations()
+    };
+
+    self.write_scenes_to_file(scenes.clone(), scene_file.as_path().to_str().unwrap());
+
+    scenes
+  }
+
+  fn write_scenes_to_file(&self, scenes: Vec<usize>, path: &str) {
+    write_scenes_to_file(scenes, self.frames, path).unwrap();
+  }
+
+  fn create_select_chunk(
+    &self,
+    index: usize,
+    src_path: &str,
+    frame_start: usize,
+    mut frame_end: usize,
+  ) -> Chunk {
+    assert!(
+      frame_end > frame_start,
+      "Can't make a chunk with <= 0 frames!"
+    );
+
+    let frames = frame_end - frame_start;
+    frame_end -= 1;
+
+    let ffmpeg_gen_cmd: Vec<String> = vec![
+      "ffmpeg".into(),
+      "-y".into(),
+      "-hide_banner".into(),
+      "-loglevel".into(),
+      "error".into(),
+      "-i".into(),
+      src_path.to_string(),
+      "-vf".into(),
+      format!(
+        "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
+        frame_start, frame_end
+      ),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-strict".into(),
+      "-1".into(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ];
+    let output_ext = output_extension(&self.encoder).unwrap();
+    // use the number of frames to prioritize which chunks encode first, since we don't have file size
+    let size = frames;
+
+    Chunk {
+      temp: self.temp.clone(),
+      index,
+      ffmpeg_gen_cmd,
+      output_ext,
+      size,
+      frames,
+      ..Default::default()
+    }
+  }
+
+  fn create_vs_chunk(
+    &self,
+    index: usize,
+    vs_script: String,
+    frame_start: usize,
+    mut frame_end: usize,
+  ) -> Chunk {
+    assert!(
+      frame_end > frame_start,
+      "Can't make a chunk with <= 0 frames!"
+    );
+
+    let frames = frame_end - frame_start;
+    // the frame end boundary is actually a frame that should be included in the next chunk
+    frame_end -= 1;
+
+    let vspipe_cmd_gen: Vec<String> = vec![
+      "vspipe".into(),
+      vs_script,
+      "-y".into(),
+      "-".into(),
+      "-s".into(),
+      frame_start.to_string(),
+      "-e".into(),
+      frame_end.to_string(),
+    ];
+
+    let output_ext = output_extension(&self.encoder).unwrap();
+
+    Chunk {
+      temp: self.temp.clone(),
+      index,
+      ffmpeg_gen_cmd: vspipe_cmd_gen,
+      output_ext,
+      // use the number of frames to prioritize which chunks encode first, since we don't have file size
+      size: frames,
+      frames,
+      ..Default::default()
+    }
+  }
+
+  fn create_video_queue_vs(&mut self, splits: Vec<usize>, py: Python) -> Vec<Chunk> {
+    let last_frame = self.get_frames(py);
+
+    let mut split_locs = vec![0];
+    split_locs.extend(splits);
+    split_locs.push(last_frame);
+
+    let chunk_boundaries: Vec<(usize, usize)> = split_locs
+      .iter()
+      .zip(split_locs.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let vs_script = if self.is_vs {
+      self.input.clone()
+    } else {
+      create_vs_file(
+        &self.temp,
+        &self.input,
+        &self.chunk_method.as_ref().unwrap(),
+      )
+      .unwrap()
+    };
+
+    let chunk_queue: Vec<Chunk> = chunk_boundaries
+      .iter()
+      .enumerate()
+      .map(|(index, (frame_start, frame_end))| {
+        self.create_vs_chunk(index, vs_script.clone(), *frame_start, *frame_end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_select(&mut self, splits: Vec<usize>, py: Python) -> Vec<Chunk> {
+    let last_frame = self.get_frames(py);
+
+    let mut split_locs = vec![0];
+    split_locs.extend(splits);
+    split_locs.push(last_frame);
+
+    let chunk_boundaries: Vec<(usize, usize)> = split_locs
+      .iter()
+      .zip(split_locs.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let chunk_queue: Vec<Chunk> = chunk_boundaries
+      .iter()
+      .enumerate()
+      .map(|(index, (frame_start, frame_end))| {
+        self.create_select_chunk(index, &self.input, *frame_start, *frame_end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_segment(&mut self, splits: Vec<usize>, py: Python) -> Vec<Chunk> {
+    let _ = log("Split video");
+    segment(&self.input, &self.temp, splits).unwrap();
+    let _ = log("Split done");
+
+    let source_path = Path::new(&self.temp).join("split");
+    let queue_files = Self::read_queue_files(&source_path);
+
+    assert!(
+      !queue_files.is_empty(),
+      "Error: No files found in temp/split, probably splitting not working"
+    );
+
+    let chunk_queue: Vec<Chunk> = queue_files
+      .iter()
+      .enumerate()
+      .map(|(index, file)| {
+        self.create_chunk_from_segment(index, file.as_path().to_str().unwrap(), py)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_hybrid(&mut self, split_locations: Vec<usize>, py: Python) -> Vec<Chunk> {
+    let keyframes = get_keyframes(&self.input).unwrap();
+
+    let mut splits = vec![0];
+    splits.extend(split_locations);
+    splits.push(self.get_frames(py));
+
+    let segments_set: HashSet<(usize, usize)> = splits
+      .iter()
+      .zip(splits.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let to_split: Vec<usize> = keyframes
+      .iter()
+      .filter(|kf| splits.contains(kf))
+      .copied()
+      .collect();
+
+    let _ = log("Segmenting video");
+    segment(
+      &self.input,
+      &self.temp,
+      to_split[1..].iter().copied().collect(),
+    )
+    .unwrap();
+    let _ = log("Segment done");
+
+    let source_path = Path::new(&self.temp).join("split");
+    let queue_files = Self::read_queue_files(&source_path);
+
+    let kf_list: Vec<(usize, usize)> = to_split
+      .iter()
+      .zip(to_split.iter().skip(1).chain(iter::once(&self.frames)))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let mut segments = Vec::with_capacity(segments_set.len());
+    for (file, (x, y)) in queue_files.iter().zip(kf_list.iter()) {
+      for (s0, s1) in &segments_set {
+        if s0 >= x && s1 <= y && s0 - x < s1 - x {
+          segments.push((file.clone(), (s0 - x, s1 - x)));
         }
       }
     }
 
-    if self.extra_split != 0 {
-      log("Applying extra splits");
-      log(format!("Split distance: {}", self.extra_split).as_str());
-      scenes = av1an_core::split::extra_splits(scenes, self.frames, self.extra_split);
+    let chunk_queue: Vec<Chunk> = segments
+      .iter()
+      .enumerate()
+      .map(|(index, (file, (start, end)))| {
+        self.create_select_chunk(index, &file.as_path().to_string_lossy(), *start, *end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_chunk_from_segment(&mut self, index: usize, file: &str, py: Python) -> Chunk {
+    let ffmpeg_gen_cmd = vec![
+      "ffmpeg".into(),
+      "-y".into(),
+      "-hide_banner".into(),
+      "-loglevel".into(),
+      "error".into(),
+      "-i".into(),
+      file.to_owned(),
+      "-strict".into(),
+      "-1".into(),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ];
+
+    let output_ext = output_extension(&self.encoder).unwrap();
+    let file_size = File::open(file).unwrap().metadata().unwrap().len();
+
+    Chunk {
+      temp: self.temp.clone(),
+      frames: self.get_frames(py),
+      ffmpeg_gen_cmd,
+      output_ext,
+      index,
+      size: file_size as usize,
+      ..Default::default()
+    }
+  }
+
+  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>, py: Python) -> Vec<Chunk> {
+    if self.resume {
+      let mut chunks = read_chunk_queue(&self.temp);
+
+      let done_path = Path::new(&self.temp).join("done.json");
+
+      let done_contents = fs::read_to_string(&done_path).unwrap();
+      let done: DoneJson = serde_json::from_str(&done_contents).unwrap();
+
+      // only keep the chunks that are not done
+      chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
+
+      chunks
+    } else {
+      let chunks = self.create_encoding_queue(splits, py);
+      save_chunk_queue(&self.temp, chunks.clone());
+      chunks
+    }
+  }
+
+  fn encode_file(mut _self: PyRefMut<Self>, py: Python) {
+    let _ = log(format!("File hash: {}", hash_path(&_self.input)).as_str());
+
+    let done_path = Path::new(&_self.temp).join("done.json");
+
+    _self.resume = _self.resume && done_path.exists();
+
+    if !_self.resume && Path::new(&_self.temp).is_dir() {
+      fs::remove_dir_all(&_self.temp).unwrap();
     }
 
-    scenes
+    let _ = match fs::create_dir_all(Path::new(&_self.temp).join("split")) {
+      Ok(_) => {}
+      Err(e) => match e.kind() {
+        io::ErrorKind::AlreadyExists => {}
+        _ => panic!("{}", e),
+      },
+    };
+    let _ = match fs::create_dir_all(Path::new(&_self.temp).join("encode")) {
+      Ok(_) => {}
+      Err(e) => match e.kind() {
+        io::ErrorKind::AlreadyExists => {}
+        _ => panic!("{}", e),
+      },
+    };
+
+    set_log(&_self.logging).unwrap();
+
+    let splits = _self.split_routine(py);
+
+    let chunk_queue = _self.load_or_gen_chunk_queue(splits, py);
+
+    let done_path = Path::new(&_self.temp).join("done.json");
+
+    let mut initial_frames: usize = 0;
+
+    if _self.resume && done_path.exists() {
+      let _ = log("Resuming...");
+
+      let done: DoneJson = serde_json::from_str(&fs::read_to_string(&done_path).unwrap()).unwrap();
+      initial_frames = done.done.iter().map(|(_, frames)| frames).sum();
+      let _ = log(format!("Resmued with {} encoded clips done", done.done.len()).as_str());
+    } else {
+      let total = _self.get_frames(py);
+      let mut done_file = fs::File::create(&done_path).unwrap();
+      done_file
+        .write_all(
+          serde_json::to_string(&DoneJson {
+            frames: total,
+            done: HashMap::new(),
+          })
+          .unwrap()
+          .as_bytes(),
+        )
+        .unwrap();
+    }
+
+    if !_self.resume {
+      extract_audio(&_self.input, &_self.temp, _self.audio_params.clone());
+    }
+
+    if _self.workers == 0 {
+      _self.workers = determine_workers(&_self.encoder).unwrap() as usize;
+    }
+    _self.workers = cmp::min(_self.workers, chunk_queue.len());
+    println!(
+      "Queue: {} Workers: {} Passes: {}\nParams: {}",
+      chunk_queue.len(),
+      _self.workers,
+      _self.passes,
+      _self.video_params.join(" ")
+    );
+
+    init_progress_bar((_self.frames - initial_frames) as u64).unwrap();
+
+    Python::with_gil(|py| -> PyResult<()> {
+      let av1an = PyModule::import(py, "av1an")?;
+
+      // hack to avoid borrow checker errors
+      let concat = _self.concat.clone();
+      let temp = _self.temp.clone();
+      let input = _self.input.clone();
+      let output_file = _self.output_file.clone();
+      let encoder = _self.encoder.clone();
+      let vmaf = _self.vmaf;
+      let keep = _self.keep;
+
+      let queue = av1an.getattr("Queue")?.call1((_self, chunk_queue))?;
+      queue.call_method0("encoding_loop")?;
+      let status: String = queue.getattr("status")?.extract()?;
+
+      if status.eq_ignore_ascii_case("fatal") {
+        let msg = "FATAL Encoding process encountered fatal error, shutting down";
+        log(msg)?;
+        panic!("\n::{}", msg);
+      }
+
+      let _ = log("Concatenating");
+
+      // TODO refactor into Concatenate trait
+      match concat.as_str() {
+        "ivf" => {
+          av1an_core::concat::concat_ivf(&Path::new(&temp).join("encode"), Path::new(&output_file))
+            .unwrap();
+        }
+        "mkvmerge" => {
+          av1an.call_method1("concatenate_mkvmerge", (temp.clone(), output_file.clone()))?;
+        }
+        "ffmpeg" => {
+          av1an_core::ffmpeg::concatenate_ffmpeg(
+            temp.clone(),
+            output_file.clone(),
+            Encoder::from_str(&encoder).unwrap(),
+          );
+        }
+        _ => unreachable!(),
+      }
+
+      if vmaf {
+        plot_vmaf(&input, &output_file)?;
+      }
+
+      if !keep {
+        fs::remove_dir_all(temp).unwrap();
+      }
+
+      Ok(())
+    })
+    .unwrap();
   }
 }
 
@@ -960,8 +1468,11 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(log_probes, m)?)?;
   m.add_function(wrap_pyfunction!(av_scenechange_detect, m)?)?;
   m.add_function(wrap_pyfunction!(is_vapoursynth, m)?)?;
+  m.add_function(wrap_pyfunction!(save_chunk_queue, m)?)?;
+  m.add_function(wrap_pyfunction!(read_chunk_queue, m)?)?;
 
   m.add_class::<Project>()?;
+  m.add_class::<Chunk>()?;
 
   Ok(())
 }

@@ -7,8 +7,7 @@ import traceback
 from pathlib import Path
 
 from av1an.target_quality import TargetQuality
-from av1an.utils import frame_probe
-from av1an_pyo3 import log, Chunk, finish_progress_bar
+from av1an_pyo3 import log, Chunk, finish_progress_bar, frame_probe
 
 from .Pipes import create_pipes
 
@@ -16,7 +15,6 @@ from .Pipes import create_pipes
 class Queue:
     def __init__(self, project, chunk_queue):
         self.chunk_queue = chunk_queue
-        self.queue = []
         self.project = project
         self.thread_executor = concurrent.futures.ThreadPoolExecutor()
         self.status = "Ok"

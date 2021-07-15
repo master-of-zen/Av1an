@@ -147,9 +147,19 @@ fn determine_workers(encoder: &str) -> PyResult<u64> {
 }
 
 #[pyfunction]
-fn frame_probe_vspipe(py: Python, source: &str) -> PyResult<usize> {
+fn frame_probe_vspipe(source: &str, py: Python) -> PyResult<usize> {
   let frames = py.allow_threads(|| av1an_core::vapoursynth::num_frames(Path::new(source)));
   frames.map_err(|e| pyo3::exceptions::PyTypeError::new_err(format!("{}", e)))
+}
+
+#[pyfunction]
+fn frame_probe(source: &str, py: Python) -> PyResult<usize> {
+  if is_vapoursynth(source) {
+    frame_probe_vspipe(source, py)
+  } else {
+    // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
+    Ok(ffmpeg_get_frame_count(source))
+  }
 }
 
 #[pyfunction]
@@ -688,6 +698,8 @@ struct Project {
   #[pyo3(get, set)]
   target_quality: Option<f32>,
   #[pyo3(get, set)]
+  target_quality_method: Option<String>,
+  #[pyo3(get, set)]
   probes: u32,
   #[pyo3(get, set)]
   probe_slow: bool,
@@ -699,8 +711,6 @@ struct Project {
   vmaf_plots: Option<bool>,
   #[pyo3(get, set)]
   probing_rate: u32,
-  #[pyo3(get, set)]
-  target_quality_method: Option<String>,
   #[pyo3(get, set)]
   n_threads: Option<u32>,
   #[pyo3(get, set)]
@@ -1470,6 +1480,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(is_vapoursynth, m)?)?;
   m.add_function(wrap_pyfunction!(save_chunk_queue, m)?)?;
   m.add_function(wrap_pyfunction!(read_chunk_queue, m)?)?;
+  m.add_function(wrap_pyfunction!(frame_probe, m)?)?;
 
   m.add_class::<Project>()?;
   m.add_class::<Chunk>()?;

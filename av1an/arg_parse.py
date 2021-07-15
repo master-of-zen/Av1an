@@ -43,7 +43,7 @@ class Args:
         self.parsed["ffmpeg_pipe"] = []
         if self.parsed["logging"] is None:
             self.parsed["logging"] = (
-                (Path(self.parsed["logging"]) / "log.log").resolve().as_posix()
+                (Path(self.parsed["temp"]) / "log.log").resolve().as_posix()
             )
         else:
             self.parsed["logging"] = (

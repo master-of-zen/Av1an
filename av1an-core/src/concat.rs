@@ -24,7 +24,7 @@ pub fn sort_files_by_filename(files: &mut [PathBuf]) {
 pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   let mut files: Vec<PathBuf> = std::fs::read_dir(input)?
     .into_iter()
-    .filter_map(|d| d.ok())
+    .filter_map(Result::ok)
     .filter_map(|d| {
       if let Ok(file_type) = d.file_type() {
         if file_type.is_file() {

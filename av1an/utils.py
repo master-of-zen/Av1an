@@ -31,8 +31,8 @@ def frame_probe_fast(source: Path, is_vs: bool = False):
     return total
 
 
-def frame_probe(source: Path):
-    if is_vapoursynth(source.as_posix()):
-        return frame_probe_vspipe(source.resolve().as_posix())
+def frame_probe(source: str):
+    if is_vapoursynth(source):
+        return frame_probe_vspipe(source)
 
-    return ffmpeg_get_frame_count(source.resolve().as_posix())
+    return ffmpeg_get_frame_count(source)

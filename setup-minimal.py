@@ -3,7 +3,6 @@ import setuptools
 
 REQUIRES = [
     "numpy",
-    "psutil",
     "scipy",
 ]
 

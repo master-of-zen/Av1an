@@ -18,9 +18,7 @@ except ImportError:
 REQUIRES = [
     "numpy",
     "vapoursynth",
-    "scenedetect[opencv]",
     "opencv-python",
-    "psutil",
     "scipy",
     "maturin",
     "setuptools_rust",

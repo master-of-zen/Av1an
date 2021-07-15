@@ -8,6 +8,19 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+pub fn sort_files_by_filename(files: &mut [PathBuf]) {
+  files.sort_unstable_by_key(|x| {
+    // If the temp directory follows the expected format of 00000.ivf, 00001.ivf, etc.,
+    // then these unwraps will not fail
+    x.file_stem()
+      .unwrap()
+      .to_str()
+      .unwrap()
+      .parse::<u32>()
+      .unwrap()
+  });
+}
+
 pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   let mut files: Vec<PathBuf> = std::fs::read_dir(input)?
     .into_iter()
@@ -25,18 +38,9 @@ pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
     })
     .collect();
 
-  assert!(!files.is_empty());
+  sort_files_by_filename(&mut files);
 
-  files.sort_unstable_by_key(|x| {
-    // If the temp directory follows the expected format of 00000.ivf, 00001.ivf, etc.,
-    // then these unwraps will not fail
-    x.file_stem()
-      .unwrap()
-      .to_str()
-      .unwrap()
-      .parse::<u32>()
-      .unwrap()
-  });
+  assert!(!files.is_empty());
 
   let output = File::create(out)?;
 

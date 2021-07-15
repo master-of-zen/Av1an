@@ -15,7 +15,6 @@ requires-dist = [
     "numpy",
     "scenedetect[opencv]",
     "opencv-python",
-    "psutil",
     "scipy",
     "vapoursynth",
 ]

@@ -13,10 +13,10 @@ if platform.system() == "Linux":
 
 
 def concatenate_mkvmerge(temp: Path, output):
-    output = shlex.quote(output.as_posix())
+    output = shlex.quote(Path(output).as_posix())
 
     encode_files = sorted(
-        (temp / "encode").iterdir(),
+        (Path(temp) / "encode").iterdir(),
         key=lambda x: int(x.stem) if x.stem.isdigit() else x.stem,
     )
     encode_files = [shlex.quote(f.as_posix()) for f in encode_files]
@@ -28,7 +28,7 @@ def concatenate_mkvmerge(temp: Path, output):
         file_limit = -1
         cmd_limit = 32767
 
-    audio_file = temp / "audio.mkv"
+    audio_file = Path(temp) / "audio.mkv"
     audio = audio_file.as_posix() if audio_file.exists() else ""
 
     if len(encode_files) > 1:

@@ -87,13 +87,13 @@ struct ScenesData {
 
 pub fn write_scenes_to_file(
   scenes: &[usize],
-  frames: usize,
+  total_frames: usize,
   scene_path: &Path,
 ) -> std::io::Result<()> {
   // Writes a list of scenes and frame count to the file
   let data = ScenesData {
     scenes: scenes.to_vec(),
-    frames,
+    frames: total_frames,
   };
 
   let serialized = serde_json::to_string(&data).unwrap();

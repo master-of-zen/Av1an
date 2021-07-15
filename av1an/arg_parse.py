@@ -43,8 +43,13 @@ class Args:
         self.parsed["ffmpeg_pipe"] = []
         if self.parsed["logging"] is None:
             self.parsed["logging"] = (
-                (Path(self.parsed["temp"]) / "log").resolve().as_posix()
+                (Path(self.parsed["logging"]) / "log.log").resolve().as_posix()
             )
+        else:
+            self.parsed["logging"] = (
+                (Path(self.parsed["logging"]).with_suffix(".log")).resolve().as_posix()
+            )
+
         self.parsed["frames"] = 0
         self.parsed["is_vs"] = is_vapoursynth(self.parsed["input"])
 

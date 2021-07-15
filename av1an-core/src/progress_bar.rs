@@ -8,13 +8,14 @@ use std::error;
 use once_cell::sync::Lazy;
 
 const INDICATIF_PROGRESS_TEMPLATE: &str =
-  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps}, eta {eta})";
+  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})";
 
 static PROGRESS_BAR: Lazy<ProgressBar> = Lazy::new(|| {
   let pb = ProgressBar::hidden();
   pb.set_style(
     ProgressStyle::default_bar()
       .template(INDICATIF_PROGRESS_TEMPLATE)
+      .with_key("fps", |state| format!("{:.2}", state.per_sec()))
       .progress_chars("#>-"),
   );
   pb.set_draw_target(ProgressDrawTarget::stderr());

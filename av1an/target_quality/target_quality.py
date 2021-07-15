@@ -1,24 +1,19 @@
 import subprocess
 from pathlib import Path
-from math import isnan
 
-import numpy as np
-from av1an.chunk import Chunk
 from av1an.manager.Pipes import process_pipe
 from av1an.vmaf import VMAF
 from av1an_pyo3 import (
     read_weighted_vmaf,
     adapt_probing_rate,
-    construct_target_quality_command,
-    log,
     probe_cmd,
     vmaf_auto_threads,
     weighted_search,
     validate_vmaf,
     interpolate_target_q,
     log_probes,
+    Chunk,
 )
-from scipy import interpolate
 
 
 class TargetQuality:

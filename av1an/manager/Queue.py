@@ -6,10 +6,9 @@ import time
 import traceback
 from pathlib import Path
 
-from av1an.chunk import Chunk
 from av1an.target_quality import TargetQuality
 from av1an.utils import frame_probe
-from av1an_pyo3 import log
+from av1an_pyo3 import log, Chunk, finish_progress_bar
 
 from .Pipes import create_pipes
 
@@ -39,7 +38,7 @@ class Queue:
                         _, _, exc_tb = sys.exc_info()
                         print(f"Encoding error {exc}\nAt line {exc_tb.tb_lineno}")
                         sys.exit(1)
-        self.project.finish_progress_bar()
+        finish_progress_bar()
 
     def encode_chunk(self, chunk: Chunk):
         restart_count = 0

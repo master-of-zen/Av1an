@@ -170,6 +170,7 @@ pub fn adapt_probing_rate(rate: usize) -> usize {
 }
 
 /// Determine the optimal number of workers for an encoder
+#[must_use]
 pub fn determine_workers(encoder: Encoder) -> u64 {
   // TODO look for lighter weight solution? sys-info maybe?
   let mut system = sysinfo::System::new();
@@ -229,7 +230,7 @@ pub fn read_file_to_string(file: &Path) -> Result<String, Error> {
 }
 
 pub fn read_vmaf_file(file: &Path) -> Result<Vec<f64>, serde_json::Error> {
-  let json_str = read_file_to_string(&file).unwrap();
+  let json_str = read_file_to_string(file).unwrap();
   let bazs = serde_json::from_str::<Baz>(&json_str)?;
   let v = bazs
     .frames

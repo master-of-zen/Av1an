@@ -1,7 +1,9 @@
-extern crate num_cpus;
 use crate::logger::log;
+
 use splines::{Interpolation, Key, Spline};
-use std::{fmt::Error, u32, usize};
+use std::cmp::Ordering;
+use std::fmt::Error;
+
 pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
   let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
   let dif2 = (transform_vmaf(target as f64) - transform_vmaf(vmaf1)).abs();
@@ -38,7 +40,7 @@ pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64,
 
   let keys = sorted
     .iter()
-    .map(|f| Key::new(f.0 as f64, f.1 as f64, Interpolation::Linear))
+    .map(|(x, y)| Key::new(*x, f64::from(*y), Interpolation::Linear))
     .collect();
 
   let spline = Spline::from_vec(keys);
@@ -48,7 +50,7 @@ pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64,
 
 pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, Error> {
   let mut sorted = scores;
-  sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+  sorted.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let keys = sorted
     .iter()

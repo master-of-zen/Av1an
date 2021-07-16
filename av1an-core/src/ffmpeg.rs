@@ -254,7 +254,7 @@ pub fn get_frame_types(file: &Path) -> Vec<String> {
 
   let str_vec = output.split('\n').collect::<Vec<_>>();
 
-  let string_vec: Vec<String> = str_vec.iter().map(|x| x.to_string()).collect();
+  let string_vec: Vec<String> = str_vec.iter().map(|s| (*s).to_string()).collect();
 
   string_vec
 }

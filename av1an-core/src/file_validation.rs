@@ -39,7 +39,7 @@ pub fn process_inputs(inputs: &[PathBuf]) -> Vec<PathBuf> {
         input_files.push(path_file);
       }
     } else {
-      input_files.push(fl.to_path_buf());
+      input_files.push(fl.clone());
     }
   }
 
@@ -69,8 +69,8 @@ mod tests {
 
   #[test]
   fn test_match_file_type() {
-    assert_eq!(match_file_type(PathBuf::from("input.mkv")), true);
-    assert_eq!(match_file_type(PathBuf::from("picture.png")), false);
+    assert_eq!(match_file_type(Path::new("input.mkv")), true);
+    assert_eq!(match_file_type(Path::new("picture.png")), false);
   }
 
   #[test]
@@ -90,7 +90,7 @@ mod tests {
     let mut valid_files = files.clone();
     valid_files.pop();
 
-    let validated = validate_files(files);
+    let validated = validate_files(&files);
 
     // Remove dummy files
     remove_file("dummy_1.mkv").unwrap();

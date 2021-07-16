@@ -20,10 +20,10 @@ pub fn plot_vmaf_score_file(
   let plot_heigth = 1440;
 
   let length = scores.len() as u32;
-  let perc_1 = read_weighted_vmaf(&scores_file, 0.01).unwrap();
-  let perc_25 = read_weighted_vmaf(&scores_file, 0.25).unwrap();
-  let perc_75 = read_weighted_vmaf(&scores_file, 0.75).unwrap();
-  let perc_mean = read_weighted_vmaf(&scores_file, 0.50).unwrap();
+  let perc_1 = read_weighted_vmaf(scores_file, 0.01).unwrap();
+  let perc_25 = read_weighted_vmaf(scores_file, 0.25).unwrap();
+  let perc_75 = read_weighted_vmaf(scores_file, 0.75).unwrap();
+  let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
 
   let root =
     BitMapBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
@@ -123,7 +123,7 @@ pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
 
 pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
   validate_libvmaf()?;
-  validate_vmaf_test_run(&vmaf_model)?;
+  validate_vmaf_test_run(vmaf_model)?;
 
   Ok(())
 }
@@ -153,16 +153,19 @@ pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error>
 
   let stdr = String::from_utf8(out.stderr)?;
 
-  match out.status.success() {
-    true => Ok(file_path),
-    false => panic!("VMAF calculation failed: \n{:#?}", stdr),
-  }
+  assert!(
+    out.status.success(),
+    "VMAF calculation failed:\n:{:#?}",
+    stdr
+  );
+
+  Ok(file_path)
 }
 
 pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
   println!("::VMAF Run..");
 
-  let json_file = run_vmaf_on_files(&source, output)?;
+  let json_file = run_vmaf_on_files(source, output)?;
   let plot_path = output.with_extension("png");
   plot_vmaf_score_file(&json_file, &plot_path).unwrap();
   Ok(())

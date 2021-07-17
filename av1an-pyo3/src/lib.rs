@@ -7,12 +7,16 @@ use av1an_core::vapoursynth;
 use av1an_core::{ChunkMethod, Encoder};
 use regex::Regex;
 
+use tokio::io::{AsyncBufReadExt, BufReader};
+
 use serde::{Deserialize, Serialize};
 
 use std::cmp;
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::convert::TryInto;
 use std::fs;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -553,6 +557,293 @@ fn is_vapoursynth(s: &str) -> bool {
   [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
 }
 
+#[pyclass]
+struct TargetQuality {
+  vmaf_res: String,
+  vmaf_filter: String,
+  n_threads: usize,
+  model: String,
+  probing_rate: usize,
+  probes: u32,
+  target: f32,
+  min_q: u32,
+  max_q: u32,
+  encoder: String,
+  ffmpeg_pipe: Vec<String>,
+  temp: String,
+  workers: usize,
+  video_params: Vec<String>,
+  probe_slow: bool,
+}
+
+#[pymethods]
+impl TargetQuality {
+  #[new]
+  fn new(project: &Project) -> Self {
+    Self {
+      vmaf_res: project
+        .vmaf_res
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      vmaf_filter: project
+        .vmaf_filter
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      n_threads: project.n_threads.unwrap_or(0) as usize,
+      model: project
+        .vmaf_path
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      probes: project.probes,
+      target: project.target_quality.unwrap(),
+      min_q: project.min_q.unwrap(),
+      max_q: project.max_q.unwrap(),
+      encoder: project.encoder.clone(),
+      ffmpeg_pipe: project.ffmpeg_pipe.clone(),
+      temp: project.temp.clone(),
+      workers: project.workers,
+      video_params: project.video_params.clone(),
+      probe_slow: project.probe_slow,
+      probing_rate: adapt_probing_rate(project.probing_rate as usize, 20),
+    }
+  }
+
+  fn per_shot_target_quality(&self, chunk: &Chunk) -> u32 {
+    let mut vmaf_cq = vec![];
+    let frames = chunk.frames;
+
+    let mut q_list = vec![];
+
+    // Make middle probe
+    let middle_point = (self.min_q + self.max_q) / 2;
+    q_list.push(middle_point);
+    let last_q = middle_point;
+
+    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q.to_string()), 0.25).unwrap();
+    vmaf_cq.push((score, last_q));
+
+    // Initialize search boundary
+    let mut vmaf_lower = score;
+    let mut vmaf_upper = score;
+    let mut vmaf_cq_lower = last_q;
+    let mut vmaf_cq_upper = last_q;
+
+    // Branch
+    let next_q = if score < self.target as f64 {
+      self.min_q
+    } else {
+      self.max_q
+    };
+
+    q_list.push(next_q);
+
+    // Edge case check
+    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q.to_string()), 0.25).unwrap();
+    vmaf_cq.push((score, next_q));
+
+    if (next_q == self.min_q && score < self.target as f64)
+      || (next_q == self.max_q && score > self.target as f64)
+    {
+      av1an_core::target_quality::log_probes(
+        vmaf_cq,
+        frames as u32,
+        self.probing_rate as u32,
+        &chunk.name(),
+        next_q,
+        score,
+        if score < self.target as f64 {
+          "low"
+        } else {
+          "high"
+        },
+      );
+      return next_q;
+    }
+
+    // Set boundary
+    if score < self.target as f64 {
+      vmaf_lower = score;
+      vmaf_cq_lower = next_q;
+    } else {
+      vmaf_upper = score;
+      vmaf_cq_upper = next_q;
+    }
+
+    // VMAF search
+    for _ in 0..self.probes - 2 {
+      let new_point = weighted_search(
+        vmaf_cq_lower as f64,
+        vmaf_lower,
+        vmaf_cq_upper as f64,
+        vmaf_upper,
+        self.target as f64,
+      )
+      .unwrap();
+
+      if vmaf_cq
+        .iter()
+        .map(|(_, x)| *x)
+        .any(|x| x == new_point as u32)
+      {
+        break;
+      }
+
+      q_list.push(new_point as u32);
+      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point.to_string()), 0.25).unwrap();
+      vmaf_cq.push((score, new_point as u32));
+
+      // Update boundary
+      if score < self.target as f64 {
+        vmaf_lower = score;
+        vmaf_cq_lower = new_point as u32;
+      } else {
+        vmaf_upper = score;
+        vmaf_cq_upper = new_point as u32;
+      }
+    }
+
+    let (q, q_vmaf) = interpolate_target_q(vmaf_cq.clone(), self.target as f64).unwrap();
+    log_probes(
+      vmaf_cq,
+      frames as u32,
+      self.probing_rate as u32,
+      chunk.name(),
+      q as u32,
+      q_vmaf,
+      "".into(),
+    )
+    .unwrap();
+
+    q as u32
+  }
+
+  fn vmaf_probe(&self, chunk: &Chunk, q: String) -> String {
+    let n_threads = if self.n_threads == 0 {
+      vmaf_auto_threads(self.workers)
+    } else {
+      self.n_threads
+    };
+
+    let cmd = probe_cmd(
+      self.encoder.clone(),
+      self.temp.clone(),
+      chunk.name(),
+      q.clone(),
+      self.ffmpeg_pipe.clone(),
+      self.probing_rate.to_string(),
+      n_threads.to_string(),
+      self.video_params.clone(),
+      self.probe_slow,
+    )
+    .unwrap();
+
+    let future = async {
+      let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
+        .args(&chunk.ffmpeg_gen_cmd[1..])
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_gen_pipe_stdout: Stdio =
+        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut ffmpeg_pipe = tokio::process::Command::new(cmd.0[0].clone())
+        .args(&cmd.0[1..])
+        .stdin(ffmpeg_gen_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut pipe = tokio::process::Command::new(cmd.1[0].clone())
+        .args(&cmd.1[1..])
+        .stdin(ffmpeg_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      process_pipe(
+        &mut pipe,
+        (&chunk).index,
+        &mut [&mut ffmpeg_gen_pipe, &mut ffmpeg_pipe],
+      )
+      .await
+      .unwrap();
+    };
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+      .enable_io()
+      .build()
+      .unwrap();
+
+    rt.block_on(future);
+
+    let probe_name =
+      Path::new(&chunk.temp)
+        .join("split")
+        .join(format!("v_{}{}.ivf", q, chunk.name()));
+    let fl_path = Path::new(&chunk.temp)
+      .join("split")
+      .join(format!("{}.json", chunk.name()));
+
+    let fl_path = fl_path.to_str().unwrap().to_owned();
+
+    run_vmaf_on_chunk(
+      probe_name.to_str().unwrap().to_owned(),
+      chunk.ffmpeg_gen_cmd.clone(),
+      fl_path.clone(),
+      self.model.clone(),
+      self.vmaf_res.clone(),
+      self.probing_rate,
+      self.vmaf_filter.clone(),
+      self.n_threads,
+    );
+
+    fl_path
+  }
+
+  fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) {
+    chunk.per_shot_target_quality_cq = Some(self.per_shot_target_quality(chunk));
+  }
+}
+
+#[must_use]
+async fn process_pipe(
+  pipe: &mut tokio::process::Child,
+  chunk_index: usize,
+  utility: &mut [&mut tokio::process::Child],
+) -> Result<(), String> {
+  let mut encoder_history: VecDeque<String> = VecDeque::with_capacity(20);
+
+  let mut reader = BufReader::new(pipe.stdout.take().unwrap()).lines();
+
+  while let Some(line) = reader.next_line().await.unwrap() {
+    encoder_history.push_back(line);
+  }
+
+  for util in utility {
+    util.kill().await.unwrap();
+  }
+
+  let returncode = pipe.wait().await.unwrap();
+  if let Some(code) = returncode.code() {
+    if code != 0 && code != -2 {
+      return Err(format!(
+        "Encoder encountered an error: {}
+Chunk: {}
+{:?}",
+        code, chunk_index, encoder_history
+      ));
+    }
+  }
+
+  Ok(())
+}
+
 #[pyclass(dict)]
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Chunk {
@@ -609,8 +900,9 @@ impl Chunk {
     Path::new(&self.temp)
       .join("encode")
       .join(format!("{}.{}", self.name(), self.output_ext))
-      .to_string_lossy()
-      .to_string()
+      .to_str()
+      .unwrap()
+      .to_owned()
   }
 }
 
@@ -707,6 +999,7 @@ struct Project {
   min_q: Option<u32>,
   #[pyo3(get, set)]
   max_q: Option<u32>,
+  // TODO: Refactor into just bool. Option<bool> is only used for Python interop.
   #[pyo3(get, set)]
   vmaf_plots: Option<bool>,
   #[pyo3(get, set)]
@@ -1434,7 +1727,7 @@ fn run_vmaf_on_chunk(
   res: String,
   sample_rate: usize,
   vmaf_filter: String,
-  threads: String,
+  threads: usize,
 ) {
   let encoded = PathBuf::from(encoded);
   let stat_file = PathBuf::from(stat_file);
@@ -1511,6 +1804,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
 
   m.add_class::<Project>()?;
   m.add_class::<Chunk>()?;
+  m.add_class::<TargetQuality>()?;
 
   Ok(())
 }

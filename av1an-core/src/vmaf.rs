@@ -180,7 +180,7 @@ pub fn run_vmaf_on_chunk(
   res: String,
   sample_rate: usize,
   vmaf_filter: String,
-  threads: String,
+  threads: usize,
 ) -> Result<(), Error> {
   // Select filter for sampling from the source
   let select = if sample_rate > 1 {
@@ -196,7 +196,7 @@ pub fn run_vmaf_on_chunk(
   let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res );
   let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res );
   let vmaf = format!(
-    "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}",
+    "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}:n_threads={}",
     stat_file.to_str().unwrap(),
     &model,
     threads

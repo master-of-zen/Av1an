@@ -6,8 +6,7 @@ import time
 import traceback
 from pathlib import Path
 
-from av1an.target_quality import TargetQuality
-from av1an_pyo3 import log, Chunk, finish_progress_bar, frame_probe
+from av1an_pyo3 import log, Chunk, finish_progress_bar, frame_probe, TargetQuality
 
 from .Pipes import create_pipes
 

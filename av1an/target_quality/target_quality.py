@@ -163,7 +163,6 @@ class TargetQuality:
         process_pipe(pipe, chunk.index, utility)
         probe_name = Path(chunk.temp) / "split" / f"v_{q}{chunk.name}.ivf"
         fl_path = (Path(chunk.temp) / "split") / f"{chunk.name}.json"
-        print(self.vmaf_filter)
 
         run_vmaf_on_chunk(str(probe_name.as_posix()),
                           chunk.ffmpeg_gen_cmd, str(fl_path.as_posix()), self.model, self.vmaf_res, self.probing_rate, self.vmaf_filter, self.n_threads)

@@ -19,32 +19,6 @@ from av1an_pyo3 import (
 )
 
 
-def process_pipe(pipe, chunk_index, utility: Iterable[Popen]):
-    encoder_history = deque(maxlen=20)
-    while True:
-        line = pipe.stdout.readline().strip()
-        if len(line) == 0 and pipe.poll() is not None:
-            break
-        if len(line) == 0:
-            continue
-        if line:
-            encoder_history.append(line)
-
-    for u_pipe in utility:
-        if u_pipe.poll() is None:
-            u_pipe.kill()
-
-    if pipe.returncode != 0 and pipe.returncode != -2:
-        msg1 = (
-            f"Encoder encountered an error: {pipe.returncode}\n"
-            + f"Chunk: {chunk_index}"
-            + "\n".join(encoder_history)
-        )
-        log(msg1)
-        tb = sys.exc_info()[2]
-        raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
-
-
 def create_pipes(
     a: Project, c: Chunk, encoder, frame_probe_source, passes, current_pass
 ):
@@ -57,12 +31,14 @@ def create_pipes(
         if current_pass == 1:
             enc_cmd = compose_1_2_pass(a.encoder, a.video_params, fpf_file)
         if current_pass == 2:
-            enc_cmd = compose_2_2_pass(a.encoder, a.video_params, fpf_file, c.output)
+            enc_cmd = compose_2_2_pass(
+                a.encoder, a.video_params, fpf_file, c.output)
 
     if c.per_shot_target_quality_cq:
         enc_cmd = man_command(a.encoder, enc_cmd, c.per_shot_target_quality_cq)
 
-    ffmpeg_gen_pipe = subprocess.Popen(c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
+    ffmpeg_gen_pipe = subprocess.Popen(
+        c.ffmpeg_gen_cmd, stdout=PIPE, stderr=DEVNULL)
     ffmpeg_pipe = subprocess.Popen(
         compose_ffmpeg_pipe(a.ffmpeg_pipe),
         stdin=ffmpeg_gen_pipe.stdout,
@@ -114,4 +90,5 @@ def create_pipes(
         log(msg)
         print(msg)
         tb = sys.exc_info()[2]
-        raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
+        raise RuntimeError(
+            "Error in processing encoding pipe").with_traceback(tb)

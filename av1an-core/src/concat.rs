@@ -4,8 +4,9 @@ use av_format::demuxer::Event;
 use av_format::muxer::Context as MuxerContext;
 use av_ivf::demuxer::*;
 use av_ivf::muxer::*;
-use std::fs::File;
+use std::fs::{read_dir, File};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
 
 pub fn sort_files_by_filename(files: &mut [PathBuf]) {
@@ -120,5 +121,45 @@ pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
 
   muxer.write_trailer()?;
 
+  Ok(())
+}
+
+pub fn concatenate_mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Error> {
+  let mut encode_folder = PathBuf::from(encode_folder);
+
+  let mut audio_file = PathBuf::from(encode_folder.as_os_str());
+  audio_file.push("audio.mkv");
+
+  encode_folder.push("encode");
+  let output = PathBuf::from(output);
+
+  let mut files: Vec<_> = read_dir(&encode_folder)
+    .unwrap()
+    .map(|x| x.unwrap())
+    .collect();
+
+  files.sort_by_key(|x| x.path());
+
+  let mut cmd = Command::new("mkvmerge");
+  cmd.args([
+    "-o",
+    output.as_os_str().to_str().unwrap(),
+    "--append-mode",
+    "file",
+  ]);
+
+  if audio_file.exists() {
+    cmd.arg(audio_file.as_os_str().to_str().unwrap());
+  };
+
+  let mut append_args = Vec::new();
+  for fl in files {
+    append_args.push(fl.path().as_os_str().to_str().unwrap().to_string());
+    append_args.push("+".to_string());
+  }
+  append_args.pop().unwrap();
+
+  cmd.args(append_args);
+  cmd.output().unwrap();
   Ok(())
 }

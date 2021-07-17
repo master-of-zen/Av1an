@@ -1399,7 +1399,7 @@ impl Project {
             .unwrap();
         }
         "mkvmerge" => {
-          av1an.call_method1("concatenate_mkvmerge", (temp.clone(), output_file.clone()))?;
+          av1an_core::concat::concatenate_mkvmerge(temp.clone(), output_file.clone()).unwrap()
         }
         "ffmpeg" => {
           av1an_core::ffmpeg::concatenate_ffmpeg(
@@ -1451,7 +1451,6 @@ fn run_vmaf_on_chunk(
   )
   .unwrap()
 }
-
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;

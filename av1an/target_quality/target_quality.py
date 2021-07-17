@@ -2,7 +2,6 @@ import subprocess
 from pathlib import Path
 
 from av1an.manager.Pipes import process_pipe
-from av1an.vmaf import VMAF
 from av1an_pyo3 import (
     read_weighted_vmaf,
     adapt_probing_rate,
@@ -13,6 +12,7 @@ from av1an_pyo3 import (
     interpolate_target_q,
     log_probes,
     Chunk,
+    run_vmaf_on_chunk,
 )
 
 
@@ -20,13 +20,11 @@ class TargetQuality:
     def __init__(self, project):
 
         validate_vmaf(project.vmaf_path if project.vmaf_path else "")
-        self.vmaf_runner = VMAF(
-            n_threads=project.n_threads,
-            model=project.vmaf_path,
-            res=project.vmaf_res,
-            vmaf_filter=project.vmaf_filter,
-        )
-        self.n_threads = project.n_threads
+
+        self.vmaf_res = project.vmaf_res
+        self.vmaf_filter = project.vmaf_filter if project.vmaf_filter else ""
+        self.n_threads = f":n_threads={project.n_threads}" if project.n_threads else ""
+        self.model = project.vmaf_path if project.vmaf_path else ""
         self.probing_rate = project.probing_rate
         self.probes = project.probes
         self.target = project.target_quality
@@ -52,7 +50,8 @@ class TargetQuality:
         q_list.append(middle_point)
         last_q = middle_point
 
-        score = read_weighted_vmaf(str(self.vmaf_probe(chunk, last_q).as_posix()), 0.25)
+        score = read_weighted_vmaf(
+            str(self.vmaf_probe(chunk, last_q).as_posix()), 0.25)
         vmaf_cq.append((score, last_q))
 
         # Initialize search boundary
@@ -70,7 +69,8 @@ class TargetQuality:
             q_list.append(self.max_q)
 
         # Edge case check
-        score = read_weighted_vmaf(str(self.vmaf_probe(chunk, next_q).as_posix()), 0.25)
+        score = read_weighted_vmaf(
+            str(self.vmaf_probe(chunk, next_q).as_posix()), 0.25)
         vmaf_cq.append((score, next_q))
 
         if (next_q == self.min_q and score < self.target) or (
@@ -118,14 +118,16 @@ class TargetQuality:
                 vmaf_cq_upper = new_point
 
         q, q_vmaf = interpolate_target_q(vmaf_cq, self.target)
-        log_probes(vmaf_cq, frames, self.probing_rate, chunk.name, int(q), q_vmaf, "")
+        log_probes(vmaf_cq, frames, self.probing_rate,
+                   chunk.name, int(q), q_vmaf, "")
 
         return int(q)
 
     def vmaf_probe(self, chunk: Chunk, q):
 
         n_threads = (
-            self.n_threads if self.n_threads else vmaf_auto_threads(self.workers)
+            self.n_threads if self.n_threads else vmaf_auto_threads(
+                self.workers)
         )
         cmd = probe_cmd(
             self.encoder,
@@ -160,8 +162,12 @@ class TargetQuality:
         utility = (ffmpeg_gen_pipe, ffmpeg_pipe)
         process_pipe(pipe, chunk.index, utility)
         probe_name = Path(chunk.temp) / "split" / f"v_{q}{chunk.name}.ivf"
-        fl = self.vmaf_runner.call_vmaf(chunk, probe_name, vmaf_rate=self.probing_rate)
-        return fl
+        fl_path = (Path(chunk.temp) / "split") / f"{chunk.name}.json"
+        print(self.vmaf_filter)
+
+        run_vmaf_on_chunk(str(probe_name.as_posix()),
+                          chunk.ffmpeg_gen_cmd, str(fl_path.as_posix()), self.model, self.vmaf_res, self.probing_rate, self.vmaf_filter, self.n_threads)
+        return fl_path
 
     def per_shot_target_quality_routine(self, chunk: Chunk):
         chunk.per_shot_target_quality_cq = self.per_shot_target_quality(chunk)

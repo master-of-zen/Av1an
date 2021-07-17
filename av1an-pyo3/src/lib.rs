@@ -1425,6 +1425,33 @@ impl Project {
   }
 }
 
+#[pyfunction]
+fn run_vmaf_on_chunk(
+  encoded: String,
+  pipe_cmd: Vec<String>,
+  stat_file: String,
+  model: String,
+  res: String,
+  sample_rate: usize,
+  vmaf_filter: String,
+  threads: String,
+) {
+  let encoded = PathBuf::from(encoded);
+  let stat_file = PathBuf::from(stat_file);
+
+  av1an_core::vmaf::run_vmaf_on_chunk(
+    encoded,
+    pipe_cmd,
+    stat_file,
+    model,
+    res,
+    sample_rate,
+    vmaf_filter,
+    threads,
+  )
+  .unwrap()
+}
+
 #[pymodule]
 fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(init_progress_bar, m)?)?;
@@ -1481,6 +1508,7 @@ fn av1an_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(save_chunk_queue, m)?)?;
   m.add_function(wrap_pyfunction!(read_chunk_queue, m)?)?;
   m.add_function(wrap_pyfunction!(frame_probe, m)?)?;
+  m.add_function(wrap_pyfunction!(run_vmaf_on_chunk, m)?)?;
 
   m.add_class::<Project>()?;
   m.add_class::<Chunk>()?;

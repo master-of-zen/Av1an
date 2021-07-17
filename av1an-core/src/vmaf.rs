@@ -3,6 +3,7 @@ use anyhow::Error;
 use plotters::prelude::*;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::usize;
 use std::{path::PathBuf, u32};
 
 #[inline]
@@ -168,5 +169,86 @@ pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
   let json_file = run_vmaf_on_files(source, output)?;
   let plot_path = output.with_extension("png");
   plot_vmaf_score_file(&json_file, &plot_path).unwrap();
+  Ok(())
+}
+
+pub fn run_vmaf_on_chunk(
+  encoded: PathBuf,
+  pipe_cmd: Vec<String>,
+  stat_file: PathBuf,
+  model: String,
+  res: String,
+  sample_rate: usize,
+  vmaf_filter: String,
+  threads: String,
+) -> Result<(), Error> {
+  // Select filter for sampling from the source
+  let select = if sample_rate > 1 {
+    format!(
+      "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
+      sample_rate,
+      1.0 / sample_rate as f64
+    )
+  } else {
+    format!("")
+  };
+
+  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res );
+  let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res );
+  let vmaf = format!(
+    "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}",
+    stat_file.to_str().unwrap(),
+    &model,
+    threads
+  );
+
+  let vmaf_cmd = [
+    "-loglevel",
+    "error",
+    "-hide_banner",
+    "-y",
+    "-thread_queue_size",
+    "1024",
+    "-hide_banner",
+    "-r",
+    "60",
+    "-i",
+    encoded.to_str().unwrap(),
+    "-r",
+    "60",
+    "-i",
+    "-",
+    "-filter_complex",
+  ];
+
+  let cmd_out = ["-f", "null", "-"];
+
+  let mut source_pipe = Command::new(pipe_cmd.get(0).unwrap());
+  source_pipe.args(&pipe_cmd[1..]);
+  source_pipe.stdout(Stdio::piped());
+  source_pipe.stderr(Stdio::piped());
+
+  let handle = source_pipe
+    .stderr(Stdio::piped())
+    .spawn()
+    .unwrap_or_else(|e| {
+      panic!(
+        "Failed to execute source pipe: {} \ncommand: {:#?}",
+        e, source_pipe
+      )
+    });
+
+  // Making final ffmpeg command
+  let mut cmd = Command::new("ffmpeg");
+  cmd.args(vmaf_cmd);
+  cmd.arg(format!("{}{}{}", distorted, reference, vmaf));
+  cmd.args(cmd_out);
+  cmd.stderr(Stdio::piped());
+  cmd.stdout(Stdio::piped());
+  cmd
+    .stdin(handle.stdout.unwrap())
+    .output()
+    .unwrap_or_else(|e| panic!("Failed to execute vmaf pipe: {}\ncommand: {:#?}", e, cmd));
+
   Ok(())
 }

@@ -24,3 +24,5 @@ splines = "4.0.0"
 indicatif = { git = "https://github.com/mitsuhiko/indicatif" }
 once_cell = "1.8.0"
 chrono = "0.4.19"
+strum = { version = "0.21", features = ["derive"] }
+itertools = "0.10.1"

@@ -1,7 +1,0 @@
-numpy
-opencv-python
-scipy
-matplotlib
-setuptools_rust
-maturin
-vapoursynth

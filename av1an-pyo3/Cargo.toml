@@ -43,6 +43,7 @@ serde = { version = "1.0.126", features = ["serde_derive"] }
 crossbeam-channel = "0.5.1"
 crossbeam-utils = "0.8.5"
 ctrlc = "3.1.9"
+itertools = "0.10.1"
 
 [dependencies.tokio]
 version = "1"

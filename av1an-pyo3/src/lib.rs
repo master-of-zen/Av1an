@@ -1,15 +1,12 @@
-use once_cell::sync::Lazy;
-
-use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
-
 use av1an_core::vapoursynth;
 use av1an_core::{ChunkMethod, Encoder};
-use regex::Regex;
 
+use once_cell::sync::Lazy;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-use serde::{Deserialize, Serialize};
+use itertools::Itertools;
 
 use std::cmp;
 use std::cmp::{Ordering, Reverse};
@@ -27,10 +24,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::time::Instant;
-use std::usize;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
 use dict_derive::FromPyObject;
+use pyo3::prelude::*;
+use pyo3::wrap_pyfunction;
 
 #[pyfunction]
 fn adapt_probing_rate(rate: usize, _frames: usize) -> usize {
@@ -592,13 +590,16 @@ impl<'a> Queue<'a> {
           .map(|(rx, queue)| {
             s.spawn(move |_| {
               while let Ok(mut chunk) = rx.recv() {
-                queue.encode_chunk(&mut chunk).unwrap();
+                if let Err(_) = queue.encode_chunk(&mut chunk) {
+                  return Err(());
+                }
               }
+              Ok(())
             })
           })
           .collect();
         for consumer in consumers {
-          consumer.join().unwrap();
+          consumer.join().unwrap().unwrap();
         }
       })
       .unwrap();
@@ -610,68 +611,71 @@ impl<'a> Queue<'a> {
   }
 
   #[must_use]
-  fn encode_chunk(&self, chunk: &mut Chunk) -> Result<(), ()> {
-    for _ in 1..=3 {
-      let st_time = Instant::now();
+  fn encode_chunk(&self, chunk: &mut Chunk) -> Result<(), String> {
+    let st_time = Instant::now();
 
-      let _ = log(format!("Enc: {}, {} fr", chunk.index, chunk.frames).as_str());
+    let _ = log(format!("Enc: {}, {} fr", chunk.index, chunk.frames).as_str());
 
-      // Target Quality mode
-      if self.project.target_quality.is_some() {
-        if let Some(ref method) = self.project.target_quality_method {
-          if method == "per_shot" {
-            if let Some(ref tq) = self.target_quality {
-              tq.per_shot_target_quality_routine(chunk);
-            }
+    // Target Quality mode
+    if self.project.target_quality.is_some() {
+      if let Some(ref method) = self.project.target_quality_method {
+        if method == "per_shot" {
+          if let Some(ref tq) = self.target_quality {
+            tq.per_shot_target_quality_routine(chunk);
           }
         }
       }
+    }
 
-      // Run all passes for this chunk
-      for current_pass in 1..=self.project.passes {
+    // Run all passes for this chunk
+    const MAX_TRIES: usize = 3;
+    for current_pass in 1..=self.project.passes {
+      for _try in 1..=MAX_TRIES {
         let res = self.project.create_pipes(chunk.clone(), current_pass);
         if let Err(e) = res {
           eprintln!("{}", e);
           let _ = log(&e);
-          continue;
+          if _try == MAX_TRIES {
+            eprintln!("Encoder crashed {} times, shutting down thread.", MAX_TRIES);
+            return Err(e);
+          }
         }
-      }
-
-      let encoded_frames = self.frame_check_output(chunk, chunk.frames);
-
-      if encoded_frames == chunk.frames {
-        let progress_file = Path::new(&self.project.temp).join("done.json");
-        let done_json = fs::read_to_string(&progress_file).unwrap();
-        let mut done_json: DoneJson = serde_json::from_str(&done_json).unwrap();
-        done_json.done.insert(chunk.name(), encoded_frames);
-
-        let mut progress_file = File::create(&progress_file).unwrap();
-        progress_file
-          .write_all(serde_json::to_string(&done_json).unwrap().as_bytes())
-          .unwrap();
-
-        let enc_time = st_time.elapsed();
-
-        let _ = log(
-          format!(
-            "Done: {} Fr: {}/{}",
-            chunk.index, encoded_frames, chunk.frames
-          )
-          .as_str(),
-        );
-        let _ = log(
-          format!(
-            "Fps: {:.2} Time: {:?}",
-            encoded_frames as f64 / enc_time.as_secs_f64(),
-            enc_time
-          )
-          .as_str(),
-        );
-        return Ok(());
       }
     }
 
-    Err(())
+    let encoded_frames = self.frame_check_output(chunk, chunk.frames);
+
+    if encoded_frames == chunk.frames {
+      let progress_file = Path::new(&self.project.temp).join("done.json");
+      let done_json = fs::read_to_string(&progress_file).unwrap();
+      let mut done_json: DoneJson = serde_json::from_str(&done_json).unwrap();
+      done_json.done.insert(chunk.name(), encoded_frames);
+
+      let mut progress_file = File::create(&progress_file).unwrap();
+      progress_file
+        .write_all(serde_json::to_string(&done_json).unwrap().as_bytes())
+        .unwrap();
+
+      let enc_time = st_time.elapsed();
+
+      let _ = log(
+        format!(
+          "Done: {} Fr: {}/{}",
+          chunk.index, encoded_frames, chunk.frames
+        )
+        .as_str(),
+      );
+      let _ = log(
+        format!(
+          "Fps: {:.2} Time: {:?}",
+          encoded_frames as f64 / enc_time.as_secs_f64(),
+          enc_time
+        )
+        .as_str(),
+      );
+    }
+
+    Ok(())
   }
 
   fn frame_check_output(&self, chunk: &Chunk, expected_frames: usize) -> usize {
@@ -1041,7 +1045,7 @@ impl Chunk {
 
 #[pyfunction]
 fn save_chunk_queue(temp: &str, chunk_queue: Vec<Chunk>) {
-  let mut file = fs::File::create(Path::new(temp).join("chunks.json")).unwrap();
+  let mut file = File::create(Path::new(temp).join("chunks.json")).unwrap();
 
   file
     .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
@@ -1314,8 +1318,10 @@ impl Project {
         return Err(format!(
           "Encoder encountered an error: {}
 Chunk: {}
-{:?}",
-          returncode, c.index, &encoder_history
+{}",
+          returncode,
+          c.index,
+          encoder_history.iter().join(" ")
         ));
       }
     }

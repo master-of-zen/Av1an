@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        enc: [aom, rav1e, svt_av1, vpx, x265, x264]
+        enc: [aom, rav1e, svt-av1, vpx, x265, x264]
         name: [baseline, baseline-select, target-quality, probe-slow]
         include:
           - name: baseline

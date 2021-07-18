@@ -26,6 +26,7 @@ use std::iter;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::time::Instant;
 use std::usize;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
@@ -163,6 +164,16 @@ fn frame_probe(source: &str, py: Python) -> PyResult<usize> {
   } else {
     // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
     Ok(ffmpeg_get_frame_count(source))
+  }
+}
+
+// same as frame_probe, but you can call it without the python GIL
+fn frame_probe_rust(source: &str) -> usize {
+  if is_vapoursynth(source) {
+    av1an_core::vapoursynth::num_frames(Path::new(source)).unwrap()
+  } else {
+    // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
+    ffmpeg_get_frame_count(source)
   }
 }
 
@@ -555,6 +566,128 @@ pub fn av_scenechange_detect(
 #[pyfunction]
 fn is_vapoursynth(s: &str) -> bool {
   [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
+}
+
+struct Queue<'a> {
+  chunk_queue: Vec<Chunk>,
+  project: &'a Project,
+  target_quality: Option<TargetQuality>,
+}
+
+impl<'a> Queue<'a> {
+  fn encoding_loop(self) -> Result<(), ()> {
+    if !self.chunk_queue.is_empty() {
+      let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
+
+      let workers = self.project.workers;
+
+      for chunk in &self.chunk_queue {
+        sender.send(chunk.clone()).unwrap();
+      }
+      drop(sender);
+
+      crossbeam_utils::thread::scope(|s| {
+        let consumers: Vec<_> = (0..workers)
+          .map(|_| (receiver.clone(), &self))
+          .map(|(rx, queue)| {
+            s.spawn(move |_| {
+              while let Ok(mut chunk) = rx.recv() {
+                queue.encode_chunk(&mut chunk).unwrap();
+              }
+            })
+          })
+          .collect();
+        for consumer in consumers {
+          consumer.join().unwrap();
+        }
+      })
+      .unwrap();
+
+      finish_progress_bar().unwrap();
+    }
+
+    Ok(())
+  }
+
+  #[must_use]
+  fn encode_chunk(&self, chunk: &mut Chunk) -> Result<(), ()> {
+    for _ in 1..=3 {
+      let st_time = Instant::now();
+
+      let _ = log(format!("Enc: {}, {} fr", chunk.index, chunk.frames).as_str());
+
+      // Target Quality mode
+      if self.project.target_quality.is_some() {
+        if let Some(ref method) = self.project.target_quality_method {
+          if method == "per_shot" {
+            if let Some(ref tq) = self.target_quality {
+              tq.per_shot_target_quality_routine(chunk);
+            }
+          }
+        }
+      }
+
+      // Run all passes for this chunk
+      for current_pass in 1..=self.project.passes {
+        let res = self.project.create_pipes(chunk.clone(), current_pass);
+        if let Err(e) = res {
+          eprintln!("{}", e);
+          let _ = log(&e);
+          continue;
+        }
+      }
+
+      let encoded_frames = self.frame_check_output(chunk, chunk.frames);
+
+      if encoded_frames == chunk.frames {
+        let progress_file = Path::new(&self.project.temp).join("done.json");
+        let done_json = fs::read_to_string(&progress_file).unwrap();
+        let mut done_json: DoneJson = serde_json::from_str(&done_json).unwrap();
+        done_json.done.insert(chunk.name(), encoded_frames);
+
+        let mut progress_file = File::create(&progress_file).unwrap();
+        progress_file
+          .write_all(serde_json::to_string(&done_json).unwrap().as_bytes())
+          .unwrap();
+
+        let enc_time = st_time.elapsed();
+
+        let _ = log(
+          format!(
+            "Done: {} Fr: {}/{}",
+            chunk.index, encoded_frames, chunk.frames
+          )
+          .as_str(),
+        );
+        let _ = log(
+          format!(
+            "Fps: {:.2} Time: {:?}",
+            encoded_frames as f64 / enc_time.as_secs_f64(),
+            enc_time
+          )
+          .as_str(),
+        );
+        return Ok(());
+      }
+    }
+
+    Err(())
+  }
+
+  fn frame_check_output(&self, chunk: &Chunk, expected_frames: usize) -> usize {
+    let actual_frames = frame_probe_rust(&chunk.output_path());
+
+    if actual_frames != expected_frames {
+      let msg = format!(
+        "Chunk #{}: {}/{} fr",
+        chunk.index, actual_frames, expected_frames
+      );
+      let _ = log(&msg);
+      println!(":: {}", msg);
+    }
+
+    actual_frames
+  }
 }
 
 #[pyclass]
@@ -1065,6 +1198,117 @@ impl Project {
     av1an_core::concat::sort_files_by_filename(&mut queue_files);
 
     queue_files
+  }
+}
+
+impl Project {
+  fn create_pipes(&self, c: Chunk, current_pass: u8) -> Result<(), String> {
+    let fpf_file = Path::new(&c.temp)
+      .join("split")
+      .join(format!("{}_fpf", c.name()));
+
+    let mut enc_cmd = if self.passes == 1 {
+      compose_1_1_pass(self.encoder.clone(), self.video_params.clone(), c.output()).unwrap()
+    } else {
+      if current_pass == 1 {
+        compose_1_2_pass(
+          self.encoder.clone(),
+          self.video_params.clone(),
+          fpf_file.to_str().unwrap().to_owned(),
+        )
+        .unwrap()
+      } else {
+        compose_2_2_pass(
+          self.encoder.clone(),
+          self.video_params.clone(),
+          fpf_file.to_str().unwrap().to_owned(),
+          c.output(),
+        )
+        .unwrap()
+      }
+    };
+
+    if let Some(per_shot_target_quality_cq) = c.per_shot_target_quality_cq {
+      enc_cmd = man_command(
+        self.encoder.clone(),
+        enc_cmd,
+        per_shot_target_quality_cq as usize,
+      );
+    }
+
+    let mut encoder_history = VecDeque::with_capacity(20);
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+      .enable_io()
+      .build()
+      .unwrap();
+
+    let returncode = rt.block_on(async {
+      let mut ffmpeg_gen_pipe = tokio::process::Command::new(&c.ffmpeg_gen_cmd[0])
+        .args(&c.ffmpeg_gen_cmd[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_gen_pipe_stdout: Stdio =
+        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone()).unwrap();
+      let mut ffmpeg_pipe = tokio::process::Command::new(&ffmpeg_pipe[0])
+        .args(&ffmpeg_pipe[1..])
+        .stdin(ffmpeg_gen_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut pipe = tokio::process::Command::new(&enc_cmd[0])
+        .args(&enc_cmd[1..])
+        .stdin(ffmpeg_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let mut frame = 0;
+
+      let mut reader = BufReader::new(pipe.stdout.take().unwrap()).lines();
+
+      while let Some(line) = reader.next_line().await.unwrap() {
+        let new = match_line(&self.encoder, &line).unwrap();
+
+        encoder_history.push_back(line);
+
+        if new > frame {
+          update_bar((new - frame) as u64).unwrap();
+          frame = new;
+        }
+      }
+
+      let returncode = pipe.wait().await.unwrap();
+
+      ffmpeg_gen_pipe.kill().await.unwrap();
+      ffmpeg_pipe.kill().await.unwrap();
+
+      returncode
+    });
+
+    if let Some(code) = returncode.code() {
+      // -2 is Ctrl+C for aom
+      if code != 0 && code != -2 {
+        return Err(format!(
+          "Encoder encountered an error: {}
+Chunk: {}
+{:?}",
+          returncode, c.index, &encoder_history
+        ));
+      }
+    }
+
+    Ok(())
   }
 }
 
@@ -1661,9 +1905,7 @@ impl Project {
 
     init_progress_bar((_self.frames - initial_frames) as u64).unwrap();
 
-    Python::with_gil(|py| -> PyResult<()> {
-      let av1an = PyModule::import(py, "av1an")?;
-
+    Python::with_gil(|_| -> PyResult<()> {
       // hack to avoid borrow checker errors
       let concat = _self.concat.clone();
       let temp = _self.temp.clone();
@@ -1673,15 +1915,17 @@ impl Project {
       let vmaf = _self.vmaf;
       let keep = _self.keep;
 
-      let queue = av1an.getattr("Queue")?.call1((_self, chunk_queue))?;
-      queue.call_method0("encoding_loop")?;
-      let status: String = queue.getattr("status")?.extract()?;
+      let queue = Queue {
+        chunk_queue,
+        project: &_self,
+        target_quality: if _self.target_quality.is_some() {
+          Some(TargetQuality::new(&_self))
+        } else {
+          None
+        },
+      };
 
-      if status.eq_ignore_ascii_case("fatal") {
-        let msg = "FATAL Encoding process encountered fatal error, shutting down";
-        log(msg)?;
-        panic!("\n::{}", msg);
-      }
+      queue.encoding_loop().unwrap();
 
       let _ = log("Concatenating");
 

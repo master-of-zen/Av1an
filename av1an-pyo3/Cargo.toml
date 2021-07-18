@@ -40,6 +40,8 @@ regex = "1.5.4"
 strsim = "0.10.0"
 serde_json = "1.0.64"
 serde = { version = "1.0.126", features = ["serde_derive"] }
+crossbeam-channel = "0.5.1"
+crossbeam-utils = "0.8.5"
 
 [dependencies.tokio]
 version = "1"

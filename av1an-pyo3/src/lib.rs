@@ -543,6 +543,8 @@ impl<'a> Queue<'a> {
             eprintln!("Encoder crashed {} times, shutting down thread.", MAX_TRIES);
             return Err(e);
           }
+        } else {
+          break;
         }
       }
     }

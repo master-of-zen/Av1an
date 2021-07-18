@@ -15,6 +15,7 @@ __pycache__/
 *.y4m
 
 # Hidden folders
+! .github
 .*
 
 # Distribution / packaging

@@ -2,7 +2,7 @@ FROM luigi311/encoders-docker:latest
 
 ENV MPLCONFIGDIR="/home/app_user/"
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DEPENDENCIES="mkvtoolnix curl python-is-python3 python3-venv"
+ARG DEPENDENCIES="mkvtoolnix curl"
 
 # Install dependencies
 RUN apt-get update && \
@@ -25,22 +25,12 @@ USER app_user
 
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain nightly
-
-# Copy av1an requirements
-COPY --chown=app_user requirements.txt /Av1an/requirements.txt
-WORKDIR /Av1an
-
-# Create virtualenv required for maturin develop
-ENV VIRTUAL_ENV=/Av1an/.venv
-RUN python3 -m venv "${VIRTUAL_ENV}"
-ENV PATH="$VIRTUAL_ENV/bin:/home/app_user/.cargo/bin:$PATH"
-
-# Install av1an requirements
-RUN pip3 install wheel && pip3 install -r requirements.txt vapoursynth
+ENV PATH="/home/app_user/.cargo/bin:$PATH"
 
 # Copy av1an and build av1an
 COPY --chown=app_user . /Av1an
-RUN maturin develop --release -m av1an-pyo3/Cargo.toml
+WORKDIR /Av1an
+RUN cargo build --release
 
 # Open up /Av1an to all users
 RUN chmod 777 /Av1an
@@ -48,4 +38,4 @@ RUN chmod 777 /Av1an
 VOLUME ["/videos"]
 WORKDIR /videos
 
-ENTRYPOINT [ "/Av1an/av1an.py" ]
+ENTRYPOINT [ "/Av1an/target/release/av1an" ]

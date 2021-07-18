@@ -438,14 +438,8 @@ impl Encoder {
     if !encoder_regex.is_match(line) {
       return Some(0);
     }
-    let captures = encoder_regex
-      .captures(line)
-      .unwrap()
-      .get(1)
-      .unwrap()
-      .as_str();
-    let result = captures.parse::<usize>().unwrap();
-    Some(result)
+    let captures = encoder_regex.captures(line)?.get(1)?.as_str();
+    captures.parse::<usize>().ok()
   }
 
   pub fn construct_target_quality_command(&self, threads: String, q: String) -> Vec<Cow<str>> {

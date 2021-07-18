@@ -1236,7 +1236,7 @@ impl Project {
       );
     }
 
-    let mut encoder_history = VecDeque::with_capacity(20);
+    let mut encoder_history: VecDeque<String> = VecDeque::with_capacity(20);
 
     let rt = tokio::runtime::Builder::new_current_thread()
       .enable_io()
@@ -1275,25 +1275,37 @@ impl Project {
 
       let mut frame = 0;
 
-      let mut reader = BufReader::new(pipe.stdout.take().unwrap()).lines();
+      let mut reader = BufReader::new(pipe.stderr.take().unwrap());
 
-      while let Some(line) = reader.next_line().await.unwrap() {
-        let new = match_line(&self.encoder, &line).unwrap();
+      let mut buf = vec![];
 
-        encoder_history.push_back(line);
-
-        if new > frame {
-          update_bar((new - frame) as u64).unwrap();
-          frame = new;
+      while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
+        if read == 0 {
+          break;
         }
+
+        let line = std::str::from_utf8(&buf);
+
+        if let Ok(line) = line {
+          let new = match_line(&self.encoder, &line).unwrap();
+
+          encoder_history.push_back(line.to_owned());
+
+          if new > frame {
+            update_bar((new - frame) as u64).unwrap();
+            frame = new;
+          }
+        }
+
+        buf.clear();
       }
 
-      let returncode = pipe.wait().await.unwrap();
+      let returncode = pipe.wait_with_output().await.unwrap();
 
       ffmpeg_gen_pipe.kill().await.unwrap();
       ffmpeg_pipe.kill().await.unwrap();
 
-      returncode
+      returncode.status
     });
 
     if let Some(code) = returncode.code() {
@@ -1831,6 +1843,12 @@ impl Project {
   }
 
   fn encode_file(mut _self: PyRefMut<Self>, py: Python) {
+    ctrlc::set_handler(|| {
+      println!("Stopped");
+      std::process::exit(0);
+    })
+    .unwrap();
+
     let _ = log(format!("File hash: {}", hash_path(&_self.input)).as_str());
 
     let done_path = Path::new(&_self.temp).join("done.json");

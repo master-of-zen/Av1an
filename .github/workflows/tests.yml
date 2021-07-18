@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree python-is-python3 python3-venv
+  deps: tree
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
@@ -91,23 +91,9 @@ jobs:
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
 
-      - uses: syphar/restore-virtualenv@v1
-        id: cache-virtualenv
-        with:
-          requirement_files: requirements.txt  # this is optional
-
-      - uses: syphar/restore-pip-download-cache@v1
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
-
-        # the package installation will only be executed when the
-        # requirements-files have changed.
-      - run: pip3 install -r requirements.txt
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
-
       - name: Build Av1an
         run: |
-          pip3 install vapoursynth
-          maturin develop --release -m av1an-pyo3/Cargo.toml
+          cargo build --release
 
       - name: Download videos
         run: |
@@ -118,7 +104,7 @@ jobs:
 
       - name: Testing ${{ matrix.name }}
         run: |
-          ./av1an.py -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          target/release/av1an -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
 

@@ -9,6 +9,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 use itertools::Itertools;
 
+use av1an_core::split::extra_splits;
 use std::cmp;
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
@@ -1291,13 +1292,22 @@ impl Project {
 
     let scene_file = Path::new(&self.temp).join("scenes.json");
 
-    let scenes = if self.resume {
+    let mut scenes = if self.resume {
       av1an_core::split::read_scenes_from_file(scene_file.as_path())
         .unwrap()
         .0
     } else {
       self.calc_split_locations()
     };
+    let _ = log(&format!("SC: Found {} scenes", scenes.len() + 1));
+    if let Some(split_len) = self.extra_splits_len {
+      let _ = log(&format!(
+        "SC: Applying extra splits every {} frames",
+        split_len
+      ));
+      scenes = extra_splits(scenes, self.frames, split_len);
+      let _ = log(&format!("SC: Now at {} scenes", scenes.len() + 1));
+    }
 
     self.write_scenes_to_file(scenes.clone(), scene_file.as_path().to_str().unwrap());
 

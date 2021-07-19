@@ -61,7 +61,7 @@ pub fn main() {
     audio_params: if let Some(params) = args.audio_params {
       shlex::split(&params).unwrap_or_else(|| Vec::new())
     } else {
-      Vec::new()
+      vec!["-c:a".into(), "copy".into()]
     },
     ffmpeg_pipe: Vec::new(),
     chunk_method: args

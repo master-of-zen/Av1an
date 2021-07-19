@@ -29,6 +29,10 @@ pub struct Args {
   #[clap(short, long)]
   pub quiet: bool,
 
+  /// Print extra progress info and stats to terminal
+  #[clap(long)]
+  pub verbose: bool,
+
   /// Enable logging
   #[clap(short, long)]
   pub logging: Option<String>,

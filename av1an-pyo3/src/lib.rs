@@ -9,6 +9,9 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 use itertools::Itertools;
 
+use av1an_core::progress_bar::{
+  finish_multi_progress_bar, init_multi_progress_bar, update_mp_bar, update_mp_msg,
+};
 use av1an_core::split::extra_splits;
 use std::cmp;
 use std::cmp::{Ordering, Reverse};
@@ -252,17 +255,17 @@ pub fn av_scenechange_detect(
   input: &str,
   total_frames: usize,
   min_scene_len: usize,
-  quiet: bool,
+  verbosity: Verbosity,
   is_vs: bool,
 ) -> anyhow::Result<Vec<usize>> {
-  if !quiet {
+  if verbosity != Verbosity::Quiet {
     println!("Scene detection");
     av1an_core::progress_bar::init_progress_bar(total_frames as u64).unwrap();
   }
 
   let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
     Path::new(input),
-    if quiet {
+    if verbosity == Verbosity::Quiet {
       None
     } else {
       Some(Box::new(|frames, _keyframes| {
@@ -308,11 +311,11 @@ impl<'a> Queue<'a> {
 
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..workers)
-          .map(|_| (receiver.clone(), &self))
-          .map(|(rx, queue)| {
+          .map(|i| (receiver.clone(), &self, i))
+          .map(|(rx, queue, consumer_idx)| {
             s.spawn(move |_| {
               while let Ok(mut chunk) = rx.recv() {
-                if queue.encode_chunk(&mut chunk).is_err() {
+                if queue.encode_chunk(&mut chunk, consumer_idx).is_err() {
                   return Err(());
                 }
               }
@@ -326,13 +329,17 @@ impl<'a> Queue<'a> {
       })
       .unwrap();
 
-      finish_progress_bar().unwrap();
+      if self.project.verbosity == Verbosity::Normal {
+        finish_progress_bar().unwrap();
+      } else if self.project.verbosity == Verbosity::Verbose {
+        finish_multi_progress_bar().unwrap();
+      }
     }
 
     Ok(())
   }
 
-  fn encode_chunk(&self, chunk: &mut Chunk) -> Result<(), String> {
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), String> {
     let st_time = Instant::now();
 
     let _ = log(format!("Enc: {}, {} fr", chunk.index, chunk.frames).as_str());
@@ -352,7 +359,9 @@ impl<'a> Queue<'a> {
     const MAX_TRIES: usize = 3;
     for current_pass in 1..=self.project.passes {
       for _try in 1..=MAX_TRIES {
-        let res = self.project.create_pipes(chunk.clone(), current_pass);
+        let res = self
+          .project
+          .create_pipes(chunk.clone(), current_pass, worker_id);
         if let Err(e) = res {
           eprintln!("{}", e);
           let _ = log(&e);
@@ -736,6 +745,13 @@ fn save_chunk_queue(temp: &str, chunk_queue: Vec<Chunk>) {
     .unwrap();
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum Verbosity {
+  Verbose,
+  Normal,
+  Quiet,
+}
+
 pub struct Project {
   pub frames: usize,
   pub is_vs: bool,
@@ -764,7 +780,7 @@ pub struct Project {
   pub audio_params: Vec<String>,
   pub pix_format: String,
 
-  pub quiet: bool,
+  pub verbosity: Verbosity,
   pub logging: String,
   pub resume: bool,
   pub keep: bool,
@@ -841,7 +857,7 @@ impl Project {
 }
 
 impl Project {
-  fn create_pipes(&self, c: Chunk, current_pass: u8) -> Result<(), String> {
+  fn create_pipes(&self, c: Chunk, current_pass: u8, worker_id: usize) -> Result<(), String> {
     let fpf_file = Path::new(&c.temp)
       .join("split")
       .join(format!("{}_fpf", c.name()));
@@ -920,11 +936,18 @@ impl Project {
         let line = std::str::from_utf8(&buf);
 
         if let Ok(line) = line {
+          if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
+            update_mp_msg(worker_id, line.to_string()).unwrap();
+          }
           if let Some(new) = self.encoder.match_line(line) {
             encoder_history.push_back(line.to_owned());
 
             if new > frame {
-              update_bar((new - frame) as u64).unwrap();
+              if self.verbosity == Verbosity::Normal {
+                update_bar((new - frame) as u64).unwrap();
+              } else if self.verbosity == Verbosity::Verbose {
+                update_mp_bar((new - frame) as u64).unwrap();
+              }
               frame = new;
             }
           }
@@ -1137,7 +1160,7 @@ impl Project {
         &self.input,
         self.frames,
         self.min_scene_len,
-        self.quiet,
+        self.verbosity,
         self.is_vs,
       )
       .unwrap(),
@@ -1530,7 +1553,11 @@ impl Project {
       self.video_params.join(" ")
     );
 
-    init_progress_bar((self.frames - initial_frames) as u64).unwrap();
+    if self.verbosity == Verbosity::Normal {
+      init_progress_bar((self.frames - initial_frames) as u64).unwrap();
+    } else if self.verbosity == Verbosity::Verbose {
+      init_multi_progress_bar((self.frames - initial_frames) as u64, self.workers).unwrap();
+    }
 
     // hack to avoid borrow checker errors
     let concat = self.concat.clone();

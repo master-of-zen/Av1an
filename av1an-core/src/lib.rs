@@ -5,7 +5,7 @@ extern crate log;
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::fmt::Error;
+use std::fmt::{Display, Error};
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -37,6 +37,12 @@ pub enum Encoder {
   svt_av1,
   x264,
   x265,
+}
+
+impl Display for Encoder {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str(<&'static str>::from(self))
+  }
 }
 
 macro_rules! into_vec {
@@ -109,7 +115,7 @@ impl Encoder {
     }
   }
 
-  pub fn compose_1_2_pass(&self, params: Vec<String>, fpf: String) -> Vec<String> {
+  pub fn compose_1_2_pass(&self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match &self {
       // Aomenc
       Self::aom => chain!(
@@ -221,7 +227,7 @@ impl Encoder {
     }
   }
 
-  pub fn compose_2_2_pass(&self, params: Vec<String>, fpf: String, output: String) -> Vec<String> {
+  pub fn compose_2_2_pass(&self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match &self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=2"],
@@ -295,7 +301,7 @@ impl Encoder {
     }
   }
 
-  pub fn get_default_arguments(&self) -> Vec<&str> {
+  pub fn get_default_arguments(&self) -> Vec<String> {
     match &self {
       Encoder::aom => into_vec![
         "--threads=8",
@@ -413,7 +419,7 @@ impl Encoder {
   }
 
   pub fn man_command(&self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index_of_regex(params.clone(), self.q_regex_str()).unwrap();
+    let index = list_index_of_regex(&params, self.q_regex_str()).unwrap();
 
     let mut new_params = params;
     let (replace_index, replace_q) = self.replace_q(index, q);
@@ -658,17 +664,17 @@ impl Encoder {
   }
 
   // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
-  pub fn decow_strings(&self, args: Vec<Cow<str>>) -> Vec<String> {
+  pub fn decow_strings(&self, args: &[Cow<str>]) -> Vec<String> {
     args.iter().map(|s| s.to_string()).collect::<Vec<String>>()
   }
 
   pub fn probe_cmd(
     &self,
     temp: String,
-    name: String,
+    name: &str,
     q: String,
     ffmpeg_pipe: Vec<String>,
-    probing_rate: String,
+    probing_rate: &str,
     n_threads: String,
     video_params: Vec<String>,
     probe_slow: bool,
@@ -709,11 +715,11 @@ impl Encoder {
       ];
       args = self.remove_patterns(args, patterns);
       let ps = self.construct_target_quality_command_probe_slow(q);
-      params = self.decow_strings(ps);
+      params = self.decow_strings(&ps);
       params.append(&mut args)
     } else {
       let ps = self.construct_target_quality_command(n_threads, q);
-      params = self.decow_strings(ps);
+      params = self.decow_strings(&ps);
     }
 
     let output: Vec<String> = match &self {
@@ -745,7 +751,7 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
   p
 }
 
-pub fn list_index_of_regex(params: Vec<String>, regex_str: &str) -> Option<usize> {
+pub fn list_index_of_regex(params: &[String], regex_str: &str) -> Option<usize> {
   let re = Regex::new(regex_str).unwrap();
 
   assert!(
@@ -779,12 +785,16 @@ pub enum SplitMethod {
   None,
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
+)]
 pub enum ChunkMethod {
   #[strum(serialize = "select")]
   Select,
   #[strum(serialize = "hybrid")]
   Hybrid,
+  #[strum(serialize = "segment")]
+  Segment,
   #[strum(serialize = "ffms2")]
   FFMS2,
   #[strum(serialize = "lsmash")]

@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use av1an_cli::Args;
+use av1an_core::vapoursynth;
 use av1an_pyo3::{hash_path, is_vapoursynth, Project};
 use clap::Clap;
 
@@ -31,7 +32,7 @@ pub fn main() {
         .to_owned()
     },
     ffmpeg: if let Some(s) = args.ffmpeg {
-      shlex::split(&s).unwrap_or_else(|| Vec::new())
+      shlex::split(&s).unwrap_or_else(Vec::new)
     } else {
       Vec::new()
     },
@@ -44,7 +45,7 @@ pub fn main() {
       args.encoder.get_default_pass()
     },
     video_params: if let Some(params) = args.video_params {
-      shlex::split(&params).unwrap_or_else(|| Vec::new())
+      shlex::split(&params).unwrap_or_else(Vec::new)
     } else {
       Vec::new()
     },
@@ -59,16 +60,16 @@ pub fn main() {
       )
     },
     audio_params: if let Some(params) = args.audio_params {
-      shlex::split(&params).unwrap_or_else(|| Vec::new())
+      shlex::split(&params).unwrap_or_else(|| vec!["-c:a".into(), "copy".into()])
     } else {
       vec!["-c:a".into(), "copy".into()]
     },
     ffmpeg_pipe: Vec::new(),
     chunk_method: args
       .chunk_method
-      .map(|cm| <&'static str>::from(cm).to_owned()),
+      .unwrap_or_else(|| vapoursynth::select_chunk_method().unwrap()),
     concat: <&'static str>::from(args.concat).to_owned(),
-    encoder: <&'static str>::from(args.encoder).to_owned(),
+    encoder: args.encoder,
     extra_splits_len: Some(args.extra_split),
     input: args.input.to_str().unwrap().to_owned(),
     keep: args.keep,
@@ -85,7 +86,7 @@ pub fn main() {
     scenes: args
       .scenes
       .map(|scenes| scenes.to_str().unwrap().to_owned()),
-    split_method: <&'static str>::from(args.split_method).to_owned(),
+    split_method: args.split_method,
     target_quality: args.target_quality,
     target_quality_method: Some(args.target_quality_method),
     vmaf: args.vmaf,

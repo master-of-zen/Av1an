@@ -1,4 +1,4 @@
-use av1an_core::vapoursynth;
+use av1an_core::{vapoursynth, SplitMethod};
 use av1an_core::{ChunkMethod, Encoder};
 
 use anyhow::anyhow;
@@ -24,7 +24,6 @@ use std::io::Write;
 use std::iter;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::str::FromStr;
 use std::time::Instant;
 use std::{collections::hash_map::DefaultHasher, path::PathBuf};
 
@@ -44,13 +43,10 @@ pub fn hash_path(path: &str) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn create_vs_file(temp: &str, source: &str, chunk_method: &str) -> anyhow::Result<String> {
+fn create_vs_file(temp: &str, source: &str, chunk_method: ChunkMethod) -> anyhow::Result<String> {
   // only for python code, remove if being called by rust
   let temp = Path::new(temp);
   let source = Path::new(source).canonicalize()?;
-  let chunk_method = ChunkMethod::from_str(chunk_method)
-    // TODO implement this in the FromStr implementation itself
-    .unwrap();
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
 
@@ -157,90 +153,9 @@ fn log(msg: &str) -> anyhow::Result<()> {
   Ok(())
 }
 
-fn get_default_cq_range(encoder: &str) -> anyhow::Result<(usize, usize)> {
-  Ok(Encoder::from_str(&encoder).unwrap().get_default_cq_range())
-}
-
-fn get_default_arguments(encoder: &str) -> anyhow::Result<Vec<String>> {
-  let encoder = Encoder::from_str(&encoder).unwrap();
-  let default_arguments = encoder.get_default_arguments();
-
-  Ok(
-    default_arguments
-      .iter()
-      .map(|&s| s.to_string())
-      .collect::<Vec<String>>(),
-  )
-}
-
-fn help_command(encoder: &str) -> anyhow::Result<Vec<String>> {
-  let encoder = Encoder::from_str(&encoder).unwrap();
-  let help_command = encoder.help_command();
-
-  Ok(
-    help_command
-      .iter()
-      .map(|&s| s.to_string())
-      .collect::<Vec<String>>(),
-  )
-}
-
-fn encoder_bin(encoder: &str) -> anyhow::Result<String> {
-  Ok(Encoder::from_str(&encoder).unwrap().encoder_bin().into())
-}
-
-fn output_extension(encoder: &str) -> anyhow::Result<String> {
-  Ok(
-    Encoder::from_str(&encoder)
-      .unwrap()
-      .output_extension()
-      .into(),
-  )
-}
-
 fn compose_ffmpeg_pipe(params: Vec<String>) -> anyhow::Result<Vec<String>> {
   let res = av1an_core::compose_ffmpeg_pipe(params);
   Ok(res)
-}
-
-fn compose_1_1_pass(
-  encoder: String,
-  params: Vec<String>,
-  output: String,
-) -> anyhow::Result<Vec<String>> {
-  let enc = Encoder::from_str(&encoder).unwrap();
-  Ok(enc.compose_1_1_pass(params, output))
-}
-
-fn compose_1_2_pass(
-  encoder: String,
-  params: Vec<String>,
-  fpf: String,
-) -> anyhow::Result<Vec<String>> {
-  let enc = Encoder::from_str(&encoder).unwrap();
-  Ok(enc.compose_1_2_pass(params, fpf))
-}
-
-fn compose_2_2_pass(
-  encoder: String,
-  params: Vec<String>,
-  fpf: String,
-  output: String,
-) -> anyhow::Result<Vec<String>> {
-  let enc = Encoder::from_str(&encoder).unwrap();
-  Ok(enc.compose_2_2_pass(params, fpf, output))
-}
-
-fn man_command(encoder: String, params: Vec<String>, q: usize) -> Vec<String> {
-  let enc = Encoder::from_str(&encoder).unwrap();
-
-  enc.man_command(params, q)
-}
-
-fn match_line(encoder: &str, line: &str) -> anyhow::Result<usize> {
-  let enc = Encoder::from_str(encoder).unwrap();
-
-  Ok(enc.match_line(line).unwrap())
 }
 
 fn weighted_search(
@@ -252,30 +167,6 @@ fn weighted_search(
 ) -> anyhow::Result<usize> {
   Ok(av1an_core::target_quality::weighted_search(
     num1, vmaf1, num2, vmaf2, target,
-  ))
-}
-
-fn probe_cmd(
-  encoder: String,
-  temp: String,
-  name: String,
-  q: String,
-  ffmpeg_pipe: Vec<String>,
-  probing_rate: String,
-  n_threads: String,
-  video_params: Vec<String>,
-  probe_slow: bool,
-) -> anyhow::Result<(Vec<String>, Vec<String>)> {
-  let encoder = Encoder::from_str(&encoder).unwrap();
-  Ok(encoder.probe_cmd(
-    temp,
-    name,
-    q,
-    ffmpeg_pipe,
-    probing_rate,
-    n_threads,
-    video_params,
-    probe_slow,
   ))
 }
 
@@ -421,7 +312,7 @@ impl<'a> Queue<'a> {
           .map(|(rx, queue)| {
             s.spawn(move |_| {
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(_) = queue.encode_chunk(&mut chunk) {
+                if queue.encode_chunk(&mut chunk).is_err() {
                   return Err(());
                 }
               }
@@ -441,7 +332,6 @@ impl<'a> Queue<'a> {
     Ok(())
   }
 
-  #[must_use]
   fn encode_chunk(&self, chunk: &mut Chunk) -> Result<(), String> {
     let st_time = Instant::now();
 
@@ -537,7 +427,7 @@ struct TargetQuality {
   target: f32,
   min_q: u32,
   max_q: u32,
-  encoder: String,
+  encoder: Encoder,
   ffmpeg_pipe: Vec<String>,
   temp: String,
   workers: usize,
@@ -565,7 +455,7 @@ impl TargetQuality {
       target: project.target_quality.unwrap(),
       min_q: project.min_q.unwrap(),
       max_q: project.max_q.unwrap(),
-      encoder: project.encoder.clone(),
+      encoder: project.encoder,
       ffmpeg_pipe: project.ffmpeg_pipe.clone(),
       temp: project.temp.clone(),
       workers: project.workers,
@@ -691,18 +581,16 @@ impl TargetQuality {
       self.n_threads
     };
 
-    let cmd = probe_cmd(
-      self.encoder.clone(),
+    let cmd = self.encoder.probe_cmd(
       self.temp.clone(),
-      chunk.name(),
+      &chunk.name(),
       q.clone(),
       self.ffmpeg_pipe.clone(),
-      self.probing_rate.to_string(),
+      &self.probing_rate.to_string(),
       n_threads.to_string(),
       self.video_params.clone(),
       self.probe_slow,
-    )
-    .unwrap();
+    );
 
     let future = async {
       let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
@@ -735,7 +623,7 @@ impl TargetQuality {
 
       process_pipe(
         &mut pipe,
-        (&chunk).index,
+        chunk.index,
         &mut [&mut ffmpeg_gen_pipe, &mut ffmpeg_pipe],
       )
       .await
@@ -778,7 +666,6 @@ impl TargetQuality {
   }
 }
 
-#[must_use]
 async fn process_pipe(
   pipe: &mut tokio::process::Child,
   chunk_index: usize,
@@ -849,7 +736,6 @@ fn save_chunk_queue(temp: &str, chunk_queue: Vec<Chunk>) {
     .unwrap();
 }
 
-#[derive(Default)]
 pub struct Project {
   pub frames: usize,
   pub is_vs: bool,
@@ -861,15 +747,15 @@ pub struct Project {
   pub output_ivf: bool,
   pub webm: bool,
 
-  pub chunk_method: Option<String>,
+  pub chunk_method: ChunkMethod,
   pub scenes: Option<String>,
-  pub split_method: String,
+  pub split_method: SplitMethod,
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
 
   pub passes: u8,
   pub video_params: Vec<String>,
-  pub encoder: String,
+  pub encoder: Encoder,
   pub workers: usize,
 
   // FFmpeg params
@@ -904,7 +790,7 @@ pub struct Project {
 static HELP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+(-\w+|(?:--\w+(?:-\w+)*))").unwrap());
 
 // TODO refactor to make types generic
-fn invalid_params<'a>(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
+fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
   params
     .iter()
     .filter_map(|param| {
@@ -946,12 +832,8 @@ impl Project {
       .collect::<Result<Vec<_>, _>>()
       .unwrap();
     queue_files.retain(|file| file.is_file());
-    queue_files.retain(
-      |file| match Path::new(&file).extension().map(|x| x == "mkv") {
-        Some(true) => true,
-        _ => false,
-      },
-    );
+    queue_files
+      .retain(|file| matches!(Path::new(&file).extension().map(|x| x == "mkv"), Some(true)));
     av1an_core::concat::sort_files_by_filename(&mut queue_files);
 
     queue_files
@@ -965,32 +847,26 @@ impl Project {
       .join(format!("{}_fpf", c.name()));
 
     let mut enc_cmd = if self.passes == 1 {
-      compose_1_1_pass(self.encoder.clone(), self.video_params.clone(), c.output()).unwrap()
+      self
+        .encoder
+        .compose_1_1_pass(self.video_params.clone(), c.output())
+    } else if current_pass == 1 {
+      self.encoder.compose_1_2_pass(
+        self.video_params.clone(),
+        &fpf_file.to_str().unwrap().to_owned(),
+      )
     } else {
-      if current_pass == 1 {
-        compose_1_2_pass(
-          self.encoder.clone(),
-          self.video_params.clone(),
-          fpf_file.to_str().unwrap().to_owned(),
-        )
-        .unwrap()
-      } else {
-        compose_2_2_pass(
-          self.encoder.clone(),
-          self.video_params.clone(),
-          fpf_file.to_str().unwrap().to_owned(),
-          c.output(),
-        )
-        .unwrap()
-      }
+      self.encoder.compose_2_2_pass(
+        self.video_params.clone(),
+        &fpf_file.to_str().unwrap().to_owned(),
+        c.output(),
+      )
     };
 
     if let Some(per_shot_target_quality_cq) = c.per_shot_target_quality_cq {
-      enc_cmd = man_command(
-        self.encoder.clone(),
-        enc_cmd,
-        per_shot_target_quality_cq as usize,
-      );
+      enc_cmd = self
+        .encoder
+        .man_command(enc_cmd, per_shot_target_quality_cq as usize);
     }
 
     let mut encoder_history: VecDeque<String> = VecDeque::with_capacity(20);
@@ -1044,13 +920,13 @@ impl Project {
         let line = std::str::from_utf8(&buf);
 
         if let Ok(line) = line {
-          let new = match_line(&self.encoder, &line).unwrap();
+          if let Some(new) = self.encoder.match_line(line) {
+            encoder_history.push_back(line.to_owned());
 
-          encoder_history.push_back(line.to_owned());
-
-          if new > frame {
-            update_bar((new - frame) as u64).unwrap();
-            frame = new;
+            if new > frame {
+              update_bar((new - frame) as u64).unwrap();
+              frame = new;
+            }
           }
         }
 
@@ -1091,42 +967,29 @@ impl Project {
 
     self.frames = if self.is_vs {
       vapoursynth::num_frames(Path::new(&self.input)).unwrap()
-    } else {
-      if ["ffms2", "lsmash"].contains(&self.chunk_method.as_ref().unwrap().as_str()) {
-        let vs = if self.is_vs {
-          self.input.clone()
-        } else {
-          create_vs_file(
-            &self.temp,
-            &self.input,
-            &self.chunk_method.as_ref().unwrap(),
-          )
-          .unwrap()
-        };
-        let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
-        if fr > 0 {
-          fr
-        } else {
-          panic!("vapoursynth reported 0 frames")
-        }
+    } else if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
+      let vs = if self.is_vs {
+        self.input.clone()
       } else {
-        ffmpeg_get_frame_count(&self.input)
+        create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
+      };
+      let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
+      if fr > 0 {
+        fr
+      } else {
+        panic!("vapoursynth reported 0 frames")
       }
+    } else {
+      ffmpeg_get_frame_count(&self.input)
     };
 
     self.frames
   }
 
-  fn select_best_chunking_method(&mut self) {
-    let chunk_method = av1an_core::vapoursynth::select_chunk_method().unwrap();
-
-    self.chunk_method = Some(<&'static str>::from(chunk_method).to_string());
-  }
-
   /// returns a list of valid parameters
   #[must_use]
   fn valid_encoder_params(&self) -> HashSet<String> {
-    let help = help_command(&self.encoder).unwrap();
+    let help = self.encoder.help_command();
 
     let help_text = String::from_utf8(
       Command::new(&help[0])
@@ -1183,12 +1046,12 @@ impl Project {
   }
 
   pub fn startup_check(&mut self) -> anyhow::Result<()> {
-    if ["rav1e", "aom", "svt_av1", "vpx"].contains(&self.encoder.as_str()) && self.output_ivf {
+    if matches!(
+      self.encoder,
+      Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::libvpx
+    ) && self.output_ivf
+    {
       panic!(".ivf only supports VP8, VP9, and AV1");
-    }
-
-    if self.chunk_method.is_none() {
-      self.select_best_chunking_method();
     }
 
     assert!(
@@ -1213,19 +1076,19 @@ impl Project {
       println!("Target quality with less than 4 probes is experimental and not recommended");
     }
 
-    if let Ok((min, max)) = get_default_cq_range(&self.encoder) {
-      match self.min_q {
-        None => {
-          self.min_q = Some(min as u32);
-        }
-        Some(min_q) => assert!(min_q > 1),
+    let (min, max) = self.encoder.get_default_cq_range();
+    match self.min_q {
+      None => {
+        self.min_q = Some(min as u32);
       }
-      if let None = self.max_q {
-        self.max_q = Some(max as u32);
-      }
+      Some(min_q) => assert!(min_q > 1),
     }
 
-    let encoder_bin = encoder_bin(&self.encoder).unwrap();
+    if self.max_q.is_none() {
+      self.max_q = Some(max as u32);
+    }
+
+    let encoder_bin = self.encoder.encoder_bin();
     let settings_valid = which::which(&encoder_bin).is_ok();
 
     if !settings_valid {
@@ -1236,7 +1099,7 @@ impl Project {
     }
 
     if self.video_params.is_empty() {
-      self.video_params = get_default_arguments(&self.encoder).unwrap();
+      self.video_params = self.encoder.get_default_arguments();
     }
 
     self.validate_inputs();
@@ -1256,12 +1119,11 @@ impl Project {
   }
 
   fn create_encoding_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
-    let mut chunks = match self.chunk_method.as_ref().unwrap().as_str() {
-      "ffms2" | "lsmash" => self.create_video_queue_vs(splits),
-      "hybrid" => self.create_video_queue_hybrid(splits),
-      "select" => self.create_video_queue_select(splits),
-      "segment" => self.create_video_queue_segment(splits),
-      _ => unreachable!(),
+    let mut chunks = match self.chunk_method {
+      ChunkMethod::FFMS2 | ChunkMethod::LSMASH => self.create_video_queue_vs(splits),
+      ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits),
+      ChunkMethod::Select => self.create_video_queue_select(splits),
+      ChunkMethod::Segment => self.create_video_queue_segment(splits),
     };
 
     chunks.sort_unstable_by_key(|chunk| Reverse(chunk.size));
@@ -1270,8 +1132,8 @@ impl Project {
   }
 
   fn calc_split_locations(&self) -> Vec<usize> {
-    match self.split_method.as_str() {
-      "av-scenechange" => av_scenechange_detect(
+    match self.split_method {
+      SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
         self.frames,
         self.min_scene_len,
@@ -1279,8 +1141,7 @@ impl Project {
         self.is_vs,
       )
       .unwrap(),
-      "none" => Vec::with_capacity(0),
-      _ => unreachable!(),
+      SplitMethod::None => Vec::with_capacity(0),
     }
   }
 
@@ -1354,7 +1215,8 @@ impl Project {
       "yuv4mpegpipe".into(),
       "-".into(),
     ];
-    let output_ext = output_extension(&self.encoder).unwrap();
+
+    let output_ext = self.encoder.output_extension().to_owned();
     // use the number of frames to prioritize which chunks encode first, since we don't have file size
     let size = frames;
 
@@ -1396,13 +1258,13 @@ impl Project {
       frame_end.to_string(),
     ];
 
-    let output_ext = output_extension(&self.encoder).unwrap();
+    let output_ext = self.encoder.output_extension();
 
     Chunk {
       temp: self.temp.clone(),
       index,
       ffmpeg_gen_cmd: vspipe_cmd_gen,
-      output_ext,
+      output_ext: output_ext.to_owned(),
       // use the number of frames to prioritize which chunks encode first, since we don't have file size
       size: frames,
       frames,
@@ -1426,12 +1288,7 @@ impl Project {
     let vs_script = if self.is_vs {
       self.input.clone()
     } else {
-      create_vs_file(
-        &self.temp,
-        &self.input,
-        &self.chunk_method.as_ref().unwrap(),
-      )
-      .unwrap()
+      create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
     };
 
     let chunk_queue: Vec<Chunk> = chunk_boundaries
@@ -1566,7 +1423,7 @@ impl Project {
       "-".into(),
     ];
 
-    let output_ext = output_extension(&self.encoder).unwrap();
+    let output_ext = self.encoder.output_extension().to_owned();
     let file_size = File::open(file).unwrap().metadata().unwrap().len();
 
     Chunk {
@@ -1662,7 +1519,7 @@ impl Project {
     }
 
     if self.workers == 0 {
-      self.workers = determine_workers(Encoder::from_str(&self.encoder).unwrap()).unwrap() as usize;
+      self.workers = determine_workers(self.encoder).unwrap() as usize;
     }
     self.workers = cmp::min(self.workers, chunk_queue.len());
     println!(
@@ -1680,7 +1537,7 @@ impl Project {
     let temp = self.temp.clone();
     let input = self.input.clone();
     let output_file = self.output_file.clone();
-    let encoder = self.encoder.clone();
+    let encoder = self.encoder;
     let vmaf = self.vmaf;
     let keep = self.keep;
 
@@ -1708,11 +1565,7 @@ impl Project {
         av1an_core::concat::concatenate_mkvmerge(temp.clone(), output_file.clone()).unwrap()
       }
       "ffmpeg" => {
-        av1an_core::ffmpeg::concatenate_ffmpeg(
-          temp.clone(),
-          output_file.clone(),
-          Encoder::from_str(&encoder).unwrap(),
-        );
+        av1an_core::ffmpeg::concatenate_ffmpeg(temp.clone(), output_file.clone(), encoder);
       }
       _ => unreachable!(),
     }
@@ -1741,13 +1594,13 @@ fn run_vmaf_on_chunk(
   let stat_file = PathBuf::from(stat_file);
 
   av1an_core::vmaf::run_vmaf_on_chunk(
-    encoded,
-    pipe_cmd,
-    stat_file,
-    model,
-    res,
+    &encoded,
+    &pipe_cmd,
+    &stat_file,
+    &model,
+    &res,
     sample_rate,
-    vmaf_filter,
+    &vmaf_filter,
     threads,
   )
   .unwrap()

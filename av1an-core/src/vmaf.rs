@@ -173,13 +173,13 @@ pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
 }
 
 pub fn run_vmaf_on_chunk(
-  encoded: PathBuf,
-  pipe_cmd: Vec<String>,
-  stat_file: PathBuf,
-  model: String,
-  res: String,
+  encoded: &Path,
+  pipe_cmd: &[String],
+  stat_file: &Path,
+  model: &str,
+  res: &str,
   sample_rate: usize,
-  vmaf_filter: String,
+  vmaf_filter: &str,
   threads: usize,
 ) -> Result<(), Error> {
   // Select filter for sampling from the source

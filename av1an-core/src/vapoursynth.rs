@@ -870,9 +870,7 @@ fn run(args: &[&str]) -> Result<(), Error> {
 pub fn select_chunk_method() -> Result<ChunkMethod, Error> {
   // Create a new VSScript environment.
   let environment = Environment::new().context("Couldn't create the VSScript environment")?;
-  let core = environment
-    .get_core()
-    .context("Couldn't get the VapourSynth core")?;
+  let core = environment.get_core()?;
 
   let plugins = core.plugins();
   let plugins: HashSet<&str> = plugins

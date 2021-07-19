@@ -1048,7 +1048,7 @@ impl Project {
   pub fn startup_check(&mut self) -> anyhow::Result<()> {
     if matches!(
       self.encoder,
-      Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::libvpx
+      Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
     ) && self.output_ivf
     {
       panic!(".ivf only supports VP8, VP9, and AV1");

@@ -32,7 +32,7 @@ use std::path::PathBuf;
 pub enum Encoder {
   aom,
   rav1e,
-  libvpx,
+  vpx,
   #[strum(serialize = "svt-av1")]
   svt_av1,
   x264,
@@ -75,7 +75,7 @@ impl Encoder {
       .collect(),
 
       // VPX
-      Self::libvpx => chain!(
+      Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=1"],
         params,
         into_vec!["-o", output, "-"]
@@ -144,7 +144,7 @@ impl Encoder {
       .collect(),
 
       // VPX
-      Self::libvpx => chain!(
+      Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=2", "--pass=1"],
         params,
         into_vec![
@@ -241,7 +241,7 @@ impl Encoder {
         into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output,]
       )
       .collect(),
-      Self::libvpx => chain!(
+      Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=2", "--pass=2"],
         params,
         into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
@@ -322,7 +322,7 @@ impl Encoder {
         "100",
         "--no-scene-detection",
       ],
-      Encoder::libvpx => into_vec![
+      Encoder::vpx => into_vec![
         "--codec=vp9",
         "-b",
         "10",
@@ -343,7 +343,7 @@ impl Encoder {
     match &self {
       Self::aom => 2,
       Self::rav1e => 1,
-      Self::libvpx => 2,
+      Self::vpx => 2,
       Self::svt_av1 => 1,
       Self::x264 => 1,
       Self::x265 => 1,
@@ -355,7 +355,7 @@ impl Encoder {
     match &self {
       Self::aom => (15, 55),
       Self::rav1e => (50, 140),
-      Self::libvpx => (15, 55),
+      Self::vpx => (15, 55),
       Self::svt_av1 => (15, 50),
       Self::x264 => (15, 35),
       Self::x265 => (15, 35),
@@ -366,7 +366,7 @@ impl Encoder {
     match &self {
       Self::aom => ["aomenc", "--help"],
       Self::rav1e => ["rav1e", "--fullhelp"],
-      Self::libvpx => ["vpxenc", "--help"],
+      Self::vpx => ["vpxenc", "--help"],
       Self::svt_av1 => ["SvtAv1EncApp", "--help"],
       Self::x264 => ["x264", "--fullhelp"],
       Self::x265 => ["x265", "--fullhelp"],
@@ -378,7 +378,7 @@ impl Encoder {
     match &self {
       Self::aom => "aomenc",
       Self::rav1e => "rav1e",
-      Self::libvpx => "vpxenc",
+      Self::vpx => "vpxenc",
       Self::svt_av1 => "SvtAv1EncApp",
       Self::x264 => "x264",
       Self::x265 => "x265",
@@ -389,7 +389,7 @@ impl Encoder {
     match &self {
       Self::aom => "ivf",
       Self::rav1e => "ivf",
-      Self::libvpx => "ivf",
+      Self::vpx => "ivf",
       Self::svt_av1 => "ivf",
       Self::x264 => "mkv",
       Self::x265 => "mkv",
@@ -400,7 +400,7 @@ impl Encoder {
     match &self {
       Self::aom => r"--cq-level=.+",
       Self::rav1e => r"--quantizer",
-      Self::libvpx => r"--cq-level=.+",
+      Self::vpx => r"--cq-level=.+",
       Self::svt_av1 => r"(--qp|-q|--crf)",
       Self::x264 => r"--crf",
       Self::x265 => r"--crf",
@@ -411,7 +411,7 @@ impl Encoder {
     match &self {
       Self::aom => (index, format!("--cq-level={}", q)),
       Self::rav1e => (index + 1, q.to_string()),
-      Self::libvpx => (index, format!("--cq-level={}", q)),
+      Self::vpx => (index, format!("--cq-level={}", q)),
       Self::svt_av1 => (index + 1, q.to_string()),
       Self::x264 => (index + 1, q.to_string()),
       Self::x265 => (index + 1, q.to_string()),
@@ -432,7 +432,7 @@ impl Encoder {
     match &self {
       Self::aom => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
       Self::rav1e => r"encoded.*? ([^ ]+?) ",
-      Self::libvpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
+      Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
       Self::svt_av1 => r"Encoding frame\s+(\d+)",
       Self::x264 => r"^[^\d]*(\d+)",
       Self::x265 => r"(\d+) frames",
@@ -504,7 +504,7 @@ impl Encoder {
         "5",
         "--no-scene-detection",
       ],
-      Self::libvpx => into_vec![
+      Self::vpx => into_vec![
         "vpxenc",
         "-b",
         "10",
@@ -616,7 +616,7 @@ impl Encoder {
     match &self {
       Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
       Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q,],
-      Self::libvpx => into_vec![
+      Self::vpx => into_vec![
         "vpxenc",
         "--passes=1",
         "--pass=1",
@@ -726,7 +726,7 @@ impl Encoder {
       Self::aom => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
       Self::rav1e => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
       Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
-      Self::libvpx => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::vpx => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
       Self::x264 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
       Self::x265 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
     };
@@ -828,7 +828,7 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
 
   std::cmp::max(
     match encoder {
-      Encoder::aom | Encoder::rav1e | Encoder::libvpx => std::cmp::min(
+      Encoder::aom | Encoder::rav1e | Encoder::vpx => std::cmp::min(
         (cpu as f64 / 3.0).round() as u64,
         (ram_gb as f64 / 1.5).round() as u64,
       ),

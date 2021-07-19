@@ -836,7 +836,7 @@ pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
   let f = k.floor();
   let c = k.ceil();
 
-  if f == c {
+  if f as u64 == c as u64 {
     return scores[k as usize];
   }
 

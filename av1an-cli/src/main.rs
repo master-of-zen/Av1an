@@ -2,7 +2,7 @@ use std::path::Path;
 
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
-use av1an_pyo3::{hash_path, is_vapoursynth, Project};
+use av1an_pyo3::{hash_path, is_vapoursynth, Project, Verbosity};
 use clap::Clap;
 
 pub fn main() {
@@ -81,7 +81,6 @@ pub fn main() {
     probe_slow: args.probe_slow,
     probes: args.probes,
     probing_rate: args.probing_rate,
-    quiet: args.quiet,
     resume: args.resume,
     scenes: args
       .scenes
@@ -89,6 +88,13 @@ pub fn main() {
     split_method: args.split_method,
     target_quality: args.target_quality,
     target_quality_method: Some(args.target_quality_method),
+    verbosity: if args.quiet {
+      Verbosity::Quiet
+    } else if args.verbose {
+      Verbosity::Verbose
+    } else {
+      Verbosity::Normal
+    },
     vmaf: args.vmaf,
     vmaf_filter: args.vmaf_filter,
     vmaf_path: args

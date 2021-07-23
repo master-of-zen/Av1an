@@ -777,6 +777,12 @@ pub enum ConcatMethod {
   Ivf,
 }
 
+impl Display for ConcatMethod {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str(<&'static str>::from(self))
+  }
+}
+
 #[derive(Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
 pub enum SplitMethod {
   #[strum(serialize = "av-scenechange")]

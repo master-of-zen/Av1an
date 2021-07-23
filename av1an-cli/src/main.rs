@@ -55,8 +55,7 @@ pub fn main() {
       format!(
         "{}_{}.mkv",
         args.input.file_stem().unwrap().to_str().unwrap(),
-        // TODO make Encoder implement Display
-        <&'static str>::from(args.encoder)
+        args.encoder
       )
     },
     audio_params: if let Some(params) = args.audio_params {
@@ -68,7 +67,7 @@ pub fn main() {
     chunk_method: args
       .chunk_method
       .unwrap_or_else(|| vapoursynth::select_chunk_method().unwrap()),
-    concat: <&'static str>::from(args.concat).to_owned(),
+    concat: format!("{}", args.concat),
     encoder: args.encoder,
     extra_splits_len: Some(args.extra_split),
     input: args.input.to_str().unwrap().to_owned(),

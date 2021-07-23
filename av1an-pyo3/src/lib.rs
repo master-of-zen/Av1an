@@ -1521,7 +1521,7 @@ impl Project {
 
       let done: DoneJson = serde_json::from_str(&fs::read_to_string(&done_path).unwrap()).unwrap();
       initial_frames = done.done.iter().map(|(_, frames)| frames).sum();
-      let _ = log(format!("Resmued with {} encoded clips done", done.done.len()).as_str());
+      let _ = log(format!("Resumed with {} encoded clips done", done.done.len()).as_str());
     } else {
       let total = self.get_frames();
       let mut done_file = fs::File::create(&done_path).unwrap();

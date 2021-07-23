@@ -689,7 +689,9 @@ async fn process_pipe(
   }
 
   for util in utility {
-    util.kill().await.unwrap();
+    // On Windows, killing the process can fail with a permission denied error, so we don't
+    // unwrap the result to prevent the program from crashing if killing the child process fails.
+    let _ = util.kill().await;
   }
 
   let returncode = pipe.wait().await.unwrap();
@@ -958,8 +960,8 @@ impl Project {
 
       let returncode = pipe.wait_with_output().await.unwrap();
 
-      ffmpeg_gen_pipe.kill().await.unwrap();
-      ffmpeg_pipe.kill().await.unwrap();
+      let _ = ffmpeg_gen_pipe.kill().await;
+      let _ = ffmpeg_pipe.kill().await;
 
       returncode.status
     });

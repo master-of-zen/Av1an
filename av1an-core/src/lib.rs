@@ -58,39 +58,30 @@ macro_rules! into_vec {
 impl Encoder {
   pub fn compose_1_1_pass(&self, params: Vec<String>, output: String) -> Vec<String> {
     match &self {
-      // Aomenc
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=1"],
         params,
         into_vec!["-o", output, "-"],
       )
       .collect(),
-
-      // Rav1e
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y"],
         params,
         into_vec!["--output", output]
       )
       .collect(),
-
-      // VPX
       Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=1"],
         params,
         into_vec!["-o", output, "-"]
       )
       .collect(),
-
-      // SVT-AV1
       Self::svt_av1 => chain!(
-        into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2",],
+        into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2"],
         params,
-        into_vec!["-b", output,],
+        into_vec!["-b", output],
       )
       .collect(),
-
-      // x264
       Self::x264 => chain!(
         into_vec![
           "x264",
@@ -101,15 +92,13 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["-", "-o", output,]
+        into_vec!["-", "-o", output]
       )
       .collect(),
-
-      // x265
       Self::x265 => chain!(
-        into_vec!["x265", "--y4m",],
+        into_vec!["x265", "--y4m"],
         params,
-        into_vec!["-", "-o", output,]
+        into_vec!["-", "-o", output]
       )
       .collect(),
     }
@@ -117,7 +106,6 @@ impl Encoder {
 
   pub fn compose_1_2_pass(&self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match &self {
-      // Aomenc
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=1"],
         params,
@@ -129,8 +117,6 @@ impl Encoder {
         ],
       )
       .collect(),
-
-      // Rav1e
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y", "-q"],
         params,
@@ -142,8 +128,6 @@ impl Encoder {
         ]
       )
       .collect(),
-
-      // VPX
       Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=2", "--pass=1"],
         params,
@@ -155,8 +139,6 @@ impl Encoder {
         ],
       )
       .collect(),
-
-      // SVT-AV1
       Self::svt_av1 => chain!(
         into_vec![
           "SvtAv1EncApp",
@@ -178,8 +160,6 @@ impl Encoder {
         ],
       )
       .collect(),
-
-      // x264
       Self::x264 => chain!(
         into_vec![
           "x264",
@@ -201,8 +181,6 @@ impl Encoder {
         ]
       )
       .collect(),
-
-      // x265
       Self::x265 => chain!(
         into_vec![
           "x265",
@@ -238,7 +216,7 @@ impl Encoder {
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y", "-q"],
         params,
-        into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output,]
+        into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output]
       )
       .collect(),
       Self::vpx => chain!(
@@ -280,7 +258,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output,]
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
@@ -295,7 +273,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output,]
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
       )
       .collect(),
     }
@@ -448,7 +426,8 @@ impl Encoder {
     captures.parse::<usize>().ok()
   }
 
-  pub fn construct_target_quality_command(&self, threads: String, q: String) -> Vec<Cow<str>> {
+  // pub fn construct_target_quality_command(&self, threads: String, q: String) -> Vec<Cow<str>> {
+  pub fn construct_target_quality_command(&self, threads: usize, q: usize) -> Vec<Cow<str>> {
     match &self {
       Self::aom => into_vec![
         "aomenc",
@@ -494,11 +473,11 @@ impl Encoder {
         "-s",
         "10",
         "--threads",
-        threads,
+        threads.to_string(),
         "--tiles",
         "16",
         "--quantizer",
-        q,
+        q.to_string(),
         "--low-latency",
         "--rdo-lookahead-frames",
         "5",
@@ -523,13 +502,13 @@ impl Encoder {
         "-i",
         "stdin",
         "--lp",
-        threads,
+        threads.to_string(),
         "--preset",
         "8",
         "--keyint",
         "240",
         "--crf",
-        q,
+        q.to_string(),
         "--tile-rows",
         "1",
         "--tile-columns",
@@ -590,11 +569,11 @@ impl Encoder {
         "-",
         "--no-progress",
         "--threads",
-        threads,
+        threads.to_string(),
         "--preset",
         "medium",
         "--crf",
-        q,
+        q.to_string(),
       ],
       Self::x265 => into_vec![
         "x265",
@@ -603,19 +582,19 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--frame-threads",
-        cmp::min(threads.parse().unwrap(), 16).to_string(),
+        cmp::min(threads, 16).to_string(),
         "--preset",
         "fast",
         "--crf",
-        q,
+        q.to_string(),
       ],
     }
   }
 
-  pub fn construct_target_quality_command_probe_slow(&self, q: String) -> Vec<Cow<str>> {
+  pub fn construct_target_quality_command_probe_slow(&self, q: usize) -> Vec<Cow<str>> {
     match &self {
-      Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q),],
-      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q,],
+      Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
+      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q.to_string()],
       Self::vpx => into_vec![
         "vpxenc",
         "--passes=1",
@@ -624,7 +603,7 @@ impl Encoder {
         "--end-usage=q",
         format!("--cq-level={}", q),
       ],
-      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q,],
+      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q.to_string()],
       Self::x264 => into_vec![
         "x264",
         "--log-level",
@@ -634,7 +613,7 @@ impl Encoder {
         "-",
         "--no-progress",
         "--crf",
-        q,
+        q.to_string(),
       ],
       Self::x265 => into_vec![
         "x265",
@@ -643,7 +622,7 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--crf",
-        q,
+        q.to_string(),
       ],
     }
   }
@@ -672,10 +651,10 @@ impl Encoder {
     &self,
     temp: String,
     name: &str,
-    q: String,
+    q: usize,
     ffmpeg_pipe: Vec<String>,
     probing_rate: &str,
-    n_threads: String,
+    n_threads: usize,
     video_params: Vec<String>,
     probe_slow: bool,
   ) -> (Vec<String>, Vec<String>) {

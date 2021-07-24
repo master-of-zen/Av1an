@@ -294,7 +294,7 @@ pub fn is_vapoursynth(s: &str) -> bool {
 struct Queue<'a> {
   chunk_queue: Vec<Chunk>,
   project: &'a Project,
-  target_quality: Option<TargetQuality>,
+  target_quality: Option<TargetQuality<'a>>,
 }
 
 impl<'a> Queue<'a> {
@@ -426,11 +426,12 @@ impl<'a> Queue<'a> {
   }
 }
 
-struct TargetQuality {
+struct TargetQuality<'a> {
   vmaf_res: String,
   vmaf_filter: String,
   n_threads: usize,
-  model: String,
+  // model: Option<PathBuf>,
+  model: Option<&'a Path>,
   probing_rate: usize,
   probes: u32,
   target: f32,
@@ -444,8 +445,8 @@ struct TargetQuality {
   probe_slow: bool,
 }
 
-impl TargetQuality {
-  fn new(project: &Project) -> Self {
+impl<'a> TargetQuality<'a> {
+  fn new(project: &'a Project) -> Self {
     Self {
       vmaf_res: project
         .vmaf_res
@@ -456,10 +457,7 @@ impl TargetQuality {
         .clone()
         .unwrap_or_else(|| String::with_capacity(0)),
       n_threads: project.n_threads.unwrap_or(0) as usize,
-      model: project
-        .vmaf_path
-        .clone()
-        .unwrap_or_else(|| String::with_capacity(0)),
+      model: project.vmaf_path.as_ref().map(|p| p.as_path()),
       probes: project.probes,
       target: project.target_quality.unwrap(),
       min_q: project.min_q.unwrap(),
@@ -485,7 +483,7 @@ impl TargetQuality {
     q_list.push(middle_point);
     let last_q = middle_point;
 
-    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q.to_string()), 0.25).unwrap();
+    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize), 0.25).unwrap();
     vmaf_cq.push((score, last_q));
 
     // Initialize search boundary
@@ -504,7 +502,7 @@ impl TargetQuality {
     q_list.push(next_q);
 
     // Edge case check
-    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q.to_string()), 0.25).unwrap();
+    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
     vmaf_cq.push((score, next_q));
 
     if (next_q == self.min_q && score < self.target as f64)
@@ -555,7 +553,7 @@ impl TargetQuality {
       }
 
       q_list.push(new_point as u32);
-      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point.to_string()), 0.25).unwrap();
+      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point), 0.25).unwrap();
       vmaf_cq.push((score, new_point as u32));
 
       // Update boundary
@@ -583,7 +581,7 @@ impl TargetQuality {
     q as u32
   }
 
-  fn vmaf_probe(&self, chunk: &Chunk, q: String) -> String {
+  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
     let n_threads = if self.n_threads == 0 {
       vmaf_auto_threads(self.workers)
     } else {
@@ -593,10 +591,10 @@ impl TargetQuality {
     let cmd = self.encoder.probe_cmd(
       self.temp.clone(),
       &chunk.name(),
-      q.clone(),
+      q,
       self.ffmpeg_pipe.clone(),
       &self.probing_rate.to_string(),
-      n_threads.to_string(),
+      n_threads,
       self.video_params.clone(),
       self.probe_slow,
     );
@@ -656,16 +654,17 @@ impl TargetQuality {
 
     let fl_path = fl_path.to_str().unwrap().to_owned();
 
-    run_vmaf_on_chunk(
-      probe_name.to_str().unwrap().to_owned(),
-      chunk.ffmpeg_gen_cmd.clone(),
-      fl_path.clone(),
-      self.model.clone(),
-      self.vmaf_res.clone(),
+    av1an_core::vmaf::run_vmaf_on_chunk(
+      &probe_name,
+      &chunk.ffmpeg_gen_cmd,
+      &fl_path,
+      self.model.as_ref(),
+      &self.vmaf_res,
       self.probing_rate,
-      self.vmaf_filter.clone(),
+      &self.vmaf_filter,
       self.n_threads,
-    );
+    )
+    .unwrap();
 
     fl_path
   }
@@ -788,7 +787,7 @@ pub struct Project {
   pub keep: bool,
 
   pub vmaf: bool,
-  pub vmaf_path: Option<String>,
+  pub vmaf_path: Option<PathBuf>,
   pub vmaf_res: Option<String>,
 
   pub concat: String,
@@ -1607,30 +1606,4 @@ impl Project {
       fs::remove_dir_all(temp).unwrap();
     }
   }
-}
-
-fn run_vmaf_on_chunk(
-  encoded: String,
-  pipe_cmd: Vec<String>,
-  stat_file: String,
-  model: String,
-  res: String,
-  sample_rate: usize,
-  vmaf_filter: String,
-  threads: usize,
-) {
-  let encoded = PathBuf::from(encoded);
-  let stat_file = PathBuf::from(stat_file);
-
-  av1an_core::vmaf::run_vmaf_on_chunk(
-    &encoded,
-    &pipe_cmd,
-    &stat_file,
-    &model,
-    &res,
-    sample_rate,
-    &vmaf_filter,
-    threads,
-  )
-  .unwrap()
 }

@@ -173,10 +173,10 @@ pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
 }
 
 pub fn run_vmaf_on_chunk(
-  encoded: &Path,
+  encoded: impl AsRef<Path>,
   pipe_cmd: &[String],
-  stat_file: &Path,
-  model: &str,
+  stat_file: impl AsRef<Path>,
+  model: Option<impl AsRef<Path>>,
   res: &str,
   sample_rate: usize,
   vmaf_filter: &str,
@@ -195,12 +195,21 @@ pub fn run_vmaf_on_chunk(
 
   let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res );
   let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res );
-  let vmaf = format!(
-    "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}:n_threads={}",
-    stat_file.to_str().unwrap(),
-    &model,
-    threads
-  );
+
+  let vmaf = if let Some(model) = model {
+    format!(
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
+      stat_file.as_ref().to_str().unwrap(),
+      &model.as_ref().to_str().unwrap(),
+      threads
+    )
+  } else {
+    format!(
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}",
+      stat_file.as_ref().to_str().unwrap(),
+      threads
+    )
+  };
 
   let vmaf_cmd = [
     "-loglevel",
@@ -213,7 +222,7 @@ pub fn run_vmaf_on_chunk(
     "-r",
     "60",
     "-i",
-    encoded.to_str().unwrap(),
+    encoded.as_ref().to_str().unwrap(),
     "-r",
     "60",
     "-i",
@@ -252,9 +261,9 @@ pub fn run_vmaf_on_chunk(
 
   assert!(
     output.status.success(),
-    "FFmpeg VMAF calculation failed!:\nCommand: {:?}\nOutput: {:?}",
+    "VMAF calculation failed:\nCommand: {:?}\nOutput: {:?}",
     cmd,
-    &output
+    output
   );
 
   Ok(())

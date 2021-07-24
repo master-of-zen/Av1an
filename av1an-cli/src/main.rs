@@ -96,9 +96,7 @@ pub fn main() {
     },
     vmaf: args.vmaf,
     vmaf_filter: args.vmaf_filter,
-    vmaf_path: args
-      .vmaf_path
-      .map(|scenes| scenes.to_str().unwrap().to_owned()),
+    vmaf_path: args.vmaf_path,
     vmaf_res: Some(args.vmaf_res),
     webm: false,
     workers: args.workers,

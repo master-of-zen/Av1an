@@ -1,5 +1,5 @@
 use av1an_core::{vapoursynth, SplitMethod};
-use av1an_core::{ChunkMethod, Encoder};
+use av1an_core::{ChunkMethod, ConcatMethod, Encoder};
 
 use anyhow::anyhow;
 use once_cell::sync::Lazy;
@@ -790,7 +790,7 @@ pub struct Project {
   pub vmaf_path: Option<PathBuf>,
   pub vmaf_res: Option<String>,
 
-  pub concat: String,
+  pub concat: ConcatMethod,
 
   pub target_quality: Option<f32>,
   pub target_quality_method: Option<String>,
@@ -1561,7 +1561,7 @@ impl Project {
     }
 
     // hack to avoid borrow checker errors
-    let concat = self.concat.clone();
+    let concat = self.concat;
     let temp = self.temp.clone();
     let input = self.input.clone();
     let output_file = self.output_file.clone();
@@ -1584,18 +1584,17 @@ impl Project {
     let _ = log("Concatenating");
 
     // TODO refactor into Concatenate trait
-    match concat.as_str() {
-      "ivf" => {
+    match concat {
+      ConcatMethod::Ivf => {
         av1an_core::concat::concat_ivf(&Path::new(&temp).join("encode"), Path::new(&output_file))
           .unwrap();
       }
-      "mkvmerge" => {
+      ConcatMethod::MKVMerge => {
         av1an_core::concat::concatenate_mkvmerge(temp.clone(), output_file.clone()).unwrap()
       }
-      "ffmpeg" => {
+      ConcatMethod::FFmpeg => {
         av1an_core::ffmpeg::concatenate_ffmpeg(temp.clone(), output_file.clone(), encoder);
       }
-      _ => unreachable!(),
     }
 
     if vmaf {

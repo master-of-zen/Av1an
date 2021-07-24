@@ -67,7 +67,7 @@ pub fn main() {
     chunk_method: args
       .chunk_method
       .unwrap_or_else(|| vapoursynth::select_chunk_method().unwrap()),
-    concat: format!("{}", args.concat),
+    concat: args.concat,
     encoder: args.encoder,
     extra_splits_len: Some(args.extra_split),
     input: args.input.to_str().unwrap().to_owned(),

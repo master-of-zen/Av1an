@@ -746,7 +746,7 @@ pub fn list_index_of_regex(params: &[String], regex_str: &str) -> Option<usize> 
   panic!("No match found for params: {:#?}", params)
 }
 
-#[derive(Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
 pub enum ConcatMethod {
   #[strum(serialize = "mkvmerge")]
   MKVMerge,

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use av1an_core::{ChunkMethod, ConcatMethod, Encoder, SplitMethod};
 
-// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
+/// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
 #[derive(Clap, Debug, Serialize, Deserialize)]
 #[clap(name = "av1an", setting = ColoredHelp, version)]
 pub struct Args {

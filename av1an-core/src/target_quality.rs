@@ -10,7 +10,7 @@ pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64
 
   let tot = dif1 + dif2;
 
-  (num1 * (dif1 / tot) + (num2 * (dif2 / tot))).round() as usize
+  num1.mul_add(dif1 / tot, num2 * (dif2 / tot)).round() as usize
 }
 
 pub fn transform_vmaf(vmaf: f64) -> f64 {
@@ -54,7 +54,7 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
 
   let keys = sorted
     .iter()
-    .map(|f| Key::new(f.1 as f64, f.0 as f64, Interpolation::Linear))
+    .map(|f| Key::new(f64::from(f.1), f.0 as f64, Interpolation::Linear))
     .collect();
 
   let spline = Spline::from_vec(keys);

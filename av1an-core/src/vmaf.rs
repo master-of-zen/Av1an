@@ -15,7 +15,7 @@ pub fn plot_vmaf_score_file(
   scores_file: &Path,
   plot_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-  let scores = read_vmaf_file(&scores_file).unwrap();
+  let scores = read_vmaf_file(scores_file).unwrap();
 
   let plot_width = 2560 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 1440;
@@ -37,7 +37,7 @@ pub fn plot_vmaf_score_file(
     .set_label_area_size(LabelAreaPosition::Left, (5).percent())
     .set_label_area_size(LabelAreaPosition::Top, (5).percent())
     .margin((1).percent())
-    .build_cartesian_2d(0u32..length, perc_1.floor()..100.0)?;
+    .build_cartesian_2d(0_u32..length, perc_1.floor()..100.0)?;
 
   chart.configure_mesh().draw()?;
 
@@ -114,12 +114,11 @@ pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
 
   let out = cmd.output()?;
 
-  let stdr = String::from_utf8(out.stderr)?;
+  let stderr = String::from_utf8(out.stderr)?;
 
-  match out.status.success() {
-    true => Ok(()),
-    false => panic!("Test vmaf run failed : \n{:#?}", stdr),
-  }
+  assert!(out.status.success(), "Test VMAF run failed:\n{:?}", stderr);
+
+  Ok(())
 }
 
 pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
@@ -163,7 +162,10 @@ pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error>
   Ok(file_path)
 }
 
-pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
+pub fn plot_vmaf(source: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<(), Error> {
+  let source = source.as_ref();
+  let output = output.as_ref();
+
   println!("::VMAF Run..");
 
   let json_file = run_vmaf_on_files(source, output)?;
@@ -173,10 +175,10 @@ pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
 }
 
 pub fn run_vmaf_on_chunk(
-  encoded: &Path,
+  encoded: impl AsRef<Path>,
   pipe_cmd: &[String],
-  stat_file: &Path,
-  model: &str,
+  stat_file: impl AsRef<Path>,
+  model: Option<impl AsRef<Path>>,
   res: &str,
   sample_rate: usize,
   vmaf_filter: &str,
@@ -195,12 +197,21 @@ pub fn run_vmaf_on_chunk(
 
   let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res );
   let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res );
-  let vmaf = format!(
-    "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}:n_threads={}",
-    stat_file.to_str().unwrap(),
-    &model,
-    threads
-  );
+
+  let vmaf = if let Some(model) = model {
+    format!(
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
+      stat_file.as_ref().to_str().unwrap(),
+      &model.as_ref().to_str().unwrap(),
+      threads
+    )
+  } else {
+    format!(
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}",
+      stat_file.as_ref().to_str().unwrap(),
+      threads
+    )
+  };
 
   let vmaf_cmd = [
     "-loglevel",
@@ -213,7 +224,7 @@ pub fn run_vmaf_on_chunk(
     "-r",
     "60",
     "-i",
-    encoded.to_str().unwrap(),
+    encoded.as_ref().to_str().unwrap(),
     "-r",
     "60",
     "-i",
@@ -245,10 +256,17 @@ pub fn run_vmaf_on_chunk(
   cmd.args(cmd_out);
   cmd.stderr(Stdio::piped());
   cmd.stdout(Stdio::piped());
-  cmd
+  let output = cmd
     .stdin(handle.stdout.unwrap())
     .output()
     .unwrap_or_else(|e| panic!("Failed to execute vmaf pipe: {}\ncommand: {:#?}", e, cmd));
+
+  assert!(
+    output.status.success(),
+    "VMAF calculation failed:\nCommand: {:?}\nOutput: {:?}",
+    cmd,
+    output
+  );
 
   Ok(())
 }

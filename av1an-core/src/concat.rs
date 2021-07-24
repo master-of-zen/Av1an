@@ -2,8 +2,8 @@ use av_format::buffer::AccReader;
 use av_format::demuxer::Context as DemuxerContext;
 use av_format::demuxer::Event;
 use av_format::muxer::Context as MuxerContext;
-use av_ivf::demuxer::*;
-use av_ivf::muxer::*;
+use av_ivf::demuxer::IvfDemuxer;
+use av_ivf::muxer::IvfMuxer;
 use std::fs::{read_dir, File};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -78,7 +78,7 @@ pub fn concat_ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   muxer.write_header()?;
 
   let mut pos_offset: usize = 0;
-  for file in files.iter() {
+  for file in &files {
     let mut last_pos: usize = 0;
     let input = std::fs::File::open(file)?;
 
@@ -135,10 +135,10 @@ pub fn concatenate_mkvmerge(encode_folder: String, output: String) -> Result<(),
 
   let mut files: Vec<_> = read_dir(&encode_folder)
     .unwrap()
-    .map(|x| x.unwrap())
+    .map(Result::unwrap)
     .collect();
 
-  files.sort_by_key(|x| x.path());
+  files.sort_by_key(std::fs::DirEntry::path);
 
   let mut cmd = Command::new("mkvmerge");
   cmd.args([

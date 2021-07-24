@@ -1,5 +1,3 @@
-use crate::logger::log;
-
 use splines::{Interpolation, Key, Spline};
 use std::cmp::Ordering;
 use std::fmt::Error;
@@ -80,7 +78,7 @@ pub fn log_probes(
   let mut scores_sorted = vmaf_cq_scores;
   scores_sorted.sort_by_key(|x| x.1);
 
-  log(format!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames).as_str());
-  log(format!("Probes {:?} {}", scores_sorted, skip_string).as_str());
-  log(format!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf).as_str());
+  info!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames);
+  info!("Probes {:?} {}", scores_sorted, skip_string);
+  info!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf);
 }

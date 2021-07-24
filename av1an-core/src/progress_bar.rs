@@ -8,8 +8,13 @@ use std::error;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
-const INDICATIF_PROGRESS_TEMPLATE: &str =
-  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})";
+const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(target_os = "windows") {
+  // Do not use a spinner on Windows since the default console cannot display
+  // the characters used for the spinner
+  "[{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})"
+} else {
+  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})"
+};
 
 static PROGRESS_BAR: Lazy<ProgressBar> = Lazy::new(|| {
   let pb = ProgressBar::hidden();

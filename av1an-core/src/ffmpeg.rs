@@ -1,3 +1,4 @@
+use path_abs::PathAbs;
 use regex::Regex;
 use std::fs::{read_dir, File};
 use std::io::prelude::*;
@@ -90,7 +91,11 @@ pub fn write_concat_file(temp_folder: &Path) {
   let mut contents = String::new();
 
   for i in files {
-    contents.push_str(format!("file {}\n", i.path().display()).as_str());
+    if cfg!(target_os = "windows") {
+      contents.push_str(&format!("file {}\n", i.path().display()).replace(r"\", r"\\"));
+    } else {
+      contents.push_str(&format!("file {}\n", i.path().display()));
+    }
   }
 
   let mut file = File::create(concat_file).unwrap();
@@ -152,15 +157,16 @@ pub fn extract_audio(input: impl AsRef<Path>, temp: impl AsRef<Path>, audio_para
 
 /// Concatenates using ffmpeg
 pub fn concatenate_ffmpeg<P: AsRef<Path>>(temp: P, output: P, encoder: Encoder) {
-  let temp = temp.as_ref().canonicalize().unwrap();
+  let temp = PathAbs::new(temp.as_ref()).unwrap();
+  let temp = temp.as_path();
   let output = output.as_ref();
 
-  let concat = &temp.join("concat");
+  let concat = temp.join("concat");
   let concat_file = concat.to_str().unwrap();
 
-  write_concat_file(&temp);
+  write_concat_file(temp);
 
-  let audio_file = Path::new(&temp).join("audio.mkv");
+  let audio_file = temp.join("audio.mkv");
 
   let audio_cmd = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
     vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"]

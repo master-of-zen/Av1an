@@ -957,7 +957,7 @@ impl Project {
   }
 
   pub fn startup_check(&mut self) -> anyhow::Result<()> {
-    if matches!(
+    if !matches!(
       self.encoder,
       Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
     ) && self.concat == ConcatMethod::Ivf

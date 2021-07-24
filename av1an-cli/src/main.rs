@@ -37,8 +37,7 @@ pub fn main() {
       Vec::new()
     },
     temp,
-    mkvmerge: false,
-    output_ivf: false,
+    force: args.force,
     passes: if let Some(passes) = args.passes {
       passes
     } else {

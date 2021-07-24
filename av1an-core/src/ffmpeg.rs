@@ -7,14 +7,14 @@ use std::process::{Command, Stdio};
 use crate::Encoder;
 
 /// Get frame count. Direct counting of frame count using ffmpeg
-pub fn ffmpeg_get_frame_count(source: &Path) -> usize {
-  let source_path = Path::new(&source);
+pub fn ffmpeg_get_frame_count(source: impl AsRef<Path>) -> usize {
+  let source = source.as_ref();
 
   let mut cmd = Command::new("ffmpeg");
   cmd.args(&[
     "-hide_banner",
     "-i",
-    source_path.to_str().unwrap(),
+    source.to_str().unwrap(),
     "-map",
     "0:v:0",
     "-c",
@@ -40,7 +40,8 @@ pub fn ffmpeg_get_frame_count(source: &Path) -> usize {
 }
 
 /// Returns vec of all keyframes
-pub fn get_keyframes(source: &Path) -> Vec<usize> {
+pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
+  let source = source.as_ref();
   let mut cmd = Command::new("ffmpeg");
 
   cmd.stdout(Stdio::piped());
@@ -81,10 +82,10 @@ pub fn write_concat_file(temp_folder: &Path) {
   let encode_folder = &temp_folder.join("encode");
   let mut files: Vec<_> = read_dir(encode_folder)
     .unwrap()
-    .map(|x| x.unwrap())
+    .map(Result::unwrap)
     .collect();
 
-  files.sort_by_key(|x| x.path());
+  files.sort_by_key(std::fs::DirEntry::path);
 
   let mut contents = String::new();
 
@@ -114,7 +115,10 @@ pub fn have_audio(file: &Path) -> bool {
 }
 
 /// Extracting audio
-pub fn extract_audio(input: &Path, temp: &Path, audio_params: &[String]) {
+pub fn extract_audio(input: impl AsRef<Path>, temp: impl AsRef<Path>, audio_params: &[String]) {
+  let input = input.as_ref();
+  let temp = temp.as_ref();
+
   let have_audio = have_audio(input);
 
   if have_audio {
@@ -158,11 +162,11 @@ pub fn concatenate_ffmpeg<P: AsRef<Path>>(temp: P, output: P, encoder: Encoder) 
 
   let audio_file = Path::new(&temp).join("audio.mkv");
 
-  let mut audio_cmd = vec![];
-
-  if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
-    audio_cmd = vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"];
-  }
+  let audio_cmd = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
+    vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"]
+  } else {
+    Vec::with_capacity(0)
+  };
 
   let mut cmd = Command::new("ffmpeg");
 

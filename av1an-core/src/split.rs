@@ -5,8 +5,11 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::string::ToString;
 
-pub fn segment(input: &Path, temp: &Path, segments: &[usize]) {
+pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usize]) {
+  let input = input.as_ref();
+  let temp = temp.as_ref();
   let mut cmd = Command::new("ffmpeg");
 
   cmd.stdout(Stdio::piped());
@@ -28,19 +31,19 @@ pub fn segment(input: &Path, temp: &Path, segments: &[usize]) {
     "0",
   ]);
 
-  if !segments.is_empty() {
+  if segments.is_empty() {
+    let split_path = Path::new(temp).join("split").join("0.mkv");
+    let split_str = split_path.to_str().unwrap();
+    cmd.arg(split_str);
+  } else {
     let segments_to_string = segments
       .iter()
-      .map(|x| x.to_string())
+      .map(ToString::to_string)
       .collect::<Vec<String>>();
     let segments_joined = segments_to_string.join(",");
 
     cmd.args(&["-f", "segment", "-segment_frames", &segments_joined]);
     let split_path = Path::new(temp).join("split").join("%05d.mkv");
-    let split_str = split_path.to_str().unwrap();
-    cmd.arg(split_str);
-  } else {
-    let split_path = Path::new(temp).join("split").join("0.mkv");
     let split_str = split_path.to_str().unwrap();
     cmd.arg(split_str);
   }
@@ -88,7 +91,7 @@ struct ScenesData {
 pub fn write_scenes_to_file(
   scenes: &[usize],
   total_frames: usize,
-  scene_path: &Path,
+  scene_path: impl AsRef<Path>,
 ) -> std::io::Result<()> {
   // Writes a list of scenes and frame count to the file
   let data = ScenesData {

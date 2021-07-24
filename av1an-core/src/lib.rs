@@ -1,4 +1,13 @@
-#![warn(clippy::needless_pass_by_value)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::cast_possible_wrap)]
 
 #[macro_use]
 extern crate log;
@@ -28,7 +37,6 @@ use std::path::PathBuf;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
-
 pub enum Encoder {
   aom,
   rav1e,
@@ -56,7 +64,7 @@ macro_rules! into_vec {
 }
 
 impl Encoder {
-  pub fn compose_1_1_pass(&self, params: Vec<String>, output: String) -> Vec<String> {
+  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match &self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=1"],
@@ -104,7 +112,7 @@ impl Encoder {
     }
   }
 
-  pub fn compose_1_2_pass(&self, params: Vec<String>, fpf: &str) -> Vec<String> {
+  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match &self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=1"],
@@ -205,7 +213,7 @@ impl Encoder {
     }
   }
 
-  pub fn compose_2_2_pass(&self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
+  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match &self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=2"],
@@ -279,7 +287,7 @@ impl Encoder {
     }
   }
 
-  pub fn get_default_arguments(&self) -> Vec<String> {
+  pub fn get_default_arguments(self) -> Vec<String> {
     match &self {
       Encoder::aom => into_vec![
         "--threads=8",
@@ -317,30 +325,24 @@ impl Encoder {
     }
   }
 
-  pub fn get_default_pass(&self) -> u8 {
+  pub const fn get_default_pass(self) -> u8 {
     match &self {
-      Self::aom => 2,
-      Self::rav1e => 1,
-      Self::vpx => 2,
-      Self::svt_av1 => 1,
-      Self::x264 => 1,
-      Self::x265 => 1,
+      Self::aom | Self::vpx => 2,
+      _ => 1,
     }
   }
 
   /// Default quantizer range target quality mode
-  pub fn get_default_cq_range(&self) -> (usize, usize) {
+  pub const fn get_default_cq_range(self) -> (usize, usize) {
     match &self {
-      Self::aom => (15, 55),
+      Self::aom | Self::vpx => (15, 55),
       Self::rav1e => (50, 140),
-      Self::vpx => (15, 55),
       Self::svt_av1 => (15, 50),
-      Self::x264 => (15, 35),
-      Self::x265 => (15, 35),
+      Self::x264 | Self::x265 => (15, 35),
     }
   }
 
-  pub fn help_command(&self) -> [&str; 2] {
+  pub const fn help_command(self) -> [&'static str; 2] {
     match &self {
       Self::aom => ["aomenc", "--help"],
       Self::rav1e => ["rav1e", "--fullhelp"],
@@ -352,7 +354,7 @@ impl Encoder {
   }
 
   /// Default quantizer range target quality mode
-  pub fn encoder_bin(&self) -> &str {
+  pub const fn encoder_bin(&self) -> &str {
     match &self {
       Self::aom => "aomenc",
       Self::rav1e => "rav1e",
@@ -363,40 +365,30 @@ impl Encoder {
     }
   }
 
-  pub fn output_extension(&self) -> &str {
+  pub const fn output_extension(&self) -> &str {
     match &self {
-      Self::aom => "ivf",
-      Self::rav1e => "ivf",
-      Self::vpx => "ivf",
-      Self::svt_av1 => "ivf",
-      Self::x264 => "mkv",
-      Self::x265 => "mkv",
+      Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
+      Self::x264 | Self::x265 => "mkv",
     }
   }
 
-  fn q_regex_str(&self) -> &str {
+  const fn q_regex_str(&self) -> &str {
     match &self {
-      Self::aom => r"--cq-level=.+",
+      Self::aom | Self::vpx => r"--cq-level=.+",
       Self::rav1e => r"--quantizer",
-      Self::vpx => r"--cq-level=.+",
       Self::svt_av1 => r"(--qp|-q|--crf)",
-      Self::x264 => r"--crf",
-      Self::x265 => r"--crf",
+      Self::x264 | Self::x265 => r"--crf",
     }
   }
 
-  fn replace_q(&self, index: usize, q: usize) -> (usize, String) {
+  fn replace_q(self, index: usize, q: usize) -> (usize, String) {
     match &self {
-      Self::aom => (index, format!("--cq-level={}", q)),
-      Self::rav1e => (index + 1, q.to_string()),
-      Self::vpx => (index, format!("--cq-level={}", q)),
-      Self::svt_av1 => (index + 1, q.to_string()),
-      Self::x264 => (index + 1, q.to_string()),
-      Self::x265 => (index + 1, q.to_string()),
+      Self::aom | Self::vpx => (index, format!("--cq-level={}", q)),
+      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, q.to_string()),
     }
   }
 
-  pub fn man_command(&self, params: Vec<String>, q: usize) -> Vec<String> {
+  pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
     let index = list_index_of_regex(&params, self.q_regex_str()).unwrap();
 
     let mut new_params = params;
@@ -406,18 +398,17 @@ impl Encoder {
     new_params
   }
 
-  fn pipe_match(&self) -> &str {
+  const fn pipe_match(&self) -> &str {
     match &self {
-      Self::aom => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
+      Self::aom | Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
       Self::rav1e => r"encoded.*? ([^ ]+?) ",
-      Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
       Self::svt_av1 => r"Encoding frame\s+(\d+)",
       Self::x264 => r"^[^\d]*(\d+)",
       Self::x265 => r"(\d+) frames",
     }
   }
 
-  pub fn match_line(&self, line: &str) -> Option<usize> {
+  pub fn match_line(self, line: &str) -> Option<usize> {
     let encoder_regex = Regex::new(self.pipe_match()).unwrap();
     if !encoder_regex.is_match(line) {
       return Some(0);
@@ -426,8 +417,11 @@ impl Encoder {
     captures.parse::<usize>().ok()
   }
 
-  // pub fn construct_target_quality_command(&self, threads: String, q: String) -> Vec<Cow<str>> {
-  pub fn construct_target_quality_command(&self, threads: usize, q: usize) -> Vec<Cow<str>> {
+  pub fn construct_target_quality_command(
+    self,
+    threads: usize,
+    q: usize,
+  ) -> Vec<Cow<'static, str>> {
     match &self {
       Self::aom => into_vec![
         "aomenc",
@@ -591,7 +585,7 @@ impl Encoder {
     }
   }
 
-  pub fn construct_target_quality_command_probe_slow(&self, q: usize) -> Vec<Cow<str>> {
+  pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
     match &self {
       Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
       Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q.to_string()],
@@ -628,7 +622,7 @@ impl Encoder {
   }
 
   // Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
-  pub fn remove_patterns(&self, args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
+  pub fn remove_patterns(args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
     let mut out = args;
     for pattern in patterns {
       if let Some(index) = out.iter().position(|value| value.contains(&pattern)) {
@@ -643,12 +637,15 @@ impl Encoder {
   }
 
   // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
-  pub fn decow_strings(&self, args: &[Cow<str>]) -> Vec<String> {
-    args.iter().map(|s| s.to_string()).collect::<Vec<String>>()
+  pub fn decow_strings(args: &[Cow<str>]) -> Vec<String> {
+    args
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<String>>()
   }
 
   pub fn probe_cmd(
-    &self,
+    self,
     temp: String,
     name: &str,
     q: usize,
@@ -692,22 +689,20 @@ impl Encoder {
         "--crf",
         "--quantizer"
       ];
-      args = self.remove_patterns(args, patterns);
+      args = Self::remove_patterns(args, patterns);
       let ps = self.construct_target_quality_command_probe_slow(q);
-      params = self.decow_strings(&ps);
+      params = Self::decow_strings(&ps);
       params.append(&mut args)
     } else {
       let ps = self.construct_target_quality_command(n_threads, q);
-      params = self.decow_strings(&ps);
+      params = Self::decow_strings(&ps);
     }
 
     let output: Vec<String> = match &self {
-      Self::aom => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
-      Self::rav1e => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
       Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
-      Self::vpx => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
-      Self::x264 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
-      Self::x265 => chain!(params, into_vec!["-o", probe_path, "-"]).collect(),
+      Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
+        chain!(params, into_vec!["-o", probe_path, "-"]).collect()
+      }
     };
 
     (pipe, output)
@@ -746,7 +741,9 @@ pub fn list_index_of_regex(params: &[String], regex_str: &str) -> Option<usize> 
   panic!("No match found for params: {:#?}", params)
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
+)]
 pub enum ConcatMethod {
   #[strum(serialize = "mkvmerge")]
   MKVMerge,
@@ -786,14 +783,14 @@ pub enum ChunkMethod {
   LSMASH,
 }
 
-/// Check for FFmpeg
+/// Check for `FFmpeg`
 pub fn get_ffmpeg_info() -> String {
   let mut cmd = Command::new("ffmpeg");
   cmd.stderr(Stdio::piped());
   String::from_utf8(cmd.output().unwrap().stderr).unwrap()
 }
 
-pub fn adapt_probing_rate(rate: usize) -> usize {
+pub const fn adapt_probing_rate(rate: usize) -> usize {
   match rate {
     1..=4 => rate,
     _ => 4,
@@ -809,7 +806,7 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
 
   let cpu = num_cpus::get() as u64;
   // available_memory returns kb, convert to gb
-  let ram_gb = system.available_memory() / 10u64.pow(6);
+  let ram_gb = system.available_memory() / 10_u64.pow(6);
 
   std::cmp::max(
     match encoder {
@@ -856,11 +853,11 @@ struct Baz {
   frames: Vec<Bar>,
 }
 
-pub fn read_file_to_string(file: &Path) -> Result<String, Error> {
-  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file)))
+pub fn read_file_to_string(file: impl AsRef<Path>) -> Result<String, Error> {
+  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file.as_ref())))
 }
 
-pub fn read_vmaf_file(file: &Path) -> Result<Vec<f64>, serde_json::Error> {
+pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
   let json_str = read_file_to_string(file).unwrap();
   let bazs = serde_json::from_str::<Baz>(&json_str)?;
   let v = bazs
@@ -872,7 +869,10 @@ pub fn read_vmaf_file(file: &Path) -> Result<Vec<f64>, serde_json::Error> {
   Ok(v)
 }
 
-pub fn read_weighted_vmaf(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
+pub fn read_weighted_vmaf(
+  file: impl AsRef<Path>,
+  percentile: f64,
+) -> Result<f64, serde_json::Error> {
   let mut scores = read_vmaf_file(file).unwrap();
 
   Ok(get_percentile(&mut scores, percentile))

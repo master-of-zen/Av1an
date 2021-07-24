@@ -15,7 +15,7 @@ pub fn plot_vmaf_score_file(
   scores_file: &Path,
   plot_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-  let scores = read_vmaf_file(&scores_file).unwrap();
+  let scores = read_vmaf_file(scores_file).unwrap();
 
   let plot_width = 2560 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 1440;
@@ -37,7 +37,7 @@ pub fn plot_vmaf_score_file(
     .set_label_area_size(LabelAreaPosition::Left, (5).percent())
     .set_label_area_size(LabelAreaPosition::Top, (5).percent())
     .margin((1).percent())
-    .build_cartesian_2d(0u32..length, perc_1.floor()..100.0)?;
+    .build_cartesian_2d(0_u32..length, perc_1.floor()..100.0)?;
 
   chart.configure_mesh().draw()?;
 
@@ -114,12 +114,11 @@ pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
 
   let out = cmd.output()?;
 
-  let stdr = String::from_utf8(out.stderr)?;
+  let stderr = String::from_utf8(out.stderr)?;
 
-  match out.status.success() {
-    true => Ok(()),
-    false => panic!("Test vmaf run failed : \n{:#?}", stdr),
-  }
+  assert!(out.status.success(), "Test VMAF run failed:\n{:?}", stderr);
+
+  Ok(())
 }
 
 pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
@@ -163,7 +162,10 @@ pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error>
   Ok(file_path)
 }
 
-pub fn plot_vmaf(source: &Path, output: &Path) -> Result<(), Error> {
+pub fn plot_vmaf(source: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<(), Error> {
+  let source = source.as_ref();
+  let output = output.as_ref();
+
   println!("::VMAF Run..");
 
   let json_file = run_vmaf_on_files(source, output)?;

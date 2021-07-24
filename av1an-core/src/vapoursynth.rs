@@ -23,7 +23,7 @@ use std::time::Instant;
 
 use self::num_rational::Ratio;
 use self::vapoursynth::prelude::*;
-use super::*;
+use super::ChunkMethod;
 
 enum OutputTarget {
   File(File),
@@ -252,7 +252,7 @@ fn print_y4m_header<W: Write>(writer: &mut W, node: &Node) -> Result<(), Error> 
 }
 
 // Checks if the frame is completed, that is, we have the frame and, if needed, its alpha part.
-fn is_completed(entry: &(Option<FrameRef>, Option<FrameRef>), have_alpha: bool) -> bool {
+const fn is_completed(entry: &(Option<FrameRef>, Option<FrameRef>), have_alpha: bool) -> bool {
   entry.0.is_some() && (!have_alpha || entry.1.is_some())
 }
 
@@ -327,20 +327,20 @@ fn frame_done_callback<'core>(
   let mut state = shared_data.output_state.lock().unwrap();
 
   // Increase the progress counter.
-  if !alpha {
+  if alpha {
+    state.callbacks_fired_alpha += 1;
+  } else {
     state.callbacks_fired += 1;
     if parameters.alpha_node.is_none() {
       state.callbacks_fired_alpha += 1;
     }
-  } else {
-    state.callbacks_fired_alpha += 1;
   }
 
   // Figure out the FPS.
   if parameters.progress {
     let current = Instant::now();
     let elapsed = current.duration_since(state.last_fps_report_time);
-    let elapsed_seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9;
+    let elapsed_seconds = f64::from(elapsed.subsec_nanos()).mul_add(1e-9, elapsed.as_secs() as f64);
 
     if elapsed.as_secs() > 10 {
       state.fps =
@@ -396,8 +396,9 @@ fn frame_done_callback<'core>(
       while state
         .reorder_map
         .get(&state.next_output_frame)
-        .map(|entry| is_completed(entry, parameters.alpha_node.is_some()))
-        .unwrap_or(false)
+        .map_or(false, |entry| {
+          is_completed(entry, parameters.alpha_node.is_some())
+        })
       {
         let next_output_frame = state.next_output_frame;
         let (frame, alpha_frame) = state.reorder_map.remove(&next_output_frame).unwrap();
@@ -415,7 +416,7 @@ fn frame_done_callback<'core>(
         }
 
         if state.timecodes_file.is_some() && state.error.is_none() {
-          let timecode = (*state.current_timecode.numer() as f64 * 1000f64)
+          let timecode = (*state.current_timecode.numer() as f64 * 1000_f64)
             / *state.current_timecode.denom() as f64;
           match writeln!(state.timecodes_file.as_mut().unwrap(), "{:.6}", timecode)
             .context("Couldn't output the timecode")
@@ -534,7 +535,7 @@ fn output(
   }
 
   let elapsed = start_time.elapsed();
-  let elapsed_seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9;
+  let elapsed_seconds = f64::from(elapsed.subsec_nanos()).mul_add(1e-9, elapsed.as_secs() as f64);
 
   let mut state = shared_data.output_state.lock().unwrap();
   eprintln!(
@@ -739,8 +740,7 @@ fn run(args: &[&str]) -> Result<(), Error> {
   // Get the output node.
   let output_index = matches
     .value_of("outputindex")
-    .map(str::parse)
-    .unwrap_or(Ok(0))
+    .map_or(Ok(0), str::parse)
     .context("Couldn't convert the output index to an integer")?;
 
   #[cfg(feature = "gte-vsscript-api-31")]
@@ -797,13 +797,11 @@ fn run(args: &[&str]) -> Result<(), Error> {
 
     let start_frame = matches
       .value_of("start")
-      .map(str::parse::<i32>)
-      .unwrap_or(Ok(0))
+      .map_or(Ok(0), str::parse::<i32>)
       .context("Couldn't convert the start frame to an integer")?;
     let end_frame = matches
       .value_of("end")
-      .map(str::parse::<i32>)
-      .unwrap_or_else(|| Ok(num_frames as i32 - 1))
+      .map_or_else(|| Ok(num_frames as i32 - 1), str::parse::<i32>)
       .context("Couldn't convert the end frame to an integer")?;
 
     // Check if the input start and end frames make sense.
@@ -820,16 +818,14 @@ fn run(args: &[&str]) -> Result<(), Error> {
         end_frame
           .checked_sub(start_frame)
           .and_then(|x| x.checked_add(1))
-          .map(|x| format!("{}", x))
-          .unwrap_or_else(|| "<overflow>".to_owned())
+          .map_or_else(|| "<overflow>".to_owned(), |x| format!("{}", x))
       );
     }
 
     let requests = {
       let requests = matches
         .value_of("requests")
-        .map(str::parse::<usize>)
-        .unwrap_or(Ok(0))
+        .map_or(Ok(0), str::parse::<usize>)
         .context("Couldn't convert the request count to an unsigned integer")?;
 
       if requests == 0 {
@@ -860,7 +856,7 @@ fn run(args: &[&str]) -> Result<(), Error> {
     // This is still not a very valid comparison since vspipe does all argument validation
     // before it starts the time.
     let elapsed = start_time.elapsed();
-    let elapsed_seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9;
+    let elapsed_seconds = f64::from(elapsed.subsec_nanos()).mul_add(1e-9, elapsed.as_secs() as f64);
     eprintln!("vspipe time: {:.2} seconds", elapsed_seconds);
   }
 

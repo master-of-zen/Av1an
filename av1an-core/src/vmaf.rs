@@ -245,10 +245,17 @@ pub fn run_vmaf_on_chunk(
   cmd.args(cmd_out);
   cmd.stderr(Stdio::piped());
   cmd.stdout(Stdio::piped());
-  cmd
+  let output = cmd
     .stdin(handle.stdout.unwrap())
     .output()
     .unwrap_or_else(|e| panic!("Failed to execute vmaf pipe: {}\ncommand: {:#?}", e, cmd));
+
+  assert!(
+    output.status.success(),
+    "FFmpeg VMAF calculation failed!:\nCommand: {:?}\nOutput: {:?}",
+    cmd,
+    &output
+  );
 
   Ok(())
 }

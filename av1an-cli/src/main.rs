@@ -2,7 +2,7 @@ use std::path::Path;
 
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
-use av1an_pyo3::{hash_path, is_vapoursynth, Project, Verbosity};
+use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
 use clap::Clap;
 
 pub fn main() {
@@ -20,16 +20,9 @@ pub fn main() {
     frames: 0,
     is_vs: is_vapoursynth(&args.input.to_str().unwrap()),
     logging: if let Some(log_file) = args.logging {
-      Path::new(&format!("{}.log", log_file))
-        .to_str()
-        .unwrap()
-        .to_owned()
+      Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
-      Path::new(&temp)
-        .join("log.log")
-        .to_str()
-        .unwrap()
-        .to_owned()
+      Path::new(&temp).join("log.log")
     },
     ffmpeg: if let Some(s) = args.ffmpeg {
       shlex::split(&s).unwrap_or_else(Vec::new)

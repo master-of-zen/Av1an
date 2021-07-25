@@ -12,47 +12,35 @@
 #[macro_use]
 extern crate log;
 
+use path_abs::PathAbs;
 use serde::{Deserialize, Serialize};
+use std::cmp;
 use std::cmp::Ordering;
 use std::fmt::{Display, Error};
 use std::fs;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::path::{Path, PathBuf};
+use std::process::{Command, ExitStatus, Stdio};
+
 use sysinfo::SystemExt;
+
+use itertools::Itertools;
+
+use crate::encoder::Encoder;
+use regex::Regex;
+
+use flexi_logger::{Duplicate, FileSpec, Logger};
+
 pub mod concat;
+pub mod encoder;
 pub mod ffmpeg;
 pub mod file_validation;
-pub mod logger;
 pub mod progress_bar;
 pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;
 pub mod vmaf;
 
-use itertools::chain;
-use regex::Regex;
-use std::borrow::Cow;
-use std::cmp;
-use std::path::PathBuf;
-
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
-pub enum Encoder {
-  aom,
-  rav1e,
-  vpx,
-  #[strum(serialize = "svt-av1")]
-  svt_av1,
-  x264,
-  x265,
-}
-
-impl Display for Encoder {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.write_str(<&'static str>::from(self))
-  }
-}
-
+#[macro_export]
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
     vec![
@@ -61,652 +49,6 @@ macro_rules! into_vec {
       )*
     ]
   };
-}
-
-impl Encoder {
-  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
-    match &self {
-      Self::aom => chain!(
-        into_vec!["aomenc", "--passes=1"],
-        params,
-        into_vec!["-o", output, "-"],
-      )
-      .collect(),
-      Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y"],
-        params,
-        into_vec!["--output", output]
-      )
-      .collect(),
-      Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=1"],
-        params,
-        into_vec!["-o", output, "-"]
-      )
-      .collect(),
-      Self::svt_av1 => chain!(
-        into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2"],
-        params,
-        into_vec!["-b", output],
-      )
-      .collect(),
-      Self::x264 => chain!(
-        into_vec![
-          "x264",
-          "--stitchable",
-          "--log-level",
-          "error",
-          "--demuxer",
-          "y4m",
-        ],
-        params,
-        into_vec!["-", "-o", output]
-      )
-      .collect(),
-      Self::x265 => chain!(
-        into_vec!["x265", "--y4m"],
-        params,
-        into_vec!["-", "-o", output]
-      )
-      .collect(),
-    }
-  }
-
-  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
-    match &self {
-      Self::aom => chain!(
-        into_vec!["aomenc", "--passes=2", "--pass=1"],
-        params,
-        into_vec![
-          format!("--fpf={}.log", fpf),
-          "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-          "-"
-        ],
-      )
-      .collect(),
-      Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y", "-q"],
-        params,
-        into_vec![
-          "--first-pass",
-          format!("{}.stat", fpf),
-          "--output",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-        ]
-      )
-      .collect(),
-      Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=2", "--pass=1"],
-        params,
-        into_vec![
-          format!("--fpf={}.log", fpf),
-          "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-          "-"
-        ],
-      )
-      .collect(),
-      Self::svt_av1 => chain!(
-        into_vec![
-          "SvtAv1EncApp",
-          "-i",
-          "stdin",
-          "--progress",
-          "2",
-          "--irefresh-type",
-          "2",
-        ],
-        params,
-        into_vec![
-          "--pass",
-          "1",
-          "--stats",
-          format!("{}.stat", fpf),
-          "-b",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-        ],
-      )
-      .collect(),
-      Self::x264 => chain!(
-        into_vec![
-          "x264",
-          "--stitchable",
-          "--log-level",
-          "error",
-          "--pass",
-          "1",
-          "--demuxer",
-          "y4m",
-        ],
-        params,
-        into_vec![
-          "--stats",
-          format!("{}.log", fpf),
-          "-",
-          "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-        ]
-      )
-      .collect(),
-      Self::x265 => chain!(
-        into_vec![
-          "x265",
-          "--stitchable",
-          "--log-level",
-          "error",
-          "--pass",
-          "1",
-          "--demuxer",
-          "y4m",
-        ],
-        params,
-        into_vec![
-          "--stats",
-          format!("{}.log", fpf),
-          "-",
-          "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
-        ]
-      )
-      .collect(),
-    }
-  }
-
-  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
-    match &self {
-      Self::aom => chain!(
-        into_vec!["aomenc", "--passes=2", "--pass=2"],
-        params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
-      )
-      .collect(),
-      Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y", "-q"],
-        params,
-        into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output]
-      )
-      .collect(),
-      Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=2", "--pass=2"],
-        params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
-      )
-      .collect(),
-      Self::svt_av1 => chain!(
-        into_vec![
-          "SvtAv1EncApp",
-          "-i",
-          "stdin",
-          "--progress",
-          "2",
-          "--irefresh-type",
-          "2",
-        ],
-        params,
-        into_vec![
-          "--pass",
-          "2",
-          "--stats",
-          format!("{}.stat", fpf),
-          "-b",
-          output,
-        ],
-      )
-      .collect(),
-      Self::x264 => chain!(
-        into_vec![
-          "x264",
-          "--stitchable",
-          "--log-level",
-          "error",
-          "--pass",
-          "2",
-          "--demuxer",
-          "y4m",
-        ],
-        params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
-      )
-      .collect(),
-      Self::x265 => chain!(
-        into_vec![
-          "x265",
-          "--stitchable",
-          "--log-level",
-          "error",
-          "--pass",
-          "2",
-          "--demuxer",
-          "y4m",
-        ],
-        params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
-      )
-      .collect(),
-    }
-  }
-
-  pub fn get_default_arguments(self) -> Vec<String> {
-    match &self {
-      Encoder::aom => into_vec![
-        "--threads=8",
-        "-b",
-        "10",
-        "--cpu-used=6",
-        "--end-usage=q",
-        "--cq-level=30",
-        "--tile-columns=2",
-        "--tile-rows=1",
-      ],
-      Encoder::rav1e => into_vec![
-        "--tiles",
-        "8",
-        "--speed",
-        "6",
-        "--quantizer",
-        "100",
-        "--no-scene-detection",
-      ],
-      Encoder::vpx => into_vec![
-        "--codec=vp9",
-        "-b",
-        "10",
-        "--profile=2",
-        "--threads=4",
-        "--cpu-used=0",
-        "--end-usage=q",
-        "--cq-level=30",
-        "--row-mt=1",
-      ],
-      Encoder::svt_av1 => into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"],
-      Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
-      Encoder::x265 => into_vec!["-p", "slow", "--crf", "25", "-D", "10"],
-    }
-  }
-
-  pub const fn get_default_pass(self) -> u8 {
-    match &self {
-      Self::aom | Self::vpx => 2,
-      _ => 1,
-    }
-  }
-
-  /// Default quantizer range target quality mode
-  pub const fn get_default_cq_range(self) -> (usize, usize) {
-    match &self {
-      Self::aom | Self::vpx => (15, 55),
-      Self::rav1e => (50, 140),
-      Self::svt_av1 => (15, 50),
-      Self::x264 | Self::x265 => (15, 35),
-    }
-  }
-
-  pub const fn help_command(self) -> [&'static str; 2] {
-    match &self {
-      Self::aom => ["aomenc", "--help"],
-      Self::rav1e => ["rav1e", "--fullhelp"],
-      Self::vpx => ["vpxenc", "--help"],
-      Self::svt_av1 => ["SvtAv1EncApp", "--help"],
-      Self::x264 => ["x264", "--fullhelp"],
-      Self::x265 => ["x265", "--fullhelp"],
-    }
-  }
-
-  /// Default quantizer range target quality mode
-  pub const fn encoder_bin(&self) -> &str {
-    match &self {
-      Self::aom => "aomenc",
-      Self::rav1e => "rav1e",
-      Self::vpx => "vpxenc",
-      Self::svt_av1 => "SvtAv1EncApp",
-      Self::x264 => "x264",
-      Self::x265 => "x265",
-    }
-  }
-
-  pub const fn output_extension(&self) -> &str {
-    match &self {
-      Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
-      Self::x264 | Self::x265 => "mkv",
-    }
-  }
-
-  const fn q_regex_str(&self) -> &str {
-    match &self {
-      Self::aom | Self::vpx => r"--cq-level=.+",
-      Self::rav1e => r"--quantizer",
-      Self::svt_av1 => r"(--qp|-q|--crf)",
-      Self::x264 | Self::x265 => r"--crf",
-    }
-  }
-
-  fn replace_q(self, index: usize, q: usize) -> (usize, String) {
-    match &self {
-      Self::aom | Self::vpx => (index, format!("--cq-level={}", q)),
-      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, q.to_string()),
-    }
-  }
-
-  pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index_of_regex(&params, self.q_regex_str()).unwrap();
-
-    let mut new_params = params;
-    let (replace_index, replace_q) = self.replace_q(index, q);
-    new_params[replace_index] = replace_q;
-
-    new_params
-  }
-
-  const fn pipe_match(&self) -> &str {
-    match &self {
-      Self::aom | Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
-      Self::rav1e => r"encoded.*? ([^ ]+?) ",
-      Self::svt_av1 => r"Encoding frame\s+(\d+)",
-      Self::x264 => r"^[^\d]*(\d+)",
-      Self::x265 => r"(\d+) frames",
-    }
-  }
-
-  pub fn match_line(self, line: &str) -> Option<usize> {
-    let encoder_regex = Regex::new(self.pipe_match()).unwrap();
-    if !encoder_regex.is_match(line) {
-      return Some(0);
-    }
-    let captures = encoder_regex.captures(line)?.get(1)?.as_str();
-    captures.parse::<usize>().ok()
-  }
-
-  pub fn construct_target_quality_command(
-    self,
-    threads: usize,
-    q: usize,
-  ) -> Vec<Cow<'static, str>> {
-    match &self {
-      Self::aom => into_vec![
-        "aomenc",
-        "--passes=1",
-        format!("--threads={}", threads),
-        "--tile-columns=2",
-        "--tile-rows=1",
-        "--end-usage=q",
-        "-b",
-        "8",
-        "--cpu-used=6",
-        format!("--cq-level={}", q),
-        "--enable-filter-intra=0",
-        "--enable-smooth-intra=0",
-        "--enable-paeth-intra=0",
-        "--enable-cfl-intra=0",
-        "--enable-obmc=0",
-        "--enable-palette=0",
-        "--enable-overlay=0",
-        "--enable-intrabc=0",
-        "--enable-angle-delta=0",
-        "--reduced-tx-type-set=1",
-        "--enable-dual-filter=0",
-        "--enable-intra-edge-filter=0",
-        "--enable-order-hint=0",
-        "--enable-flip-idtx=0",
-        "--enable-dist-wtd-comp=0",
-        "--enable-interintra-wedge=0",
-        "--enable-onesided-comp=0",
-        "--enable-interintra-comp=0",
-        "--enable-global-motion=0",
-        "--enable-cdef=0",
-        "--max-reference-frames=3",
-        "--cdf-update-mode=2",
-        "--deltaq-mode=0",
-        "--sb-size=64",
-        "--min-partition-size=32",
-        "--max-partition-size=32",
-      ],
-      Self::rav1e => into_vec![
-        "rav1e",
-        "-y",
-        "-s",
-        "10",
-        "--threads",
-        threads.to_string(),
-        "--tiles",
-        "16",
-        "--quantizer",
-        q.to_string(),
-        "--low-latency",
-        "--rdo-lookahead-frames",
-        "5",
-        "--no-scene-detection",
-      ],
-      Self::vpx => into_vec![
-        "vpxenc",
-        "-b",
-        "10",
-        "--profile=2",
-        "--passes=1",
-        "--pass=1",
-        "--codec=vp9",
-        format!("--threads={}", threads),
-        "--cpu-used=9",
-        "--end-usage=q",
-        format!("--cq-level={}", q),
-        "--row-mt=1",
-      ],
-      Self::svt_av1 => into_vec![
-        "SvtAv1EncApp",
-        "-i",
-        "stdin",
-        "--lp",
-        threads.to_string(),
-        "--preset",
-        "8",
-        "--keyint",
-        "240",
-        "--crf",
-        q.to_string(),
-        "--tile-rows",
-        "1",
-        "--tile-columns",
-        "2",
-        "--pred-struct",
-        "0",
-        "--sg-filter-mode",
-        "0",
-        "--enable-restoration-filtering",
-        "0",
-        "--cdef-level",
-        "0",
-        "--disable-dlf",
-        "0",
-        "--mrp-level",
-        "0",
-        "--enable-mfmv",
-        "0",
-        "--enable-local-warp",
-        "0",
-        "--enable-global-motion",
-        "0",
-        "--enable-interintra-comp",
-        "0",
-        "--obmc-level",
-        "0",
-        "--rdoq-level",
-        "0",
-        "--filter-intra-level",
-        "0",
-        "--enable-intra-edge-filter",
-        "0",
-        "--enable-pic-based-rate-est",
-        "0",
-        "--pred-me",
-        "0",
-        "--bipred-3x3",
-        "0",
-        "--compound",
-        "0",
-        "--ext-block",
-        "0",
-        "--hbd-md",
-        "0",
-        "--palette-level",
-        "0",
-        "--umv",
-        "0",
-        "--tf-level",
-        "3",
-      ],
-      Self::x264 => into_vec![
-        "x264",
-        "--log-level",
-        "error",
-        "--demuxer",
-        "y4m",
-        "-",
-        "--no-progress",
-        "--threads",
-        threads.to_string(),
-        "--preset",
-        "medium",
-        "--crf",
-        q.to_string(),
-      ],
-      Self::x265 => into_vec![
-        "x265",
-        "--log-level",
-        "0",
-        "--no-progress",
-        "--y4m",
-        "--frame-threads",
-        cmp::min(threads, 16).to_string(),
-        "--preset",
-        "fast",
-        "--crf",
-        q.to_string(),
-      ],
-    }
-  }
-
-  pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
-    match &self {
-      Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
-      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q.to_string()],
-      Self::vpx => into_vec![
-        "vpxenc",
-        "--passes=1",
-        "--pass=1",
-        "--codec=vp9",
-        "--end-usage=q",
-        format!("--cq-level={}", q),
-      ],
-      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q.to_string()],
-      Self::x264 => into_vec![
-        "x264",
-        "--log-level",
-        "error",
-        "--demuxer",
-        "y4m",
-        "-",
-        "--no-progress",
-        "--crf",
-        q.to_string(),
-      ],
-      Self::x265 => into_vec![
-        "x265",
-        "--log-level",
-        "0",
-        "--no-progress",
-        "--y4m",
-        "--crf",
-        q.to_string(),
-      ],
-    }
-  }
-
-  // Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
-  pub fn remove_patterns(args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
-    let mut out = args;
-    for pattern in patterns {
-      if let Some(index) = out.iter().position(|value| value.contains(&pattern)) {
-        out.remove(index);
-        // If pattern does not contain =, we need to remove the index that follows.
-        if !pattern.contains('=') {
-          out.remove(index);
-        }
-      }
-    }
-    out
-  }
-
-  // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
-  pub fn decow_strings(args: &[Cow<str>]) -> Vec<String> {
-    args
-      .iter()
-      .map(ToString::to_string)
-      .collect::<Vec<String>>()
-  }
-
-  pub fn probe_cmd(
-    self,
-    temp: String,
-    name: &str,
-    q: usize,
-    ffmpeg_pipe: Vec<String>,
-    probing_rate: &str,
-    n_threads: usize,
-    video_params: Vec<String>,
-    probe_slow: bool,
-  ) -> (Vec<String>, Vec<String>) {
-    let pipe: Vec<String> = chain!(
-      into_vec![
-        "ffmpeg",
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        "-",
-        "-vf",
-        format!("select=not(mod(n\\,{}))", probing_rate).as_str(),
-        "-vsync",
-        "0",
-      ],
-      ffmpeg_pipe
-    )
-    .collect();
-
-    let probe_name = format!("v_{}{}.ivf", q, name);
-    let mut probe = PathBuf::from(temp);
-    probe.push("split");
-    probe.push(&probe_name);
-    let probe_path = probe.into_os_string().into_string().unwrap();
-
-    let mut params;
-    if probe_slow {
-      let mut args = video_params;
-      let patterns = into_vec![
-        "--cq-level=",
-        "--passes=",
-        "--pass=",
-        "--crf",
-        "--quantizer"
-      ];
-      args = Self::remove_patterns(args, patterns);
-      let ps = self.construct_target_quality_command_probe_slow(q);
-      params = Self::decow_strings(&ps);
-      params.append(&mut args)
-    } else {
-      let ps = self.construct_target_quality_command(n_threads, q);
-      params = Self::decow_strings(&ps);
-    }
-
-    let output: Vec<String> = match &self {
-      Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
-      Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
-        chain!(params, into_vec!["-o", probe_path, "-"]).collect()
-      }
-    };
-
-    (pipe, output)
-  }
 }
 
 pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
@@ -876,4 +218,1462 @@ pub fn read_weighted_vmaf(
   let mut scores = read_vmaf_file(file).unwrap();
 
   Ok(get_percentile(&mut scores, percentile))
+}
+
+use anyhow::anyhow;
+use once_cell::sync::Lazy;
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+use crate::ffmpeg::extract_audio;
+use crate::ffmpeg::ffmpeg_get_frame_count;
+use crate::ffmpeg::get_keyframes;
+use crate::progress_bar::finish_progress_bar;
+use crate::progress_bar::init_progress_bar;
+use crate::progress_bar::update_bar;
+use crate::progress_bar::{
+  finish_multi_progress_bar, init_multi_progress_bar, update_mp_bar, update_mp_msg,
+};
+use crate::split::extra_splits;
+use crate::split::segment;
+use crate::split::write_scenes_to_file;
+use crate::target_quality::log_probes;
+use crate::target_quality::vmaf_auto_threads;
+use crate::target_quality::weighted_search;
+use crate::vmaf::plot_vmaf;
+
+use std::cmp::Reverse;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io;
+use std::io::Write;
+use std::iter;
+use std::string::ToString;
+use std::time::Instant;
+
+pub fn hash_path(path: &str) -> String {
+  let mut s = DefaultHasher::new();
+  path.hash(&mut s);
+  format!("{:x}", s.finish())[..7].to_string()
+}
+
+fn create_vs_file(temp: &str, source: &str, chunk_method: ChunkMethod) -> anyhow::Result<String> {
+  // only for python code, remove if being called by rust
+  let temp = Path::new(temp);
+  let source = Path::new(source).canonicalize()?;
+
+  let load_script_path = temp.join("split").join("loadscript.vpy");
+
+  if load_script_path.exists() {
+    return Ok(load_script_path.to_string_lossy().to_string());
+  }
+  let mut load_script = File::create(&load_script_path)?;
+
+  let cache_file = std::env::current_dir()?.join(temp.join("split").join(format!(
+    "cache.{}",
+    match chunk_method {
+      ChunkMethod::FFMS2 => "ffindex",
+      ChunkMethod::LSMASH => "lwi",
+      _ => return Err(anyhow!("invalid chunk method")),
+    }
+  )));
+
+  load_script.write_all(
+    // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
+    format!(
+      "from vapoursynth import core\n\
+core.{}({:?}, cachefile={:?}).set_output()",
+      match chunk_method {
+        ChunkMethod::FFMS2 => "ffms2.Source",
+        ChunkMethod::LSMASH => "lsmas.LWLibavSource",
+        _ => unreachable!(),
+      },
+      source,
+      cache_file
+    )
+    .as_bytes(),
+  )?;
+
+  // TODO use vapoursynth crate instead
+  Command::new("vspipe")
+    .arg("-i")
+    .arg(&load_script_path)
+    .args(&["-i", "-"])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?
+    .wait()?;
+
+  Ok(load_script_path.to_string_lossy().to_string())
+}
+
+fn frame_probe(source: &str) -> usize {
+  if is_vapoursynth(source) {
+    crate::vapoursynth::num_frames(Path::new(source)).unwrap()
+  } else {
+    // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
+    ffmpeg_get_frame_count(source)
+  }
+}
+
+pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64) {
+  let q = crate::target_quality::interpolate_target_q(scores.clone(), target).unwrap();
+
+  let vmaf = crate::target_quality::interpolate_target_vmaf(scores, q).unwrap();
+
+  (q, vmaf)
+}
+
+pub fn av_scenechange_detect(
+  input: &str,
+  total_frames: usize,
+  min_scene_len: usize,
+  verbosity: Verbosity,
+  is_vs: bool,
+) -> anyhow::Result<Vec<usize>> {
+  if verbosity != Verbosity::Quiet {
+    println!("Scene detection");
+    crate::progress_bar::init_progress_bar(total_frames as u64).unwrap();
+  }
+
+  let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
+    Path::new(input),
+    if verbosity == Verbosity::Quiet {
+      None
+    } else {
+      Some(Box::new(|frames, _keyframes| {
+        let _ = crate::progress_bar::set_pos(frames as u64);
+      }))
+    },
+    min_scene_len,
+    is_vs,
+  )?;
+
+  let _ = crate::progress_bar::finish_progress_bar();
+
+  if frames[0] == 0 {
+    // TODO refactor the chunk creation to not require this
+    // Currently, this is required for compatibility with create_video_queue_vs
+    frames.remove(0);
+  }
+
+  Ok(frames)
+}
+
+pub fn is_vapoursynth(s: &str) -> bool {
+  [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
+}
+
+struct Queue<'a> {
+  chunk_queue: Vec<Chunk>,
+  project: &'a Project,
+  target_quality: Option<TargetQuality<'a>>,
+}
+
+impl<'a> Queue<'a> {
+  fn encoding_loop(self) {
+    if !self.chunk_queue.is_empty() {
+      let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
+
+      let workers = self.project.workers;
+
+      for chunk in &self.chunk_queue {
+        sender.send(chunk.clone()).unwrap();
+      }
+      drop(sender);
+
+      crossbeam_utils::thread::scope(|s| {
+        let consumers: Vec<_> = (0..workers)
+          .map(|i| (receiver.clone(), &self, i))
+          .map(|(rx, queue, consumer_idx)| {
+            s.spawn(move |_| {
+              while let Ok(mut chunk) = rx.recv() {
+                if queue.encode_chunk(&mut chunk, consumer_idx).is_err() {
+                  return Err(());
+                }
+              }
+              Ok(())
+            })
+          })
+          .collect();
+        for consumer in consumers {
+          consumer.join().unwrap().unwrap();
+        }
+      })
+      .unwrap();
+
+      if self.project.verbosity == Verbosity::Normal {
+        finish_progress_bar().unwrap();
+      } else if self.project.verbosity == Verbosity::Verbose {
+        finish_multi_progress_bar().unwrap();
+      }
+    }
+  }
+
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), VecDeque<String>> {
+    let st_time = Instant::now();
+
+    info!("Enc: {}, {} fr", chunk.index, chunk.frames);
+
+    // Target Quality mode
+    if self.project.target_quality.is_some() {
+      if let Some(ref method) = self.project.target_quality_method {
+        if method == "per_shot" {
+          if let Some(ref tq) = self.target_quality {
+            tq.per_shot_target_quality_routine(chunk);
+          }
+        }
+      }
+    }
+
+    // Run all passes for this chunk
+    const MAX_TRIES: usize = 3;
+    for current_pass in 1..=self.project.passes {
+      for r#try in 1..=MAX_TRIES {
+        let res = self.project.create_pipes(chunk, current_pass, worker_id);
+        if let Err((exit_status, output)) = res {
+          warn!(
+            "Encoder failed (on chunk {}) with {}:\n{}",
+            chunk.index,
+            exit_status,
+            textwrap::indent(&output.iter().join("\n"), "        ")
+          );
+          if r#try == MAX_TRIES {
+            error!(
+              "Encoder crashed (on chunk {}) {} times, shutting down thread",
+              chunk.index, MAX_TRIES
+            );
+            return Err(output);
+          }
+        } else {
+          break;
+        }
+      }
+    }
+
+    let encoded_frames = Self::frame_check_output(chunk, chunk.frames);
+
+    if encoded_frames == chunk.frames {
+      let progress_file = Path::new(&self.project.temp).join("done.json");
+      let done_json = fs::read_to_string(&progress_file).unwrap();
+      let mut done_json: DoneJson = serde_json::from_str(&done_json).unwrap();
+      done_json.done.insert(chunk.name(), encoded_frames);
+
+      let mut progress_file = File::create(&progress_file).unwrap();
+      progress_file
+        .write_all(serde_json::to_string(&done_json).unwrap().as_bytes())
+        .unwrap();
+
+      let enc_time = st_time.elapsed();
+
+      info!(
+        "Done: {} Fr: {}/{}",
+        chunk.index, encoded_frames, chunk.frames
+      );
+      info!(
+        "Fps: {:.2} Time: {:?}",
+        encoded_frames as f64 / enc_time.as_secs_f64(),
+        enc_time
+      );
+    }
+
+    Ok(())
+  }
+
+  fn frame_check_output(chunk: &Chunk, expected_frames: usize) -> usize {
+    let actual_frames = frame_probe(&chunk.output_path());
+
+    if actual_frames != expected_frames {
+      info!(
+        "Chunk #{}: {}/{} fr",
+        chunk.index, actual_frames, expected_frames
+      );
+    }
+
+    actual_frames
+  }
+}
+
+struct TargetQuality<'a> {
+  vmaf_res: String,
+  vmaf_filter: String,
+  n_threads: usize,
+  // model: Option<PathBuf>,
+  model: Option<&'a Path>,
+  probing_rate: usize,
+  probes: u32,
+  target: f32,
+  min_q: u32,
+  max_q: u32,
+  encoder: Encoder,
+  ffmpeg_pipe: Vec<String>,
+  temp: String,
+  workers: usize,
+  video_params: Vec<String>,
+  probe_slow: bool,
+}
+
+impl<'a> TargetQuality<'a> {
+  fn new(project: &'a Project) -> Self {
+    Self {
+      vmaf_res: project
+        .vmaf_res
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      vmaf_filter: project
+        .vmaf_filter
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      n_threads: project.n_threads.unwrap_or(0) as usize,
+      model: project.vmaf_path.as_deref(),
+      probes: project.probes,
+      target: project.target_quality.unwrap(),
+      min_q: project.min_q.unwrap(),
+      max_q: project.max_q.unwrap(),
+      encoder: project.encoder,
+      ffmpeg_pipe: project.ffmpeg_pipe.clone(),
+      temp: project.temp.clone(),
+      workers: project.workers,
+      video_params: project.video_params.clone(),
+      probe_slow: project.probe_slow,
+      probing_rate: adapt_probing_rate(project.probing_rate as usize),
+    }
+  }
+
+  fn per_shot_target_quality(&self, chunk: &Chunk) -> u32 {
+    let mut vmaf_cq = vec![];
+    let frames = chunk.frames;
+
+    let mut q_list = vec![];
+
+    // Make middle probe
+    let middle_point = (self.min_q + self.max_q) / 2;
+    q_list.push(middle_point);
+    let last_q = middle_point;
+
+    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize), 0.25).unwrap();
+    vmaf_cq.push((score, last_q));
+
+    // Initialize search boundary
+    let mut vmaf_lower = score;
+    let mut vmaf_upper = score;
+    let mut vmaf_cq_lower = last_q;
+    let mut vmaf_cq_upper = last_q;
+
+    // Branch
+    let next_q = if score < f64::from(self.target) {
+      self.min_q
+    } else {
+      self.max_q
+    };
+
+    q_list.push(next_q);
+
+    // Edge case check
+    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
+    vmaf_cq.push((score, next_q));
+
+    if (next_q == self.min_q && score < f64::from(self.target))
+      || (next_q == self.max_q && score > f64::from(self.target))
+    {
+      crate::target_quality::log_probes(
+        vmaf_cq,
+        frames as u32,
+        self.probing_rate as u32,
+        &chunk.name(),
+        next_q,
+        score,
+        if score < f64::from(self.target) {
+          "low"
+        } else {
+          "high"
+        },
+      );
+      return next_q;
+    }
+
+    // Set boundary
+    if score < f64::from(self.target) {
+      vmaf_lower = score;
+      vmaf_cq_lower = next_q;
+    } else {
+      vmaf_upper = score;
+      vmaf_cq_upper = next_q;
+    }
+
+    // VMAF search
+    for _ in 0..self.probes - 2 {
+      let new_point = weighted_search(
+        f64::from(vmaf_cq_lower),
+        vmaf_lower,
+        f64::from(vmaf_cq_upper),
+        vmaf_upper,
+        f64::from(self.target),
+      );
+
+      if vmaf_cq
+        .iter()
+        .map(|(_, x)| *x)
+        .any(|x| x == new_point as u32)
+      {
+        break;
+      }
+
+      q_list.push(new_point as u32);
+      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point), 0.25).unwrap();
+      vmaf_cq.push((score, new_point as u32));
+
+      // Update boundary
+      if score < f64::from(self.target) {
+        vmaf_lower = score;
+        vmaf_cq_lower = new_point as u32;
+      } else {
+        vmaf_upper = score;
+        vmaf_cq_upper = new_point as u32;
+      }
+    }
+
+    let (q, q_vmaf) = interpolate_target_q(vmaf_cq.clone(), f64::from(self.target));
+    log_probes(
+      vmaf_cq,
+      frames as u32,
+      self.probing_rate as u32,
+      &chunk.name(),
+      q as u32,
+      q_vmaf,
+      "",
+    );
+
+    q as u32
+  }
+
+  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
+    let n_threads = if self.n_threads == 0 {
+      vmaf_auto_threads(self.workers)
+    } else {
+      self.n_threads
+    };
+
+    let cmd = self.encoder.probe_cmd(
+      self.temp.clone(),
+      &chunk.name(),
+      q,
+      self.ffmpeg_pipe.clone(),
+      self.probing_rate,
+      n_threads,
+      self.video_params.clone(),
+      self.probe_slow,
+    );
+
+    let future = async {
+      let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
+        .args(&chunk.ffmpeg_gen_cmd[1..])
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_gen_pipe_stdout: Stdio =
+        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut ffmpeg_pipe = tokio::process::Command::new(cmd.0[0].clone())
+        .args(&cmd.0[1..])
+        .stdin(ffmpeg_gen_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut pipe = tokio::process::Command::new(cmd.1[0].clone())
+        .args(&cmd.1[1..])
+        .stdin(ffmpeg_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      process_pipe(
+        &mut pipe,
+        chunk.index,
+        &mut [&mut ffmpeg_gen_pipe, &mut ffmpeg_pipe],
+      )
+      .await
+      .unwrap();
+    };
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+      .enable_io()
+      .build()
+      .unwrap();
+
+    rt.block_on(future);
+
+    let probe_name =
+      Path::new(&chunk.temp)
+        .join("split")
+        .join(format!("v_{}{}.ivf", q, chunk.name()));
+    let fl_path = Path::new(&chunk.temp)
+      .join("split")
+      .join(format!("{}.json", chunk.name()));
+
+    let fl_path = fl_path.to_str().unwrap().to_owned();
+
+    crate::vmaf::run_vmaf_on_chunk(
+      &probe_name,
+      &chunk.ffmpeg_gen_cmd,
+      &fl_path,
+      self.model.as_ref(),
+      &self.vmaf_res,
+      self.probing_rate,
+      &self.vmaf_filter,
+      self.n_threads,
+    )
+    .unwrap();
+
+    fl_path
+  }
+
+  fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) {
+    chunk.per_shot_target_quality_cq = Some(self.per_shot_target_quality(chunk));
+  }
+}
+
+async fn process_pipe(
+  pipe: &mut tokio::process::Child,
+  chunk_index: usize,
+  utility: &mut [&mut tokio::process::Child],
+) -> Result<(), String> {
+  let mut encoder_history: VecDeque<String> = VecDeque::with_capacity(20);
+
+  let mut reader = BufReader::new(pipe.stdout.take().unwrap()).lines();
+
+  while let Some(line) = reader.next_line().await.unwrap() {
+    encoder_history.push_back(line);
+  }
+
+  for util in utility {
+    // On Windows, killing the process can fail with a permission denied error, so we don't
+    // unwrap the result to prevent the program from crashing if killing the child process fails.
+    drop(util.kill().await);
+  }
+
+  let returncode = pipe.wait().await.unwrap();
+  if let Some(code) = returncode.code() {
+    if code != 0 && code != -2 {
+      return Err(format!(
+        "Encoder encountered an error: {}
+Chunk: {}
+{:?}",
+        code, chunk_index, encoder_history
+      ));
+    }
+  }
+
+  Ok(())
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+struct Chunk {
+  temp: String,
+  index: usize,
+  ffmpeg_gen_cmd: Vec<String>,
+  output_ext: String,
+  size: usize,
+  frames: usize,
+  per_shot_target_quality_cq: Option<u32>,
+}
+
+impl Chunk {
+  fn name(&self) -> String {
+    format!("{:05}", self.index)
+  }
+
+  fn output(&self) -> String {
+    self.output_path()
+  }
+
+  fn output_path(&self) -> String {
+    Path::new(&self.temp)
+      .join("encode")
+      .join(format!("{}.{}", self.name(), self.output_ext))
+      .to_str()
+      .unwrap()
+      .to_owned()
+  }
+}
+
+fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) {
+  let mut file = File::create(Path::new(temp).join("chunks.json")).unwrap();
+
+  file
+    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
+    .unwrap();
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Verbosity {
+  Verbose,
+  Normal,
+  Quiet,
+}
+
+pub struct Project {
+  pub frames: usize,
+  pub is_vs: bool,
+
+  pub input: String,
+  pub temp: String,
+  pub output_file: String,
+  pub webm: bool,
+
+  pub chunk_method: ChunkMethod,
+  pub scenes: Option<String>,
+  pub split_method: SplitMethod,
+  pub extra_splits_len: Option<usize>,
+  pub min_scene_len: usize,
+
+  pub passes: u8,
+  pub video_params: Vec<String>,
+  pub encoder: Encoder,
+  pub workers: usize,
+
+  // FFmpeg params
+  pub ffmpeg_pipe: Vec<String>,
+  pub ffmpeg: Vec<String>,
+  pub audio_params: Vec<String>,
+  pub pix_format: String,
+
+  pub verbosity: Verbosity,
+  pub logging: PathBuf,
+  pub resume: bool,
+  pub keep: bool,
+  pub force: bool,
+
+  pub vmaf: bool,
+  pub vmaf_path: Option<PathBuf>,
+  pub vmaf_res: Option<String>,
+
+  pub concat: ConcatMethod,
+
+  pub target_quality: Option<f32>,
+  pub target_quality_method: Option<String>,
+  pub probes: u32,
+  pub probe_slow: bool,
+  pub min_q: Option<u32>,
+  pub max_q: Option<u32>,
+
+  pub probing_rate: u32,
+  pub n_threads: Option<u32>,
+  pub vmaf_filter: Option<String>,
+}
+
+static HELP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+(-\w+|(?:--\w+(?:-\w+)*))").unwrap());
+
+// TODO refactor to make types generic
+fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
+  params
+    .iter()
+    .filter(|param| !valid_options.contains(*param))
+    .map(ToString::to_string)
+    .collect()
+}
+
+fn suggest_fix(wrong_arg: &str, arg_dictionary: &HashSet<String>) -> Option<String> {
+  // Minimum threshold to consider a suggestion similar enough that it could be a typo
+  const MIN_THRESHOLD: f64 = 0.75;
+
+  arg_dictionary
+    .iter()
+    .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
+    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
+    .and_then(|(suggestion, score)| {
+      if score > MIN_THRESHOLD {
+        Some((*suggestion).clone())
+      } else {
+        None
+      }
+    })
+}
+
+fn read_chunk_queue(temp: &str) -> Vec<Chunk> {
+  let contents = fs::read_to_string(Path::new(temp).join("chunks.json")).unwrap();
+
+  serde_json::from_str(&contents).unwrap()
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct DoneJson {
+  frames: usize,
+  done: HashMap<String, usize>,
+}
+
+impl Project {
+  /// Initialize logging routines and create temporary directories
+  pub fn initialize(&mut self) {
+    info!("File hash: {}", hash_path(&self.input));
+
+    self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
+
+    if !self.resume && Path::new(&self.temp).is_dir() {
+      if let Err(e) = fs::remove_dir_all(&self.temp) {
+        warn!("Failed to delete temp directory: {}", e);
+      }
+    }
+
+    fs::create_dir(&self.temp).unwrap();
+
+    match fs::create_dir(Path::new(&self.temp).join("split")) {
+      Ok(_) => {}
+      Err(e) => match e.kind() {
+        io::ErrorKind::AlreadyExists => {}
+        _ => panic!("{}", e),
+      },
+    };
+    match fs::create_dir(Path::new(&self.temp).join("encode")) {
+      Ok(_) => {}
+      Err(e) => match e.kind() {
+        io::ErrorKind::AlreadyExists => {}
+        _ => panic!("{}", e),
+      },
+    };
+
+    Logger::try_with_str("info")
+      .unwrap()
+      .log_to_file(FileSpec::try_from(PathAbs::new(&self.logging).unwrap()).unwrap())
+      .duplicate_to_stderr(Duplicate::Warn)
+      .start()
+      .unwrap();
+  }
+
+  fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
+    let mut queue_files = fs::read_dir(&source_path)
+      .unwrap()
+      .map(|res| res.map(|e| e.path()))
+      .collect::<Result<Vec<_>, _>>()
+      .unwrap();
+    queue_files.retain(|file| file.is_file());
+    queue_files.retain(|file| matches!(file.extension().map(|ext| ext == "mkv"), Some(true)));
+    crate::concat::sort_files_by_filename(&mut queue_files);
+
+    queue_files
+  }
+
+  fn create_pipes(
+    &self,
+    c: &Chunk,
+    current_pass: u8,
+    worker_id: usize,
+  ) -> Result<(), (ExitStatus, VecDeque<String>)> {
+    let fpf_file = Path::new(&c.temp)
+      .join("split")
+      .join(format!("{}_fpf", c.name()));
+
+    let mut enc_cmd = if self.passes == 1 {
+      self
+        .encoder
+        .compose_1_1_pass(self.video_params.clone(), c.output())
+    } else if current_pass == 1 {
+      self.encoder.compose_1_2_pass(
+        self.video_params.clone(),
+        &fpf_file.to_str().unwrap().to_owned(),
+      )
+    } else {
+      self.encoder.compose_2_2_pass(
+        self.video_params.clone(),
+        &fpf_file.to_str().unwrap().to_owned(),
+        c.output(),
+      )
+    };
+
+    if let Some(per_shot_target_quality_cq) = c.per_shot_target_quality_cq {
+      enc_cmd = self
+        .encoder
+        .man_command(enc_cmd, per_shot_target_quality_cq as usize);
+    }
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+      .enable_io()
+      .build()
+      .unwrap();
+
+    let (exit_status, output) = rt.block_on(async {
+      let mut ffmpeg_gen_pipe = tokio::process::Command::new(&c.ffmpeg_gen_cmd[0])
+        .args(&c.ffmpeg_gen_cmd[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_gen_pipe_stdout: Stdio =
+        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone());
+      let mut ffmpeg_pipe = tokio::process::Command::new(&ffmpeg_pipe[0])
+        .args(&ffmpeg_pipe[1..])
+        .stdin(ffmpeg_gen_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut pipe = tokio::process::Command::new(&enc_cmd[0])
+        .args(&enc_cmd[1..])
+        .stdin(ffmpeg_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let mut frame = 0;
+
+      let mut reader = BufReader::new(pipe.stderr.take().unwrap());
+
+      let mut buf = vec![];
+      let mut output = VecDeque::with_capacity(20);
+
+      while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
+        if read == 0 {
+          break;
+        }
+
+        let line = std::str::from_utf8(&buf);
+
+        if let Ok(line) = line {
+          if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
+            update_mp_msg(worker_id, line.to_string()).unwrap();
+          }
+          if let Some(new) = self.encoder.match_line(line) {
+            if new > frame {
+              if self.verbosity == Verbosity::Normal {
+                update_bar((new - frame) as u64).unwrap();
+              } else if self.verbosity == Verbosity::Verbose {
+                update_mp_bar((new - frame) as u64).unwrap();
+              }
+              frame = new;
+            }
+          }
+          output.push_back(line.to_string());
+        }
+
+        buf.clear();
+      }
+
+      let status = pipe.wait_with_output().await.unwrap().status;
+
+      drop(ffmpeg_gen_pipe.kill().await);
+      drop(ffmpeg_pipe.kill().await);
+
+      (status, output)
+    });
+
+    if !exit_status.success() {
+      return Err((exit_status, output));
+    }
+
+    Ok(())
+  }
+}
+
+impl Project {
+  fn get_frames(&mut self) -> usize {
+    if self.frames != 0 {
+      return self.frames;
+    }
+
+    self.frames = if self.is_vs {
+      vapoursynth::num_frames(Path::new(&self.input)).unwrap()
+    } else if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
+      let vs = if self.is_vs {
+        self.input.clone()
+      } else {
+        create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
+      };
+      let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
+      if fr > 0 {
+        fr
+      } else {
+        panic!("vapoursynth reported 0 frames")
+      }
+    } else {
+      ffmpeg_get_frame_count(&self.input)
+    };
+
+    self.frames
+  }
+
+  /// returns a list of valid parameters
+  #[must_use]
+  fn valid_encoder_params(&self) -> HashSet<String> {
+    let help = self.encoder.help_command();
+
+    let help_text = String::from_utf8(
+      Command::new(&help[0])
+        .args(&help[1..])
+        .output()
+        .unwrap()
+        .stdout,
+    )
+    .unwrap();
+
+    HELP_REGEX
+      .find_iter(&help_text)
+      .filter_map(|m| {
+        m.as_str()
+          .split_ascii_whitespace()
+          .next()
+          .map(ToString::to_string)
+      })
+      .collect::<HashSet<String>>()
+  }
+
+  // TODO remove all of these extra allocations
+  fn validate_input(&self) {
+    if self.force {
+      return;
+    }
+
+    let video_params: Vec<String> = self
+      .video_params
+      .as_slice()
+      .iter()
+      .filter_map(|param| {
+        if param.starts_with('-') {
+          param.split('=').next()
+        } else {
+          None
+        }
+      })
+      .map(ToString::to_string)
+      .collect();
+
+    let valid_params = self.valid_encoder_params();
+
+    let invalid_params = invalid_params(video_params.as_slice(), &valid_params);
+
+    for wrong_param in &invalid_params {
+      eprintln!(
+        "'{}' isn't a valid parameter for {}",
+        wrong_param, self.encoder,
+      );
+      if let Some(suggestion) = suggest_fix(wrong_param, &valid_params) {
+        eprintln!("\tDid you mean '{}'?", suggestion)
+      }
+    }
+
+    if !invalid_params.is_empty() {
+      println!("\nTo continue anyway, run av1an with '--force'");
+      std::process::exit(1);
+    }
+  }
+
+  pub fn startup_check(&mut self) -> anyhow::Result<()> {
+    if !matches!(
+      self.encoder,
+      Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
+    ) && self.concat == ConcatMethod::Ivf
+    {
+      panic!(".ivf only supports VP8, VP9, and AV1");
+    }
+
+    assert!(
+      Path::new(&self.input).exists(),
+      "Input file {:?} does not exist!",
+      self.input
+    );
+
+    self.is_vs = is_vapoursynth(&self.input);
+
+    if which::which("ffmpeg").is_err() {
+      panic!("No FFmpeg");
+    }
+
+    if let Some(ref vmaf_path) = self.vmaf_path {
+      assert!(Path::new(vmaf_path).exists());
+    }
+
+    if self.probes < 4 {
+      println!("Target quality with less than 4 probes is experimental and not recommended");
+    }
+
+    let (min, max) = self.encoder.get_default_cq_range();
+    match self.min_q {
+      None => {
+        self.min_q = Some(min as u32);
+      }
+      Some(min_q) => assert!(min_q > 1),
+    }
+
+    if self.max_q.is_none() {
+      self.max_q = Some(max as u32);
+    }
+
+    let encoder_bin = self.encoder.bin();
+    let settings_valid = which::which(&encoder_bin).is_ok();
+
+    if !settings_valid {
+      panic!(
+        "Encoder {} not found. Is it installed in the system path?",
+        encoder_bin
+      );
+    }
+
+    if self.video_params.is_empty() {
+      self.video_params = self.encoder.get_default_arguments();
+    }
+
+    self.validate_input();
+    self.initialize();
+
+    self.ffmpeg_pipe = self.ffmpeg.clone();
+    self.ffmpeg_pipe.extend([
+      "-strict".into(),
+      "-1".into(),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ]);
+
+    Ok(())
+  }
+
+  fn create_encoding_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+    let mut chunks = match self.chunk_method {
+      ChunkMethod::FFMS2 | ChunkMethod::LSMASH => self.create_video_queue_vs(splits),
+      ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits),
+      ChunkMethod::Select => self.create_video_queue_select(splits),
+      ChunkMethod::Segment => self.create_video_queue_segment(&splits),
+    };
+
+    chunks.sort_unstable_by_key(|chunk| Reverse(chunk.size));
+
+    chunks
+  }
+
+  fn calc_split_locations(&self) -> Vec<usize> {
+    match self.split_method {
+      SplitMethod::AvScenechange => av_scenechange_detect(
+        &self.input,
+        self.frames,
+        self.min_scene_len,
+        self.verbosity,
+        self.is_vs,
+      )
+      .unwrap(),
+      SplitMethod::None => Vec::with_capacity(0),
+    }
+  }
+
+  // If we are not resuming, then do scene detection. Otherwise: get scenes from
+  // scenes.json and return that.
+  fn split_routine(&mut self) -> Vec<usize> {
+    // TODO make self.frames impossible to misuse
+    let _ = self.get_frames();
+
+    let scene_file = Path::new(&self.temp).join("scenes.json");
+
+    let mut scenes = if self.resume {
+      crate::split::read_scenes_from_file(scene_file.as_path())
+        .unwrap()
+        .0
+    } else {
+      self.calc_split_locations()
+    };
+    info!("SC: Found {} scenes", scenes.len() + 1);
+    if let Some(split_len) = self.extra_splits_len {
+      info!("SC: Applying extra splits every {} frames", split_len);
+      scenes = extra_splits(scenes, self.frames, split_len);
+      info!("SC: Now at {} scenes", scenes.len() + 1);
+    }
+
+    self.write_scenes_to_file(&scenes, scene_file.as_path().to_str().unwrap());
+
+    scenes
+  }
+
+  fn write_scenes_to_file(&self, scenes: &[usize], path: &str) {
+    write_scenes_to_file(scenes, self.frames, path).unwrap();
+  }
+
+  fn create_select_chunk(
+    &self,
+    index: usize,
+    src_path: &str,
+    frame_start: usize,
+    mut frame_end: usize,
+  ) -> Chunk {
+    assert!(
+      frame_end > frame_start,
+      "Can't make a chunk with <= 0 frames!"
+    );
+
+    let frames = frame_end - frame_start;
+    frame_end -= 1;
+
+    let ffmpeg_gen_cmd: Vec<String> = vec![
+      "ffmpeg".into(),
+      "-y".into(),
+      "-hide_banner".into(),
+      "-loglevel".into(),
+      "error".into(),
+      "-i".into(),
+      src_path.to_string(),
+      "-vf".into(),
+      format!(
+        "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
+        frame_start, frame_end
+      ),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-strict".into(),
+      "-1".into(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ];
+
+    let output_ext = self.encoder.output_extension().to_owned();
+    // use the number of frames to prioritize which chunks encode first, since we don't have file size
+    let size = frames;
+
+    Chunk {
+      temp: self.temp.clone(),
+      index,
+      ffmpeg_gen_cmd,
+      output_ext,
+      size,
+      frames,
+      ..Chunk::default()
+    }
+  }
+
+  fn create_vs_chunk(
+    &self,
+    index: usize,
+    vs_script: String,
+    frame_start: usize,
+    mut frame_end: usize,
+  ) -> Chunk {
+    assert!(
+      frame_end > frame_start,
+      "Can't make a chunk with <= 0 frames!"
+    );
+
+    let frames = frame_end - frame_start;
+    // the frame end boundary is actually a frame that should be included in the next chunk
+    frame_end -= 1;
+
+    let vspipe_cmd_gen: Vec<String> = vec![
+      "vspipe".into(),
+      vs_script,
+      "-y".into(),
+      "-".into(),
+      "-s".into(),
+      frame_start.to_string(),
+      "-e".into(),
+      frame_end.to_string(),
+    ];
+
+    let output_ext = self.encoder.output_extension();
+
+    Chunk {
+      temp: self.temp.clone(),
+      index,
+      ffmpeg_gen_cmd: vspipe_cmd_gen,
+      output_ext: output_ext.to_owned(),
+      // use the number of frames to prioritize which chunks encode first, since we don't have file size
+      size: frames,
+      frames,
+      ..Chunk::default()
+    }
+  }
+
+  fn create_video_queue_vs(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+    let last_frame = self.get_frames();
+
+    let mut split_locs = vec![0];
+    split_locs.extend(splits);
+    split_locs.push(last_frame);
+
+    let chunk_boundaries: Vec<(usize, usize)> = split_locs
+      .iter()
+      .zip(split_locs.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let vs_script = if self.is_vs {
+      self.input.clone()
+    } else {
+      create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
+    };
+
+    let chunk_queue: Vec<Chunk> = chunk_boundaries
+      .iter()
+      .enumerate()
+      .map(|(index, (frame_start, frame_end))| {
+        self.create_vs_chunk(index, vs_script.clone(), *frame_start, *frame_end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_select(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+    let last_frame = self.get_frames();
+
+    let mut split_locs = vec![0];
+    split_locs.extend(splits);
+    split_locs.push(last_frame);
+
+    let chunk_boundaries: Vec<(usize, usize)> = split_locs
+      .iter()
+      .zip(split_locs.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let chunk_queue: Vec<Chunk> = chunk_boundaries
+      .iter()
+      .enumerate()
+      .map(|(index, (frame_start, frame_end))| {
+        self.create_select_chunk(index, &self.input, *frame_start, *frame_end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_segment(&mut self, splits: &[usize]) -> Vec<Chunk> {
+    info!("Split video");
+    segment(&self.input, &self.temp, splits);
+    info!("Split done");
+
+    let source_path = Path::new(&self.temp).join("split");
+    let queue_files = Self::read_queue_files(&source_path);
+
+    assert!(
+      !queue_files.is_empty(),
+      "Error: No files found in temp/split, probably splitting not working"
+    );
+
+    let chunk_queue: Vec<Chunk> = queue_files
+      .iter()
+      .enumerate()
+      .map(|(index, file)| self.create_chunk_from_segment(index, file.as_path().to_str().unwrap()))
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_video_queue_hybrid(&mut self, split_locations: Vec<usize>) -> Vec<Chunk> {
+    let keyframes = get_keyframes(&self.input);
+
+    let mut splits = vec![0];
+    splits.extend(split_locations);
+    splits.push(self.get_frames());
+
+    let segments_set: HashSet<(usize, usize)> = splits
+      .iter()
+      .zip(splits.iter().skip(1))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let to_split: Vec<usize> = keyframes
+      .iter()
+      .filter(|kf| splits.contains(kf))
+      .copied()
+      .collect();
+
+    info!("Segmenting video");
+    segment(&self.input, &self.temp, &to_split[1..]);
+    info!("Segment done");
+
+    let source_path = Path::new(&self.temp).join("split");
+    let queue_files = Self::read_queue_files(&source_path);
+
+    let kf_list: Vec<(usize, usize)> = to_split
+      .iter()
+      .zip(to_split.iter().skip(1).chain(iter::once(&self.frames)))
+      .map(|(start, end)| (*start, *end))
+      .collect();
+
+    let mut segments = Vec::with_capacity(segments_set.len());
+    for (file, (x, y)) in queue_files.iter().zip(kf_list.iter()) {
+      for (s0, s1) in &segments_set {
+        if s0 >= x && s1 <= y && s0 - x < s1 - x {
+          segments.push((file.clone(), (s0 - x, s1 - x)));
+        }
+      }
+    }
+
+    let chunk_queue: Vec<Chunk> = segments
+      .iter()
+      .enumerate()
+      .map(|(index, (file, (start, end)))| {
+        self.create_select_chunk(index, &file.as_path().to_string_lossy(), *start, *end)
+      })
+      .collect();
+
+    chunk_queue
+  }
+
+  fn create_chunk_from_segment(&mut self, index: usize, file: &str) -> Chunk {
+    let ffmpeg_gen_cmd = vec![
+      "ffmpeg".into(),
+      "-y".into(),
+      "-hide_banner".into(),
+      "-loglevel".into(),
+      "error".into(),
+      "-i".into(),
+      file.to_owned(),
+      "-strict".into(),
+      "-1".into(),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ];
+
+    let output_ext = self.encoder.output_extension().to_owned();
+    let file_size = File::open(file).unwrap().metadata().unwrap().len();
+
+    Chunk {
+      temp: self.temp.clone(),
+      frames: self.get_frames(),
+      ffmpeg_gen_cmd,
+      output_ext,
+      index,
+      size: file_size as usize,
+      ..Chunk::default()
+    }
+  }
+
+  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+    if self.resume {
+      let mut chunks = read_chunk_queue(&self.temp);
+
+      let done_path = Path::new(&self.temp).join("done.json");
+
+      let done_contents = fs::read_to_string(&done_path).unwrap();
+      let done: DoneJson = serde_json::from_str(&done_contents).unwrap();
+
+      // only keep the chunks that are not done
+      chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
+
+      chunks
+    } else {
+      let chunks = self.create_encoding_queue(splits);
+      save_chunk_queue(&self.temp, &chunks);
+      chunks
+    }
+  }
+
+  pub fn encode_file(&mut self) {
+    let done_path = Path::new(&self.temp).join("done.json");
+
+    let splits = self.split_routine();
+
+    let chunk_queue = self.load_or_gen_chunk_queue(splits);
+
+    let mut initial_frames: usize = 0;
+
+    if self.resume && done_path.exists() {
+      info!("Resuming...");
+
+      let done: DoneJson = serde_json::from_str(&fs::read_to_string(&done_path).unwrap()).unwrap();
+      initial_frames = done.done.iter().map(|(_, frames)| frames).sum();
+      info!("Resumed with {} encoded clips done", done.done.len());
+    } else {
+      let total = self.get_frames();
+      let mut done_file = fs::File::create(&done_path).unwrap();
+      done_file
+        .write_all(
+          serde_json::to_string(&DoneJson {
+            frames: total,
+            done: HashMap::new(),
+          })
+          .unwrap()
+          .as_bytes(),
+        )
+        .unwrap();
+    }
+
+    if !self.resume {
+      extract_audio(&self.input, &self.temp, &self.audio_params);
+    }
+
+    if self.workers == 0 {
+      self.workers = determine_workers(self.encoder) as usize;
+    }
+    self.workers = cmp::min(self.workers, chunk_queue.len());
+    println!(
+      "Queue: {} Workers: {} Passes: {}\nParams: {}\n",
+      chunk_queue.len(),
+      self.workers,
+      self.passes,
+      self.video_params.join(" ")
+    );
+
+    if self.verbosity == Verbosity::Normal {
+      init_progress_bar((self.frames - initial_frames) as u64).unwrap();
+    } else if self.verbosity == Verbosity::Verbose {
+      init_multi_progress_bar((self.frames - initial_frames) as u64, self.workers).unwrap();
+    }
+
+    // hack to avoid borrow checker errors
+    let concat = self.concat;
+    let temp = self.temp.clone();
+    let input = self.input.clone();
+    let output_file = self.output_file.clone();
+    let encoder = self.encoder;
+    let vmaf = self.vmaf;
+    let keep = self.keep;
+
+    let queue = Queue {
+      chunk_queue,
+      project: self,
+      target_quality: if self.target_quality.is_some() {
+        Some(TargetQuality::new(self))
+      } else {
+        None
+      },
+    };
+
+    queue.encoding_loop();
+
+    info!("Concatenating");
+
+    // TODO refactor into Concatenate trait
+    match concat {
+      ConcatMethod::Ivf => {
+        crate::concat::concat_ivf(&Path::new(&temp).join("encode"), Path::new(&output_file))
+          .unwrap();
+      }
+      ConcatMethod::MKVMerge => {
+        crate::concat::concatenate_mkvmerge(temp.clone(), output_file.clone()).unwrap()
+      }
+      ConcatMethod::FFmpeg => {
+        crate::ffmpeg::concatenate_ffmpeg(temp.clone(), output_file.clone(), encoder);
+      }
+    }
+
+    if vmaf {
+      plot_vmaf(&input, &output_file).unwrap();
+    }
+
+    if !keep {
+      if let Err(e) = fs::remove_dir_all(temp) {
+        warn!("Failed to delete temp directory: {}", e);
+      }
+    }
+  }
 }

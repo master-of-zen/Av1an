@@ -1,14 +1,10 @@
-use path_abs::PathAbs;
 use regex::Regex;
-use std::fs::{read_dir, File};
-use std::io::prelude::*;
+use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use crate::Encoder;
-
 /// Get frame count. Direct counting of frame count using ffmpeg
-pub fn ffmpeg_get_frame_count(source: impl AsRef<Path>) -> usize {
+pub fn get_frame_count(source: impl AsRef<Path>) -> usize {
   let source = source.as_ref();
 
   let mut cmd = Command::new("ffmpeg");
@@ -78,31 +74,7 @@ pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
   kfs
 }
 
-pub fn write_concat_file(temp_folder: &Path) {
-  let concat_file = &temp_folder.join("concat");
-  let encode_folder = &temp_folder.join("encode");
-  let mut files: Vec<_> = read_dir(encode_folder)
-    .unwrap()
-    .map(Result::unwrap)
-    .collect();
-
-  files.sort_by_key(std::fs::DirEntry::path);
-
-  let mut contents = String::new();
-
-  for i in files {
-    if cfg!(target_os = "windows") {
-      contents.push_str(&format!("file {}\n", i.path().display()).replace(r"\", r"\\"));
-    } else {
-      contents.push_str(&format!("file {}\n", i.path().display()));
-    }
-  }
-
-  let mut file = File::create(concat_file).unwrap();
-  file.write_all(contents.as_bytes()).unwrap();
-}
-
-pub fn have_audio(file: &Path) -> bool {
+pub fn has_audio(file: &Path) -> bool {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.stdout(Stdio::piped());
@@ -119,119 +91,47 @@ pub fn have_audio(file: &Path) -> bool {
   re.is_match(&output)
 }
 
-/// Extracting audio
-pub fn extract_audio(input: impl AsRef<Path>, temp: impl AsRef<Path>, audio_params: &[String]) {
+/// Encodes the audio using FFmpeg, blocking the current thread.
+///
+/// This function returns `true` if the audio exists and the audio
+/// successfully encoded, or `false` otherwise.
+#[must_use]
+pub fn encode_audio<S: AsRef<OsStr>>(
+  input: impl AsRef<Path>,
+  temp: impl AsRef<Path>,
+  audio_params: &[S],
+) -> bool {
   let input = input.as_ref();
   let temp = temp.as_ref();
 
-  let have_audio = have_audio(input);
-
-  if have_audio {
+  if has_audio(input) {
     let audio_file = Path::new(temp).join("audio.mkv");
-    let mut process_audio = Command::new("ffmpeg");
+    let mut encode_audio = Command::new("ffmpeg");
 
-    process_audio.stdout(Stdio::piped());
-    process_audio.stderr(Stdio::piped());
+    encode_audio.stdout(Stdio::piped());
+    encode_audio.stderr(Stdio::piped());
 
-    process_audio.args([
-      "-y",
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-i",
-      input.to_str().unwrap(),
-      "-map_metadata",
-      "-1",
-      "-dn",
-      "-vn",
-    ]);
+    encode_audio.args(["-y", "-hide_banner", "-loglevel", "error", "-i"]);
+    encode_audio.arg(input);
+    encode_audio.args(["-map_metadata", "-1", "-dn", "-vn"]);
 
-    let audio_args: Vec<&str> = audio_params.iter().map(|x| &**x).collect();
-    process_audio.args(audio_args);
-    process_audio.arg(audio_file.to_str().unwrap());
+    encode_audio.args(audio_params);
+    encode_audio.arg(audio_file);
 
-    let out = process_audio.output().unwrap();
-    assert!(out.status.success());
-  }
-}
+    let output = encode_audio.output().unwrap();
 
-/// Concatenates using ffmpeg
-pub fn concatenate_ffmpeg<P: AsRef<Path>>(temp: P, output: P, encoder: Encoder) {
-  let temp = PathAbs::new(temp.as_ref()).unwrap();
-  let temp = temp.as_path();
-  let output = output.as_ref();
+    if !output.status.success() {
+      warn!(
+        "FFmpeg failed to encode audio!\n{:#?}\nParams: {:?}",
+        output, encode_audio
+      );
+      return false;
+    }
 
-  let concat = temp.join("concat");
-  let concat_file = concat.to_str().unwrap();
-
-  write_concat_file(temp);
-
-  let audio_file = temp.join("audio.mkv");
-
-  let audio_cmd = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
-    vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"]
+    true
   } else {
-    Vec::with_capacity(0)
-  };
-
-  let mut cmd = Command::new("ffmpeg");
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  match encoder {
-    Encoder::x265 => cmd
-      .args(&[
-        "-y",
-        "-fflags",
-        "+genpts",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concat_file,
-      ])
-      .args(audio_cmd)
-      .args(&[
-        "-c",
-        "copy",
-        "-movflags",
-        "frag_keyframe+empty_moov",
-        "-map",
-        "0",
-        "-f",
-        "mp4",
-        output.to_str().unwrap(),
-      ]),
-
-    _ => cmd
-      .args([
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concat_file,
-      ])
-      .args(audio_cmd)
-      .args(["-c", "copy", output.to_str().unwrap()]),
-  };
-  let out = cmd.output().unwrap();
-
-  assert!(
-    out.status.success(),
-    "FFmpeg failed with output: {:?}\nCommand: {:?}",
-    out,
-    cmd
-  );
+    false
+  }
 }
 
 pub fn get_frame_types(file: &Path) -> Vec<String> {

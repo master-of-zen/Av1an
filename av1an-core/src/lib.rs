@@ -12,6 +12,7 @@
 #[macro_use]
 extern crate log;
 
+use dashmap::DashMap;
 use path_abs::PathAbs;
 use serde::{Deserialize, Serialize};
 use std::cmp;
@@ -20,6 +21,9 @@ use std::fmt::{Display, Error};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::sync::mpsc::Sender;
+use std::sync::{atomic, mpsc};
 
 use sysinfo::SystemExt;
 
@@ -221,12 +225,9 @@ pub fn read_weighted_vmaf(
 }
 
 use anyhow::anyhow;
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-use crate::ffmpeg::extract_audio;
-use crate::ffmpeg::ffmpeg_get_frame_count;
-use crate::ffmpeg::get_keyframes;
 use crate::progress_bar::finish_progress_bar;
 use crate::progress_bar::init_progress_bar;
 use crate::progress_bar::update_bar;
@@ -243,7 +244,6 @@ use crate::vmaf::plot_vmaf;
 
 use std::cmp::Reverse;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::convert::TryInto;
@@ -316,14 +316,14 @@ fn frame_probe(source: &str) -> usize {
     crate::vapoursynth::num_frames(Path::new(source)).unwrap()
   } else {
     // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
-    ffmpeg_get_frame_count(source)
+    ffmpeg::get_frame_count(source)
   }
 }
 
 pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64) {
-  let q = crate::target_quality::interpolate_target_q(scores.clone(), target).unwrap();
+  let q = target_quality::interpolate_target_q(scores.clone(), target).unwrap();
 
-  let vmaf = crate::target_quality::interpolate_target_vmaf(scores, q).unwrap();
+  let vmaf = target_quality::interpolate_target_vmaf(scores, q).unwrap();
 
   (q, vmaf)
 }
@@ -337,7 +337,7 @@ pub fn av_scenechange_detect(
 ) -> anyhow::Result<Vec<usize>> {
   if verbosity != Verbosity::Quiet {
     println!("Scene detection");
-    crate::progress_bar::init_progress_bar(total_frames as u64).unwrap();
+    progress_bar::init_progress_bar(total_frames as u64);
   }
 
   let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
@@ -346,14 +346,14 @@ pub fn av_scenechange_detect(
       None
     } else {
       Some(Box::new(|frames, _keyframes| {
-        let _ = crate::progress_bar::set_pos(frames as u64);
+        progress_bar::set_pos(frames as u64);
       }))
     },
     min_scene_len,
     is_vs,
   )?;
 
-  let _ = crate::progress_bar::finish_progress_bar();
+  progress_bar::finish_progress_bar();
 
   if frames[0] == 0 {
     // TODO refactor the chunk creation to not require this
@@ -375,7 +375,7 @@ struct Queue<'a> {
 }
 
 impl<'a> Queue<'a> {
-  fn encoding_loop(self) {
+  fn encoding_loop(self, tx: Sender<()>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -390,9 +390,11 @@ impl<'a> Queue<'a> {
         let consumers: Vec<_> = (0..workers)
           .map(|i| (receiver.clone(), &self, i))
           .map(|(rx, queue, consumer_idx)| {
+            let tx = tx.clone();
             s.spawn(move |_| {
               while let Ok(mut chunk) = rx.recv() {
                 if queue.encode_chunk(&mut chunk, consumer_idx).is_err() {
+                  tx.send(()).unwrap();
                   return Err(());
                 }
               }
@@ -401,15 +403,15 @@ impl<'a> Queue<'a> {
           })
           .collect();
         for consumer in consumers {
-          consumer.join().unwrap().unwrap();
+          let _ = consumer.join().unwrap();
         }
       })
       .unwrap();
 
       if self.project.verbosity == Verbosity::Normal {
-        finish_progress_bar().unwrap();
+        finish_progress_bar();
       } else if self.project.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar().unwrap();
+        finish_multi_progress_bar();
       }
     }
   }
@@ -440,11 +442,11 @@ impl<'a> Queue<'a> {
             "Encoder failed (on chunk {}) with {}:\n{}",
             chunk.index,
             exit_status,
-            textwrap::indent(&output.iter().join("\n"), "        ")
+            textwrap::indent(&output.iter().join("\n"), /* 8 spaces */ "        ")
           );
           if r#try == MAX_TRIES {
             error!(
-              "Encoder crashed (on chunk {}) {} times, shutting down thread",
+              "Encoder crashed (on chunk {}) {} times, terminating thread",
               chunk.index, MAX_TRIES
             );
             return Err(output);
@@ -459,13 +461,11 @@ impl<'a> Queue<'a> {
 
     if encoded_frames == chunk.frames {
       let progress_file = Path::new(&self.project.temp).join("done.json");
-      let done_json = fs::read_to_string(&progress_file).unwrap();
-      let mut done_json: DoneJson = serde_json::from_str(&done_json).unwrap();
-      done_json.done.insert(chunk.name(), encoded_frames);
+      get_done().done.insert(chunk.name(), encoded_frames);
 
       let mut progress_file = File::create(&progress_file).unwrap();
       progress_file
-        .write_all(serde_json::to_string(&done_json).unwrap().as_bytes())
+        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
 
       let enc_time = st_time.elapsed();
@@ -502,7 +502,6 @@ struct TargetQuality<'a> {
   vmaf_res: String,
   vmaf_filter: String,
   n_threads: usize,
-  // model: Option<PathBuf>,
   model: Option<&'a Path>,
   probing_rate: usize,
   probes: u32,
@@ -907,15 +906,48 @@ fn read_chunk_queue(temp: &str) -> Vec<Chunk> {
   serde_json::from_str(&contents).unwrap()
 }
 
+/// Concurrent data structure for keeping track of the finished
+/// chunks in an encode
 #[derive(Debug, Deserialize, Serialize)]
 struct DoneJson {
-  frames: usize,
-  done: HashMap<String, usize>,
+  frames: AtomicUsize,
+  done: DashMap<String, usize>,
+  audio_done: AtomicBool,
+}
+
+static DONE_JSON: OnceCell<DoneJson> = OnceCell::new();
+
+// once_cell::sync::Lazy cannot be used here due to Lazy<T> not implementing
+// Serialize or Deserialize, we need to get a reference directly to the global
+// data
+fn get_done() -> &'static DoneJson {
+  DONE_JSON.get().unwrap()
+}
+
+fn init_done(done: DoneJson) -> &'static DoneJson {
+  DONE_JSON.get_or_init(|| done)
+}
+
+/// Attempts to create the directory if it does not exist, logging and returning
+/// and error if creating the directory failed.
+macro_rules! create_dir {
+  ($loc:expr) => {
+    match fs::create_dir(&$loc) {
+      Ok(_) => Ok(()),
+      Err(e) => match e.kind() {
+        io::ErrorKind::AlreadyExists => Ok(()),
+        _ => {
+          error!("Error while creating directory {:?}: {}", &$loc, e);
+          Err(e)
+        }
+      },
+    }
+  };
 }
 
 impl Project {
   /// Initialize logging routines and create temporary directories
-  pub fn initialize(&mut self) {
+  pub fn initialize(&mut self) -> anyhow::Result<()> {
     info!("File hash: {}", hash_path(&self.input));
 
     self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
@@ -926,29 +958,17 @@ impl Project {
       }
     }
 
-    fs::create_dir(&self.temp).unwrap();
-
-    match fs::create_dir(Path::new(&self.temp).join("split")) {
-      Ok(_) => {}
-      Err(e) => match e.kind() {
-        io::ErrorKind::AlreadyExists => {}
-        _ => panic!("{}", e),
-      },
-    };
-    match fs::create_dir(Path::new(&self.temp).join("encode")) {
-      Ok(_) => {}
-      Err(e) => match e.kind() {
-        io::ErrorKind::AlreadyExists => {}
-        _ => panic!("{}", e),
-      },
-    };
+    create_dir!(&self.temp)?;
+    create_dir!(Path::new(&self.temp).join("split"))?;
+    create_dir!(Path::new(&self.temp).join("encode"))?;
 
     Logger::try_with_str("info")
       .unwrap()
       .log_to_file(FileSpec::try_from(PathAbs::new(&self.logging).unwrap()).unwrap())
       .duplicate_to_stderr(Duplicate::Warn)
-      .start()
-      .unwrap();
+      .start()?;
+
+    Ok(())
   }
 
   fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
@@ -1048,14 +1068,14 @@ impl Project {
 
         if let Ok(line) = line {
           if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
-            update_mp_msg(worker_id, line.to_string()).unwrap();
+            update_mp_msg(worker_id, line.to_string());
           }
           if let Some(new) = self.encoder.match_line(line) {
             if new > frame {
               if self.verbosity == Verbosity::Normal {
-                update_bar((new - frame) as u64).unwrap();
+                update_bar((new - frame) as u64);
               } else if self.verbosity == Verbosity::Verbose {
-                update_mp_bar((new - frame) as u64).unwrap();
+                update_mp_bar((new - frame) as u64);
               }
               frame = new;
             }
@@ -1103,7 +1123,7 @@ impl Project {
         panic!("vapoursynth reported 0 frames")
       }
     } else {
-      ffmpeg_get_frame_count(&self.input)
+      ffmpeg::get_frame_count(&self.input)
     };
 
     self.frames
@@ -1230,7 +1250,7 @@ impl Project {
     }
 
     self.validate_input();
-    self.initialize();
+    self.initialize().unwrap();
 
     self.ffmpeg_pipe = self.ffmpeg.clone();
     self.ffmpeg_pipe.extend([
@@ -1474,7 +1494,7 @@ impl Project {
   }
 
   fn create_video_queue_hybrid(&mut self, split_locations: Vec<usize>) -> Vec<Chunk> {
-    let keyframes = get_keyframes(&self.input);
+    let keyframes = ffmpeg::get_keyframes(&self.input);
 
     let mut splits = vec![0];
     splits.extend(split_locations);
@@ -1561,10 +1581,7 @@ impl Project {
     if self.resume {
       let mut chunks = read_chunk_queue(&self.temp);
 
-      let done_path = Path::new(&self.temp).join("done.json");
-
-      let done_contents = fs::read_to_string(&done_path).unwrap();
-      let done: DoneJson = serde_json::from_str(&done_contents).unwrap();
+      let done = get_done();
 
       // only keep the chunks that are not done
       chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
@@ -1582,98 +1599,137 @@ impl Project {
 
     let splits = self.split_routine();
 
-    let chunk_queue = self.load_or_gen_chunk_queue(splits);
-
     let mut initial_frames: usize = 0;
 
     if self.resume && done_path.exists() {
       info!("Resuming...");
 
-      let done: DoneJson = serde_json::from_str(&fs::read_to_string(&done_path).unwrap()).unwrap();
-      initial_frames = done.done.iter().map(|(_, frames)| frames).sum();
-      info!("Resumed with {} encoded clips done", done.done.len());
+      let done = fs::read_to_string(done_path).unwrap();
+      let done: DoneJson = serde_json::from_str(&done).unwrap();
+      init_done(done);
+
+      initial_frames = get_done()
+        .done
+        .iter()
+        .map(|ref_multi| *ref_multi.value())
+        .sum();
+      info!("Resumed with {} encoded clips done", get_done().done.len());
     } else {
       let total = self.get_frames();
+
+      init_done(DoneJson {
+        frames: AtomicUsize::new(total),
+        done: DashMap::new(),
+        audio_done: AtomicBool::new(false),
+      });
+
       let mut done_file = fs::File::create(&done_path).unwrap();
       done_file
-        .write_all(
-          serde_json::to_string(&DoneJson {
-            frames: total,
-            done: HashMap::new(),
-          })
-          .unwrap()
-          .as_bytes(),
-        )
+        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
     }
 
-    if !self.resume {
-      extract_audio(&self.input, &self.temp, &self.audio_params);
-    }
+    let chunk_queue = self.load_or_gen_chunk_queue(splits);
 
-    if self.workers == 0 {
-      self.workers = determine_workers(self.encoder) as usize;
-    }
-    self.workers = cmp::min(self.workers, chunk_queue.len());
-    println!(
-      "Queue: {} Workers: {} Passes: {}\nParams: {}\n",
-      chunk_queue.len(),
-      self.workers,
-      self.passes,
-      self.video_params.join(" ")
-    );
-
-    if self.verbosity == Verbosity::Normal {
-      init_progress_bar((self.frames - initial_frames) as u64).unwrap();
-    } else if self.verbosity == Verbosity::Verbose {
-      init_multi_progress_bar((self.frames - initial_frames) as u64, self.workers).unwrap();
-    }
-
-    // hack to avoid borrow checker errors
-    let concat = self.concat;
-    let temp = self.temp.clone();
-    let input = self.input.clone();
-    let output_file = self.output_file.clone();
-    let encoder = self.encoder;
-    let vmaf = self.vmaf;
-    let keep = self.keep;
-
-    let queue = Queue {
-      chunk_queue,
-      project: self,
-      target_quality: if self.target_quality.is_some() {
-        Some(TargetQuality::new(self))
+    crossbeam_utils::thread::scope(|s| {
+      let audio_thread = if !self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst) {
+        // Required outside of closure due to borrow checker errors
+        let input = &self.input;
+        let temp = &self.temp;
+        let audio_params = self.audio_params.as_slice();
+        Some(s.spawn(move |_| {
+          let audio_output_exists = ffmpeg::encode_audio(input, temp, audio_params);
+          get_done().audio_done.store(true, atomic::Ordering::SeqCst);
+          audio_output_exists
+        }))
       } else {
         None
-      },
-    };
+      };
 
-    queue.encoding_loop();
-
-    info!("Concatenating");
-
-    // TODO refactor into Concatenate trait
-    match concat {
-      ConcatMethod::Ivf => {
-        crate::concat::concat_ivf(&Path::new(&temp).join("encode"), Path::new(&output_file))
-          .unwrap();
+      if self.workers == 0 {
+        self.workers = determine_workers(self.encoder) as usize;
       }
-      ConcatMethod::MKVMerge => {
-        crate::concat::concatenate_mkvmerge(temp.clone(), output_file.clone()).unwrap()
-      }
-      ConcatMethod::FFmpeg => {
-        crate::ffmpeg::concatenate_ffmpeg(temp.clone(), output_file.clone(), encoder);
-      }
-    }
+      self.workers = cmp::min(self.workers, chunk_queue.len());
+      println!(
+        "Queue: {} Workers: {} Passes: {}\nParams: {}\n",
+        chunk_queue.len(),
+        self.workers,
+        self.passes,
+        self.video_params.join(" ")
+      );
 
-    if vmaf {
-      plot_vmaf(&input, &output_file).unwrap();
-    }
-
-    if !keep {
-      if let Err(e) = fs::remove_dir_all(temp) {
-        warn!("Failed to delete temp directory: {}", e);
+      if self.verbosity == Verbosity::Normal {
+        init_progress_bar((self.frames - initial_frames) as u64);
+      } else if self.verbosity == Verbosity::Verbose {
+        init_multi_progress_bar((self.frames - initial_frames) as u64, self.workers);
       }
-    }
+
+      // hack to avoid borrow checker errors
+      let concat = self.concat;
+      let temp = &self.temp;
+      let input = &self.input;
+      let output_file = &self.output_file;
+      let encoder = self.encoder;
+      let vmaf = self.vmaf;
+      let keep = self.keep;
+
+      let queue = Queue {
+        chunk_queue,
+        project: self,
+        target_quality: if self.target_quality.is_some() {
+          Some(TargetQuality::new(self))
+        } else {
+          None
+        },
+      };
+
+      let (tx, rx) = mpsc::channel();
+      let handle = s.spawn(|_| {
+        queue.encoding_loop(tx);
+      });
+
+      // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
+      // more than MAX_TRIES. So, we have to explicitly exit the program if that happens.
+      while let Ok(()) = rx.recv() {
+        std::process::exit(1);
+      }
+
+      handle.join().unwrap();
+
+      if self.verbosity == Verbosity::Normal {
+        finish_progress_bar();
+      } else if self.verbosity == Verbosity::Verbose {
+        finish_multi_progress_bar();
+      }
+
+      // TODO add explicit parameter to concatenation functions to control whether audio is also muxed in
+      let _audio_output_exists =
+        audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
+
+      info!("Concatenating");
+
+      match concat {
+        ConcatMethod::Ivf => {
+          crate::concat::ivf(&Path::new(&temp).join("encode"), Path::new(&output_file)).unwrap();
+        }
+        ConcatMethod::MKVMerge => {
+          crate::concat::mkvmerge(temp.clone(), output_file.clone()).unwrap()
+        }
+        ConcatMethod::FFmpeg => {
+          crate::concat::ffmpeg(temp.clone(), output_file.clone(), encoder);
+        }
+      }
+
+      if vmaf {
+        plot_vmaf(&input, &output_file).unwrap();
+      }
+
+      if !keep {
+        if let Err(e) = fs::remove_dir_all(temp) {
+          warn!("Failed to delete temp directory: {}", e);
+        }
+      }
+    })
+    .unwrap();
   }
 }

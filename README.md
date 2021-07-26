@@ -30,35 +30,35 @@ With your own parameters:
 
 <h2 align="center">Usage</h2>
 
-    -i   --input            Input file(s), or Vapoursynth (.py,.vpy) script
+    -i  --input             Input file(s), or Vapoursynth (.py,.vpy) script
                             (relative or absolute path)
 
-    -o   --output-file      Name/Path for output file (Default: (input file name)_(encoder).mkv)
+    -o  --output-file       Name/Path for output file (Default: (input file name)_(encoder).mkv)
                             Output file ending is always `.mkv`
 
-    -e --encoder            Encoder to use
+    -e  --encoder           Encoder to use
                             [default: aom] [possible values: aom, rav1e, vpx, svt-av1, x264, x265]
 
-    -v   --video-params     Encoder settings flags (If not set, will be used default parameters.)
+    -v  --video-params      Encoder settings flags (If not set, will be used default parameters.)
                             Must be inside ' ' or " "
 
-    -p   --passes           Set number of passes for encoding
+    -p  --passes            Set number of passes for encoding
                             (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1,
                             VPX: 2, x265: 1, x264: 1)
 
-    -w   --workers          Override number of workers.
+    -w  --workers           Override number of workers.
 
-    -r   --resume           Resumes encoding.
+    -r  --resume            Resumes encoding.
 
     --keep                  Doesn't delete temporary folders after encode has finished.
 
-    -q --quiet              Do not print a progress bar to the terminal.
+    -q  --quiet             Do not print a progress bar to the terminal.
 
-    -l --logging            Path to .log file(By default created in temp folder)
+    -l  --logging           Path to .log file(By default created in temp folder)
 
     --temp                  Set path for the temporary folder. [default: .hash]
 
-    -c --concat             Concatenation method to use for splits Default: ffmpeg
+    -c  --concat            Concatenation method to use for splits Default: ffmpeg
                             [possible values: ffmpeg, mkvmerge, ivf]
 
     --webm                  Outputs webm file.
@@ -66,10 +66,10 @@ With your own parameters:
 
 <h3 align="center">FFmpeg options</h3>
 
-    -a   --audio-params     FFmpeg audio settings (Default: copy audio from source to output)
+    -a  --audio-params      FFmpeg audio settings (Default: copy audio from source to output)
                             Example: -a '-c:a libopus -b:a  64k'
 
-    -f  --ffmpeg           FFmpeg options video options.
+    -f  --ffmpeg            FFmpeg options video options.
                             Applied to each encoding segment individually.
                             (Warning: Cropping doesn't work with Target VMAF mode
                             without specifying it in --vmaf-filter)
@@ -89,7 +89,7 @@ With your own parameters:
                             By default the best method is selected automatically.
                             [possible values: segment, select, ffms2, lsmash, hybrid]
 
-    -s   --scenes           File to save/read scenes.
+    -s  --scenes            File to save/read scenes.
 
     -x  --extra-split       Size of chunk after which it will be split [default: 240]
 
@@ -166,7 +166,7 @@ With your own parameters:
     -   [mkvmerge](https://mkvtoolnix.download/)
 
 -   With a package manager:
-    -   [AUR](https://aur.archlinux.org/packages/python-av1an/)
+    -   [AUR](https://aur.archlinux.org/packages/av1an-git/)
 
 -   Manually:
     -   Clone Repo or Download from Releases

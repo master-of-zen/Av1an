@@ -1299,7 +1299,10 @@ impl Project {
     // TODO make self.frames impossible to misuse
     let _ = self.get_frames();
 
-    let scene_file = Path::new(&self.temp).join("scenes.json");
+    let scene_file = self.scenes.as_ref().map_or_else(
+      || Path::new(&self.temp).join("scenes.json"),
+      |path| Path::new(&path).to_path_buf(),
+    );
 
     let mut scenes = if self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())
@@ -1640,6 +1643,13 @@ impl Project {
         Some(s.spawn(move |_| {
           let audio_output_exists = ffmpeg::encode_audio(input, temp, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
+
+          let progress_file = Path::new(temp).join("done.json");
+          let mut progress_file = File::create(&progress_file).unwrap();
+          progress_file
+            .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
+            .unwrap();
+
           audio_output_exists
         }))
       } else {

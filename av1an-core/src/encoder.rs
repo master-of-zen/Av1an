@@ -87,7 +87,11 @@ impl Encoder {
         into_vec![
           format!("--fpf={}.log", fpf),
           "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
           "-"
         ],
       )
@@ -99,7 +103,11 @@ impl Encoder {
           "--first-pass",
           format!("{}.stat", fpf),
           "--output",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
         ]
       )
       .collect(),
@@ -109,7 +117,11 @@ impl Encoder {
         into_vec![
           format!("--fpf={}.log", fpf),
           "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
           "-"
         ],
       )
@@ -131,7 +143,11 @@ impl Encoder {
           "--stats",
           format!("{}.stat", fpf),
           "-b",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
         ],
       )
       .collect(),
@@ -152,7 +168,11 @@ impl Encoder {
           format!("{}.log", fpf),
           "-",
           "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
         ]
       )
       .collect(),
@@ -173,7 +193,11 @@ impl Encoder {
           format!("{}.log", fpf),
           "-",
           "-o",
-          if cfg!(windows) { "nul" } else { "/dev/null" },
+          if cfg!(target_os = "windows") {
+            "nul"
+          } else {
+            "/dev/null"
+          },
         ]
       )
       .collect(),

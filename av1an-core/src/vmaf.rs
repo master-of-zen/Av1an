@@ -1,10 +1,12 @@
+use crate::ffmpeg;
 use crate::{read_vmaf_file, read_weighted_vmaf};
 use anyhow::Error;
 use plotters::prelude::*;
+
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::usize;
-use std::{path::PathBuf, u32};
 
 #[inline]
 fn printable_base10_digits(x: usize) -> u32 {
@@ -128,7 +130,11 @@ pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
   Ok(())
 }
 
-pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error> {
+pub fn run_vmaf_on_files(
+  source: &Path,
+  output: &Path,
+  model: Option<&Path>,
+) -> Result<PathBuf, Error> {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.args(["-y", "-hide_banner", "-loglevel", "error"]);
@@ -139,10 +145,23 @@ pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error>
   let res = "1920x1080";
   let vmaf_filter = "";
   let file_path = output.with_extension("json");
-  let model = "";
   let threads = "";
 
-  cmd.args([format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}", res, vmaf_filter, res, file_path.as_os_str().to_str().unwrap(), model, threads )]);
+  cmd.arg(
+    format!(
+      "[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}",
+      res, 
+      vmaf_filter,
+      res,
+      file_path.as_os_str().to_str().unwrap(),
+      if let Some(model) = model {
+        format!(":model_path={}", ffmpeg::escape_path_in_filter(model))
+      } else {
+        "".into()
+      },
+      threads
+    )
+  );
 
   cmd.args(["-f", "null", "-"]);
 
@@ -162,13 +181,18 @@ pub fn run_vmaf_on_files(source: &Path, output: &Path) -> Result<PathBuf, Error>
   Ok(file_path)
 }
 
-pub fn plot_vmaf(source: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<(), Error> {
+pub fn plot_vmaf(
+  source: impl AsRef<Path>,
+  output: impl AsRef<Path>,
+  model: Option<impl AsRef<Path>>,
+) -> Result<(), Error> {
   let source = source.as_ref();
   let output = output.as_ref();
+  let model = model.as_ref().map(|path| path.as_ref());
 
-  println!("::VMAF Run..");
+  println!(":: VMAF Run");
 
-  let json_file = run_vmaf_on_files(source, output)?;
+  let json_file = run_vmaf_on_files(source, output, model)?;
   let plot_path = output.with_extension("png");
   plot_vmaf_score_file(&json_file, &plot_path).unwrap();
   Ok(())
@@ -195,20 +219,20 @@ pub fn run_vmaf_on_chunk(
     format!("")
   };
 
-  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res );
-  let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res );
+  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
+  let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res);
 
   let vmaf = if let Some(model) = model {
     format!(
       "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
-      stat_file.as_ref().to_str().unwrap(),
+      ffmpeg::escape_path_in_filter(stat_file),
       &model.as_ref().to_str().unwrap(),
       threads
     )
   } else {
     format!(
       "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}",
-      stat_file.as_ref().to_str().unwrap(),
+      ffmpeg::escape_path_in_filter(stat_file),
       threads
     )
   };

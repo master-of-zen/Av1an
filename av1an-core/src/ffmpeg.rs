@@ -1,3 +1,4 @@
+use path_abs::{PathAbs, PathInfo};
 use regex::Regex;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -167,4 +168,23 @@ pub fn get_frame_types(file: &Path) -> Vec<String> {
   let string_vec: Vec<String> = str_vec.iter().map(|s| (*s).to_string()).collect();
 
   string_vec
+}
+
+pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
+  if cfg!(target_os = "windows") {
+    PathAbs::new(path.as_ref())
+      .unwrap()
+      .to_str()
+      .unwrap()
+      // This is needed because of how FFmpeg handles absolute file paths on Windows.
+      // https://stackoverflow.com/questions/60440793/how-can-i-use-windows-absolute-paths-with-the-movie-filter-on-ffmpeg
+      .replace(r"\", "/")
+      .replace(":", r"\\:")
+  } else {
+    PathAbs::new(path.as_ref())
+      .unwrap()
+      .to_str()
+      .unwrap()
+      .to_string()
+  }
 }

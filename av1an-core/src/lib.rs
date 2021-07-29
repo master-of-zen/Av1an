@@ -13,7 +13,7 @@
 extern crate log;
 
 use dashmap::DashMap;
-use path_abs::PathAbs;
+use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::cmp::Ordering;
@@ -273,14 +273,15 @@ fn create_vs_file(temp: &str, source: &str, chunk_method: ChunkMethod) -> anyhow
   }
   let mut load_script = File::create(&load_script_path)?;
 
-  let cache_file = std::env::current_dir()?.join(temp.join("split").join(format!(
+  let cache_file = PathAbs::new(temp.join("split").join(format!(
     "cache.{}",
     match chunk_method {
       ChunkMethod::FFMS2 => "ffindex",
       ChunkMethod::LSMASH => "lwi",
       _ => return Err(anyhow!("invalid chunk method")),
     }
-  )));
+  )))
+  .unwrap();
 
   load_script.write_all(
     // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
@@ -689,7 +690,7 @@ impl<'a> TargetQuality<'a> {
 
       let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let mut pipe = tokio::process::Command::new(cmd.1[0].clone())
+      let pipe = tokio::process::Command::new(cmd.1[0].clone())
         .args(&cmd.1[1..])
         .stdin(ffmpeg_pipe_stdout)
         .stdout(Stdio::piped())
@@ -697,13 +698,7 @@ impl<'a> TargetQuality<'a> {
         .spawn()
         .unwrap();
 
-      process_pipe(
-        &mut pipe,
-        chunk.index,
-        &mut [&mut ffmpeg_gen_pipe, &mut ffmpeg_pipe],
-      )
-      .await
-      .unwrap();
+      process_pipe(pipe, chunk.index).await.unwrap();
     };
 
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -743,35 +738,14 @@ impl<'a> TargetQuality<'a> {
   }
 }
 
-async fn process_pipe(
-  pipe: &mut tokio::process::Child,
-  chunk_index: usize,
-  utility: &mut [&mut tokio::process::Child],
-) -> Result<(), String> {
-  let mut encoder_history: VecDeque<String> = VecDeque::with_capacity(20);
+async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result<(), String> {
+  let status = pipe.wait_with_output().await.unwrap();
 
-  let mut reader = BufReader::new(pipe.stdout.take().unwrap()).lines();
-
-  while let Some(line) = reader.next_line().await.unwrap() {
-    encoder_history.push_back(line);
-  }
-
-  for util in utility {
-    // On Windows, killing the process can fail with a permission denied error, so we don't
-    // unwrap the result to prevent the program from crashing if killing the child process fails.
-    drop(util.kill().await);
-  }
-
-  let returncode = pipe.wait().await.unwrap();
-  if let Some(code) = returncode.code() {
-    if code != 0 && code != -2 {
-      return Err(format!(
-        "Encoder encountered an error: {}
-Chunk: {}
-{:?}",
-        code, chunk_index, encoder_history
-      ));
-    }
+  if !status.status.success() {
+    return Err(format!(
+      "Encoder encountered an error on chunk {}: {:?}",
+      chunk_index, status
+    ));
   }
 
   Ok(())
@@ -1681,6 +1655,7 @@ impl Project {
       let output_file = &self.output_file;
       let encoder = self.encoder;
       let vmaf = self.vmaf;
+      let model = self.vmaf_path.as_ref();
       let keep = self.keep;
 
       let queue = Queue {
@@ -1731,7 +1706,7 @@ impl Project {
       }
 
       if vmaf {
-        plot_vmaf(&input, &output_file).unwrap();
+        plot_vmaf(&input, &output_file, model).unwrap();
       }
 
       if !keep {

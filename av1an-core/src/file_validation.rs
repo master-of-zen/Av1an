@@ -10,6 +10,7 @@ fn match_file_type(input: &Path) -> bool {
   .any(|&v| input.extension().map_or(false, |u| v == u))
 }
 
+/// Check if all files in files actually exists
 fn validate_files(files: &[PathBuf]) -> Vec<PathBuf> {
   let valid: Vec<PathBuf> = files
     .iter()

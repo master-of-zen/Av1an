@@ -75,6 +75,7 @@ pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
   kfs
 }
 
+/// Returns true if input file have audio in it
 pub fn has_audio(file: &Path) -> bool {
   let mut cmd = Command::new("ffmpeg");
 
@@ -135,6 +136,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
   }
 }
 
+/// Returns list of frame types of the video
 pub fn get_frame_types(file: &Path) -> Vec<String> {
   let mut cmd = Command::new("ffmpeg");
 
@@ -170,6 +172,7 @@ pub fn get_frame_types(file: &Path) -> Vec<String> {
   string_vec
 }
 
+/// Escapes paths in ffmpeg filters if on windows
 pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
   if cfg!(target_os = "windows") {
     PathAbs::new(path.as_ref())

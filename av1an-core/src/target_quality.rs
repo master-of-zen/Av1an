@@ -20,6 +20,7 @@ pub fn transform_vmaf(vmaf: f64) -> f64 {
   }
 }
 
+/// Returns auto detected amount of threads used for vmaf calculation
 pub fn vmaf_auto_threads(workers: usize) -> usize {
   const OVER_PROVISION_FACTOR: f64 = 1.25;
 
@@ -32,6 +33,7 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
   )
 }
 
+/// Use linear interpolation to get q/crf values closest to the target value
 pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64, Error> {
   let mut sorted = scores;
   sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
@@ -46,6 +48,7 @@ pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64,
   Ok(spline.sample(target).unwrap())
 }
 
+/// Use linear interpolation to get vmaf value that expected from q
 pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, Error> {
   let mut sorted = scores;
   sorted.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Less));

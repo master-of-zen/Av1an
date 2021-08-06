@@ -13,6 +13,8 @@ const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(target_os = "windows") {
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 
+/// Initialize progress bar
+/// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
   let pb = PROGRESS_BAR.get_or_init(|| {
     ProgressBar::new(len).with_style(

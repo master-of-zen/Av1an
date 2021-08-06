@@ -31,6 +31,7 @@ impl Display for Encoder {
 }
 
 impl Encoder {
+  /// Composes 1st pass command for 1 pass encoding
   pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match &self {
       Self::aom => chain!(
@@ -79,6 +80,7 @@ impl Encoder {
     }
   }
 
+  /// Composes 1st pass command for 2 pass encoding
   pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match &self {
       Self::aom => chain!(
@@ -204,6 +206,7 @@ impl Encoder {
     }
   }
 
+  /// Composes 2st pass command for 2 pass encoding
   pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match &self {
       Self::aom => chain!(
@@ -278,6 +281,7 @@ impl Encoder {
     }
   }
 
+  /// Returns default settings for the encoder
   pub fn get_default_arguments(self) -> Vec<String> {
     match &self {
       Encoder::aom => into_vec![
@@ -316,6 +320,7 @@ impl Encoder {
     }
   }
 
+  /// Return number of default passes for encoder
   pub const fn get_default_pass(self) -> u8 {
     match &self {
       Self::aom | Self::vpx => 2,
@@ -333,6 +338,7 @@ impl Encoder {
     }
   }
 
+  /// Returns help command for encoder
   pub const fn help_command(self) -> [&'static str; 2] {
     match &self {
       Self::aom => ["aomenc", "--help"],
@@ -364,6 +370,7 @@ impl Encoder {
     }
   }
 
+  /// Returns string used for regex matching q/crf arguments in command line
   const fn q_regex_str(&self) -> &str {
     match &self {
       Self::aom | Self::vpx => r"--cq-level=.+",
@@ -380,6 +387,7 @@ impl Encoder {
     }
   }
 
+  /// Returns changed q/crf in command line arguments
   pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
     let index = list_index_of_regex(&params, self.q_regex_str()).unwrap();
 
@@ -390,6 +398,7 @@ impl Encoder {
     new_params
   }
 
+  /// Retuns string for regex to matching encoder progress in cli
   const fn pipe_match(&self) -> &str {
     match &self {
       Self::aom | Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
@@ -400,6 +409,7 @@ impl Encoder {
     }
   }
 
+  /// Returs option of q/crf value from cli encoder output
   pub fn match_line(self, line: &str) -> Option<usize> {
     let encoder_regex = Regex::new(self.pipe_match()).unwrap();
     if !encoder_regex.is_match(line) {
@@ -409,6 +419,7 @@ impl Encoder {
     captures.parse::<usize>().ok()
   }
 
+  /// Returns command used for target quality probing
   pub fn construct_target_quality_command(
     self,
     threads: usize,
@@ -577,6 +588,7 @@ impl Encoder {
     }
   }
 
+  /// Returns command used for target quality probing (slow, correctness focused version)
   pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
     match &self {
       Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
@@ -636,6 +648,7 @@ impl Encoder {
       .collect::<Vec<String>>()
   }
 
+  /// Constructs tuple of commands for target quality probing
   pub fn probe_cmd(
     self,
     temp: String,

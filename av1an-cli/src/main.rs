@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::exit;
 
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
@@ -42,7 +43,14 @@ pub fn main() {
       Vec::new()
     },
     output_file: if let Some(output) = args.output_file {
-      output.to_str().unwrap().to_owned()
+      if !output.parent().unwrap().exists() && output.parent().unwrap() == PathBuf::new() {
+        output.to_str().unwrap().to_owned()
+      } else if output.parent().unwrap().exists() {
+        output.to_str().unwrap().to_owned()
+      } else {
+        println!("Path to file is invalid {:#?}", &output);
+        exit(1);
+      }
     } else {
       format!(
         "{}_{}.mkv",

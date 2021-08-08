@@ -1477,7 +1477,7 @@ impl Project {
     splits.extend(split_locations);
     splits.push(self.get_frames());
 
-    let segments_set: HashSet<(usize, usize)> = splits
+    let segments_set: Vec<(usize, usize)> = splits
       .iter()
       .zip(splits.iter().skip(1))
       .map(|(start, end)| (*start, *end))

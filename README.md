@@ -34,7 +34,8 @@ With your own parameters:
                             (relative or absolute path)
 
     -o  --output-file       Name/Path for output file (Default: (input file name)_(encoder).mkv)
-                            Output file ending is always `.mkv`
+                            Output is `mkv` by default
+                            Ouput extension can be set to: `mkv`, `webm`, `mp4`
 
     -e  --encoder           Encoder to use
                             [default: aom] [possible values: aom, rav1e, vpx, svt-av1, x264, x265]

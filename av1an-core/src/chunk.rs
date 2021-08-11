@@ -1,3 +1,4 @@
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
@@ -12,6 +13,26 @@ pub struct Chunk {
 }
 
 impl Chunk {
+  pub fn new(
+    temp: String,
+    index: usize,
+    ffmpeg_gen_cmd: Vec<String>,
+    output_ext: String,
+    size: usize,
+    frames: usize,
+    per_shot_target_quality_cq: Option<u32>,
+  ) -> Result<Self, anyhow::Error> {
+    Ok(Chunk {
+      temp,
+      index,
+      ffmpeg_gen_cmd,
+      output_ext,
+      size,
+      frames,
+      per_shot_target_quality_cq,
+    })
+  }
+
   /// Returns numeric name of chunk `00001`
   pub fn name(&self) -> String {
     format!("{:05}", self.index)

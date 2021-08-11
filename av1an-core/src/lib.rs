@@ -12,6 +12,7 @@
 #[macro_use]
 extern crate log;
 
+use chunk::Chunk;
 use dashmap::DashMap;
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,6 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::mpsc::Sender;
 use std::sync::{atomic, mpsc};
-
 use sysinfo::SystemExt;
 
 use itertools::Itertools;
@@ -34,6 +34,7 @@ use regex::Regex;
 
 use flexi_logger::{Duplicate, FileSpec, Logger};
 
+pub mod chunk;
 pub mod concat;
 pub mod encoder;
 pub mod ffmpeg;
@@ -748,36 +749,6 @@ async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result
   }
 
   Ok(())
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, Clone)]
-struct Chunk {
-  temp: String,
-  index: usize,
-  ffmpeg_gen_cmd: Vec<String>,
-  output_ext: String,
-  size: usize,
-  frames: usize,
-  per_shot_target_quality_cq: Option<u32>,
-}
-
-impl Chunk {
-  fn name(&self) -> String {
-    format!("{:05}", self.index)
-  }
-
-  fn output(&self) -> String {
-    self.output_path()
-  }
-
-  fn output_path(&self) -> String {
-    Path::new(&self.temp)
-      .join("encode")
-      .join(format!("{}.{}", self.name(), self.output_ext))
-      .to_str()
-      .unwrap()
-      .to_owned()
-  }
 }
 
 fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) {

@@ -1,4 +1,3 @@
-use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]

@@ -12,6 +12,7 @@
 #[macro_use]
 extern crate log;
 
+use crate::target_quality::TargetQuality;
 use chunk::Chunk;
 use dashmap::DashMap;
 use path_abs::{PathAbs, PathInfo};
@@ -136,13 +137,6 @@ pub fn get_ffmpeg_info() -> String {
   String::from_utf8(cmd.output().unwrap().stderr).unwrap()
 }
 
-pub const fn adapt_probing_rate(rate: usize) -> usize {
-  match rate {
-    1..=4 => rate,
-    _ => 4,
-  }
-}
-
 /// Determine the optimal number of workers for an encoder
 #[must_use]
 pub fn determine_workers(encoder: Encoder) -> u64 {
@@ -166,8 +160,8 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   )
 }
 
+/// Calculates percentile from vector of scores
 pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
-  // Calculates percentile from vector of valuees
   scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let k = (scores.len() - 1) as f64 * percentile;
@@ -237,9 +231,6 @@ use crate::progress_bar::{
 use crate::split::extra_splits;
 use crate::split::segment;
 use crate::split::write_scenes_to_file;
-use crate::target_quality::log_probes;
-use crate::target_quality::vmaf_auto_threads;
-use crate::target_quality::weighted_search;
 use crate::vmaf::plot_vmaf;
 
 use std::cmp::Reverse;
@@ -319,14 +310,6 @@ fn frame_probe(source: &str) -> usize {
     // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
     ffmpeg::get_frame_count(source)
   }
-}
-
-pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64) {
-  let q = target_quality::interpolate_target_q(scores.clone(), target).unwrap();
-
-  let vmaf = target_quality::interpolate_target_vmaf(scores, q).unwrap();
-
-  (q, vmaf)
 }
 
 pub fn av_scenechange_detect(
@@ -499,246 +482,7 @@ impl<'a> Queue<'a> {
   }
 }
 
-struct TargetQuality<'a> {
-  vmaf_res: String,
-  vmaf_filter: String,
-  n_threads: usize,
-  model: Option<&'a Path>,
-  probing_rate: usize,
-  probes: u32,
-  target: f32,
-  min_q: u32,
-  max_q: u32,
-  encoder: Encoder,
-  ffmpeg_pipe: Vec<String>,
-  temp: String,
-  workers: usize,
-  video_params: Vec<String>,
-  probe_slow: bool,
-}
-
-impl<'a> TargetQuality<'a> {
-  fn new(project: &'a Project) -> Self {
-    Self {
-      vmaf_res: project
-        .vmaf_res
-        .clone()
-        .unwrap_or_else(|| String::with_capacity(0)),
-      vmaf_filter: project
-        .vmaf_filter
-        .clone()
-        .unwrap_or_else(|| String::with_capacity(0)),
-      n_threads: project.n_threads.unwrap_or(0) as usize,
-      model: project.vmaf_path.as_deref(),
-      probes: project.probes,
-      target: project.target_quality.unwrap(),
-      min_q: project.min_q.unwrap(),
-      max_q: project.max_q.unwrap(),
-      encoder: project.encoder,
-      ffmpeg_pipe: project.ffmpeg_pipe.clone(),
-      temp: project.temp.clone(),
-      workers: project.workers,
-      video_params: project.video_params.clone(),
-      probe_slow: project.probe_slow,
-      probing_rate: adapt_probing_rate(project.probing_rate as usize),
-    }
-  }
-
-  fn per_shot_target_quality(&self, chunk: &Chunk) -> u32 {
-    let mut vmaf_cq = vec![];
-    let frames = chunk.frames;
-
-    let mut q_list = vec![];
-
-    // Make middle probe
-    let middle_point = (self.min_q + self.max_q) / 2;
-    q_list.push(middle_point);
-    let last_q = middle_point;
-
-    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize), 0.25).unwrap();
-    vmaf_cq.push((score, last_q));
-
-    // Initialize search boundary
-    let mut vmaf_lower = score;
-    let mut vmaf_upper = score;
-    let mut vmaf_cq_lower = last_q;
-    let mut vmaf_cq_upper = last_q;
-
-    // Branch
-    let next_q = if score < f64::from(self.target) {
-      self.min_q
-    } else {
-      self.max_q
-    };
-
-    q_list.push(next_q);
-
-    // Edge case check
-    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
-    vmaf_cq.push((score, next_q));
-
-    if (next_q == self.min_q && score < f64::from(self.target))
-      || (next_q == self.max_q && score > f64::from(self.target))
-    {
-      crate::target_quality::log_probes(
-        vmaf_cq,
-        frames as u32,
-        self.probing_rate as u32,
-        &chunk.name(),
-        next_q,
-        score,
-        if score < f64::from(self.target) {
-          "low"
-        } else {
-          "high"
-        },
-      );
-      return next_q;
-    }
-
-    // Set boundary
-    if score < f64::from(self.target) {
-      vmaf_lower = score;
-      vmaf_cq_lower = next_q;
-    } else {
-      vmaf_upper = score;
-      vmaf_cq_upper = next_q;
-    }
-
-    // VMAF search
-    for _ in 0..self.probes - 2 {
-      let new_point = weighted_search(
-        f64::from(vmaf_cq_lower),
-        vmaf_lower,
-        f64::from(vmaf_cq_upper),
-        vmaf_upper,
-        f64::from(self.target),
-      );
-
-      if vmaf_cq
-        .iter()
-        .map(|(_, x)| *x)
-        .any(|x| x == new_point as u32)
-      {
-        break;
-      }
-
-      q_list.push(new_point as u32);
-      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point), 0.25).unwrap();
-      vmaf_cq.push((score, new_point as u32));
-
-      // Update boundary
-      if score < f64::from(self.target) {
-        vmaf_lower = score;
-        vmaf_cq_lower = new_point as u32;
-      } else {
-        vmaf_upper = score;
-        vmaf_cq_upper = new_point as u32;
-      }
-    }
-
-    let (q, q_vmaf) = interpolate_target_q(vmaf_cq.clone(), f64::from(self.target));
-    log_probes(
-      vmaf_cq,
-      frames as u32,
-      self.probing_rate as u32,
-      &chunk.name(),
-      q as u32,
-      q_vmaf,
-      "",
-    );
-
-    q as u32
-  }
-
-  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
-    let n_threads = if self.n_threads == 0 {
-      vmaf_auto_threads(self.workers)
-    } else {
-      self.n_threads
-    };
-
-    let cmd = self.encoder.probe_cmd(
-      self.temp.clone(),
-      &chunk.name(),
-      q,
-      self.ffmpeg_pipe.clone(),
-      self.probing_rate,
-      n_threads,
-      self.video_params.clone(),
-      self.probe_slow,
-    );
-
-    let future = async {
-      let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
-        .args(&chunk.ffmpeg_gen_cmd[1..])
-        .stderr(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-      let ffmpeg_gen_pipe_stdout: Stdio =
-        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
-
-      let mut ffmpeg_pipe = tokio::process::Command::new(cmd.0[0].clone())
-        .args(&cmd.0[1..])
-        .stdin(ffmpeg_gen_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
-
-      let pipe = tokio::process::Command::new(cmd.1[0].clone())
-        .args(&cmd.1[1..])
-        .stdin(ffmpeg_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-      process_pipe(pipe, chunk.index).await.unwrap();
-    };
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-      .enable_io()
-      .build()
-      .unwrap();
-
-    rt.block_on(future);
-
-    let probe_name =
-      Path::new(&chunk.temp)
-        .join("split")
-        .join(format!("v_{}{}.ivf", q, chunk.name()));
-    let fl_path = Path::new(&chunk.temp)
-      .join("split")
-      .join(format!("{}.json", chunk.name()));
-
-    let fl_path = fl_path.to_str().unwrap().to_owned();
-
-    crate::vmaf::run_vmaf_on_chunk(
-      &probe_name,
-      &chunk.ffmpeg_gen_cmd,
-      &fl_path,
-      self.model.as_ref(),
-      &self.vmaf_res,
-      self.probing_rate,
-      &self.vmaf_filter,
-      self.n_threads,
-    )
-    .unwrap();
-
-    fl_path
-  }
-
-  fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) {
-    chunk.per_shot_target_quality_cq = Some(self.per_shot_target_quality(chunk));
-  }
-}
-
-async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result<(), String> {
+pub async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result<(), String> {
   let status = pipe.wait_with_output().await.unwrap();
 
   if !status.status.success() {

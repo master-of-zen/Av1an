@@ -1,6 +1,252 @@
+use crate::chunk::Chunk;
+use crate::process_pipe;
+use crate::read_weighted_vmaf;
+use crate::Encoder;
+use crate::Project;
 use splines::{Interpolation, Key, Spline};
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::fmt::Error;
+use std::path::Path;
+use std::process::Stdio;
+pub struct TargetQuality<'a> {
+  vmaf_res: String,
+  vmaf_filter: String,
+  n_threads: usize,
+  model: Option<&'a Path>,
+  probing_rate: usize,
+  probes: u32,
+  target: f32,
+  min_q: u32,
+  max_q: u32,
+  encoder: Encoder,
+  ffmpeg_pipe: Vec<String>,
+  temp: String,
+  workers: usize,
+  video_params: Vec<String>,
+  probe_slow: bool,
+}
+
+impl<'a> TargetQuality<'a> {
+  pub fn new(project: &'a Project) -> Self {
+    Self {
+      vmaf_res: project
+        .vmaf_res
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      vmaf_filter: project
+        .vmaf_filter
+        .clone()
+        .unwrap_or_else(|| String::with_capacity(0)),
+      n_threads: project.n_threads.unwrap_or(0) as usize,
+      model: project.vmaf_path.as_deref(),
+      probes: project.probes,
+      target: project.target_quality.unwrap(),
+      min_q: project.min_q.unwrap(),
+      max_q: project.max_q.unwrap(),
+      encoder: project.encoder,
+      ffmpeg_pipe: project.ffmpeg_pipe.clone(),
+      temp: project.temp.clone(),
+      workers: project.workers,
+      video_params: project.video_params.clone(),
+      probe_slow: project.probe_slow,
+      probing_rate: adapt_probing_rate(project.probing_rate as usize),
+    }
+  }
+
+  fn per_shot_target_quality(&self, chunk: &Chunk) -> u32 {
+    let mut vmaf_cq = vec![];
+    let frames = chunk.frames;
+
+    let mut q_list = vec![];
+
+    // Make middle probe
+    let middle_point = (self.min_q + self.max_q) / 2;
+    q_list.push(middle_point);
+    let last_q = middle_point;
+
+    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize), 0.25).unwrap();
+    vmaf_cq.push((score, last_q));
+
+    // Initialize search boundary
+    let mut vmaf_lower = score;
+    let mut vmaf_upper = score;
+    let mut vmaf_cq_lower = last_q;
+    let mut vmaf_cq_upper = last_q;
+
+    // Branch
+    let next_q = if score < f64::from(self.target) {
+      self.min_q
+    } else {
+      self.max_q
+    };
+
+    q_list.push(next_q);
+
+    // Edge case check
+    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
+    vmaf_cq.push((score, next_q));
+
+    if (next_q == self.min_q && score < f64::from(self.target))
+      || (next_q == self.max_q && score > f64::from(self.target))
+    {
+      log_probes(
+        vmaf_cq,
+        frames as u32,
+        self.probing_rate as u32,
+        &chunk.name(),
+        next_q,
+        score,
+        if score < f64::from(self.target) {
+          "low"
+        } else {
+          "high"
+        },
+      );
+      return next_q;
+    }
+
+    // Set boundary
+    if score < f64::from(self.target) {
+      vmaf_lower = score;
+      vmaf_cq_lower = next_q;
+    } else {
+      vmaf_upper = score;
+      vmaf_cq_upper = next_q;
+    }
+
+    // VMAF search
+    for _ in 0..self.probes - 2 {
+      let new_point = weighted_search(
+        f64::from(vmaf_cq_lower),
+        vmaf_lower,
+        f64::from(vmaf_cq_upper),
+        vmaf_upper,
+        f64::from(self.target),
+      );
+
+      if vmaf_cq
+        .iter()
+        .map(|(_, x)| *x)
+        .any(|x| x == new_point as u32)
+      {
+        break;
+      }
+
+      q_list.push(new_point as u32);
+      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point), 0.25).unwrap();
+      vmaf_cq.push((score, new_point as u32));
+
+      // Update boundary
+      if score < f64::from(self.target) {
+        vmaf_lower = score;
+        vmaf_cq_lower = new_point as u32;
+      } else {
+        vmaf_upper = score;
+        vmaf_cq_upper = new_point as u32;
+      }
+    }
+
+    let (q, q_vmaf) = interpolated_target_q(vmaf_cq.clone(), f64::from(self.target));
+    log_probes(
+      vmaf_cq,
+      frames as u32,
+      self.probing_rate as u32,
+      &chunk.name(),
+      q as u32,
+      q_vmaf,
+      "",
+    );
+
+    q as u32
+  }
+
+  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
+    let n_threads = if self.n_threads == 0 {
+      vmaf_auto_threads(self.workers)
+    } else {
+      self.n_threads
+    };
+
+    let cmd = self.encoder.probe_cmd(
+      self.temp.clone(),
+      &chunk.name(),
+      q,
+      self.ffmpeg_pipe.clone(),
+      self.probing_rate,
+      n_threads,
+      self.video_params.clone(),
+      self.probe_slow,
+    );
+
+    let future = async {
+      let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
+        .args(&chunk.ffmpeg_gen_cmd[1..])
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_gen_pipe_stdout: Stdio =
+        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let mut ffmpeg_pipe = tokio::process::Command::new(cmd.0[0].clone())
+        .args(&cmd.0[1..])
+        .stdin(ffmpeg_gen_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      let pipe = tokio::process::Command::new(cmd.1[0].clone())
+        .args(&cmd.1[1..])
+        .stdin(ffmpeg_pipe_stdout)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+      process_pipe(pipe, chunk.index).await.unwrap();
+    };
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+      .enable_io()
+      .build()
+      .unwrap();
+
+    rt.block_on(future);
+
+    let probe_name =
+      Path::new(&chunk.temp)
+        .join("split")
+        .join(format!("v_{}{}.ivf", q, chunk.name()));
+    let fl_path = Path::new(&chunk.temp)
+      .join("split")
+      .join(format!("{}.json", chunk.name()));
+
+    let fl_path = fl_path.to_str().unwrap().to_owned();
+
+    crate::vmaf::run_vmaf_on_chunk(
+      &probe_name,
+      &chunk.ffmpeg_gen_cmd,
+      &fl_path,
+      self.model.as_ref(),
+      &self.vmaf_res,
+      self.probing_rate,
+      &self.vmaf_filter,
+      self.n_threads,
+    )
+    .unwrap();
+
+    fl_path
+  }
+
+  pub fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) {
+    chunk.per_shot_target_quality_cq = Some(self.per_shot_target_quality(chunk));
+  }
+}
 
 pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
   let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
@@ -84,4 +330,19 @@ pub fn log_probes(
   info!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames);
   info!("Probes {:?} {}", scores_sorted, skip_string);
   info!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf);
+}
+
+pub const fn adapt_probing_rate(rate: usize) -> usize {
+  match rate {
+    1..=4 => rate,
+    _ => 4,
+  }
+}
+
+pub fn interpolated_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64) {
+  let q = interpolate_target_q(scores.clone(), target).unwrap();
+
+  let vmaf = interpolate_target_vmaf(scores, q).unwrap();
+
+  (q, vmaf)
 }

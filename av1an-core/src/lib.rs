@@ -1278,7 +1278,11 @@ impl Project {
       |path| Path::new(&path).to_path_buf(),
     );
 
-    let mut scenes = if self.resume {
+    let mut scenes = if self.scenes.is_some() && scene_file.exists() {
+      crate::split::read_scenes_from_file(scene_file.as_path())
+        .unwrap()
+        .0
+    } else if self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())
         .unwrap()
         .0

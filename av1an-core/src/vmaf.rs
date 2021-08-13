@@ -208,19 +208,25 @@ pub fn run_vmaf_on_chunk(
   vmaf_filter: &str,
   threads: usize,
 ) -> Result<(), Error> {
+  let mut filter = String::from("");
+
   // Select filter for sampling from the source
-  let select = if sample_rate > 1 {
-    format!(
+  if sample_rate > 1 {
+    filter += &format!(
       "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
       sample_rate,
       1.0 / sample_rate as f64
-    )
-  } else {
-    format!("")
+    );
+  };
+
+  // User-defined video filter
+  if !vmaf_filter.is_empty() {
+    filter.push_str(vmaf_filter);
+    filter.push(',');
   };
 
   let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
-  let reference = format!("[1:v]{}{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", select, vmaf_filter, &res);
+  let reference = format!("[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", filter, &res);
 
   let vmaf = if let Some(model) = model {
     format!(

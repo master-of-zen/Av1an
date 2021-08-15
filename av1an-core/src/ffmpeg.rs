@@ -114,7 +114,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
 
     encode_audio.args(["-y", "-hide_banner", "-loglevel", "error", "-i"]);
     encode_audio.arg(input);
-    encode_audio.args(["-map_metadata", "-1", "-dn", "-vn"]);
+    encode_audio.args(["-map_metadata", "-1", "-dn", "-vn", "-sn"]);
 
     encode_audio.args(audio_params);
     encode_audio.arg(audio_file);

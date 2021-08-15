@@ -14,7 +14,7 @@ pub fn get_frame_count(source: impl AsRef<Path>) -> usize {
     "-i",
     source.to_str().unwrap(),
     "-map",
-    "0:v:0",
+    "0:V:0",
     "-c",
     "copy",
     "-f",

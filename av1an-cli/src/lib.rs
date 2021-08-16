@@ -46,10 +46,6 @@ pub struct Args {
   #[clap(long)]
   pub keep: bool,
 
-  /// Output to webm
-  #[clap(long)]
-  pub webm: bool,
-
   /// Method for creating chunks
   #[clap(short = 'm', long, possible_values=&["segment", "select", "ffms2", "lsmash", "hybrid"])]
   pub chunk_method: Option<ChunkMethod>,

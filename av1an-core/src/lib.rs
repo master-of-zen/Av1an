@@ -43,7 +43,6 @@ pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;
 pub mod vmaf;
-
 #[macro_export]
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
@@ -803,7 +802,6 @@ pub struct Project {
   pub input: String,
   pub temp: String,
   pub output_file: String,
-  pub webm: bool,
 
   pub chunk_method: ChunkMethod,
   pub scenes: Option<String>,

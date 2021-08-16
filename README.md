@@ -61,9 +61,6 @@ With your own parameters:
     -c  --concat            Concatenation method to use for splits Default: ffmpeg
                             [possible values: ffmpeg, mkvmerge, ivf]
 
-    --webm                  Outputs webm file.
-                            Use only if you're sure the source video and audio are compatible.
-
 <h3 align="center">FFmpeg options</h3>
 
     -a  --audio-params      FFmpeg audio settings (Default: copy audio from source to output)

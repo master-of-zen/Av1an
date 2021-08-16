@@ -44,8 +44,10 @@ pub fn main() {
     },
     output_file: if let Some(output) = args.output_file {
       if !output.parent().unwrap().exists() && output.parent().unwrap() == PathBuf::new() {
+        // ^ Check if path is file in current folder
         output.to_str().unwrap().to_owned()
       } else if output.parent().unwrap().exists() {
+        // ^ Check if path to the file valid
         output.to_str().unwrap().to_owned()
       } else {
         println!("Path to file is invalid {:#?}", &output);
@@ -98,7 +100,6 @@ pub fn main() {
     vmaf_filter: args.vmaf_filter,
     vmaf_path: args.vmaf_path,
     vmaf_res: Some(args.vmaf_res),
-    webm: false,
     workers: args.workers,
   };
 

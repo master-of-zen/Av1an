@@ -21,7 +21,7 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
     "-i",
     input.to_str().unwrap(),
     "-map",
-    "0:v:0",
+    "0:V:0",
     "-an",
     "-c",
     "copy",

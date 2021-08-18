@@ -15,6 +15,18 @@ pub struct Broker<'a> {
 }
 
 impl<'a> Broker<'a> {
+  pub fn new(
+    chunk_queue: Vec<Chunk>,
+    project: &'a Project,
+    target_quality: Option<TargetQuality<'a>>,
+  ) -> Self {
+    Broker {
+      chunk_queue,
+      project,
+      target_quality,
+    }
+  }
+
   pub fn encoding_loop(self, tx: Sender<()>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());

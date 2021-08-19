@@ -21,7 +21,7 @@ impl Chunk {
     frames: usize,
     per_shot_target_quality_cq: Option<u32>,
   ) -> Result<Self, anyhow::Error> {
-    Ok(Chunk {
+    Ok(Self {
       temp,
       index,
       ffmpeg_gen_cmd,

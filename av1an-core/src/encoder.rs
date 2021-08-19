@@ -697,7 +697,7 @@ impl Encoder {
       args = Self::remove_patterns(args, patterns);
       let ps = self.construct_target_quality_command_probe_slow(q);
       params = Self::decow_strings(&ps);
-      params.append(&mut args)
+      params.append(&mut args);
     } else {
       let ps = self.construct_target_quality_command(n_threads, q);
       params = Self::decow_strings(&ps);

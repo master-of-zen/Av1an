@@ -2,6 +2,5 @@
 
 members = [
     "av1an-core",
-    "av1an-scene-detection",
     "av1an-cli",
 ]

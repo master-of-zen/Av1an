@@ -28,6 +28,34 @@ use std::sync::mpsc::Sender;
 use std::sync::{atomic, mpsc};
 use sysinfo::SystemExt;
 
+use anyhow::anyhow;
+use once_cell::sync::{Lazy, OnceCell};
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+use crate::progress_bar::finish_progress_bar;
+use crate::progress_bar::init_progress_bar;
+use crate::progress_bar::update_bar;
+use crate::progress_bar::{
+  finish_multi_progress_bar, init_multi_progress_bar, update_mp_bar, update_mp_msg,
+};
+use crate::split::extra_splits;
+use crate::split::segment;
+use crate::split::write_scenes_to_file;
+use crate::vmaf::plot_vmaf;
+
+use std::cmp::Reverse;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io;
+use std::io::Write;
+use std::iter;
+use std::string::ToString;
+use std::time::Instant;
+
 use itertools::Itertools;
 
 use crate::encoder::Encoder;
@@ -41,10 +69,12 @@ pub mod encoder;
 pub mod ffmpeg;
 pub mod file_validation;
 pub mod progress_bar;
+pub mod scene_detect;
 pub mod split;
 pub mod target_quality;
 pub mod vapoursynth;
 pub mod vmaf;
+
 #[macro_export]
 macro_rules! into_vec {
   ($($x:expr),* $(,)?) => {
@@ -162,8 +192,9 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   )
 }
 
-/// Calculates percentile from vector of scores
+/// Calculates percentile from an array of values
 pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
+  assert!(!scores.is_empty());
   scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let k = (scores.len() - 1) as f64 * percentile;
@@ -219,34 +250,6 @@ pub fn read_weighted_vmaf(
 
   Ok(get_percentile(&mut scores, percentile))
 }
-
-use anyhow::anyhow;
-use once_cell::sync::{Lazy, OnceCell};
-use tokio::io::{AsyncBufReadExt, BufReader};
-
-use crate::progress_bar::finish_progress_bar;
-use crate::progress_bar::init_progress_bar;
-use crate::progress_bar::update_bar;
-use crate::progress_bar::{
-  finish_multi_progress_bar, init_multi_progress_bar, update_mp_bar, update_mp_msg,
-};
-use crate::split::extra_splits;
-use crate::split::segment;
-use crate::split::write_scenes_to_file;
-use crate::vmaf::plot_vmaf;
-
-use std::cmp::Reverse;
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::convert::TryInto;
-use std::fs::File;
-use std::hash::{Hash, Hasher};
-use std::io;
-use std::io::Write;
-use std::iter;
-use std::string::ToString;
-use std::time::Instant;
 
 pub fn hash_path(path: &str) -> String {
   let mut s = DefaultHasher::new();
@@ -327,7 +330,7 @@ pub fn av_scenechange_detect(
     progress_bar::init_progress_bar(total_frames as u64);
   }
 
-  let mut frames = av1an_scene_detection::av_scenechange::scene_detect(
+  let mut frames = crate::scene_detect::scene_detect(
     Path::new(input),
     if verbosity == Verbosity::Quiet {
       None
@@ -875,7 +878,7 @@ impl Project {
         wrong_param, self.encoder,
       );
       if let Some(suggestion) = suggest_fix(wrong_param, &valid_params) {
-        eprintln!("\tDid you mean '{}'?", suggestion)
+        eprintln!("\tDid you mean '{}'?", suggestion);
       }
     }
 
@@ -1005,11 +1008,7 @@ impl Project {
       |path| Path::new(&path).to_path_buf(),
     );
 
-    let mut scenes = if self.scenes.is_some() && scene_file.exists() {
-      crate::split::read_scenes_from_file(scene_file.as_path())
-        .unwrap()
-        .0
-    } else if self.resume {
+    let mut scenes = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())
         .unwrap()
         .0
@@ -1429,7 +1428,7 @@ impl Project {
           crate::concat::ivf(&Path::new(&temp).join("encode"), Path::new(&output_file)).unwrap();
         }
         ConcatMethod::MKVMerge => {
-          crate::concat::mkvmerge(temp.clone(), output_file.clone()).unwrap()
+          crate::concat::mkvmerge(temp.clone(), output_file.clone()).unwrap();
         }
         ConcatMethod::FFmpeg => {
           crate::concat::ffmpeg(temp.clone(), output_file.clone(), encoder);

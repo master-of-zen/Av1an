@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::path::Path;
 
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
 use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
 use clap::Clap;
+use path_abs::{PathAbs, PathInfo};
 
 pub fn main() {
   let args = Args::parse();
@@ -19,7 +19,7 @@ pub fn main() {
   // Unify Project/Args
   let mut project = Project {
     frames: 0,
-    is_vs: is_vapoursynth(&args.input.to_str().unwrap()),
+    is_vs: is_vapoursynth(args.input.to_str().unwrap()),
     logging: if let Some(log_file) = args.logging {
       Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
@@ -43,16 +43,20 @@ pub fn main() {
       Vec::new()
     },
     output_file: if let Some(output) = args.output_file {
-      if !output.parent().unwrap().exists() && output.parent().unwrap() == PathBuf::new() {
-        // ^ Check if path is file in current folder
-        output.to_str().unwrap().to_owned()
-      } else if output.parent().unwrap().exists() {
-        // ^ Check if path to the file valid
-        output.to_str().unwrap().to_owned()
-      } else {
-        println!("Path to file is invalid {:#?}", &output);
-        exit(1);
+      let output = PathAbs::new(output).expect(
+        "Failed to canonicalize output path: the output file must have a valid parent directory",
+      );
+
+      if !output
+        .parent()
+        .expect("Failed to get parent directory of canonicalized path")
+        .exists()
+      {
+        eprintln!("Path to file is invalid: {:?}", &output);
+        std::process::exit(1);
       }
+
+      output.to_str().unwrap().to_owned()
     } else {
       format!(
         "{}_{}.mkv",

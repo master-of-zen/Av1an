@@ -144,7 +144,7 @@ pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Err
     .map(Result::unwrap)
     .collect();
 
-  files.sort_by_key(std::fs::DirEntry::path);
+  files.sort_by_key(DirEntry::path);
 
   let mut cmd = Command::new("mkvmerge");
   cmd.args([

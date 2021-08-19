@@ -12,7 +12,14 @@ pub fn scene_detect(
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
   is_vs: bool,
+  fast_analysis: bool,
 ) -> anyhow::Result<Vec<usize>> {
+  let filters: &[&str] = if fast_analysis {
+    &["-pix_fmt", "yuv420p", "-vf", "scale=360:-2"]
+  } else {
+    &["-pix_fmt", "yuv420p"]
+  };
+
   Ok(
     detect_scene_changes::<_, u8>(
       &mut y4m::Decoder::new(if is_vs {
@@ -29,17 +36,9 @@ pub fn scene_detect(
 
           Command::new("ffmpeg")
             .stdin(vspipe)
-            .args(&[
-              "-i",
-              "pipe:",
-              "-f",
-              "yuv4mpegpipe",
-              "-pix_fmt",
-              "yuv420p",
-              "-vf",
-              "scale=360:-2",
-              "-",
-            ])
+            .args(&["-i", "pipe:", "-f", "yuv4mpegpipe"])
+            .args(filters)
+            .arg("-")
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?
@@ -50,15 +49,8 @@ pub fn scene_detect(
         Command::new("ffmpeg")
           .arg("-i")
           .arg(src)
-          .args(&[
-            "-pix_fmt",
-            "yuv420p",
-            "-vf",
-            "scale=360:-2",
-            "-f",
-            "yuv4mpegpipe",
-            "-",
-          ])
+          .args(filters)
+          .args(&["-f", "yuv4mpegpipe", "-"])
           .stdout(Stdio::piped())
           .stderr(Stdio::null())
           .spawn()?
@@ -68,6 +60,7 @@ pub fn scene_detect(
       DetectionOptions {
         ignore_flashes: true,
         min_scenecut_distance: Some(min_scene_len),
+        fast_analysis,
         ..Default::default()
       },
       callback,

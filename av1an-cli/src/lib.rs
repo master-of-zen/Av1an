@@ -55,7 +55,7 @@ pub struct Args {
   pub scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[clap(long, possible_values=&["av-scenechange", "none"], default_value = "av-scenechange")]
+  #[clap(long, possible_values=&["av-scenechange", "av-scenechange-fast", "none"], default_value = "av-scenechange")]
   pub split_method: SplitMethod,
 
   /// Number of frames after which make split

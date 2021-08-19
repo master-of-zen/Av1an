@@ -110,6 +110,8 @@ impl Display for ConcatMethod {
 pub enum SplitMethod {
   #[strum(serialize = "av-scenechange")]
   AvScenechange,
+  #[strum(serialize = "av-scenechange-fast")]
+  AvScenechangeFast,
   #[strum(serialize = "none")]
   None,
 }
@@ -318,6 +320,7 @@ pub fn av_scenechange_detect(
   min_scene_len: usize,
   verbosity: Verbosity,
   is_vs: bool,
+  fast_analysis: bool,
 ) -> anyhow::Result<Vec<usize>> {
   if verbosity != Verbosity::Quiet {
     println!("Scene detection");
@@ -335,6 +338,7 @@ pub fn av_scenechange_detect(
     },
     min_scene_len,
     is_vs,
+    fast_analysis,
   )?;
 
   progress_bar::finish_progress_bar();
@@ -974,6 +978,16 @@ impl Project {
         self.min_scene_len,
         self.verbosity,
         self.is_vs,
+        false,
+      )
+      .unwrap(),
+      SplitMethod::AvScenechangeFast => av_scenechange_detect(
+        &self.input,
+        self.frames,
+        self.min_scene_len,
+        self.verbosity,
+        self.is_vs,
+        true,
       )
       .unwrap(),
       SplitMethod::None => Vec::with_capacity(0),

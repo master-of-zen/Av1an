@@ -32,9 +32,8 @@ pub fn get_frame_count(source: impl AsRef<Path>) -> usize {
   let re = Regex::new(r".*frame=\s*([0-9]+)\s").unwrap();
   let output = String::from_utf8(out.stderr).unwrap();
 
-  let cap = re.captures(&output).unwrap();
-
-  cap[cap.len() - 1].parse::<usize>().unwrap()
+  let cap = re.captures_iter(&output).last().unwrap();
+  cap[1].parse::<usize>().unwrap()
 }
 
 /// Returns vec of all keyframes

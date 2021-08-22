@@ -20,7 +20,7 @@ use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::cmp::Ordering;
-use std::fmt::{Display, Error};
+use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
@@ -28,7 +28,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{atomic, mpsc};
 use sysinfo::SystemExt;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail, ensure, Context};
 use once_cell::sync::{Lazy, OnceCell};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -225,8 +225,8 @@ struct Baz {
   frames: Vec<Bar>,
 }
 
-pub fn read_file_to_string(file: impl AsRef<Path>) -> Result<String, Error> {
-  Ok(fs::read_to_string(&file).unwrap_or_else(|_| panic!("Can't open file {:?}", file.as_ref())))
+pub fn read_file_to_string(file: impl AsRef<Path>) -> anyhow::Result<String> {
+  fs::read_to_string(&file).with_context(|| format!("Can't open file {:?}", file.as_ref()))
 }
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
@@ -763,10 +763,10 @@ impl Project {
       Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
     ) && self.concat == ConcatMethod::Ivf
     {
-      panic!(".ivf only supports VP8, VP9, and AV1");
+      bail!(".ivf only supports VP8, VP9, and AV1");
     }
 
-    assert!(
+    ensure!(
       Path::new(&self.input).exists(),
       "Input file {:?} does not exist!",
       self.input
@@ -775,11 +775,11 @@ impl Project {
     self.is_vs = is_vapoursynth(&self.input);
 
     if which::which("ffmpeg").is_err() {
-      panic!("No FFmpeg");
+      bail!("No FFmpeg");
     }
 
     if let Some(ref vmaf_path) = self.vmaf_path {
-      assert!(Path::new(vmaf_path).exists());
+      ensure!(Path::new(vmaf_path).exists());
     }
 
     if self.probes < 4 {
@@ -802,7 +802,7 @@ impl Project {
     let settings_valid = which::which(&encoder_bin).is_ok();
 
     if !settings_valid {
-      panic!(
+      bail!(
         "Encoder {} not found. Is it installed in the system path?",
         encoder_bin
       );

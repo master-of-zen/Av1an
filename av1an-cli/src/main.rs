@@ -6,7 +6,7 @@ use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
 use clap::Clap;
 use path_abs::{PathAbs, PathInfo};
 
-pub fn main() {
+pub fn main() -> anyhow::Result<()> {
   let args = Args::parse();
 
   let temp = if let Some(path) = args.temp {
@@ -113,6 +113,8 @@ pub fn main() {
   })
   .unwrap();
 
-  project.startup_check().unwrap();
+  project.startup_check()?;
   project.encode_file();
+
+  Ok(())
 }

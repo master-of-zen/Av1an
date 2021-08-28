@@ -354,7 +354,7 @@ impl Encoder {
     new_params
   }
 
-  /// Retuns string for regex to matching encoder progress in cli
+  /// Retuns regex for matching encoder progress in cli
   fn pipe_match(&self) -> &'static Regex {
     match &self {
       Self::aom | Self::vpx => regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) "),

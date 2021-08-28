@@ -1,4 +1,7 @@
 use crate::into_vec;
+use crate::list_index_of_regex;
+use crate::regex;
+
 use serde::{Deserialize, Serialize};
 
 use itertools::chain;
@@ -10,7 +13,11 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use crate::list_index_of_regex;
+const NULL: &'static str = if cfg!(target_os = "windows") {
+  "nul"
+} else {
+  "/dev/null"
+};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
@@ -86,46 +93,19 @@ impl Encoder {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=1"],
         params,
-        into_vec![
-          format!("--fpf={}.log", fpf),
-          "-o",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
-          "-"
-        ],
+        into_vec![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
         into_vec!["rav1e", "-", "-y", "-q"],
         params,
-        into_vec![
-          "--first-pass",
-          format!("{}.stat", fpf),
-          "--output",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
-        ]
+        into_vec!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
       )
       .collect(),
       Self::vpx => chain!(
         into_vec!["vpxenc", "--passes=2", "--pass=1"],
         params,
-        into_vec![
-          format!("--fpf={}.log", fpf),
-          "-o",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
-          "-"
-        ],
+        into_vec![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
       )
       .collect(),
       Self::svt_av1 => chain!(
@@ -145,11 +125,7 @@ impl Encoder {
           "--stats",
           format!("{}.stat", fpf),
           "-b",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
+          NULL,
         ],
       )
       .collect(),
@@ -165,17 +141,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec![
-          "--stats",
-          format!("{}.log", fpf),
-          "-",
-          "-o",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
-        ]
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
       )
       .collect(),
       Self::x265 => chain!(
@@ -190,17 +156,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec![
-          "--stats",
-          format!("{}.log", fpf),
-          "-",
-          "-o",
-          if cfg!(target_os = "windows") {
-            "nul"
-          } else {
-            "/dev/null"
-          },
-        ]
+        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
       )
       .collect(),
     }
@@ -370,13 +326,13 @@ impl Encoder {
     }
   }
 
-  /// Returns string used for regex matching q/crf arguments in command line
-  const fn q_regex_str(&self) -> &str {
+  /// Returns regex used for matching q/crf arguments in command line
+  fn q_regex(&self) -> &'static Regex {
     match &self {
-      Self::aom | Self::vpx => r"--cq-level=.+",
-      Self::rav1e => r"--quantizer",
-      Self::svt_av1 => r"(--qp|-q|--crf)",
-      Self::x264 | Self::x265 => r"--crf",
+      Self::aom | Self::vpx => regex!(r"--cq-level=.+"),
+      Self::rav1e => regex!(r"--quantizer"),
+      Self::svt_av1 => regex!(r"(--qp|-q|--crf)"),
+      Self::x264 | Self::x265 => regex!(r"--crf"),
     }
   }
 
@@ -389,7 +345,7 @@ impl Encoder {
 
   /// Returns changed q/crf in command line arguments
   pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index_of_regex(&params, self.q_regex_str()).unwrap();
+    let index = list_index_of_regex(&params, self.q_regex()).unwrap();
 
     let mut new_params = params;
     let (replace_index, replace_q) = self.replace_q(index, q);
@@ -399,19 +355,19 @@ impl Encoder {
   }
 
   /// Retuns string for regex to matching encoder progress in cli
-  const fn pipe_match(&self) -> &str {
+  fn pipe_match(&self) -> &'static Regex {
     match &self {
-      Self::aom | Self::vpx => r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ",
-      Self::rav1e => r"encoded.*? ([^ ]+?) ",
-      Self::svt_av1 => r"Encoding frame\s+(\d+)",
-      Self::x264 => r"^[^\d]*(\d+)",
-      Self::x265 => r"(\d+) frames",
+      Self::aom | Self::vpx => regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) "),
+      Self::rav1e => regex!(r"encoded.*? ([^ ]+?) "),
+      Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),
+      Self::x264 => regex!(r"^[^\d]*(\d+)"),
+      Self::x265 => regex!(r"(\d+) frames"),
     }
   }
 
   /// Returs option of q/crf value from cli encoder output
   pub fn match_line(self, line: &str) -> Option<usize> {
-    let encoder_regex = Regex::new(self.pipe_match()).unwrap();
+    let encoder_regex = self.pipe_match();
     if !encoder_regex.is_match(line) {
       return Some(0);
     }

@@ -29,7 +29,7 @@ use std::sync::{atomic, mpsc};
 use sysinfo::SystemExt;
 
 use anyhow::{anyhow, bail, ensure, Context};
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::OnceCell;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::progress_bar::finish_progress_bar;
@@ -50,7 +50,6 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io;
 use std::io::Write;
 use std::iter;
 use std::string::ToString;
@@ -71,19 +70,9 @@ pub mod progress_bar;
 pub mod scene_detect;
 pub mod split;
 pub mod target_quality;
+pub mod util;
 pub mod vapoursynth;
 pub mod vmaf;
-
-#[macro_export]
-macro_rules! into_vec {
-  ($($x:expr),* $(,)?) => {
-    vec![
-      $(
-        $x.into(),
-      )*
-    ]
-  };
-}
 
 pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
   let mut p: Vec<String> = into_vec![
@@ -101,9 +90,7 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
   p
 }
 
-pub fn list_index_of_regex(params: &[String], regex_str: &str) -> Option<usize> {
-  let re = Regex::new(regex_str).unwrap();
-
+pub fn list_index_of_regex(params: &[String], re: &Regex) -> Option<usize> {
   assert!(
     !params.is_empty(),
     "List index of regex got empty list of params"
@@ -435,8 +422,6 @@ pub struct Project {
   pub vmaf_filter: Option<String>,
 }
 
-static HELP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+(-\w+|(?:--\w+(?:-\w+)*))").unwrap());
-
 // TODO refactor to make types generic
 fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
   params
@@ -489,23 +474,6 @@ fn get_done() -> &'static DoneJson {
 
 fn init_done(done: DoneJson) -> &'static DoneJson {
   DONE_JSON.get_or_init(|| done)
-}
-
-/// Attempts to create the directory if it does not exist, logging and returning
-/// and error if creating the directory failed.
-macro_rules! create_dir {
-  ($loc:expr) => {
-    match fs::create_dir(&$loc) {
-      Ok(_) => Ok(()),
-      Err(e) => match e.kind() {
-        io::ErrorKind::AlreadyExists => Ok(()),
-        _ => {
-          error!("Error while creating directory {:?}: {}", &$loc, e);
-          Err(e)
-        }
-      },
-    }
-  };
 }
 
 impl Project {
@@ -706,7 +674,7 @@ impl Project {
     )
     .unwrap();
 
-    HELP_REGEX
+    regex!(r"\s+(-\w+|(?:--\w+(?:-\w+)*))")
       .find_iter(&help_text)
       .filter_map(|m| {
         m.as_str()

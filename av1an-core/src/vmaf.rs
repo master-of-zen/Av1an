@@ -150,7 +150,7 @@ pub fn run_vmaf_on_files(
   cmd.arg(
     format!(
       "[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}",
-      res, 
+      res,
       vmaf_filter,
       res,
       file_path.as_os_str().to_str().unwrap(),
@@ -226,7 +226,10 @@ pub fn run_vmaf_on_chunk(
   };
 
   let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
-  let reference = format!("[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];", filter, &res);
+  let reference = format!(
+    "[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];",
+    filter, &res
+  );
 
   let vmaf = if let Some(model) = model {
     format!(

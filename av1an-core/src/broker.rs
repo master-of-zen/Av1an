@@ -73,15 +73,9 @@ impl<'a> Broker<'a> {
 
     info!("Enc: {}, {} fr", chunk.index, chunk.frames);
 
-    // Target Quality mode
-    if self.project.target_quality.is_some() {
-      if let Some(ref method) = self.project.target_quality_method {
-        if method == "per_shot" {
-          if let Some(ref tq) = self.target_quality {
-            tq.per_shot_target_quality_routine(chunk);
-          }
-        }
-      }
+    // TODO change logic if other target quality methods are added in the future
+    if let Some(ref tq) = self.target_quality {
+      tq.per_shot_target_quality_routine(chunk);
     }
 
     // Run all passes for this chunk
@@ -140,8 +134,8 @@ impl<'a> Broker<'a> {
     let actual_frames = frame_probe(&chunk.output_path());
 
     if actual_frames != expected_frames {
-      info!(
-        "Chunk #{}: {}/{} fr",
+      warn!(
+        "FRAME MISMATCH: Chunk #{}: {}/{} fr",
         chunk.index, actual_frames, expected_frames
       );
     }

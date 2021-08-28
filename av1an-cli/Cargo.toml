@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.42"
-clap = "3.0.0-beta.2"
+structopt = "0.3.22"
 serde_json = "1.0.64"
 serde = { version = "1.0.126", features = ["serde_derive"] }
 av1an-core = { path="../av1an-core" }

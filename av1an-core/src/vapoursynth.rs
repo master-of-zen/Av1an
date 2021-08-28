@@ -1,16 +1,8 @@
-#![allow(clippy::mutex_atomic)]
-// This is a mostly drop-in reimplementation of vspipe.
-// The main difference is what the errors look like.
-
-// Modified from vspipe example in vapoursynth crate
-// https://github.com/YaLTeR/vapoursynth-rs/blob/master/vapoursynth/examples/vspipe.rs
-extern crate vapoursynth;
-
 use std::collections::HashSet;
 use std::path::Path;
 
-use self::vapoursynth::prelude::*;
 use super::ChunkMethod;
+use vapoursynth::prelude::*;
 
 use anyhow::anyhow;
 

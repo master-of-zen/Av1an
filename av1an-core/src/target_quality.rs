@@ -98,9 +98,9 @@ impl<'a> TargetQuality<'a> {
         next_q,
         score,
         if score < f64::from(self.target) {
-          "low"
+          Skip::Low
         } else {
-          "high"
+          Skip::High
         },
       );
       return next_q;
@@ -155,7 +155,7 @@ impl<'a> TargetQuality<'a> {
       &chunk.name(),
       q as u32,
       q_vmaf,
-      "",
+      Skip::None,
     );
 
     q as u32
@@ -170,7 +170,7 @@ impl<'a> TargetQuality<'a> {
 
     let cmd = self.encoder.probe_cmd(
       self.temp.clone(),
-      &chunk.name(),
+      chunk.name(),
       q,
       self.ffmpeg_pipe.clone(),
       self.probing_rate,
@@ -200,13 +200,14 @@ impl<'a> TargetQuality<'a> {
 
       let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let pipe = tokio::process::Command::new(cmd.1[0].clone())
-        .args(&cmd.1[1..])
-        .stdin(ffmpeg_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+      let mut pipe = tokio::process::Command::new(&*cmd.1[0]);
+      for arg in &cmd.1[1..] {
+        pipe.arg((*arg).as_ref());
+      }
+      pipe.stdin(ffmpeg_pipe_stdout);
+      pipe.stdout(Stdio::piped());
+      pipe.stderr(Stdio::piped());
+      let pipe = pipe.spawn().unwrap();
 
       process_pipe(pipe, chunk.index).await.unwrap();
     };
@@ -309,6 +310,12 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
   Ok(spline.sample(q).unwrap())
 }
 
+pub enum Skip {
+  High,
+  Low,
+  None,
+}
+
 pub fn log_probes(
   vmaf_cq_scores: Vec<(f64, u32)>,
   frames: u32,
@@ -316,19 +323,21 @@ pub fn log_probes(
   name: &str,
   target_q: u32,
   target_vmaf: f64,
-  skip: &str,
+  skip: Skip,
 ) {
-  let skip_string = match skip {
-    "high" => "Early Skip High Q".to_string(),
-    "low" => "Early Skip Low Q".to_string(),
-    _ => "".to_string(),
-  };
-
   let mut scores_sorted = vmaf_cq_scores;
   scores_sorted.sort_by_key(|x| x.1);
 
   info!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames);
-  info!("Probes {:?} {}", scores_sorted, skip_string);
+  info!(
+    "Probes {:?}{}",
+    scores_sorted,
+    match skip {
+      Skip::High => " Early Skip High Q",
+      Skip::Low => " Early Skip Low Q",
+      _ => "",
+    }
+  );
   info!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf);
 }
 

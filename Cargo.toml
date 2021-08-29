@@ -1,6 +1,31 @@
-[workspace]
+[package]
+name = "Av1an"
+version = "0.1.0-alpha"
+authors = ["Zen <master_of_zen@protonmail.com>"]
+description = """
+Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
+"""
+repository = "https://github.com/master-of-zen/Av1an"
+keywords = ["video"]
+categories = ["command-line-utilities"]
+license = "GNU General Public License v3.0"
+edition = "2018"
 
-members = [
-    "av1an-core",
-    "av1an-cli",
-]
+[[bin]]
+path = "av1an-cli/src/main.rs"
+name = "av1an"
+
+[dependencies]
+anyhow = "1.0.42"
+clap = "3.0.0-beta.2"
+serde_json = "1.0.64"
+serde = { version = "1.0.126", features = ["serde_derive"] }
+shlex = "1.0.0"
+ctrlc = "3.1.9"
+path_abs = "0.5.1"
+av1an-cli = { path = "av1an-cli" }
+av1an-core = { path = "av1an-core" }
+
+
+[workspace]
+members = ["av1an-core", "av1an-cli"]

@@ -581,41 +581,31 @@ impl Encoder {
     }
   }
 
-  // Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
-  pub fn remove_patterns(args: Vec<String>, patterns: Vec<String>) -> Vec<String> {
-    let mut out = args;
+  /// Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
+  pub fn remove_patterns(args: &mut Vec<String>, patterns: &[&str]) {
     for pattern in patterns {
-      if let Some(index) = out.iter().position(|value| value.contains(&pattern)) {
-        out.remove(index);
+      if let Some(index) = args.iter().position(|value| value.contains(pattern)) {
+        args.remove(index);
         // If pattern does not contain =, we need to remove the index that follows.
         if !pattern.contains('=') {
-          out.remove(index);
+          args.remove(index);
         }
       }
     }
-    out
-  }
-
-  // Function unwrap cow strings that take in a vec of strings and returns a vec of strings.
-  pub fn decow_strings(args: &[Cow<str>]) -> Vec<String> {
-    args
-      .iter()
-      .map(ToString::to_string)
-      .collect::<Vec<String>>()
   }
 
   /// Constructs tuple of commands for target quality probing
   pub fn probe_cmd(
     self,
     temp: String,
-    name: &str,
+    name: String,
     q: usize,
     ffmpeg_pipe: Vec<String>,
     probing_rate: usize,
     n_threads: usize,
-    video_params: Vec<String>,
+    mut video_params: Vec<String>,
     probe_slow: bool,
-  ) -> (Vec<String>, Vec<String>) {
+  ) -> (Vec<String>, Vec<Cow<'static, str>>) {
     let pipe: Vec<String> = chain!(
       into_vec![
         "ffmpeg",
@@ -638,28 +628,30 @@ impl Encoder {
     let mut probe = PathBuf::from(temp);
     probe.push("split");
     probe.push(&probe_name);
-    let probe_path = probe.into_os_string().into_string().unwrap();
+    let probe_path = probe.to_str().unwrap().to_owned();
 
-    let mut params;
-    if probe_slow {
-      let mut args = video_params;
-      let patterns = into_vec![
+    let params: Vec<Cow<str>> = if probe_slow {
+      let patterns = [
         "--cq-level=",
         "--passes=",
         "--pass=",
         "--crf",
-        "--quantizer"
+        "--quantizer",
       ];
-      args = Self::remove_patterns(args, patterns);
-      let ps = self.construct_target_quality_command_probe_slow(q);
-      params = Self::decow_strings(&ps);
-      params.append(&mut args);
-    } else {
-      let ps = self.construct_target_quality_command(n_threads, q);
-      params = Self::decow_strings(&ps);
-    }
+      Self::remove_patterns(&mut video_params, &patterns);
+      let mut ps = self.construct_target_quality_command_probe_slow(q);
 
-    let output: Vec<String> = match &self {
+      ps.reserve(video_params.len());
+      for arg in video_params {
+        ps.push(Cow::Owned(arg));
+      }
+
+      ps
+    } else {
+      self.construct_target_quality_command(n_threads, q)
+    };
+
+    let output: Vec<Cow<str>> = match self {
       Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
       Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
         chain!(params, into_vec!["-o", probe_path, "-"]).collect()

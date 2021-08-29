@@ -26,10 +26,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{atomic, mpsc};
-use sysinfo::SystemExt;
 
 use anyhow::{anyhow, bail, ensure, Context};
 use once_cell::sync::OnceCell;
+use sysinfo::SystemExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::progress_bar::finish_progress_bar;
@@ -191,25 +191,25 @@ pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
     return scores[k as usize];
   }
 
-  let d0 = scores[f as usize] as f64 * (c - k);
-  let d1 = scores[f as usize] as f64 * (k - f);
+  let d0 = scores[f as usize] * (c - k);
+  let d1 = scores[f as usize] * (k - f);
 
   d0 + d1
 }
 
 #[derive(Deserialize, Debug)]
-struct Foo {
+struct VmafScore {
   vmaf: f64,
 }
 
 #[derive(Deserialize, Debug)]
-struct Bar {
-  metrics: Foo,
+struct Metrics {
+  metrics: VmafScore,
 }
 
 #[derive(Deserialize, Debug)]
-struct Baz {
-  frames: Vec<Bar>,
+struct VmafResult {
+  frames: Vec<Metrics>,
 }
 
 pub fn read_file_to_string(file: impl AsRef<Path>) -> anyhow::Result<String> {
@@ -218,7 +218,7 @@ pub fn read_file_to_string(file: impl AsRef<Path>) -> anyhow::Result<String> {
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
   let json_str = read_file_to_string(file).unwrap();
-  let bazs = serde_json::from_str::<Baz>(&json_str)?;
+  let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
   let v = bazs
     .frames
     .into_iter()
@@ -648,11 +648,8 @@ impl Project {
         create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
       };
       let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
-      if fr > 0 {
-        fr
-      } else {
-        panic!("vapoursynth reported 0 frames")
-      }
+      assert!(fr != 0, "vapoursynth reported 0 frames");
+      fr
     } else {
       ffmpeg::get_frame_count(&self.input)
     };
@@ -883,26 +880,26 @@ impl Project {
     let frames = frame_end - frame_start;
     frame_end -= 1;
 
-    let ffmpeg_gen_cmd: Vec<String> = vec![
-      "ffmpeg".into(),
-      "-y".into(),
-      "-hide_banner".into(),
-      "-loglevel".into(),
-      "error".into(),
-      "-i".into(),
+    let ffmpeg_gen_cmd: Vec<String> = into_vec![
+      "ffmpeg",
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
       src_path.to_string(),
-      "-vf".into(),
+      "-vf",
       format!(
         "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
         frame_start, frame_end
       ),
-      "-pix_fmt".into(),
+      "-pix_fmt",
       self.pix_format.clone(),
-      "-strict".into(),
-      "-1".into(),
-      "-f".into(),
-      "yuv4mpegpipe".into(),
-      "-".into(),
+      "-strict",
+      "-1",
+      "-f",
+      "yuv4mpegpipe",
+      "-",
     ];
 
     let output_ext = self.encoder.output_extension().to_owned();
@@ -1178,8 +1175,8 @@ impl Project {
     crossbeam_utils::thread::scope(|s| {
       let audio_thread = if !self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst) {
         // Required outside of closure due to borrow checker errors
-        let input = &self.input;
-        let temp = &self.temp;
+        let input = self.input.as_str();
+        let temp = self.temp.as_str();
         let audio_params = self.audio_params.as_slice();
         Some(s.spawn(move |_| {
           let audio_output_exists = ffmpeg::encode_audio(input, temp, audio_params);

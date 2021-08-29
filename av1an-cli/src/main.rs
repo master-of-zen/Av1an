@@ -3,11 +3,12 @@ use std::path::Path;
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
 use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
-use clap::Clap;
 use path_abs::{PathAbs, PathInfo};
 
+use structopt::StructOpt;
+
 pub fn main() -> anyhow::Result<()> {
-  let args = Args::parse();
+  let args = Args::from_args();
 
   let temp = if let Some(path) = args.temp {
     path.to_str().unwrap().to_owned()

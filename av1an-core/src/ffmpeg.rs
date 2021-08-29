@@ -1,5 +1,6 @@
+use crate::regex;
+
 use path_abs::{PathAbs, PathInfo};
-use regex::Regex;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -29,10 +30,12 @@ pub fn get_frame_count(source: impl AsRef<Path>) -> usize {
 
   assert!(out.status.success());
 
-  let re = Regex::new(r".*frame=\s*([0-9]+)\s").unwrap();
   let output = String::from_utf8(out.stderr).unwrap();
 
-  let cap = re.captures_iter(&output).last().unwrap();
+  let cap = regex!(r".*frame=\s*([0-9]+)\s")
+    .captures_iter(&output)
+    .last()
+    .unwrap();
   cap[1].parse::<usize>().unwrap()
 }
 
@@ -60,10 +63,9 @@ pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
   let out = cmd.output().unwrap();
   assert!(out.status.success());
 
-  let re = Regex::new(r".*n:([0-9]+)\.[0-9]+ pts:.+key:1").unwrap();
   let output = String::from_utf8(out.stderr).unwrap();
   let mut kfs: Vec<usize> = vec![];
-  for found in re.captures_iter(&output) {
+  for found in regex!(r".*n:([0-9]+)\.[0-9]+ pts:.+key:1").captures_iter(&output) {
     kfs.push(found.get(1).unwrap().as_str().parse::<usize>().unwrap());
   }
 
@@ -81,15 +83,13 @@ pub fn has_audio(file: &Path) -> bool {
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
-  let re = Regex::new(r".*Stream.+(Audio)").unwrap();
-
   cmd.args(&["-hide_banner", "-i", file.to_str().unwrap()]);
 
   let out = cmd.output().unwrap();
 
   let output = String::from_utf8(out.stderr).unwrap();
 
-  re.is_match(&output)
+  regex!(r".*Stream.+(Audio)").is_match(&output)
 }
 
 /// Encodes the audio using FFmpeg, blocking the current thread.

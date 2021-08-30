@@ -14,4 +14,4 @@ edition = "2018"
 [dependencies]
 structopt = "0.3.22"
 serde = { version = "1.0.126", features = ["serde_derive"] }
-av1an-core = { path = "../av1an-core" }
+av1an-core = { path = "../av1an-core", version = "0.1.0" }

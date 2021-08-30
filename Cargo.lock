@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-core"
-version = "0.1.2"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "av-format",

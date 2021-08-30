@@ -24,7 +24,7 @@ ctrlc = "3.1.9"
 path_abs = "0.5.1"
 structopt = "0.3.22"
 av1an-cli = { path = "av1an-cli", version = "0.1.0" }
-av1an-core = { path = "av1an-core", version = "0.1.2" }
+av1an-core = { path = "av1an-core", version = "0.1.0" }
 
 
 [workspace]

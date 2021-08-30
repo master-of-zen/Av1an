@@ -1,6 +1,14 @@
 [package]
 name = "av1an-cli"
 version = "0.1.0"
+authors = ["Zen <master_of_zen@protonmail.com>"]
+description = """
+Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Command line library]
+"""
+repository = "https://github.com/master-of-zen/Av1an"
+keywords = ["video"]
+categories = ["command-line-utilities"]
+license = "GNU General Public License v3.0"
 edition = "2018"
 
 [dependencies]

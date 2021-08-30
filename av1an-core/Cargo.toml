@@ -1,7 +1,15 @@
 [package]
 name = "av1an-core"
-version = "0.1.2"
+version = "0.1.0"
 edition = "2018"
+authors = ["Zen <master_of_zen@protonmail.com>"]
+description = """
+Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Core library]
+"""
+repository = "https://github.com/master-of-zen/Av1an"
+keywords = ["video"]
+categories = ["command-line-utilities"]
+license = "GNU General Public License v3.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

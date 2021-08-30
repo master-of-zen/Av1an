@@ -173,8 +173,12 @@ dependencies = [
 name = "av1an-cli"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "av1an-core",
+ "ctrlc",
+ "path_abs",
  "serde",
+ "shlex",
  "structopt",
 ]
 

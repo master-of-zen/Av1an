@@ -8,7 +8,7 @@ Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per 
 repository = "https://github.com/master-of-zen/Av1an"
 keywords = ["video"]
 categories = ["command-line-utilities"]
-license = "GNU General Public License v3.0"
+license = "GPL-3.0"
 edition = "2018"
 
 [[bin]]

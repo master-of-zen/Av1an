@@ -1,11 +1,37 @@
-use std::path::Path;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 
+use anyhow::Context;
 use av1an_cli::Args;
 use av1an_core::vapoursynth;
 use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
 use path_abs::{PathAbs, PathInfo};
 
 use structopt::StructOpt;
+
+fn confirm(prompt: &str) -> io::Result<bool> {
+  let mut buf = String::with_capacity(4);
+  let mut stdout = io::stdout();
+  let stdin = io::stdin();
+  loop {
+    stdout.write_all(prompt.as_bytes())?;
+    stdout.flush()?;
+    stdin.read_line(&mut buf)?;
+
+    match buf.as_str() {
+      "y\n" | "Y\n" => break Ok(true),
+      "n\n" | "N\n" => break Ok(false),
+      other => {
+        println!(
+          "Sorry, response {:?} is not understood.",
+          &other.get(..other.len().saturating_sub(1)).unwrap_or("")
+        );
+        buf.clear();
+        continue;
+      }
+    }
+  }
+}
 
 pub fn main() -> anyhow::Result<()> {
   let args = Args::from_args();
@@ -44,9 +70,19 @@ pub fn main() -> anyhow::Result<()> {
       Vec::new()
     },
     output_file: if let Some(output) = args.output_file {
-      let output = PathAbs::new(output).expect(
+      if output.exists() {
+        if !confirm(&format!(
+          "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          output
+        ))? {
+          println!("Not overwriting, aborting.");
+          return Ok(());
+        }
+      }
+
+      let output = PathAbs::new(output).context(
         "Failed to canonicalize output path: the output file must have a valid parent directory",
-      );
+      )?;
 
       if !output
         .parent()
@@ -59,11 +95,23 @@ pub fn main() -> anyhow::Result<()> {
 
       output.to_str().unwrap().to_owned()
     } else {
-      format!(
+      let default_path = format!(
         "{}_{}.mkv",
         args.input.file_stem().unwrap().to_str().unwrap(),
         args.encoder
-      )
+      );
+
+      if PathBuf::from(&default_path).exists() {
+        if !confirm(&format!(
+          "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          &default_path
+        ))? {
+          println!("Not overwriting, aborting.");
+          return Ok(());
+        }
+      }
+
+      default_path
     },
     audio_params: if let Some(params) = args.audio_params {
       shlex::split(&params).unwrap_or_else(|| vec!["-c:a".into(), "copy".into()])

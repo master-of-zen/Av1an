@@ -1,5 +1,5 @@
 [package]
-name = "Av1an"
+name = "av1an"
 version = "0.1.0-alpha"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
@@ -12,7 +12,7 @@ license = "GPL-3.0"
 edition = "2018"
 
 [[bin]]
-path = "av1an-cli/src/main.rs"
+path = "src/main.rs"
 name = "av1an"
 
 [dependencies]
@@ -23,7 +23,7 @@ shlex = "1.0.0"
 ctrlc = "3.1.9"
 path_abs = "0.5.1"
 structopt = "0.3.22"
-av1an-cli = { path = "av1an-cli", version = "0.1.0" }
+av1an-cli = { path = "av1an-cli", version = "0.1.1" }
 av1an-core = { path = "av1an-core", version = "0.1.0" }
 
 

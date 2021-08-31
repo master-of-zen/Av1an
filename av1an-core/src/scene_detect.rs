@@ -1,5 +1,5 @@
-use crate::{progress_bar, Verbosity};
-use av_scenechange::{detect_scene_changes, DetectionOptions};
+use crate::{into_vec, progress_bar, ScenecutMethod, Verbosity};
+use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
 use std::{
   path::Path,
@@ -12,7 +12,8 @@ pub fn av_scenechange_detect(
   min_scene_len: usize,
   verbosity: Verbosity,
   is_vs: bool,
-  fast_analysis: bool,
+  sc_method: ScenecutMethod,
+  sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
   if verbosity != Verbosity::Quiet {
     println!("Scene detection");
@@ -30,7 +31,8 @@ pub fn av_scenechange_detect(
     },
     min_scene_len,
     is_vs,
-    fast_analysis,
+    sc_method,
+    sc_downscale_height,
   )?;
 
   progress_bar::finish_progress_bar();
@@ -52,12 +54,18 @@ pub fn scene_detect(
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
   is_vs: bool,
-  fast_analysis: bool,
+  sc_method: ScenecutMethod,
+  sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
-  let filters: &[&str] = if fast_analysis {
-    &["-pix_fmt", "yuv420p", "-vf", "scale=360:-2"]
+  let filters: Vec<String> = if let Some(downscale_height) = sc_downscale_height {
+    into_vec![
+      "-pix_fmt",
+      "yuv420p",
+      "-vf",
+      format!("scale=-2:'min({},ih)'", downscale_height)
+    ]
   } else {
-    &["-pix_fmt", "yuv420p"]
+    into_vec!["-pix_fmt", "yuv420p"]
   };
 
   Ok(
@@ -100,7 +108,11 @@ pub fn scene_detect(
       DetectionOptions {
         ignore_flashes: true,
         min_scenecut_distance: Some(min_scene_len),
-        fast_analysis,
+        fast_analysis: match sc_method {
+          ScenecutMethod::Fast => SceneDetectionSpeed::Fast,
+          ScenecutMethod::Medium => SceneDetectionSpeed::Medium,
+          ScenecutMethod::Slow => SceneDetectionSpeed::Slow,
+        },
         ..Default::default()
       },
       callback,

@@ -93,10 +93,18 @@ pub fn list_index_of_regex(params: &[String], re: &Regex) -> Option<usize> {
 pub enum SplitMethod {
   #[strum(serialize = "av-scenechange")]
   AvScenechange,
-  #[strum(serialize = "av-scenechange-fast")]
-  AvScenechangeFast,
   #[strum(serialize = "none")]
   None,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, strum::EnumString, strum::IntoStaticStr)]
+pub enum ScenecutMethod {
+  #[strum(serialize = "fast")]
+  Fast,
+  #[strum(serialize = "medium")]
+  Medium,
+  #[strum(serialize = "slow")]
+  Slow,
 }
 
 #[derive(

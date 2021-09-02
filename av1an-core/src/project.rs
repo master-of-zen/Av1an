@@ -255,11 +255,11 @@ impl Project {
       } else {
         create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
       };
-      let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
+      let fr = vapoursynth::num_frames(vs.as_ref()).unwrap();
       assert!(fr != 0, "vapoursynth reported 0 frames");
       fr
     } else {
-      ffmpeg::get_frame_count(&self.input)
+      ffmpeg::num_frames(self.input.as_ref()).unwrap()
     };
 
     self.frames

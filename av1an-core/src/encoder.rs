@@ -4,7 +4,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
 
-const NULL: &'static str = if cfg!(target_os = "windows") {
+const NULL: &str = if cfg!(target_os = "windows") {
   "nul"
 } else {
   "/dev/null"
@@ -318,7 +318,7 @@ impl Encoder {
   }
 
   /// Returns regex used for matching q/crf arguments in command line
-  fn q_regex(&self) -> &'static Regex {
+  fn q_regex(self) -> &'static Regex {
     match &self {
       Self::aom | Self::vpx => regex!(r"--cq-level=.+"),
       Self::rav1e => regex!(r"--quantizer"),
@@ -346,8 +346,8 @@ impl Encoder {
   }
 
   /// Retuns regex for matching encoder progress in cli
-  fn pipe_match(&self) -> &'static Regex {
-    match &self {
+  fn pipe_match(self) -> &'static Regex {
+    match self {
       Self::aom | Self::vpx => regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) "),
       Self::rav1e => regex!(r"encoded.*? ([^ ]+?) "),
       Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),
@@ -572,7 +572,7 @@ impl Encoder {
     }
   }
 
-  /// Function remove_patterns that takes in args and patterns and removes all instances of the patterns from the args.
+  /// Function `remove_patterns` that takes in args and patterns and removes all instances of the patterns from the args.
   pub fn remove_patterns(args: &mut Vec<String>, patterns: &[&str]) {
     for pattern in patterns {
       if let Some(index) = args.iter().position(|value| value.contains(pattern)) {

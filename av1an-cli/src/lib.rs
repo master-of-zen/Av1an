@@ -267,7 +267,7 @@ pub fn cli() -> anyhow::Result<()> {
     ffmpeg_pipe: Vec::new(),
     chunk_method: args
       .chunk_method
-      .unwrap_or_else(|| vapoursynth::select_chunk_method().unwrap()),
+      .unwrap_or_else(vapoursynth::best_available_chunk_method),
     concat: args.concat,
     encoder: args.encoder,
     extra_splits_len: Some(args.extra_split),

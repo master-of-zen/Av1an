@@ -189,7 +189,7 @@ pub fn plot_vmaf(
 ) -> Result<(), Error> {
   let source = source.as_ref();
   let output = output.as_ref();
-  let model = model.as_ref().map(|path| path.as_ref());
+  let model = model.as_ref().map(AsRef::as_ref);
 
   println!(":: VMAF Run");
 

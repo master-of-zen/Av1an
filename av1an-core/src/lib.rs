@@ -8,6 +8,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::if_not_else)]
 
 #[macro_use]
 extern crate log;
@@ -172,10 +173,9 @@ pub fn hash_path(path: &str) -> String {
 
 fn frame_probe(source: &str) -> usize {
   if is_vapoursynth(source) {
-    crate::vapoursynth::num_frames(Path::new(source)).unwrap()
+    vapoursynth::num_frames(source.as_ref()).unwrap()
   } else {
-    // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
-    ffmpeg::get_frame_count(source)
+    ffmpeg::num_frames(source.as_ref()).unwrap()
   }
 }
 

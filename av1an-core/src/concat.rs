@@ -5,8 +5,9 @@ use av_format::muxer::Context as MuxerContext;
 use av_ivf::demuxer::IvfDemuxer;
 use av_ivf::muxer::IvfMuxer;
 use path_abs::PathAbs;
-use std::fs::DirEntry;
-use std::fs::{read_dir, File};
+
+use std::fs;
+use std::fs::{read_dir, DirEntry, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -29,7 +30,7 @@ pub fn sort_files_by_filename(files: &mut [PathBuf]) {
 }
 
 pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
-  let mut files: Vec<PathBuf> = std::fs::read_dir(input)?
+  let mut files: Vec<PathBuf> = fs::read_dir(input)?
     .into_iter()
     .filter_map(Result::ok)
     .filter_map(|d| {
@@ -133,7 +134,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
 pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Error> {
   let mut encode_folder = PathBuf::from(encode_folder);
 
-  let mut audio_file = PathBuf::from(encode_folder.as_os_str());
+  let mut audio_file = PathBuf::from(&encode_folder);
   audio_file.push("audio.mkv");
 
   encode_folder.push("encode");
@@ -144,29 +145,66 @@ pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Err
     .map(Result::unwrap)
     .collect();
 
+  assert!(!files.is_empty());
+
   files.sort_by_key(DirEntry::path);
 
   let mut cmd = Command::new("mkvmerge");
-  cmd.args([
-    "-o",
-    output.as_os_str().to_str().unwrap(),
-    "--append-mode",
-    "file",
-  ]);
+  cmd.arg("-o");
+  cmd.arg(output);
+  cmd.args(["--append-mode", "file"]);
 
   if audio_file.exists() {
-    cmd.arg(audio_file.as_os_str().to_str().unwrap());
-  };
-
-  let mut append_args = Vec::new();
-  for fl in files {
-    append_args.push(fl.path().as_os_str().to_str().unwrap().to_string());
-    append_args.push("+".to_string());
+    cmd.arg(audio_file);
   }
-  append_args.pop().unwrap();
 
-  cmd.args(append_args);
-  cmd.output().unwrap();
+  // `std::process::Command` does not support removing arguments after they have been added,
+  // so we have to add all elements without adding any extra that are later removed. This
+  // complicates the logic slightly, but in turn does not perform any unnecessary allocations
+  // or copy from a temporary data structure.
+  if files.len() % 2 != 0 {
+    let mut chunks = files.chunks_exact(2);
+    for files in &mut chunks {
+      // Each chunk always has exactly 2 elements.
+      for file in files {
+        cmd.arg(file.path());
+        cmd.arg("+");
+      }
+    }
+    // The remainder is always *exactly* one element since are using `chunks_exact(2)`, and we
+    // asserted that the length `files` is odd and nonzero in this branch.
+    cmd.arg(chunks.remainder()[0].path());
+  } else {
+    // The total number of elements at this point is even, and there are at *least* 2 elements,
+    // since `files` is not empty and the case of exactly one element would have been handled by
+    // the previous `if`, so we get the last 2 to handle them separately from the other pairs of 2,
+    // so as to not add a trailing "+" at the end.
+
+    // `files.len() - 2` cannot overflow, as `files.len()` is at least 2 here.
+    let (start, end) = files.split_at(files.len() - 2);
+
+    // `start` will be empty if there are exactly 2 elements in `files`, in which case
+    // this loop will not run.
+    for file in start {
+      cmd.arg(file.path());
+      cmd.arg("+");
+    }
+
+    // There are always *exactly* 2 elements in `end`, since we used `split_at(files.len() - 2)`,
+    // which will always succeed given that `files` has at least 2 elements at this point.
+    cmd.arg(end[0].path());
+    cmd.arg("+");
+    cmd.arg(end[1].path());
+  }
+
+  let output = cmd.output()?;
+
+  assert!(
+    output.status.success(),
+    "mkvmerge failed with output: {:?}",
+    output
+  );
+
   Ok(())
 }
 

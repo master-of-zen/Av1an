@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-const NULL: &'static str = if cfg!(target_os = "windows") {
+const NULL: &str = if cfg!(target_os = "windows") {
   "nul"
 } else {
   "/dev/null"
@@ -327,7 +327,7 @@ impl Encoder {
   }
 
   /// Returns regex used for matching q/crf arguments in command line
-  fn q_regex(&self) -> &'static Regex {
+  fn q_regex(self) -> &'static Regex {
     match &self {
       Self::aom | Self::vpx => regex!(r"--cq-level=.+"),
       Self::rav1e => regex!(r"--quantizer"),
@@ -355,8 +355,8 @@ impl Encoder {
   }
 
   /// Retuns regex for matching encoder progress in cli
-  fn pipe_match(&self) -> &'static Regex {
-    match &self {
+  fn pipe_match(self) -> &'static Regex {
+    match self {
       Self::aom | Self::vpx => regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) "),
       Self::rav1e => regex!(r"encoded.*? ([^ ]+?) "),
       Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),

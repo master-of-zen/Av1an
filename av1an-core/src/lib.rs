@@ -8,6 +8,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::if_not_else)]
 
 #[macro_use]
 extern crate log;
@@ -27,7 +28,7 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{atomic, mpsc};
 
-use anyhow::{anyhow, bail, ensure, Context};
+use anyhow::{bail, ensure, Context};
 use once_cell::sync::OnceCell;
 use sysinfo::SystemExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -41,6 +42,7 @@ use crate::progress_bar::{
 use crate::split::extra_splits;
 use crate::split::segment;
 use crate::split::write_scenes_to_file;
+use crate::vapoursynth::create_vs_file;
 use crate::vmaf::plot_vmaf;
 
 use std::cmp::Reverse;
@@ -243,63 +245,12 @@ pub fn hash_path(path: &str) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn create_vs_file(temp: &str, source: &str, chunk_method: ChunkMethod) -> anyhow::Result<String> {
-  // only for python code, remove if being called by rust
-  let temp = Path::new(temp);
-  let source = Path::new(source).canonicalize()?;
-
-  let load_script_path = temp.join("split").join("loadscript.vpy");
-
-  if load_script_path.exists() {
-    return Ok(load_script_path.to_string_lossy().to_string());
-  }
-  let mut load_script = File::create(&load_script_path)?;
-
-  let cache_file = PathAbs::new(temp.join("split").join(format!(
-    "cache.{}",
-    match chunk_method {
-      ChunkMethod::FFMS2 => "ffindex",
-      ChunkMethod::LSMASH => "lwi",
-      _ => return Err(anyhow!("invalid chunk method")),
-    }
-  )))
-  .unwrap();
-
-  load_script.write_all(
-    // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
-    format!(
-      "from vapoursynth import core\n\
-core.{}({:?}, cachefile={:?}).set_output()",
-      match chunk_method {
-        ChunkMethod::FFMS2 => "ffms2.Source",
-        ChunkMethod::LSMASH => "lsmas.LWLibavSource",
-        _ => unreachable!(),
-      },
-      source,
-      cache_file
-    )
-    .as_bytes(),
-  )?;
-
-  // TODO use vapoursynth crate instead
-  Command::new("vspipe")
-    .arg("-i")
-    .arg(&load_script_path)
-    .args(&["-i", "-"])
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()?
-    .wait()?;
-
-  Ok(load_script_path.to_string_lossy().to_string())
-}
-
+#[inline]
 fn frame_probe(source: &str) -> usize {
   if is_vapoursynth(source) {
-    crate::vapoursynth::num_frames(Path::new(source)).unwrap()
+    vapoursynth::num_frames_script(source.as_ref()).unwrap()
   } else {
-    // TODO evaluate vapoursynth script in-memory if ffms2 or lsmash exists
-    ffmpeg::get_frame_count(source)
+    vapoursynth::FRAME_COUNT_FN(source.as_ref()).unwrap()
   }
 }
 
@@ -317,7 +268,7 @@ pub fn av_scenechange_detect(
   }
 
   let mut frames = crate::scene_detect::scene_detect(
-    Path::new(input),
+    input.as_ref(),
     if verbosity == Verbosity::Quiet {
       None
     } else {
@@ -640,18 +591,18 @@ impl Project {
     }
 
     self.frames = if self.is_vs {
-      vapoursynth::num_frames(Path::new(&self.input)).unwrap()
+      vapoursynth::num_frames_script(Path::new(&self.input)).unwrap()
     } else if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
       let vs = if self.is_vs {
         self.input.clone()
       } else {
         create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
       };
-      let fr = vapoursynth::num_frames(Path::new(&vs)).unwrap();
+      let fr = vapoursynth::num_frames_script(vs.as_ref()).unwrap();
       assert!(fr != 0, "vapoursynth reported 0 frames");
       fr
     } else {
-      ffmpeg::get_frame_count(&self.input)
+      ffmpeg::get_frame_count(self.input.as_ref()).unwrap()
     };
 
     self.frames

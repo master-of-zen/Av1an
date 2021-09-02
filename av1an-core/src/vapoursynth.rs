@@ -115,13 +115,10 @@ pub static FRAME_COUNT_FN: Lazy<fn(&Path) -> anyhow::Result<usize>> = Lazy::new(
     };
   }
 
-  // FFMS2 is preferred over L-SMASH for getting the number of frames of a clip
-  // since it correctly handles clips encoded with `--enable-keyframe-filtering=2`,
-  // while L-SMASH seems to crash
-  if VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2") {
-    create_eval_fn!("ffms2.Source")
-  } else if VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas") {
+  if VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas") {
     create_eval_fn!("lsmas.LWLibavSource")
+  } else if VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2") {
+    create_eval_fn!("ffms2.Source")
   } else {
     ffmpeg::get_frame_count
   }

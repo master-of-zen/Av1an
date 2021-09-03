@@ -3,13 +3,17 @@ use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use structopt::clap::AppSettings::ColoredHelp;
-use structopt::StructOpt;
+use structopt::{clap::AppSettings::ColoredHelp, StructOpt};
 
-use av1an_core::encoder::Encoder;
-use av1an_core::vapoursynth;
-use av1an_core::{hash_path, is_vapoursynth, Project, Verbosity};
-use av1an_core::{ChunkMethod, ConcatMethod, SplitMethod};
+use av1an_core::{
+  encoder::Encoder,
+  hash_path,
+  project::Project,
+  vapoursynth,
+  vapoursynth::is_vapoursynth,
+  Verbosity,
+  {concat::ConcatMethod, ChunkMethod, SplitMethod},
+};
 
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
 #[derive(StructOpt, Debug, Serialize, Deserialize)]

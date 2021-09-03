@@ -1,10 +1,20 @@
-use std::collections::HashSet;
-use std::path::Path;
+use std::{
+  collections::HashSet,
+  fs::File,
+  io::Write,
+  path::Path,
+  process::{Command, Stdio},
+};
 
 use super::ChunkMethod;
+use path_abs::PathAbs;
 use vapoursynth::prelude::*;
 
 use anyhow::anyhow;
+
+pub fn is_vapoursynth(s: &str) -> bool {
+  [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
+}
 
 pub fn select_chunk_method() -> anyhow::Result<ChunkMethod> {
   // Create a new VSScript environment.
@@ -83,4 +93,59 @@ pub fn num_frames(path: &Path) -> anyhow::Result<usize> {
   };
 
   Ok(num_frames)
+}
+
+pub fn create_vs_file(
+  temp: &str,
+  source: &str,
+  chunk_method: ChunkMethod,
+) -> anyhow::Result<String> {
+  // only for python code, remove if being called by rust
+  let temp = Path::new(temp);
+  let source = Path::new(source).canonicalize()?;
+
+  let load_script_path = temp.join("split").join("loadscript.vpy");
+
+  if load_script_path.exists() {
+    return Ok(load_script_path.to_string_lossy().to_string());
+  }
+  let mut load_script = File::create(&load_script_path)?;
+
+  let cache_file = PathAbs::new(temp.join("split").join(format!(
+    "cache.{}",
+    match chunk_method {
+      ChunkMethod::FFMS2 => "ffindex",
+      ChunkMethod::LSMASH => "lwi",
+      _ => return Err(anyhow!("invalid chunk method")),
+    }
+  )))
+  .unwrap();
+
+  load_script.write_all(
+    // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
+    format!(
+      "from vapoursynth import core\n\
+core.{}({:?}, cachefile={:?}).set_output()",
+      match chunk_method {
+        ChunkMethod::FFMS2 => "ffms2.Source",
+        ChunkMethod::LSMASH => "lsmas.LWLibavSource",
+        _ => unreachable!(),
+      },
+      source,
+      cache_file
+    )
+    .as_bytes(),
+  )?;
+
+  // TODO use vapoursynth crate instead
+  Command::new("vspipe")
+    .arg("-i")
+    .arg(&load_script_path)
+    .args(&["-i", "-"])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?
+    .wait()?;
+
+  Ok(load_script_path.to_string_lossy().to_string())
 }

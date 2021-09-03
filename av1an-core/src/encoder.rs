@@ -1,17 +1,8 @@
-use crate::into_vec;
-use crate::list_index_of_regex;
-use crate::regex;
-
-use serde::{Deserialize, Serialize};
-
+use crate::{into_vec, list_index_of_regex, regex};
 use itertools::chain;
-
-use std::borrow::Cow;
-use std::cmp;
-use std::fmt::Display;
-use std::path::PathBuf;
-
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
 
 const NULL: &'static str = if cfg!(target_os = "windows") {
   "nul"

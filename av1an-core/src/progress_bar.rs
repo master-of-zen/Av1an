@@ -1,5 +1,4 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
-
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 

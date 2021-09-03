@@ -1,10 +1,26 @@
-use crate::regex;
-
+use crate::{into_vec, regex};
 use path_abs::{PathAbs, PathInfo};
-use std::ffi::OsStr;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::{
+  ffi::OsStr,
+  path::Path,
+  process::{Command, Stdio},
+};
 
+pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
+  let mut p: Vec<String> = into_vec![
+    "ffmpeg",
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    "-",
+  ];
+
+  p.extend(params);
+
+  p
+}
 /// Get frame count. Direct counting of frame count using ffmpeg
 pub fn get_frame_count(source: impl AsRef<Path>) -> usize {
   let source = source.as_ref();
@@ -189,4 +205,11 @@ pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
       .unwrap()
       .to_string()
   }
+}
+
+/// Check for `FFmpeg`
+pub fn get_ffmpeg_info() -> String {
+  let mut cmd = Command::new("ffmpeg");
+  cmd.stderr(Stdio::piped());
+  String::from_utf8(cmd.output().unwrap().stderr).unwrap()
 }

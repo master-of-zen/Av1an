@@ -1,13 +1,10 @@
 use crate::{
-  finish_multi_progress_bar, finish_progress_bar, frame_probe, get_done, Chunk, Instant, Project,
-  TargetQuality, VecDeque, Verbosity,
+  finish_multi_progress_bar, finish_progress_bar, frame_probe, get_done, project::Project, Chunk,
+  Instant, TargetQuality, VecDeque, Verbosity,
 };
-
 use itertools::Itertools;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-use std::sync::mpsc::Sender;
+use std::{fs::File, io::Write, path::Path, sync::mpsc::Sender};
+
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a Project,
@@ -31,15 +28,13 @@ impl<'a> Broker<'a> {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
-      let workers = self.project.workers;
-
       for chunk in &self.chunk_queue {
         sender.send(chunk.clone()).unwrap();
       }
       drop(sender);
 
       crossbeam_utils::thread::scope(|s| {
-        let consumers: Vec<_> = (0..workers)
+        let consumers: Vec<_> = (0..self.project.workers)
           .map(|i| (receiver.clone(), &self, i))
           .map(|(rx, queue, consumer_idx)| {
             let tx = tx.clone();

@@ -1,14 +1,7 @@
-use crate::chunk::Chunk;
-use crate::process_pipe;
-use crate::read_weighted_vmaf;
-use crate::Encoder;
-use crate::Project;
+use crate::{chunk::Chunk, process_pipe, project::Project, vmaf::read_weighted_vmaf, Encoder};
 use splines::{Interpolation, Key, Spline};
-use std::cmp::Ordering;
-use std::convert::TryInto;
-use std::fmt::Error;
-use std::path::Path;
-use std::process::Stdio;
+use std::{cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
+
 pub struct TargetQuality<'a> {
   vmaf_res: String,
   vmaf_filter: String,

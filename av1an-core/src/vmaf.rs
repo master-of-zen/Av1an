@@ -1,12 +1,13 @@
-use crate::ffmpeg;
-use crate::{read_vmaf_file, read_weighted_vmaf};
+use crate::{ffmpeg, VmafResult};
 use anyhow::Error;
 use plotters::prelude::*;
-
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::usize;
+use std::{
+  cmp::Ordering,
+  path::Path,
+  path::PathBuf,
+  process::{Command, Stdio},
+  usize,
+};
 
 #[inline]
 fn printable_base10_digits(x: usize) -> u32 {
@@ -302,4 +303,44 @@ pub fn run_vmaf_on_chunk(
   );
 
   Ok(())
+}
+
+pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
+  let json_str = crate::util::read_file_to_string(file).unwrap();
+  let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
+  let v = bazs
+    .frames
+    .into_iter()
+    .map(|x| x.metrics.vmaf)
+    .collect::<Vec<_>>();
+
+  Ok(v)
+}
+
+pub fn read_weighted_vmaf(
+  file: impl AsRef<Path>,
+  percentile: f64,
+) -> Result<f64, serde_json::Error> {
+  let mut scores = read_vmaf_file(file).unwrap();
+
+  Ok(get_percentile(&mut scores, percentile))
+}
+
+/// Calculates percentile from an array of values
+pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
+  assert!(!scores.is_empty());
+  scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+
+  let k = (scores.len() - 1) as f64 * percentile;
+  let f = k.floor();
+  let c = k.ceil();
+
+  if f as u64 == c as u64 {
+    return scores[k as usize];
+  }
+
+  let d0 = scores[f as usize] * (c - k);
+  let d1 = scores[f as usize] * (k - f);
+
+  d0 + d1
 }

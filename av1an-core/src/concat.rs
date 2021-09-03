@@ -1,19 +1,39 @@
-use av_format::buffer::AccReader;
-use av_format::demuxer::Context as DemuxerContext;
-use av_format::demuxer::Event;
-use av_format::muxer::Context as MuxerContext;
-use av_ivf::demuxer::IvfDemuxer;
-use av_ivf::muxer::IvfMuxer;
+use av_format::{
+  buffer::AccReader,
+  demuxer::{Context as DemuxerContext, Event},
+  muxer::Context as MuxerContext,
+};
+use av_ivf::{demuxer::IvfDemuxer, muxer::IvfMuxer};
 use path_abs::PathAbs;
-use std::fs::DirEntry;
-use std::fs::{read_dir, File};
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::process::Stdio;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use std::{
+  fmt::Display,
+  fs::{read_dir, DirEntry, File},
+  io::Write,
+  path::{Path, PathBuf},
+  process::{Command, Stdio},
+  sync::Arc,
+};
 
 use crate::encoder::Encoder;
+
+#[derive(
+  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
+)]
+pub enum ConcatMethod {
+  #[strum(serialize = "mkvmerge")]
+  MKVMerge,
+  #[strum(serialize = "ffmpeg")]
+  FFmpeg,
+  #[strum(serialize = "ivf")]
+  Ivf,
+}
+
+impl Display for ConcatMethod {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str(<&'static str>::from(self))
+  }
+}
 
 pub fn sort_files_by_filename(files: &mut [PathBuf]) {
   files.sort_unstable_by_key(|x| {

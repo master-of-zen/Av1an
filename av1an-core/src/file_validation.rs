@@ -1,5 +1,7 @@
-use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::{
+  path::{Path, PathBuf},
+  process::exit,
+};
 
 /// Returns file if it have suffix of media file
 fn match_file_type(input: &Path) -> bool {

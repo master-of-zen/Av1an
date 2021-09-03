@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::error;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::path::Path;
-use std::process::{Command, Stdio};
-use std::string::ToString;
+use std::{
+  error,
+  fs::File,
+  io::prelude::*,
+  io::BufReader,
+  path::Path,
+  process::{Command, Stdio},
+  string::ToString,
+};
 
 pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usize]) {
   let input = input.as_ref();

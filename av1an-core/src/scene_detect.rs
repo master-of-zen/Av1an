@@ -1,8 +1,48 @@
+use crate::{progress_bar, Verbosity};
 use av_scenechange::{detect_scene_changes, DetectionOptions};
+
 use std::{
   path::Path,
   process::{Command, Stdio},
 };
+
+pub fn av_scenechange_detect(
+  input: &str,
+  total_frames: usize,
+  min_scene_len: usize,
+  verbosity: Verbosity,
+  is_vs: bool,
+  fast_analysis: bool,
+) -> anyhow::Result<Vec<usize>> {
+  if verbosity != Verbosity::Quiet {
+    println!("Scene detection");
+    progress_bar::init_progress_bar(total_frames as u64);
+  }
+
+  let mut frames = crate::scene_detect::scene_detect(
+    Path::new(input),
+    if verbosity == Verbosity::Quiet {
+      None
+    } else {
+      Some(Box::new(|frames, _keyframes| {
+        progress_bar::set_pos(frames as u64);
+      }))
+    },
+    min_scene_len,
+    is_vs,
+    fast_analysis,
+  )?;
+
+  progress_bar::finish_progress_bar();
+
+  if frames[0] == 0 {
+    // TODO refactor the chunk creation to not require this
+    // Currently, this is required for compatibility with create_video_queue_vs
+    frames.remove(0);
+  }
+
+  Ok(frames)
+}
 
 /// Detect scene changes using rav1e scene detector.
 ///

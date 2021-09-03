@@ -1273,7 +1273,9 @@ impl Project {
         plot_vmaf(&input, &output_file, model).unwrap();
       }
 
-      if !keep {
+      if !Path::new(&output_file).exists() {
+          warn!("Concatenating failed for unknown reasons! Temp folder will not be deleted: {}", temp);
+      } else if !keep {
         if let Err(e) = fs::remove_dir_all(temp) {
           warn!("Failed to delete temp directory: {}", e);
         }

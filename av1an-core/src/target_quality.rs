@@ -303,6 +303,7 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
   Ok(spline.sample(q).unwrap())
 }
 
+#[derive(Copy, Clone)]
 pub enum Skip {
   High,
   Low,
@@ -328,7 +329,7 @@ pub fn log_probes(
     match skip {
       Skip::High => " Early Skip High Q",
       Skip::Low => " Early Skip Low Q",
-      _ => "",
+      Skip::None => "",
     }
   );
   info!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf);

@@ -6,23 +6,26 @@ use std::{
   process::{Command, Stdio},
 };
 
+use once_cell::sync::Lazy;
+
 use super::ChunkMethod;
 use path_abs::PathAbs;
 use vapoursynth::prelude::*;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 
 pub fn is_vapoursynth(s: &str) -> bool {
   [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
 }
 
-pub fn select_chunk_method() -> anyhow::Result<ChunkMethod> {
-  // Create a new VSScript environment.
-  let environment = Environment::new().map_err(|e| anyhow!("{}", e))?;
-  let core = environment.get_core().map_err(|e| anyhow!("{}", e))?;
+static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
+  let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
+  let core = environment
+    .get_core()
+    .expect("Failed to get VapourSynth core");
 
   let plugins = core.plugins();
-  let plugins: HashSet<&str> = plugins
+  plugins
     .keys()
     .filter_map(|plugin| {
       plugins
@@ -30,27 +33,24 @@ pub fn select_chunk_method() -> anyhow::Result<ChunkMethod> {
         .ok()
         .and_then(|slice| std::str::from_utf8(slice).ok())
         .and_then(|s| s.split(';').nth(1))
+        .map(ToOwned::to_owned)
     })
-    .collect();
+    .collect()
+});
 
-  if plugins.contains("systems.innocent.lsmas") {
-    Ok(ChunkMethod::LSMASH)
-  } else if plugins.contains("com.vapoursynth.ffms2") {
-    Ok(ChunkMethod::FFMS2)
+pub fn best_available_chunk_method() -> ChunkMethod {
+  if VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas") {
+    ChunkMethod::LSMASH
+  } else if VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2") {
+    ChunkMethod::FFMS2
   } else {
-    Ok(ChunkMethod::Hybrid)
+    ChunkMethod::Hybrid
   }
 }
 
-pub fn num_frames(path: &Path) -> anyhow::Result<usize> {
-  // Create a new VSScript environment.
-  let mut environment = Environment::new().unwrap();
-
-  // Evaluate the script.
-  environment
-    .eval_file(path, EvalFlags::SetWorkingDir)
-    .unwrap();
-
+/// Get the number of frames from an environment that has already been
+/// evaluated on a script.
+fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   // Get the output node.
   let output_index = 0;
 
@@ -60,19 +60,19 @@ pub fn num_frames(path: &Path) -> anyhow::Result<usize> {
     output_index
   ))?;
   #[cfg(not(feature = "gte-vsscript-api-31"))]
-  let (node, _) = (environment.get_output(output_index).unwrap(), None::<Node>);
+  let (node, _) = (env.get_output(output_index).unwrap(), None::<Node>);
 
   let num_frames = {
     let info = node.info();
 
     if let Property::Variable = info.format {
-      panic!("Cannot output clips with varying format");
+      bail!("Cannot output clips with varying format");
     }
     if let Property::Variable = info.resolution {
-      panic!("Cannot output clips with varying dimensions");
+      bail!("Cannot output clips with varying dimensions");
     }
     if let Property::Variable = info.framerate {
-      panic!("Cannot output clips with varying framerate");
+      bail!("Cannot output clips with varying framerate");
     }
 
     #[cfg(feature = "gte-vapoursynth-api-32")]
@@ -82,8 +82,7 @@ pub fn num_frames(path: &Path) -> anyhow::Result<usize> {
     let num_frames = {
       match info.num_frames {
         Property::Variable => {
-          // TODO: make it possible?
-          panic!("Cannot output clips with unknown length");
+          bail!("Cannot output clips with unknown length");
         }
         Property::Constant(x) => x,
       }
@@ -100,8 +99,7 @@ pub fn create_vs_file(
   source: &str,
   chunk_method: ChunkMethod,
 ) -> anyhow::Result<String> {
-  // only for python code, remove if being called by rust
-  let temp = Path::new(temp);
+  let temp: &Path = temp.as_ref();
   let source = Path::new(source).canonicalize()?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
@@ -148,4 +146,16 @@ core.{}({:?}, cachefile={:?}).set_output()",
     .wait()?;
 
   Ok(load_script_path.to_string_lossy().to_string())
+}
+
+pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_num_frames(&mut environment)
 }

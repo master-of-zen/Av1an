@@ -123,6 +123,7 @@ pub fn create_vs_file(
     // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
     format!(
       "from vapoursynth import core\n\
+      core.max_cache_size=1024\n\
 core.{}({:?}, cachefile={:?}).set_output()",
       match chunk_method {
         ChunkMethod::FFMS2 => "ffms2.Source",

@@ -142,8 +142,10 @@ With your own parameters:
 -   Both video and audio transcoding.
 
 ## Install
-
-
+-   With a package manager:
+    -   `cargo install av1an`
+    -   [CARGO](https://crates.io/crates/av1an)  
+    -   [AUR](https://aur.archlinux.org/packages/av1an-git/)
 
 -   Prerequisites:
     -   [Install FFmpeg](https://ffmpeg.org/download.html)
@@ -157,14 +159,10 @@ With your own parameters:
     -   [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
 -   Optional :
-
     -   [Vapoursynth](http://www.vapoursynth.com/)
     -   [ffms2](https://github.com/FFMS/ffms2)
     -   [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
     -   [mkvmerge](https://mkvtoolnix.download/)
-
--   With a package manager:
-    -   [AUR](https://aur.archlinux.org/packages/av1an-git/)
 
 -   Manually:
     -   Clone Repo or Download from Releases

@@ -463,6 +463,14 @@ impl Project {
       scenes = extra_splits(scenes, self.frames, split_len);
       info!("SC: Now at {} scenes", scenes.len() + 1);
     }
+    if self.verbosity == Verbosity::Verbose {
+      // Also print this info to stderr in verbose mode
+      eprintln!("Found {} scenes", scenes.len() + 1);
+      if let Some(split_len) = self.extra_splits_len {
+        eprintln!("Applying extra splits every {} frames", split_len);
+        eprintln!("Now at {} scenes", scenes.len() + 1);
+      }
+    }
 
     self.write_scenes_to_file(&scenes, scene_file.as_path().to_str().unwrap());
 

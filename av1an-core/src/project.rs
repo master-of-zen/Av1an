@@ -458,15 +458,14 @@ impl Project {
       self.calc_split_locations()
     };
     info!("SC: Found {} scenes", scenes.len() + 1);
+    if self.verbosity == Verbosity::Verbose {
+      eprintln!("Found {} scenes", scenes.len() + 1);
+    }
     if let Some(split_len) = self.extra_splits_len {
       info!("SC: Applying extra splits every {} frames", split_len);
       scenes = extra_splits(scenes, self.frames, split_len);
       info!("SC: Now at {} scenes", scenes.len() + 1);
-    }
-    if self.verbosity == Verbosity::Verbose {
-      // Also print this info to stderr in verbose mode
-      eprintln!("Found {} scenes", scenes.len() + 1);
-      if let Some(split_len) = self.extra_splits_len {
+      if self.verbosity == Verbosity::Verbose {
         eprintln!("Applying extra splits every {} frames", split_len);
         eprintln!("Now at {} scenes", scenes.len() + 1);
       }

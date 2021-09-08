@@ -36,8 +36,8 @@ pub fn plot_vmaf_score_file(
 ) -> Result<(), Box<dyn std::error::Error>> {
   let scores = read_vmaf_file(scores_file).unwrap();
 
-  let plot_width = 2560 + (printable_base10_digits(scores.len()) as u32 * 200);
-  let plot_heigth = 1440;
+  let plot_width = 1600 + (printable_base10_digits(scores.len()) as u32 * 200);
+  let plot_heigth = 600;
 
   let length = scores.len() as u32;
   let perc_1 = read_weighted_vmaf(scores_file, 0.01).unwrap();
@@ -50,9 +50,9 @@ pub fn plot_vmaf_score_file(
   root.fill(&WHITE)?;
 
   let mut chart = ChartBuilder::on(&root)
-    .set_label_area_size(LabelAreaPosition::Bottom, (8).percent())
+    .set_label_area_size(LabelAreaPosition::Bottom, (5).percent())
     .set_label_area_size(LabelAreaPosition::Left, (5).percent())
-    .set_label_area_size(LabelAreaPosition::Left, (5).percent())
+    .set_label_area_size(LabelAreaPosition::Right, (7).percent())
     .set_label_area_size(LabelAreaPosition::Top, (5).percent())
     .margin((1).percent())
     .build_cartesian_2d(0_u32..length, perc_1.floor()..100.0)?;

@@ -40,11 +40,7 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 
 ### Example settings and explanation
 
-#### Change encoding bit depth
 
-`-b 8` `-b 10` `-b 12`
-
-This command changes output bit depth
 
 ##### Constant quality
 
@@ -74,14 +70,14 @@ If tiles required to improve playback on old devices or high framerates, set --t
 
 #### Bit-depth
 
-` ... --bit-depth=10 ... `
+` ... --bit-depth=10 ... ` `.. -b 8..` `.. -b 10..` `.. -b 12..`
 It is recommended to set it to 10-bit even for 8-bit content for higher efficiency (due to better compression efficiency) and less banding.
 
 #### Lag-in-frames
 
-` ... --lag-in-frames=35 ... `
+` ... --lag-in-frames=48 ... `
 
-More is better, up to a limit of 35 (default is 19).
+More is better, up to a limit of 48 (default is 35).
 
 #### Content tune
 

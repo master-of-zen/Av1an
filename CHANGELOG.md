@@ -1,4 +1,5 @@
 ### 7
+
 - Starting including rust code
 - FFMPEG info, hash path, adapt probing rate to rust
 - Removed VVC support for now
@@ -6,15 +7,16 @@
 - Removed per frame target quality code (as it's too complex for me to make it work, atm)
 
 ### 6
+
 - ~1.7x faster probes for svt-av1
 - ~2x faster probes for aomenc
--  Changed rav1e settings, disable rav1e scene detection
+- Changed rav1e settings, disable rav1e scene detection
 - Temporally removed VVC support until it's 100% ready and working
 - Added overwrite promt
 - Speed up for SVT-AV1 target quality
 
-
 ### 5
+
 - Fixed fatal errors with ffms2/lsmash
 - Added vmaf validation on each time when VMAF initialized
 - Fix running not required frame probe
@@ -24,6 +26,7 @@
 - aomenc target quality probes to be 8 bit
 
 ### 4
+
 - Refactored Args to Project class
 - Removed dead Rust code
 - Default encoder settings changed
@@ -46,9 +49,11 @@
 - Refactored module structure/names
 
 ### 3
+
 - Default pix format to be yuv420p10le
 - Default scene change interval to be 120 frames
 
 ### 2
+
 - Target VMAF renamed to Target Quality
 - Changed Algo for Target Quality score calculation

@@ -1,6 +1,7 @@
- # Target Quality
+# Target Quality
 
 ## Table of Contents
+
 1. [Description](#Description)
 2. [Requirements](#Requirements)
 3. [Commands](#Commands)
@@ -17,17 +18,17 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
 ## Requirements
 
 - Working VMAF setup
-    - FFMPEG with libvmaf (It's de facto default configuration from 2020)
-    - Installed or manually selected VMAF models
-        - by default it grabs /usr/share/model/vmaf_v0.6.1.pkl
+  - FFMPEG with libvmaf (It's de facto default configuration from 2020)
+  - Installed or manually selected VMAF models
+    - by default it grabs /usr/share/model/vmaf_v0.6.1.pkl
 
 - Supported encoder
-    - aomenc
-    - rav1e
-    - svt-av1
-    - x265
-    - x264
-    - vpx
+  - aomenc
+  - rav1e
+  - svt-av1
+  - x265
+  - x264
+  - vpx
 
 - Quality/Constant Rate control (Target quality change crf/cq value for each segment). Which means that encoders must be in mode that use CRF/CQ and have those options specified ( `--crf 30`, `--cq-level=30`) those values get replaced for each segment
 
@@ -43,4 +44,4 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
 
 `av1an -i file --target_quality 90` - Will run aomenc with default settings of target_quality
 
-`av1an -i file --target_quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6 ` - With specified path to vmaf model and 6 probes per segment
+`av1an -i file --target_quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6` - With specified path to vmaf model and 6 probes per segment

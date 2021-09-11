@@ -160,7 +160,7 @@ dependencies = [
 
 [[package]]
 name = "av1an"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "av1an-cli",
@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-cli"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "av1an-core",
@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "av-format",

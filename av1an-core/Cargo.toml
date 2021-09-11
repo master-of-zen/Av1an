@@ -1,6 +1,6 @@
 [package]
 name = "av1an-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
@@ -63,4 +63,7 @@ features = ["serde"]
 
 [features]
 ffmpeg_static = ["ffmpeg-next/static", "ffmpeg-next/build"]
-vapoursynth_new_api = ["vapoursynth/vapoursynth-api-32", "vapoursynth/vsscript-api-31"]
+vapoursynth_new_api = [
+  "vapoursynth/vapoursynth-api-32",
+  "vapoursynth/vsscript-api-31",
+]

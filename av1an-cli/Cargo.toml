@@ -1,6 +1,6 @@
 [package]
 name = "av1an-cli"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Command line library]
@@ -17,11 +17,16 @@ shlex = "1.0.0"
 ctrlc = "3.1.9"
 path_abs = "0.5.1"
 anyhow = "1.0.42"
-av1an-core = { path = "../av1an-core", version = "0.1.0" }
+av1an-core = { path = "../av1an-core", version = "0.2.0" }
 thiserror = "1.0.30"
 
 [build-dependencies]
-vergen = { version = "5", default-features = false, features = ["git", "build", "rustc", "cargo"] }
+vergen = { version = "5", default-features = false, features = [
+  "git",
+  "build",
+  "rustc",
+  "cargo",
+] }
 
 [dependencies.ffmpeg-next]
 version = "4.4.0"

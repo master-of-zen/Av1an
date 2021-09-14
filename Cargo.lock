@@ -143,9 +143,9 @@ dependencies = [
 
 [[package]]
 name = "av-scenechange"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1710d6df78c912316637586ab68b794a158633954f12d22a47b8c90ce1255b95"
+checksum = "d42e2f96f7f4cc93b5043e8acaa6a83028b687c7b84c7f5a436a6dc4970ee0c9"
 dependencies = [
  "clap",
  "rav1e",
@@ -1280,9 +1280,9 @@ dependencies = [
 
 [[package]]
 name = "rav1e"
-version = "0.5.0-beta"
+version = "0.5.0-beta.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a80b9488c1dca7379d29d43fac55038b5482cf3b29d1335b9d9b4bc2dbcca9c7"
+checksum = "819fe17f51d8eb13046a9602d00b56f2bb2da3c84d16e6d280afd87c5a815698"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1835,9 +1835,9 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "v_frame"
-version = "0.2.2"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80b4c7125fe75942c6bca0fe93cd5a6018778791297cfb21283be47f1d52185b"
+checksum = "594718cad812ffd9e3784bdf272a233805b4b7a8d560b9ec30b1ae71d60eb23a"
 dependencies = [
  "cfg-if 1.0.0",
  "noop_proc_macro",

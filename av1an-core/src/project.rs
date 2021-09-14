@@ -15,7 +15,7 @@ use crate::{
   suggest_fix, vapoursynth,
   vapoursynth::{create_vs_file, is_vapoursynth},
   vmaf::plot_vmaf,
-  ChunkMethod, DashMap, DoneJson, Encoder, SplitMethod, TargetQuality, Verbosity,
+  ChunkMethod, DashMap, DoneJson, Encoder, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
 };
 use anyhow::{bail, ensure};
 use crossbeam_utils;
@@ -48,6 +48,8 @@ pub struct Project {
   pub chunk_method: ChunkMethod,
   pub scenes: Option<String>,
   pub split_method: SplitMethod,
+  pub sc_method: ScenecutMethod,
+  pub sc_downscale_height: Option<usize>,
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
 
@@ -423,16 +425,8 @@ impl Project {
         self.min_scene_len,
         self.verbosity,
         self.is_vs,
-        false,
-      )
-      .unwrap(),
-      SplitMethod::AvScenechangeFast => av_scenechange_detect(
-        &self.input,
-        self.frames,
-        self.min_scene_len,
-        self.verbosity,
-        self.is_vs,
-        true,
+        self.sc_method,
+        self.sc_downscale_height,
       )
       .unwrap(),
       SplitMethod::None => Vec::with_capacity(0),

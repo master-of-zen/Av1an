@@ -1,4 +1,5 @@
 use anyhow::Context;
+use av1an_core::ScenecutMethod;
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
@@ -64,8 +65,24 @@ pub struct Args {
   pub scenes: Option<PathBuf>,
 
   /// Specify splitting method
-  #[structopt(long, possible_values=&["av-scenechange", "av-scenechange-fast", "none"], default_value = "av-scenechange")]
+  #[structopt(long, possible_values=&["av-scenechange", "none"], default_value = "av-scenechange")]
   pub split_method: SplitMethod,
+
+  /// Specify scenecut method
+  ///
+  /// Slow: Most accurate, but 5 times slower than medium
+  /// Medium: Gives a reasonable amount of accuracy at a fairly quick speed
+  /// Fast: Very fast, but less accurate
+  #[structopt(long, possible_values=&["slow", "medium", "fast"], default_value = "medium")]
+  pub sc_method: ScenecutMethod,
+
+  /// Optional downscaling for scenecut detection,
+  /// specify as the desired maximum height to scale to
+  /// (e.g. "720" to downscale to 720p--this will leave lower resolution content untouched).
+  /// Downscaling will improve speed but lower scenecut accuracy,
+  /// especially when scaling to very low resolutions.
+  #[structopt(long)]
+  pub sc_downscale_height: Option<usize>,
 
   /// Number of frames after which make split
   #[structopt(short = "x", long, default_value = "240")]
@@ -286,6 +303,8 @@ pub fn cli() -> anyhow::Result<()> {
       .scenes
       .map(|scenes| scenes.to_str().unwrap().to_owned()),
     split_method: args.split_method,
+    sc_method: args.sc_method,
+    sc_downscale_height: args.sc_downscale_height,
     target_quality: args.target_quality,
     target_quality_method: Some(args.target_quality_method),
     verbosity: if args.quiet {

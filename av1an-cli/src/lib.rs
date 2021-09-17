@@ -181,14 +181,12 @@ fn confirm(prompt: &str) -> io::Result<bool> {
     stdout.flush()?;
     stdin.read_line(&mut buf)?;
 
-    match buf.as_str() {
-      "y\n" | "Y\n" => break Ok(true),
-      "n\n" | "N\n" => break Ok(false),
+    match buf.as_str().trim() {
+      // allows enter to continue
+      "y" | "Y" | "" => break Ok(true),
+      "n" | "N" => break Ok(false),
       other => {
-        println!(
-          "Sorry, response {:?} is not understood.",
-          &other.get(..other.len().saturating_sub(1)).unwrap_or("")
-        );
+        println!("Sorry, response {:?} is not understood.", other);
         buf.clear();
         continue;
       }

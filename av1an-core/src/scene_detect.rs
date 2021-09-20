@@ -98,12 +98,10 @@ pub fn scene_detect(
           .unwrap(),
       })?,
       DetectionOptions {
-        ignore_flashes: true,
         min_scenecut_distance: Some(min_scene_len),
-        fast_analysis: match sc_method {
+        analysis_speed: match sc_method {
           ScenecutMethod::Fast => SceneDetectionSpeed::Fast,
-          ScenecutMethod::Medium => SceneDetectionSpeed::Medium,
-          ScenecutMethod::Slow => SceneDetectionSpeed::Slow,
+          ScenecutMethod::Standard => SceneDetectionSpeed::Standard,
         },
         ..DetectionOptions::default()
       },

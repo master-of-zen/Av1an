@@ -71,10 +71,9 @@ pub struct Args {
 
   /// Specify scenecut method
   ///
-  /// Slow: Most accurate, but 5 times slower than medium
-  /// Medium: Gives a reasonable amount of accuracy at a fairly quick speed
+  /// Standard: Most accurate, still reasonably fast
   /// Fast: Very fast, but less accurate
-  #[structopt(long, possible_values=&["slow", "medium", "fast"], default_value = "medium")]
+  #[structopt(long, possible_values=&["standard", "fast"], default_value = "standard")]
   pub sc_method: ScenecutMethod,
 
   /// Optional downscaling for scenecut detection,

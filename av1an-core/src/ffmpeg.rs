@@ -1,4 +1,7 @@
 use crate::{into_vec, regex};
+use ffmpeg_next::format::input;
+use ffmpeg_next::media::Type;
+use ffmpeg_next::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
 use std::{
   ffi::OsStr,
@@ -23,30 +26,16 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
 }
 /// Get frame count. Direct counting of frame count using ffmpeg
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
-  let mut cmd = Command::new("ffprobe");
-  cmd.args([
-    "-v",
-    "error",
-    "-select_streams",
-    "v:0",
-    "-count_packets",
-    "-show_entries",
-    "stream=nb_read_packets",
-    "-of",
-    "csv=p=0",
-  ]);
-  cmd.arg(source);
+  let mut ictx = input(&source)?;
+  let input = ictx.streams().best(Type::Video).ok_or(StreamNotFound)?;
+  let video_stream_index = input.index();
 
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  let out = cmd.output()?;
-
-  assert!(out.status.success());
-
-  let output = String::from_utf8(out.stdout)?;
-
-  Ok(output.trim().parse::<usize>()?)
+  Ok(
+    ictx
+      .packets()
+      .filter(|(stream, _)| stream.index() == video_stream_index)
+      .count(),
+  )
 }
 
 /// Returns vec of all keyframes

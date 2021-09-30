@@ -91,6 +91,8 @@ pub struct Project {
 impl Project {
   /// Initialize logging routines and create temporary directories
   pub fn initialize(&mut self) -> anyhow::Result<()> {
+    ffmpeg_next::init()?;
+
     info!("File hash: {}", hash_path(&self.input));
 
     self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();

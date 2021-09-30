@@ -26,6 +26,12 @@ structopt = "0.3.22"
 av1an-cli = { path = "av1an-cli", version = "0.1.1" }
 av1an-core = { path = "av1an-core", version = "0.1.0" }
 
+[features]
+default = ["ffmpeg_static"]
+ffmpeg_static = ["av1an-core/ffmpeg_static"]
 
 [workspace]
 members = ["av1an-core", "av1an-cli"]
+
+[profile.dev.package.av-scenechange]
+opt-level = 3

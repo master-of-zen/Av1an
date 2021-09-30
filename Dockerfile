@@ -2,7 +2,7 @@ FROM luigi311/encoders-docker:latest
 
 ENV MPLCONFIGDIR="/home/app_user/"
 ARG DEBIAN_FRONTEND=noninteractive
-ARG DEPENDENCIES="mkvtoolnix curl"
+ARG DEPENDENCIES="mkvtoolnix curl llvm clang"
 
 # Install dependencies
 RUN apt-get update && \

@@ -11,7 +11,9 @@ const NULL: &str = if cfg!(target_os = "windows") {
 };
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+  Clone, Copy, PartialEq, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
+)]
 pub enum Encoder {
   aom,
   rav1e,

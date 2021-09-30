@@ -387,6 +387,18 @@ impl Project {
       self.video_params = self.encoder.get_default_arguments();
     }
 
+    if self.encoder == Encoder::aom
+      && self.concat != ConcatMethod::MKVMerge
+      && self
+        .video_params
+        .iter()
+        .any(|param| param == "--enable-keyframe-filtering=2")
+    {
+      bail!(
+        "keyframe filtering mode 2 currently only works when using mkvmerge as the concat method"
+      );
+    }
+
     self.validate_input();
     self.initialize().unwrap();
 

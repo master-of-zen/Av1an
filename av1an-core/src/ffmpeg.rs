@@ -23,10 +23,19 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
 }
 /// Get frame count. Direct counting of frame count using ffmpeg
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
-  let mut cmd = Command::new("ffmpeg");
-  cmd.args(["-hide_banner", "-i"]);
+  let mut cmd = Command::new("ffprobe");
+  cmd.args([
+    "-v",
+    "error",
+    "-select_streams",
+    "v:0",
+    "-count_packets",
+    "-show_entries",
+    "stream=nb_read_packets",
+    "-of",
+    "csv=p=0",
+  ]);
   cmd.arg(source);
-  cmd.args(["-map", "0:V:0", "-c", "copy", "-f", "null", "-"]);
 
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
@@ -35,14 +44,9 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
 
   assert!(out.status.success());
 
-  let output = String::from_utf8(out.stderr)?;
+  let output = String::from_utf8(out.stdout)?;
 
-  let cap = regex!(r".*frame=\s*([0-9]+)\s")
-    .captures_iter(&output)
-    .last()
-    .unwrap();
-
-  Ok(cap[1].parse::<usize>()?)
+  Ok(output.trim().parse::<usize>()?)
 }
 
 /// Returns vec of all keyframes

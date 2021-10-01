@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree
+  deps: tree llvm clang
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
@@ -82,14 +82,15 @@ jobs:
             default: true
             components: rustfmt, clippy
 
+      - name: Install requirements
+        run: |
+          apt-get update && apt-get install -y ${{ env.deps }}
+
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
-
-      - name: Install requirements
-        run: |
-          apt-get update && apt-get install -y ${{ env.deps }}
+          args: --no-default-features
 
       - name: Build Av1an
         run: |

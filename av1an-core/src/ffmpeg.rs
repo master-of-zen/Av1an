@@ -1,6 +1,7 @@
 use crate::{into_vec, regex};
 use ffmpeg_next::format::input;
-use ffmpeg_next::media::Type;
+use ffmpeg_next::media::Type as MediaType;
+use ffmpeg_next::picture::Type as PictureType;
 use ffmpeg_next::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
 use std::{
@@ -27,7 +28,10 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
 /// Get frame count. Direct counting of frame count using ffmpeg
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
   let mut ictx = input(&source)?;
-  let input = ictx.streams().best(Type::Video).ok_or(StreamNotFound)?;
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)?;
   let video_stream_index = input.index();
 
   Ok(
@@ -40,33 +44,22 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
 
 /// Returns vec of all keyframes
 pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
-  let source = source.as_ref();
-  let mut cmd = Command::new("ffmpeg");
+  let mut ictx = input(&source).unwrap();
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)
+    .unwrap();
+  let video_stream_index = input.index();
 
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  cmd.args(&[
-    "-hide_banner",
-    "-i",
-    source.to_str().unwrap(),
-    "-vf",
-    r"select=eq(pict_type\,PICT_TYPE_I)",
-    "-f",
-    "null",
-    "-loglevel",
-    "debug",
-    "-",
-  ]);
-
-  let out = cmd.output().unwrap();
-  assert!(out.status.success());
-
-  let output = String::from_utf8(out.stderr).unwrap();
-  let mut kfs: Vec<usize> = vec![];
-  for found in regex!(r".*n:([0-9]+)\.[0-9]+ pts:.+key:1").captures_iter(&output) {
-    kfs.push(found.get(1).unwrap().as_str().parse::<usize>().unwrap());
-  }
+  let kfs = ictx
+    .packets()
+    .filter(|(stream, _)| stream.index() == video_stream_index)
+    .map(|(_, packet)| packet)
+    .enumerate()
+    .filter(|(_, packet)| packet.is_key())
+    .map(|(i, _)| i)
+    .collect::<Vec<_>>();
 
   if kfs.is_empty() {
     return vec![0];

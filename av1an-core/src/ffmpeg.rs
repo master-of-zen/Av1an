@@ -1,7 +1,6 @@
-use crate::{into_vec, regex};
+use crate::into_vec;
 use ffmpeg_next::format::input;
 use ffmpeg_next::media::Type as MediaType;
-use ffmpeg_next::picture::Type as PictureType;
 use ffmpeg_next::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
 use std::{
@@ -115,42 +114,6 @@ pub fn encode_audio<S: AsRef<OsStr>>(
   } else {
     false
   }
-}
-
-/// Returns list of frame types of the video
-pub fn get_frame_types(file: &Path) -> Vec<String> {
-  let mut cmd = Command::new("ffmpeg");
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  let args = [
-    "ffmpeg",
-    "-hide_banner",
-    "-i",
-    file.to_str().unwrap(),
-    "-vf",
-    "showinfo",
-    "-f",
-    "null",
-    "-loglevel",
-    "debug",
-    "-",
-  ];
-
-  cmd.args(args);
-
-  let out = cmd.output().unwrap();
-
-  assert!(out.status.success());
-
-  let output = String::from_utf8(out.stderr).unwrap();
-
-  let str_vec = output.split('\n').collect::<Vec<_>>();
-
-  let string_vec: Vec<String> = str_vec.iter().map(|s| (*s).to_string()).collect();
-
-  string_vec
 }
 
 /// Escapes paths in ffmpeg filters if on windows

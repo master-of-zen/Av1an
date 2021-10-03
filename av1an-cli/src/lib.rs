@@ -85,6 +85,7 @@ pub struct Args {
   pub sc_downscale_height: Option<usize>,
 
   /// Number of frames after which make split
+  /// Set to 0 to disable
   #[structopt(short = "x", long, default_value = "240")]
   pub extra_split: usize,
 
@@ -285,7 +286,11 @@ pub fn cli() -> anyhow::Result<()> {
       .unwrap_or_else(vapoursynth::best_available_chunk_method),
     concat: args.concat,
     encoder: args.encoder,
-    extra_splits_len: Some(args.extra_split),
+    extra_splits_len: if args.extra_split > 0 {
+      Some(args.extra_split)
+    } else {
+      None
+    },
     input: args.input.to_str().unwrap().to_owned(),
     keep: args.keep,
     min_q: args.min_q,

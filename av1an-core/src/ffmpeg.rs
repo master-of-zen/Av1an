@@ -70,18 +70,8 @@ pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
 
 /// Returns true if input file have audio in it
 pub fn has_audio(file: &Path) -> bool {
-  let mut cmd = Command::new("ffmpeg");
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  cmd.args(&["-hide_banner", "-i", file.to_str().unwrap()]);
-
-  let out = cmd.output().unwrap();
-
-  let output = String::from_utf8(out.stderr).unwrap();
-
-  regex!(r".*Stream.+(Audio)").is_match(&output)
+  let ictx = input(&file).unwrap();
+  ictx.streams().best(MediaType::Audio).is_some()
 }
 
 /// Encodes the audio using FFmpeg, blocking the current thread.

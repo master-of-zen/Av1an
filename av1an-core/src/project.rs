@@ -93,7 +93,7 @@ impl Project {
   pub fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg_next::init()?;
 
-    info!("File hash: {}", hash_path(&self.input.as_path()));
+    info!("File hash: {}", hash_path(self.input.as_path()));
 
     self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
 
@@ -346,10 +346,7 @@ impl Project {
       bail!(".ivf only supports VP8, VP9, and AV1");
     }
 
-    let input = match &self.input {
-      Input::Video(path) => path.as_ref(),
-      Input::VapourSynth(path) => path.as_path(),
-    };
+    let input = self.input.as_path();
 
     ensure!(
       input.exists(),

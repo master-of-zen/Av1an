@@ -24,7 +24,8 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
 
   p
 }
-/// Get frame count. Direct counting of frame count using ffmpeg
+
+/// Get frame count using FFmpeg
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
   let mut ictx = input(&source)?;
   let input = ictx
@@ -134,11 +135,4 @@ pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
       .unwrap()
       .to_string()
   }
-}
-
-/// Check for `FFmpeg`
-pub fn get_ffmpeg_info() -> String {
-  let mut cmd = Command::new("ffmpeg");
-  cmd.stderr(Stdio::piped());
-  String::from_utf8(cmd.output().unwrap().stderr).unwrap()
 }

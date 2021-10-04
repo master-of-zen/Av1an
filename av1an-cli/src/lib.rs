@@ -10,7 +10,7 @@ use structopt::{clap::AppSettings::ColoredHelp, StructOpt};
 use av1an_core::{
   encoder::Encoder,
   hash_path,
-  project::Project,
+  settings::EncodeArgs,
   vapoursynth, Verbosity,
   {concat::ConcatMethod, ChunkMethod, SplitMethod},
 };
@@ -141,7 +141,7 @@ pub struct Args {
 
   /// Value to target
   #[structopt(long)]
-  pub target_quality: Option<f32>,
+  pub target_quality: Option<f64>,
 
   /// Number of probes to make for target_quality
   #[structopt(long, default_value = "4")]
@@ -201,7 +201,7 @@ pub fn cli() -> anyhow::Result<()> {
 
   // TODO parse with normal (non proc-macro) clap methods to simplify this
   // Unify Project/Args
-  let mut project = Project {
+  let mut project = EncodeArgs {
     frames: 0,
     logging: if let Some(log_file) = args.logging {
       Path::new(&format!("{}.log", log_file)).to_owned()
@@ -226,14 +226,14 @@ pub fn cli() -> anyhow::Result<()> {
       Vec::new()
     },
     output_file: if let Some(output) = args.output_file {
-      if output.exists() {
-        if !confirm(&format!(
+      if output.exists()
+        && !confirm(&format!(
           "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
           output
-        ))? {
-          println!("Not overwriting, aborting.");
-          return Ok(());
-        }
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        return Ok(());
       }
 
       let output = PathAbs::new(output).context(
@@ -257,14 +257,14 @@ pub fn cli() -> anyhow::Result<()> {
         args.encoder
       );
 
-      if Path::new(&*default_path).exists() {
-        if !confirm(&format!(
+      if Path::new(&*default_path).exists()
+        && !confirm(&format!(
           "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
           &default_path
-        ))? {
-          println!("Not overwriting, aborting.");
-          return Ok(());
-        }
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        return Ok(());
       }
 
       default_path
@@ -297,9 +297,7 @@ pub fn cli() -> anyhow::Result<()> {
     probes: args.probes,
     probing_rate: args.probing_rate,
     resume: args.resume,
-    scenes: args
-      .scenes
-      .map(|scenes| scenes.to_str().unwrap().to_owned()),
+    scenes: args.scenes,
     split_method: args.split_method,
     sc_method: args.sc_method,
     sc_downscale_height: args.sc_downscale_height,
@@ -314,7 +312,7 @@ pub fn cli() -> anyhow::Result<()> {
     vmaf: args.vmaf,
     vmaf_filter: args.vmaf_filter,
     vmaf_path: args.vmaf_path,
-    vmaf_res: Some(args.vmaf_res),
+    vmaf_res: args.vmaf_res,
     workers: args.workers,
   };
 

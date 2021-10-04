@@ -16,7 +16,7 @@ pub fn av_scenechange_detect(
     progress_bar::init_progress_bar(total_frames as u64);
   }
 
-  let mut frames = crate::scene_detect::scene_detect(
+  let mut frames = scene_detect(
     input,
     if verbosity == Verbosity::Quiet {
       None
@@ -42,10 +42,8 @@ pub fn av_scenechange_detect(
 }
 
 /// Detect scene changes using rav1e scene detector.
-///
-/// src: Input to video.
 pub fn scene_detect(
-  src: &Input,
+  input: &Input,
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
   sc_method: ScenecutMethod,
@@ -64,7 +62,7 @@ pub fn scene_detect(
 
   Ok(
     detect_scene_changes::<_, u8>(
-      &mut y4m::Decoder::new(match src {
+      &mut y4m::Decoder::new(match input {
         Input::VapourSynth(path) => {
           let vspipe = Command::new("vspipe")
             .arg("-y")
@@ -107,7 +105,7 @@ pub fn scene_detect(
           ScenecutMethod::Medium => SceneDetectionSpeed::Medium,
           ScenecutMethod::Slow => SceneDetectionSpeed::Slow,
         },
-        ..Default::default()
+        ..DetectionOptions::default()
       },
       callback,
     )

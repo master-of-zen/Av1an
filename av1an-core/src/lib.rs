@@ -9,6 +9,9 @@
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::cast_possible_wrap)]
 #![allow(clippy::if_not_else)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::items_after_statements)]
 
 #[macro_use]
 extern crate log;
@@ -24,8 +27,7 @@ use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-  cmp::Ordering,
-  collections::{hash_map::DefaultHasher, HashSet},
+  collections::hash_map::DefaultHasher,
   fs,
   fs::File,
   hash::{Hash, Hasher},
@@ -43,8 +45,8 @@ pub mod concat;
 pub mod encoder;
 pub mod ffmpeg;
 pub mod progress_bar;
-pub mod project;
 pub mod scene_detect;
+pub mod settings;
 pub mod split;
 pub mod target_quality;
 pub mod util;
@@ -97,9 +99,17 @@ impl Input {
   pub const fn is_vapoursynth(&self) -> bool {
     matches!(&self, Input::VapourSynth(_))
   }
+
+  pub fn frames(&self) -> usize {
+    match &self {
+      Input::Video(path) => ffmpeg::num_frames(path.as_path()).unwrap(),
+      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).unwrap(),
+    }
+  }
 }
 
 impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
+  #[allow(clippy::option_if_let_else)]
   fn from(path: P) -> Self {
     if let Some(ext) = path.as_ref().extension() {
       if ext == "py" || ext == "vpy" {
@@ -213,13 +223,6 @@ pub fn hash_path(path: &Path) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn frame_probe(input: &Input) -> usize {
-  match input {
-    Input::Video(path) => ffmpeg::num_frames(path.as_path()).unwrap(),
-    Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).unwrap(),
-  }
-}
-
 pub async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result<(), String> {
   let status = pipe.wait_with_output().await.unwrap();
 
@@ -248,32 +251,7 @@ pub enum Verbosity {
   Quiet,
 }
 
-fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
-  params
-    .iter()
-    .filter(|param| !valid_options.contains(*param))
-    .map(ToString::to_string)
-    .collect()
-}
-
-fn suggest_fix<'a>(wrong_arg: &str, arg_dictionary: &'a HashSet<String>) -> Option<&'a str> {
-  // Minimum threshold to consider a suggestion similar enough that it could be a typo
-  const MIN_THRESHOLD: f64 = 0.75;
-
-  arg_dictionary
-    .iter()
-    .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
-    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
-    .and_then(|(suggestion, score)| {
-      if score > MIN_THRESHOLD {
-        Some(suggestion.as_str())
-      } else {
-        None
-      }
-    })
-}
-
-fn read_chunk_queue(temp: &str) -> Vec<Chunk> {
+fn read_chunk_queue(temp: &Path) -> Vec<Chunk> {
   let contents = fs::read_to_string(Path::new(temp).join("chunks.json")).unwrap();
 
   serde_json::from_str(&contents).unwrap()

@@ -20,6 +20,17 @@ macro_rules! into_vec {
   };
 }
 
+#[macro_export]
+macro_rules! ref_vec {
+  ($t:ty, [$($x:expr),* $(,)?]$(,)?) => {
+    vec![
+      $(
+        AsRef::<$t>::as_ref($x),
+      )*
+    ]
+  };
+}
+
 /// Attempts to create the directory if it does not exist, logging and returning
 /// and error if creating the directory failed.
 #[macro_export]

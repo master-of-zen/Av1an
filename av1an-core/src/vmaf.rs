@@ -1,13 +1,29 @@
-use crate::{ffmpeg, VmafResult};
+use crate::{ffmpeg, ref_vec, Input};
 use anyhow::Error;
 use plotters::prelude::*;
+use serde::Deserialize;
 use std::{
   cmp::Ordering,
+  ffi::OsStr,
   path::Path,
-  path::PathBuf,
   process::{Command, Stdio},
   usize,
 };
+
+#[derive(Deserialize, Debug)]
+struct VmafScore {
+  vmaf: f64,
+}
+
+#[derive(Deserialize, Debug)]
+struct Metrics {
+  metrics: VmafScore,
+}
+
+#[derive(Deserialize, Debug)]
+struct VmafResult {
+  frames: Vec<Metrics>,
+}
 
 #[inline]
 fn printable_base10_digits(x: usize) -> u32 {
@@ -29,8 +45,7 @@ pub fn plot_vmaf_score_file(
   let perc_75 = read_weighted_vmaf(scores_file, 0.75).unwrap();
   let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
 
-  let root =
-    BitMapBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
+  let root = SVGBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
 
   root.fill(&WHITE)?;
 
@@ -89,9 +104,8 @@ pub fn plot_vmaf_score_file(
 }
 
 pub fn validate_libvmaf() -> Result<(), Error> {
-  let lib_check = "--enable-libvmaf";
   let mut cmd = Command::new("ffmpeg");
-  cmd.args(["-h"]);
+  cmd.arg("-h");
 
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
@@ -99,8 +113,8 @@ pub fn validate_libvmaf() -> Result<(), Error> {
   let out = cmd.output()?;
 
   let stdr = String::from_utf8(out.stderr)?;
-  if !stdr.contains(lib_check) {
-    panic!("FFmpeg doesn't have --enable-libvmaf");
+  if !stdr.contains("--enable-libvmaf") {
+    panic!("FFmpeg is not compiled with --enable-libvmaf");
   }
   Ok(())
 }
@@ -109,7 +123,7 @@ pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
   let mut cmd = Command::new("ffmpeg");
 
   cmd.args(["-hide_banner", "-filter_complex"]);
-  cmd.args([format!("testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{}", model).as_str()]);
+  cmd.arg(format!("testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{}", model).as_str());
   cmd.args(["-t", "1", "-f", "null", "-"]);
 
   cmd.stdout(Stdio::piped());
@@ -131,112 +145,85 @@ pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
   Ok(())
 }
 
-pub fn run_vmaf_on_files(
-  source: &Path,
-  output: &Path,
-  model: Option<&Path>,
-) -> Result<PathBuf, Error> {
-  let mut cmd = Command::new("ffmpeg");
-
-  cmd.args(["-y", "-hide_banner", "-loglevel", "error"]);
-  cmd.args(["-r", "60", "-i", output.as_os_str().to_str().unwrap()]);
-  cmd.args(["-r", "60", "-i", source.as_os_str().to_str().unwrap()]);
-  cmd.args(["-filter_complex"]);
-
-  let res = "1920x1080";
-  let vmaf_filter = "";
-  let file_path = output.with_extension("json");
-  let threads = "";
-
-  cmd.arg(
-    format!(
-      "[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}{}",
-      res,
-      vmaf_filter,
-      res,
-      file_path.as_os_str().to_str().unwrap(),
-      if let Some(model) = model {
-        format!(":model_path={}", ffmpeg::escape_path_in_filter(model))
-      } else {
-        "".into()
-      },
-      threads
-    )
-  );
-
-  cmd.args(["-f", "null", "-"]);
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  let out = cmd.output()?;
-
-  let stdr = String::from_utf8(out.stderr)?;
-
-  assert!(
-    out.status.success(),
-    "VMAF calculation failed:\n:{:#?}",
-    stdr
-  );
-
-  Ok(file_path)
-}
-
-pub fn plot_vmaf(
-  source: impl AsRef<Path>,
-  output: impl AsRef<Path>,
+pub fn plot(
+  encoded: &Path,
+  reference: &Input,
   model: Option<impl AsRef<Path>>,
+  res: &str,
+  sample_rate: usize,
+  filter: Option<&str>,
+  threads: usize,
 ) -> Result<(), Error> {
-  let source = source.as_ref();
-  let output = output.as_ref();
-  let model = model.as_ref().map(AsRef::as_ref);
+  let json_file = encoded.with_extension("json");
+  let plot_file = encoded.with_extension("svg");
 
   println!(":: VMAF Run");
 
-  let json_file = run_vmaf_on_files(source, output, model)?;
-  let plot_path = output.with_extension("png");
-  plot_vmaf_score_file(&json_file, &plot_path).unwrap();
+  let pipe_cmd: Vec<&OsStr> = match &reference {
+    Input::Video(ref path) => ref_vec![
+      OsStr,
+      [
+        "ffmpeg",
+        "-i",
+        path,
+        "-strict",
+        "-1",
+        "-f",
+        "yuv4mpegpipe",
+        "-"
+      ]
+    ],
+    Input::VapourSynth(ref path) => {
+      ref_vec![OsStr, ["vspipe", "-y", path, "-"]]
+    }
+  };
+
+  run_vmaf(
+    encoded,
+    &pipe_cmd,
+    &json_file,
+    model,
+    res,
+    sample_rate,
+    filter,
+    threads,
+  )?;
+
+  plot_vmaf_score_file(&json_file, &plot_file).unwrap();
   Ok(())
 }
 
-pub fn run_vmaf_on_chunk(
-  encoded: impl AsRef<Path>,
-  pipe_cmd: &[String],
+pub fn run_vmaf(
+  encoded: &Path,
+  reference_pipe_cmd: &[impl AsRef<OsStr>],
   stat_file: impl AsRef<Path>,
   model: Option<impl AsRef<Path>>,
   res: &str,
   sample_rate: usize,
-  vmaf_filter: &str,
+  vmaf_filter: Option<&str>,
   threads: usize,
 ) -> Result<(), Error> {
-  let mut filter = String::from("");
-
-  // Select filter for sampling from the source
-  if sample_rate > 1 {
-    filter += &format!(
+  let mut filter = if sample_rate > 1 {
+    format!(
       "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
       sample_rate,
-      1.0 / sample_rate as f64
-    );
+      1.0 / sample_rate as f64,
+    )
+  } else {
+    String::new()
   };
 
-  // User-defined video filter
-  if !vmaf_filter.is_empty() {
+  if let Some(vmaf_filter) = vmaf_filter {
+    filter.reserve(1 + vmaf_filter.len());
     filter.push_str(vmaf_filter);
     filter.push(',');
-  };
-
-  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
-  let reference = format!(
-    "[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];",
-    filter, &res
-  );
+  }
 
   let vmaf = if let Some(model) = model {
     format!(
       "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
       ffmpeg::escape_path_in_filter(stat_file),
-      &model.as_ref().to_str().unwrap(),
+      ffmpeg::escape_path_in_filter(&model),
       threads
     )
   } else {
@@ -247,7 +234,28 @@ pub fn run_vmaf_on_chunk(
     )
   };
 
-  let vmaf_cmd = [
+  let mut source_pipe = if let [cmd, args @ ..] = &*reference_pipe_cmd {
+    let mut source_pipe = Command::new(cmd);
+    source_pipe.args(args);
+    source_pipe.stdout(Stdio::piped());
+    source_pipe.stderr(Stdio::piped());
+    source_pipe
+  } else {
+    unreachable!()
+  };
+
+  let handle = source_pipe
+    .stderr(Stdio::piped())
+    .spawn()
+    .unwrap_or_else(|e| {
+      panic!(
+        "Failed to execute source pipe: {}\ncommand: {:#?}",
+        e, source_pipe
+      )
+    });
+
+  let mut cmd = Command::new("ffmpeg");
+  cmd.args([
     "-loglevel",
     "error",
     "-hide_banner",
@@ -258,38 +266,21 @@ pub fn run_vmaf_on_chunk(
     "-r",
     "60",
     "-i",
-    encoded.as_ref().to_str().unwrap(),
-    "-r",
-    "60",
-    "-i",
-    "-",
-    "-filter_complex",
-  ];
+  ]);
+  cmd.arg(encoded);
+  cmd.args(["-r", "60", "-i", "-", "-filter_complex"]);
 
-  let cmd_out = ["-f", "null", "-"];
+  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
+  let reference = format!(
+    "[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];",
+    filter, &res
+  );
 
-  let mut source_pipe = Command::new(pipe_cmd.get(0).unwrap());
-  source_pipe.args(&pipe_cmd[1..]);
-  source_pipe.stdout(Stdio::piped());
-  source_pipe.stderr(Stdio::piped());
-
-  let handle = source_pipe
-    .stderr(Stdio::piped())
-    .spawn()
-    .unwrap_or_else(|e| {
-      panic!(
-        "Failed to execute source pipe: {} \ncommand: {:#?}",
-        e, source_pipe
-      )
-    });
-
-  // Making final ffmpeg command
-  let mut cmd = Command::new("ffmpeg");
-  cmd.args(vmaf_cmd);
   cmd.arg(format!("{}{}{}", distorted, reference, vmaf));
-  cmd.args(cmd_out);
+  cmd.args(["-f", "null", "-"]);
   cmd.stderr(Stdio::piped());
   cmd.stdout(Stdio::piped());
+
   let output = cmd
     .stdin(handle.stdout.unwrap())
     .output()
@@ -297,7 +288,7 @@ pub fn run_vmaf_on_chunk(
 
   assert!(
     output.status.success(),
-    "VMAF calculation failed:\nCommand: {:?}\nOutput: {:?}",
+    "VMAF calculation failed:\nCommand: {:?}\nOutput: {:#?}",
     cmd,
     output
   );
@@ -329,7 +320,7 @@ pub fn read_weighted_vmaf(
 /// Calculates percentile from an array of values
 pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
   assert!(!scores.is_empty());
-  scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+  scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let k = (scores.len() - 1) as f64 * percentile;
   let f = k.floor();

@@ -1,17 +1,13 @@
-use crate::{into_vec, progress_bar, ScenecutMethod, Verbosity};
+use crate::{into_vec, progress_bar, Input, ScenecutMethod, Verbosity};
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
-use std::{
-  path::Path,
-  process::{Command, Stdio},
-};
+use std::process::{Command, Stdio};
 
 pub fn av_scenechange_detect(
-  input: &str,
+  input: &Input,
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
-  is_vs: bool,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
@@ -21,7 +17,7 @@ pub fn av_scenechange_detect(
   }
 
   let mut frames = crate::scene_detect::scene_detect(
-    Path::new(input),
+    input,
     if verbosity == Verbosity::Quiet {
       None
     } else {
@@ -30,7 +26,6 @@ pub fn av_scenechange_detect(
       }))
     },
     min_scene_len,
-    is_vs,
     sc_method,
     sc_downscale_height,
   )?;
@@ -50,10 +45,9 @@ pub fn av_scenechange_detect(
 ///
 /// src: Input to video.
 pub fn scene_detect(
-  src: &Path,
+  src: &Input,
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
-  is_vs: bool,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
@@ -70,11 +64,11 @@ pub fn scene_detect(
 
   Ok(
     detect_scene_changes::<_, u8>(
-      &mut y4m::Decoder::new(if is_vs {
-        {
+      &mut y4m::Decoder::new(match src {
+        Input::VapourSynth(path) => {
           let vspipe = Command::new("vspipe")
             .arg("-y")
-            .arg(src)
+            .arg(path)
             .arg("-")
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -82,9 +76,10 @@ pub fn scene_detect(
             .stdout
             .unwrap();
 
+          // TODO: do not convert to yuv420p if the source is already yuv420p
           Command::new("ffmpeg")
             .stdin(vspipe)
-            .args(&["-i", "pipe:", "-f", "yuv4mpegpipe"])
+            .args(["-i", "pipe:", "-f", "yuv4mpegpipe"])
             .args(filters)
             .arg("-")
             .stdout(Stdio::piped())
@@ -93,17 +88,16 @@ pub fn scene_detect(
             .stdout
             .unwrap()
         }
-      } else {
-        Command::new("ffmpeg")
+        Input::Video(path) => Command::new("ffmpeg")
           .arg("-i")
-          .arg(src)
+          .arg(path)
           .args(filters)
-          .args(&["-f", "yuv4mpegpipe", "-"])
+          .args(["-f", "yuv4mpegpipe", "-"])
           .stdout(Stdio::piped())
           .stderr(Stdio::null())
           .spawn()?
           .stdout
-          .unwrap()
+          .unwrap(),
       })?,
       DetectionOptions {
         ignore_flashes: true,

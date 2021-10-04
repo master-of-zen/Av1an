@@ -2,7 +2,7 @@ use std::{
   collections::HashSet,
   fs::File,
   io::Write,
-  path::Path,
+  path::{Path, PathBuf},
   process::{Command, Stdio},
 };
 
@@ -13,10 +13,6 @@ use path_abs::PathAbs;
 use vapoursynth::prelude::*;
 
 use anyhow::{anyhow, bail};
-
-pub fn is_vapoursynth(s: &str) -> bool {
-  [".vpy", ".py"].iter().any(|ext| s.ends_with(ext))
-}
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
   let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
@@ -91,21 +87,23 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
     num_frames
   };
 
+  assert!(num_frames != 0, "vapoursynth reported 0 frames");
+
   Ok(num_frames)
 }
 
 pub fn create_vs_file(
   temp: &str,
-  source: &str,
+  source: &Path,
   chunk_method: ChunkMethod,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<PathBuf> {
   let temp: &Path = temp.as_ref();
   let source = Path::new(source).canonicalize()?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
 
   if load_script_path.exists() {
-    return Ok(load_script_path.to_string_lossy().to_string());
+    return Ok(load_script_path);
   }
   let mut load_script = File::create(&load_script_path)?;
 
@@ -140,13 +138,13 @@ core.{}({:?}, cachefile={:?}).set_output()",
   Command::new("vspipe")
     .arg("-i")
     .arg(&load_script_path)
-    .args(&["-i", "-"])
+    .args(["-i", "-"])
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()?
     .wait()?;
 
-  Ok(load_script_path.to_string_lossy().to_string())
+  Ok(load_script_path)
 }
 
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {

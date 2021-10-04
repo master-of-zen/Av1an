@@ -4,6 +4,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
 
+use std::iter::Iterator;
+
 const NULL: &str = if cfg!(target_os = "windows") {
   "nul"
 } else {
@@ -33,7 +35,7 @@ impl Display for Encoder {
 impl Encoder {
   /// Composes 1st pass command for 1 pass encoding
   pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
-    match &self {
+    match self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=1"],
         params,
@@ -82,7 +84,7 @@ impl Encoder {
 
   /// Composes 1st pass command for 2 pass encoding
   pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
-    match &self {
+    match self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=1"],
         params,
@@ -157,7 +159,7 @@ impl Encoder {
 
   /// Composes 2st pass command for 2 pass encoding
   pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
-    match &self {
+    match self {
       Self::aom => chain!(
         into_vec!["aomenc", "--passes=2", "--pass=2"],
         params,
@@ -271,7 +273,7 @@ impl Encoder {
 
   /// Return number of default passes for encoder
   pub const fn get_default_pass(self) -> u8 {
-    match &self {
+    match self {
       Self::aom | Self::vpx => 2,
       _ => 1,
     }
@@ -279,7 +281,7 @@ impl Encoder {
 
   /// Default quantizer range target quality mode
   pub const fn get_default_cq_range(self) -> (usize, usize) {
-    match &self {
+    match self {
       Self::aom | Self::vpx => (15, 55),
       Self::rav1e => (50, 140),
       Self::svt_av1 => (15, 50),
@@ -289,7 +291,7 @@ impl Encoder {
 
   /// Returns help command for encoder
   pub const fn help_command(self) -> [&'static str; 2] {
-    match &self {
+    match self {
       Self::aom => ["aomenc", "--help"],
       Self::rav1e => ["rav1e", "--fullhelp"],
       Self::vpx => ["vpxenc", "--help"],
@@ -312,7 +314,7 @@ impl Encoder {
   }
 
   /// Get the default output extension for the encoder
-  pub const fn output_extension(&self) -> &str {
+  pub const fn output_extension(&self) -> &'static str {
     match &self {
       Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
       Self::x264 | Self::x265 => "mkv",
@@ -330,7 +332,7 @@ impl Encoder {
   }
 
   fn replace_q(self, index: usize, q: usize) -> (usize, String) {
-    match &self {
+    match self {
       Self::aom | Self::vpx => (index, format!("--cq-level={}", q)),
       Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, q.to_string()),
     }
@@ -338,7 +340,8 @@ impl Encoder {
 
   /// Returns changed q/crf in command line arguments
   pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index_of_regex(&params, self.q_regex()).unwrap();
+    let index = list_index_of_regex(&params, self.q_regex())
+      .unwrap_or_else(|| panic!("No match found for params: {:#?}", params));
 
     let mut new_params = params;
     let (replace_index, replace_q) = self.replace_q(index, q);

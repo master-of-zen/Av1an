@@ -151,7 +151,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
-pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Error> {
+pub fn mkvmerge(encode_folder: &Path, output: &Path) -> Result<(), anyhow::Error> {
   let mut encode_folder = PathBuf::from(encode_folder);
 
   let mut audio_file = PathBuf::from(&encode_folder);
@@ -191,7 +191,7 @@ pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Err
         cmd.arg("+");
       }
     }
-    // The remainder is always *exactly* one element since are using `chunks_exact(2)`, and we
+    // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
     // asserted that the length `files` is odd and nonzero in this branch.
     cmd.arg(chunks.remainder()[0].path());
   } else {
@@ -229,7 +229,7 @@ pub fn mkvmerge(encode_folder: String, output: String) -> Result<(), anyhow::Err
 }
 
 /// Concatenates using ffmpeg
-pub fn ffmpeg<P: AsRef<Path>>(temp: P, output: P, encoder: Encoder) {
+pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
   fn write_concat_file(temp_folder: &Path) {
     let concat_file = &temp_folder.join("concat");
     let encode_folder = &temp_folder.join("encode");
@@ -254,9 +254,8 @@ pub fn ffmpeg<P: AsRef<Path>>(temp: P, output: P, encoder: Encoder) {
     file.write_all(contents.as_bytes()).unwrap();
   }
 
-  let temp = PathAbs::new(temp.as_ref()).unwrap();
+  let temp = PathAbs::new(temp).unwrap();
   let temp = temp.as_path();
-  let output = output.as_ref();
 
   let concat = temp.join("concat");
   let concat_file = concat.to_str().unwrap();

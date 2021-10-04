@@ -1,10 +1,17 @@
-use crate::{chunk::Chunk, process_pipe, project::Project, vmaf::read_weighted_vmaf, Encoder};
+use crate::{
+  chunk::Chunk,
+  process_pipe,
+  project::Project,
+  vmaf::{self, read_weighted_vmaf},
+  Encoder,
+};
 use splines::{Interpolation, Key, Spline};
 use std::{cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
 
+// TODO: just make it take a reference to a `Project`
 pub struct TargetQuality<'a> {
   vmaf_res: String,
-  vmaf_filter: String,
+  vmaf_filter: Option<&'a str>,
   n_threads: usize,
   model: Option<&'a Path>,
   probing_rate: usize,
@@ -27,11 +34,8 @@ impl<'a> TargetQuality<'a> {
         .vmaf_res
         .clone()
         .unwrap_or_else(|| String::with_capacity(0)),
-      vmaf_filter: project
-        .vmaf_filter
-        .clone()
-        .unwrap_or_else(|| String::with_capacity(0)),
-      n_threads: project.n_threads.unwrap_or(0) as usize,
+      vmaf_filter: project.vmaf_filter.as_deref(),
+      n_threads: project.vmaf_threads.unwrap_or(0) as usize,
       model: project.vmaf_path.as_deref(),
       probes: project.probes,
       target: project.target_quality.unwrap(),
@@ -173,34 +177,44 @@ impl<'a> TargetQuality<'a> {
     );
 
     let future = async {
-      let mut ffmpeg_gen_pipe = tokio::process::Command::new(chunk.ffmpeg_gen_cmd[0].clone())
-        .args(&chunk.ffmpeg_gen_cmd[1..])
-        .stderr(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+      let mut source = if let [pipe_cmd, args @ ..] = &*chunk.source {
+        tokio::process::Command::new(pipe_cmd)
+          .args(args)
+          .stderr(Stdio::piped())
+          .stdout(Stdio::piped())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
-      let ffmpeg_gen_pipe_stdout: Stdio =
-        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+      let source_pipe_stdout: Stdio = source.stdout.take().unwrap().try_into().unwrap();
 
-      let mut ffmpeg_pipe = tokio::process::Command::new(cmd.0[0].clone())
-        .args(&cmd.0[1..])
-        .stdin(ffmpeg_gen_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+      let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
+        tokio::process::Command::new(ffmpeg)
+          .args(args)
+          .stdin(source_pipe_stdout)
+          .stdout(Stdio::piped())
+          .stderr(Stdio::piped())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
       let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let mut pipe = tokio::process::Command::new(&*cmd.1[0]);
-      for arg in &cmd.1[1..] {
-        pipe.arg((*arg).as_ref());
-      }
-      pipe.stdin(ffmpeg_pipe_stdout);
-      pipe.stdout(Stdio::piped());
-      pipe.stderr(Stdio::piped());
-      let pipe = pipe.spawn().unwrap();
+      let pipe = if let [cmd, args @ ..] = &*cmd.1 {
+        tokio::process::Command::new(cmd.as_ref())
+          .args(args.iter().map(AsRef::as_ref))
+          .stdin(ffmpeg_pipe_stdout)
+          .stdout(Stdio::piped())
+          .stderr(Stdio::piped())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
       process_pipe(pipe, chunk.index).await.unwrap();
     };
@@ -222,14 +236,14 @@ impl<'a> TargetQuality<'a> {
 
     let fl_path = fl_path.to_str().unwrap().to_owned();
 
-    crate::vmaf::run_vmaf_on_chunk(
+    vmaf::run_vmaf(
       &probe_name,
-      &chunk.ffmpeg_gen_cmd,
+      chunk.source.as_slice(),
       &fl_path,
       self.model.as_ref(),
       &self.vmaf_res,
       self.probing_rate,
-      &self.vmaf_filter,
+      self.vmaf_filter,
       self.n_threads,
     )
     .unwrap();

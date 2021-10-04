@@ -1,9 +1,11 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{
   error,
   fs::File,
   io::prelude::*,
   io::BufReader,
+  iter,
   path::Path,
   process::{Command, Stdio},
   string::ToString,
@@ -50,38 +52,40 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
     cmd.arg(split_str);
   }
   let out = cmd.output().unwrap();
-  assert!(out.status.success());
+  assert!(out.status.success(), "FFmpeg failed to segment: {:#?}", out);
 }
 
-pub fn extra_splits(
-  split_locations: Vec<usize>,
-  total_frames: usize,
-  split_size: usize,
-) -> Vec<usize> {
-  let mut result_vec: Vec<usize> = split_locations.clone();
+pub fn extra_splits(splits: &[usize], total_frames: usize, split_size: usize) -> Vec<usize> {
+  let mut new_splits: Vec<usize> = splits.to_vec();
 
-  let mut total_length = split_locations;
-  total_length.insert(0, 0);
-  total_length.push(total_frames);
+  if let Some(&last_frame) = splits.last() {
+    assert!(
+      last_frame < total_frames,
+      "scenecut reported at index {}, but there are only {} frames",
+      last_frame,
+      total_frames
+    );
+  }
 
-  let iter = total_length[..total_length.len() - 1]
-    .iter()
-    .zip(total_length[1..].iter());
+  let total_length = iter::once(0)
+    .chain(splits.iter().copied())
+    .chain(iter::once(total_frames))
+    .tuple_windows();
 
-  for (x, y) in iter {
+  for (x, y) in total_length {
     let distance = y - x;
     if distance > split_size {
       let additional_splits = (distance / split_size) + 1;
       for n in 1..additional_splits {
         let new_split = (distance as f64 * (n as f64 / additional_splits as f64)) as usize + x;
-        result_vec.push(new_split);
+        new_splits.push(new_split);
       }
     }
   }
 
-  result_vec.sort_unstable();
+  new_splits.sort_unstable();
 
-  result_vec
+  new_splits
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -130,7 +134,7 @@ mod tests {
   fn test_extra_split_no_segments() {
     let total_frames = 300;
     let split_size = 240;
-    let done = extra_splits(vec![], total_frames, split_size);
+    let done = extra_splits(&[], total_frames, split_size);
     let expected_split_locations = vec![150];
 
     assert_eq!(expected_split_locations, done);
@@ -141,15 +145,15 @@ mod tests {
     let total_frames = 2000;
     let split_size = 130;
     let done = extra_splits(
-      vec![150, 460, 728, 822, 876, 890, 1100, 1399, 1709],
+      &[150, 460, 728, 822, 876, 890, 1100, 1399, 1709],
       total_frames,
       split_size,
     );
-    let expected_split_locations: Vec<usize> = vec![
+    let expected_split_locations = [
       75, 150, 253, 356, 460, 549, 638, 728, 822, 876, 890, 995, 1100, 1199, 1299, 1399, 1502,
       1605, 1709, 1806, 1903,
     ];
 
-    assert_eq!(expected_split_locations, done);
+    assert_eq!(&expected_split_locations, &*done);
   }
 }

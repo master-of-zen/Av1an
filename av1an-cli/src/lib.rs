@@ -1,4 +1,5 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
+use av1an_core::Input;
 use av1an_core::ScenecutMethod;
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
@@ -10,9 +11,7 @@ use av1an_core::{
   encoder::Encoder,
   hash_path,
   project::Project,
-  vapoursynth,
-  vapoursynth::is_vapoursynth,
-  Verbosity,
+  vapoursynth, Verbosity,
   {concat::ConcatMethod, ChunkMethod, SplitMethod},
 };
 
@@ -138,15 +137,11 @@ pub struct Args {
 
   /// Number of threads to use for VMAF calculation
   #[structopt(long)]
-  pub vmaf_threads: Option<u32>,
+  pub vmaf_threads: Option<usize>,
 
   /// Value to target
   #[structopt(long)]
   pub target_quality: Option<f32>,
-
-  /// Method selection for target quality
-  #[structopt(long, possible_values = &["per_shot"], default_value = "per_shot")]
-  pub target_quality_method: String,
 
   /// Number of probes to make for target_quality
   #[structopt(long, default_value = "4")]
@@ -201,21 +196,20 @@ pub fn cli() -> anyhow::Result<()> {
   let temp = if let Some(path) = args.temp {
     path.to_str().unwrap().to_owned()
   } else {
-    format!(".{}", hash_path(&args.input.to_str().unwrap().to_owned()))
+    format!(".{}", hash_path(args.input.as_path()))
   };
 
   // TODO parse with normal (non proc-macro) clap methods to simplify this
   // Unify Project/Args
   let mut project = Project {
     frames: 0,
-    is_vs: is_vapoursynth(args.input.to_str().unwrap()),
     logging: if let Some(log_file) = args.logging {
       Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
       Path::new(&temp).join("log.log")
     },
-    ffmpeg: if let Some(s) = args.ffmpeg {
-      shlex::split(&s).unwrap_or_else(Vec::new)
+    ffmpeg: if let Some(args) = args.ffmpeg {
+      shlex::split(&args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
     } else {
       Vec::new()
     },
@@ -226,8 +220,8 @@ pub fn cli() -> anyhow::Result<()> {
     } else {
       args.encoder.get_default_pass()
     },
-    video_params: if let Some(params) = args.video_params {
-      shlex::split(&params).unwrap_or_else(Vec::new)
+    video_params: if let Some(args) = args.video_params {
+      shlex::split(&args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
     } else {
       Vec::new()
     },
@@ -263,7 +257,7 @@ pub fn cli() -> anyhow::Result<()> {
         args.encoder
       );
 
-      if PathBuf::from(&default_path).exists() {
+      if Path::new(&*default_path).exists() {
         if !confirm(&format!(
           "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
           &default_path
@@ -275,8 +269,9 @@ pub fn cli() -> anyhow::Result<()> {
 
       default_path
     },
-    audio_params: if let Some(params) = args.audio_params {
-      shlex::split(&params).unwrap_or_else(|| vec!["-c:a".into(), "copy".into()])
+    audio_params: if let Some(args) = args.audio_params {
+      shlex::split(&args)
+        .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
     } else {
       vec!["-c:a".into(), "copy".into()]
     },
@@ -291,12 +286,12 @@ pub fn cli() -> anyhow::Result<()> {
     } else {
       None
     },
-    input: args.input.to_str().unwrap().to_owned(),
+    input: Input::from(args.input),
     keep: args.keep,
     min_q: args.min_q,
     max_q: args.max_q,
     min_scene_len: args.min_scene_len,
-    n_threads: args.vmaf_threads,
+    vmaf_threads: args.vmaf_threads,
     pix_format: args.pix_format,
     probe_slow: args.probe_slow,
     probes: args.probes,
@@ -309,7 +304,6 @@ pub fn cli() -> anyhow::Result<()> {
     sc_method: args.sc_method,
     sc_downscale_height: args.sc_downscale_height,
     target_quality: args.target_quality,
-    target_quality_method: Some(args.target_quality_method),
     verbosity: if args.quiet {
       Verbosity::Quiet
     } else if args.verbose {

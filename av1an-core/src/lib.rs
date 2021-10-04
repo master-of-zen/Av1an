@@ -17,7 +17,6 @@ use crate::{
   encoder::Encoder,
   progress_bar::{finish_multi_progress_bar, finish_progress_bar},
   target_quality::TargetQuality,
-  vapoursynth::is_vapoursynth,
 };
 use chunk::Chunk;
 use dashmap::DashMap;
@@ -26,12 +25,12 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
   cmp::Ordering,
-  collections::{hash_map::DefaultHasher, HashSet, VecDeque},
+  collections::{hash_map::DefaultHasher, HashSet},
   fs,
   fs::File,
   hash::{Hash, Hasher},
   io::Write,
-  path::Path,
+  path::{Path, PathBuf},
   string::ToString,
   sync::atomic::{AtomicBool, AtomicUsize},
   time::Instant,
@@ -43,7 +42,6 @@ pub mod chunk;
 pub mod concat;
 pub mod encoder;
 pub mod ffmpeg;
-pub mod file_validation;
 pub mod progress_bar;
 pub mod project;
 pub mod scene_detect;
@@ -52,6 +50,77 @@ pub mod target_quality;
 pub mod util;
 pub mod vapoursynth;
 pub mod vmaf;
+
+#[derive(Debug)]
+pub enum Input {
+  VapourSynth(PathBuf),
+  Video(PathBuf),
+}
+
+impl Input {
+  /// Returns a reference to the inner path, panicking if the input is not an `Input::Video`.
+  pub fn as_video_path(&self) -> &Path {
+    match &self {
+      Input::Video(path) => path.as_ref(),
+      Input::VapourSynth(_) => {
+        panic!("called `Input::as_video_path()` on an `Input::VapourSynth` variant")
+      }
+    }
+  }
+
+  /// Returns a reference to the inner path, panicking if the input is not an `Input::VapourSynth`.
+  pub fn as_vapoursynth_path(&self) -> &Path {
+    match &self {
+      Input::VapourSynth(path) => path.as_ref(),
+      Input::Video(_) => {
+        panic!("called `Input::as_vapoursynth_path()` on an `Input::Video` variant")
+      }
+    }
+  }
+
+  /// Returns a reference to the inner path regardless of whether `self` is
+  /// `Video` or `VapourSynth`.
+  ///
+  /// The caller must ensure that the input type is being properly handled.
+  /// This method should not be used unless the code is TRULY agnostic of the
+  /// input type!
+  pub fn as_path(&self) -> &Path {
+    match &self {
+      Input::Video(path) | Input::VapourSynth(path) => path.as_ref(),
+    }
+  }
+
+  pub const fn is_video(&self) -> bool {
+    matches!(&self, Input::Video(_))
+  }
+
+  pub const fn is_vapoursynth(&self) -> bool {
+    matches!(&self, Input::VapourSynth(_))
+  }
+}
+
+impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
+  fn from(path: P) -> Self {
+    if let Some(ext) = path.as_ref().extension() {
+      if ext == "py" || ext == "vpy" {
+        Self::VapourSynth(path.into())
+      } else {
+        Self::Video(path.into())
+      }
+    } else {
+      Self::Video(path.into())
+    }
+  }
+}
+
+/// Concurrent data structure for keeping track of the finished
+/// chunks in an encode
+#[derive(Debug, Deserialize, Serialize)]
+struct DoneJson {
+  frames: AtomicUsize,
+  done: DashMap<String, usize>,
+  audio_done: AtomicBool,
+}
 
 static DONE_JSON: OnceCell<DoneJson> = OnceCell::new();
 
@@ -66,27 +135,19 @@ fn init_done(done: DoneJson) -> &'static DoneJson {
   DONE_JSON.get_or_init(|| done)
 }
 
-/// Concurrent data structure for keeping track of the finished
-/// chunks in an encode
-#[derive(Debug, Deserialize, Serialize)]
-struct DoneJson {
-  frames: AtomicUsize,
-  done: DashMap<String, usize>,
-  audio_done: AtomicBool,
-}
-
-pub fn list_index_of_regex(params: &[String], re: &Regex) -> Option<usize> {
+pub fn list_index_of_regex(params: &[impl AsRef<str>], re: &Regex) -> Option<usize> {
   assert!(
     !params.is_empty(),
     "List index of regex got empty list of params"
   );
 
   for (i, cmd) in params.iter().enumerate() {
-    if re.is_match(cmd) {
+    if re.is_match(cmd.as_ref()) {
       return Some(i);
     }
   }
-  panic!("No match found for params: {:#?}", params)
+
+  None
 }
 
 #[derive(Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
@@ -146,44 +207,16 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   )
 }
 
-#[derive(Deserialize, Debug)]
-struct VmafScore {
-  vmaf: f64,
-}
-
-#[derive(Deserialize, Debug)]
-struct Metrics {
-  metrics: VmafScore,
-}
-
-#[derive(Deserialize, Debug)]
-struct VmafResult {
-  frames: Vec<Metrics>,
-}
-
-pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
-  let json_str = crate::util::read_file_to_string(file).unwrap();
-  let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
-  let v = bazs
-    .frames
-    .into_iter()
-    .map(|x| x.metrics.vmaf)
-    .collect::<Vec<_>>();
-
-  Ok(v)
-}
-
-pub fn hash_path(path: &str) -> String {
+pub fn hash_path(path: &Path) -> String {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn frame_probe(source: &str) -> usize {
-  if is_vapoursynth(source) {
-    vapoursynth::num_frames(source.as_ref()).unwrap()
-  } else {
-    ffmpeg::num_frames(source.as_ref()).unwrap()
+fn frame_probe(input: &Input) -> usize {
+  match input {
+    Input::Video(path) => ffmpeg::num_frames(path.as_path()).unwrap(),
+    Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).unwrap(),
   }
 }
 
@@ -215,7 +248,6 @@ pub enum Verbosity {
   Quiet,
 }
 
-// TODO refactor to make types generic
 fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<String> {
   params
     .iter()
@@ -224,7 +256,7 @@ fn invalid_params(params: &[String], valid_options: &HashSet<String>) -> Vec<Str
     .collect()
 }
 
-fn suggest_fix(wrong_arg: &str, arg_dictionary: &HashSet<String>) -> Option<String> {
+fn suggest_fix<'a>(wrong_arg: &str, arg_dictionary: &'a HashSet<String>) -> Option<&'a str> {
   // Minimum threshold to consider a suggestion similar enough that it could be a typo
   const MIN_THRESHOLD: f64 = 0.75;
 
@@ -234,7 +266,7 @@ fn suggest_fix(wrong_arg: &str, arg_dictionary: &HashSet<String>) -> Option<Stri
     .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
     .and_then(|(suggestion, score)| {
       if score > MIN_THRESHOLD {
-        Some((*suggestion).clone())
+        Some(suggestion.as_str())
       } else {
         None
       }

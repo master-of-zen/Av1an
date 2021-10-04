@@ -1,7 +1,7 @@
 use crate::{
   broker::Broker,
   chunk::Chunk,
-  concat::ConcatMethod,
+  concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
   ffmpeg::compose_ffmpeg_pipe,
   finish_multi_progress_bar, get_done, hash_path, init_done, into_vec, invalid_params,
@@ -13,19 +13,21 @@ use crate::{
   scene_detect::av_scenechange_detect,
   split::{extra_splits, segment, write_scenes_to_file},
   suggest_fix, vapoursynth,
-  vapoursynth::{create_vs_file, is_vapoursynth},
-  vmaf::plot_vmaf,
-  ChunkMethod, DashMap, DoneJson, Encoder, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
+  vapoursynth::create_vs_file,
+  vmaf, ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
+  Verbosity,
 };
 use anyhow::{bail, ensure};
 use crossbeam_utils;
 use flexi_logger::{Duplicate, FileSpec, Logger};
+use itertools::Itertools;
 use path_abs::PathAbs;
 use std::{
   cmp,
   cmp::Reverse,
-  collections::{HashSet, VecDeque},
+  collections::HashSet,
   convert::TryInto,
+  ffi::OsString,
   fs,
   fs::File,
   io::Write,
@@ -39,9 +41,8 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct Project {
   pub frames: usize,
-  pub is_vs: bool,
 
-  pub input: String,
+  pub input: Input,
   pub temp: String,
   pub output_file: String,
 
@@ -77,14 +78,13 @@ pub struct Project {
   pub concat: ConcatMethod,
 
   pub target_quality: Option<f32>,
-  pub target_quality_method: Option<String>,
   pub probes: u32,
   pub probe_slow: bool,
   pub min_q: Option<u32>,
   pub max_q: Option<u32>,
 
   pub probing_rate: u32,
-  pub n_threads: Option<u32>,
+  pub vmaf_threads: Option<usize>,
   pub vmaf_filter: Option<String>,
 }
 
@@ -93,7 +93,7 @@ impl Project {
   pub fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg_next::init()?;
 
-    info!("File hash: {}", hash_path(&self.input));
+    info!("File hash: {}", hash_path(&self.input.as_path()));
 
     self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
 
@@ -122,8 +122,9 @@ impl Project {
       .map(|res| res.map(|e| e.path()))
       .collect::<Result<Vec<_>, _>>()
       .unwrap();
-    queue_files.retain(|file| file.is_file());
-    queue_files.retain(|file| matches!(file.extension().map(|ext| ext == "mkv"), Some(true)));
+    queue_files.retain(|file| {
+      file.is_file() && matches!(file.extension().map(|ext| ext == "mkv"), Some(true))
+    });
     crate::concat::sort_files_by_filename(&mut queue_files);
 
     queue_files
@@ -131,18 +132,18 @@ impl Project {
 
   pub fn create_pipes(
     &self,
-    c: &Chunk,
+    chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
-  ) -> Result<(), (ExitStatus, VecDeque<String>)> {
-    let fpf_file = Path::new(&c.temp)
+  ) -> Result<(), (ExitStatus, String)> {
+    let fpf_file = Path::new(&chunk.temp)
       .join("split")
-      .join(format!("{}_fpf", c.name()));
+      .join(format!("{}_fpf", chunk.name()));
 
     let mut enc_cmd = if self.passes == 1 {
       self
         .encoder
-        .compose_1_1_pass(self.video_params.clone(), c.output())
+        .compose_1_1_pass(self.video_params.clone(), chunk.output())
     } else if current_pass == 1 {
       self.encoder.compose_1_2_pass(
         self.video_params.clone(),
@@ -152,11 +153,11 @@ impl Project {
       self.encoder.compose_2_2_pass(
         self.video_params.clone(),
         &fpf_file.to_str().unwrap().to_owned(),
-        c.output(),
+        chunk.output(),
       )
     };
 
-    if let Some(per_shot_target_quality_cq) = c.per_shot_target_quality_cq {
+    if let Some(per_shot_target_quality_cq) = chunk.per_shot_target_quality_cq {
       enc_cmd = self
         .encoder
         .man_command(enc_cmd, per_shot_target_quality_cq as usize);
@@ -168,50 +169,61 @@ impl Project {
       .unwrap();
 
     let (exit_status, output) = rt.block_on(async {
-      let mut ffmpeg_gen_pipe = tokio::process::Command::new(&c.ffmpeg_gen_cmd[0])
-        .args(&c.ffmpeg_gen_cmd[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
+      let mut ffmpeg_gen_pipe = if let [source, args @ ..] = &*chunk.source {
+        tokio::process::Command::new(source)
+          .args(args)
+          .stdout(Stdio::piped())
+          .stderr(Stdio::null())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
       let ffmpeg_gen_pipe_stdout: Stdio =
         ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
 
       let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone());
-      let mut ffmpeg_pipe = tokio::process::Command::new(&ffmpeg_pipe[0])
-        .args(&ffmpeg_pipe[1..])
-        .stdin(ffmpeg_gen_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+
+      let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
+        tokio::process::Command::new(ffmpeg)
+          .args(args)
+          .stdin(ffmpeg_gen_pipe_stdout)
+          .stdout(Stdio::piped())
+          .stderr(Stdio::piped())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
       let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let mut pipe = tokio::process::Command::new(&enc_cmd[0])
-        .args(&enc_cmd[1..])
-        .stdin(ffmpeg_pipe_stdout)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+      let mut pipe = if let [encoder, args @ ..] = &*enc_cmd {
+        tokio::process::Command::new(encoder)
+          .args(args)
+          .stdin(ffmpeg_pipe_stdout)
+          .stdout(Stdio::piped())
+          .stderr(Stdio::piped())
+          .spawn()
+          .unwrap()
+      } else {
+        unreachable!()
+      };
 
       let mut frame = 0;
 
       let mut reader = BufReader::new(pipe.stderr.take().unwrap());
 
-      let mut buf = vec![];
-      let mut output = VecDeque::with_capacity(20);
+      let mut buf = Vec::with_capacity(64);
+      let mut output = String::with_capacity(64);
 
       while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
         if read == 0 {
           break;
         }
 
-        let line = std::str::from_utf8(&buf);
-
-        if let Ok(line) = line {
+        if let Ok(line) = std::str::from_utf8(&buf) {
           if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
             update_mp_msg(worker_id, line.to_string());
           }
@@ -225,18 +237,19 @@ impl Project {
               frame = new;
             }
           }
-          output.push_back(line.to_string());
+          output.push_str(line);
+          output.push('\n');
         }
 
         buf.clear();
       }
 
-      let status = pipe.wait_with_output().await.unwrap().status;
+      let exit_status = pipe.wait_with_output().await.unwrap().status;
 
       drop(ffmpeg_gen_pipe.kill().await);
       drop(ffmpeg_pipe.kill().await);
 
-      (status, output)
+      (exit_status, output)
     });
 
     if !exit_status.success() {
@@ -251,19 +264,16 @@ impl Project {
       return self.frames;
     }
 
-    self.frames = if self.is_vs {
-      vapoursynth::num_frames(Path::new(&self.input)).unwrap()
-    } else if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
-      let vs = if self.is_vs {
-        self.input.clone()
-      } else {
-        create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
-      };
-      let fr = vapoursynth::num_frames(vs.as_ref()).unwrap();
-      assert!(fr != 0, "vapoursynth reported 0 frames");
-      fr
-    } else {
-      ffmpeg::num_frames(self.input.as_ref()).unwrap()
+    self.frames = match &self.input {
+      Input::Video(path) => {
+        if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
+          let script = create_vs_file(&self.temp, path.as_ref(), self.chunk_method).unwrap();
+          vapoursynth::num_frames(script.as_ref()).unwrap()
+        } else {
+          ffmpeg::num_frames(path.as_ref()).unwrap()
+        }
+      }
+      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_ref()).unwrap(),
     };
 
     self.frames
@@ -272,16 +282,9 @@ impl Project {
   /// returns a list of valid parameters
   #[must_use]
   fn valid_encoder_params(&self) -> HashSet<String> {
-    let help = self.encoder.help_command();
+    let [cmd, arg] = self.encoder.help_command();
 
-    let help_text = String::from_utf8(
-      Command::new(&help[0])
-        .args(&help[1..])
-        .output()
-        .unwrap()
-        .stdout,
-    )
-    .unwrap();
+    let help_text = String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap();
 
     regex!(r"\s+(-\w+|(?:--\w+(?:-\w+)*))")
       .find_iter(&help_text)
@@ -343,16 +346,25 @@ impl Project {
       bail!(".ivf only supports VP8, VP9, and AV1");
     }
 
+    let input = match &self.input {
+      Input::Video(path) => path.as_ref(),
+      Input::VapourSynth(path) => path.as_path(),
+    };
+
     ensure!(
-      Path::new(&self.input).exists(),
+      input.exists(),
       "Input file {:?} does not exist!",
       self.input
     );
 
-    self.is_vs = is_vapoursynth(&self.input);
-
     if which::which("ffmpeg").is_err() {
-      bail!("No FFmpeg");
+      bail!("FFmpeg not found. Is it installed in system path?");
+    }
+
+    if self.concat == ConcatMethod::MKVMerge {
+      if which::which("mkvmerge").is_err() {
+        bail!("mkvmerge not found, but `--concat mkvmerge` was specified. Is it installed in system path?");
+      }
     }
 
     if let Some(ref vmaf_path) = self.vmaf_path {
@@ -426,7 +438,7 @@ impl Project {
       ChunkMethod::Segment => self.create_video_queue_segment(&splits),
     };
 
-    chunks.sort_unstable_by_key(|chunk| Reverse(chunk.size));
+    chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
 
     chunks
   }
@@ -438,12 +450,11 @@ impl Project {
         self.frames,
         self.min_scene_len,
         self.verbosity,
-        self.is_vs,
         self.sc_method,
         self.sc_downscale_height,
       )
       .unwrap(),
-      SplitMethod::None => Vec::with_capacity(0),
+      SplitMethod::None => Vec::new(),
     }
   }
 
@@ -471,7 +482,7 @@ impl Project {
     }
     if let Some(split_len) = self.extra_splits_len {
       info!("SC: Applying extra splits every {} frames", split_len);
-      scenes = extra_splits(scenes, self.frames, split_len);
+      scenes = extra_splits(&scenes, self.frames, split_len);
       info!("SC: Now at {} scenes", scenes.len() + 1);
       if self.verbosity == Verbosity::Verbose {
         eprintln!("Applying extra splits every {} frames", split_len);
@@ -491,7 +502,7 @@ impl Project {
   fn create_select_chunk(
     &self,
     index: usize,
-    src_path: &str,
+    src_path: &Path,
     frame_start: usize,
     mut frame_end: usize,
   ) -> Chunk {
@@ -503,14 +514,14 @@ impl Project {
     let frames = frame_end - frame_start;
     frame_end -= 1;
 
-    let ffmpeg_gen_cmd: Vec<String> = into_vec![
+    let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
       "ffmpeg",
       "-y",
       "-hide_banner",
       "-loglevel",
       "error",
       "-i",
-      src_path.to_string(),
+      src_path,
       "-vf",
       format!(
         "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
@@ -525,16 +536,13 @@ impl Project {
       "-",
     ];
 
-    let output_ext = self.encoder.output_extension().to_owned();
-    // use the number of frames to prioritize which chunks encode first, since we don't have file size
-    let size = frames;
+    let output_ext = self.encoder.output_extension();
 
     Chunk {
       temp: self.temp.clone(),
       index,
-      ffmpeg_gen_cmd,
-      output_ext,
-      size,
+      source: ffmpeg_gen_cmd,
+      output_ext: output_ext.to_owned(),
       frames,
       ..Chunk::default()
     }
@@ -543,12 +551,12 @@ impl Project {
   fn create_vs_chunk(
     &self,
     index: usize,
-    vs_script: String,
+    vs_script: PathBuf,
     frame_start: usize,
     mut frame_end: usize,
   ) -> Chunk {
     assert!(
-      frame_end > frame_start,
+      frame_start < frame_end,
       "Can't make a chunk with <= 0 frames!"
     );
 
@@ -556,14 +564,14 @@ impl Project {
     // the frame end boundary is actually a frame that should be included in the next chunk
     frame_end -= 1;
 
-    let vspipe_cmd_gen: Vec<String> = vec![
-      "vspipe".into(),
+    let vspipe_cmd_gen: Vec<OsString> = into_vec![
+      "vspipe",
       vs_script,
-      "-y".into(),
-      "-".into(),
-      "-s".into(),
+      "-y",
+      "-",
+      "-s",
       frame_start.to_string(),
-      "-e".into(),
+      "-e",
       frame_end.to_string(),
     ];
 
@@ -572,10 +580,8 @@ impl Project {
     Chunk {
       temp: self.temp.clone(),
       index,
-      ffmpeg_gen_cmd: vspipe_cmd_gen,
+      source: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
-      // use the number of frames to prioritize which chunks encode first, since we don't have file size
-      size: frames,
       frames,
       ..Chunk::default()
     }
@@ -594,10 +600,9 @@ impl Project {
       .map(|(start, end)| (*start, *end))
       .collect();
 
-    let vs_script = if self.is_vs {
-      self.input.clone()
-    } else {
-      create_vs_file(&self.temp, &self.input, self.chunk_method).unwrap()
+    let vs_script = match &self.input {
+      Input::VapourSynth(path) => path.clone(),
+      Input::Video(path) => create_vs_file(&self.temp, path, self.chunk_method).unwrap(),
     };
 
     let chunk_queue: Vec<Chunk> = chunk_boundaries
@@ -614,6 +619,8 @@ impl Project {
   fn create_video_queue_select(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
     let last_frame = self.get_frames();
 
+    let input = self.input.as_video_path();
+
     let mut split_locs = vec![0];
     split_locs.extend(splits);
     split_locs.push(last_frame);
@@ -628,7 +635,7 @@ impl Project {
       .iter()
       .enumerate()
       .map(|(index, (frame_start, frame_end))| {
-        self.create_select_chunk(index, &self.input, *frame_start, *frame_end)
+        self.create_select_chunk(index, input, *frame_start, *frame_end)
       })
       .collect();
 
@@ -636,8 +643,10 @@ impl Project {
   }
 
   fn create_video_queue_segment(&mut self, splits: &[usize]) -> Vec<Chunk> {
+    let input = self.input.as_video_path();
+
     info!("Split video");
-    segment(&self.input, &self.temp, splits);
+    segment(input, &self.temp, splits);
     info!("Split done");
 
     let source_path = Path::new(&self.temp).join("split");
@@ -658,16 +667,19 @@ impl Project {
   }
 
   fn create_video_queue_hybrid(&mut self, split_locations: Vec<usize>) -> Vec<Chunk> {
-    let keyframes = ffmpeg::get_keyframes(&self.input);
-
-    let mut splits = vec![0];
+    let mut splits = Vec::with_capacity(2 + split_locations.len());
+    splits.push(0);
     splits.extend(split_locations);
     splits.push(self.get_frames());
 
+    let input = self.input.as_video_path();
+
+    let keyframes = ffmpeg::get_keyframes(input);
+
     let segments_set: Vec<(usize, usize)> = splits
       .iter()
-      .zip(splits.iter().skip(1))
-      .map(|(start, end)| (*start, *end))
+      .tuple_windows()
+      .map(|(&x, &y)| (x, y))
       .collect();
 
     let to_split: Vec<usize> = keyframes
@@ -677,7 +689,7 @@ impl Project {
       .collect();
 
     info!("Segmenting video");
-    segment(&self.input, &self.temp, &to_split[1..]);
+    segment(input, &self.temp, &to_split[1..]);
     info!("Segment done");
 
     let source_path = Path::new(&self.temp).join("split");
@@ -702,7 +714,7 @@ impl Project {
       .iter()
       .enumerate()
       .map(|(index, (file, (start, end)))| {
-        self.create_select_chunk(index, &file.as_path().to_string_lossy(), *start, *end)
+        self.create_select_chunk(index, file.as_path(), *start, *end)
       })
       .collect();
 
@@ -710,33 +722,31 @@ impl Project {
   }
 
   fn create_chunk_from_segment(&mut self, index: usize, file: &str) -> Chunk {
-    let ffmpeg_gen_cmd = vec![
-      "ffmpeg".into(),
-      "-y".into(),
-      "-hide_banner".into(),
-      "-loglevel".into(),
-      "error".into(),
-      "-i".into(),
+    let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
+      "ffmpeg",
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
       file.to_owned(),
-      "-strict".into(),
-      "-1".into(),
-      "-pix_fmt".into(),
+      "-strict",
+      "-1",
+      "-pix_fmt",
       self.pix_format.clone(),
-      "-f".into(),
-      "yuv4mpegpipe".into(),
-      "-".into(),
+      "-f",
+      "yuv4mpegpipe",
+      "-",
     ];
 
-    let output_ext = self.encoder.output_extension().to_owned();
-    let file_size = File::open(file).unwrap().metadata().unwrap().len();
+    let output_ext = self.encoder.output_extension();
 
     Chunk {
       temp: self.temp.clone(),
       frames: self.get_frames(),
-      ffmpeg_gen_cmd,
-      output_ext,
+      source: ffmpeg_gen_cmd,
+      output_ext: output_ext.to_owned(),
       index,
-      size: file_size as usize,
       ..Chunk::default()
     }
   }
@@ -796,9 +806,11 @@ impl Project {
     let chunk_queue = self.load_or_gen_chunk_queue(splits);
 
     crossbeam_utils::thread::scope(|s| {
-      let audio_thread = if !self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst) {
-        // Required outside of closure due to borrow checker errors
-        let input = self.input.as_str();
+      // vapoursynth audio is currently unsupported
+      let audio_thread = if self.input.is_video()
+        && (!self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst))
+      {
+        let input = self.input.as_video_path();
         let temp = self.temp.as_str();
         let audio_params = self.audio_params.as_slice();
         Some(s.spawn(move |_| {
@@ -835,16 +847,6 @@ impl Project {
         init_multi_progress_bar((self.frames - initial_frames) as u64, self.workers);
       }
 
-      // hack to avoid borrow checker errors
-      let concat = self.concat;
-      let temp = &self.temp;
-      let input = &self.input;
-      let output_file = &self.output_file;
-      let encoder = self.encoder;
-      let vmaf = self.vmaf;
-      let model = self.vmaf_path.as_ref();
-      let keep = self.keep;
-
       let broker = Broker {
         chunk_queue,
         project: self,
@@ -878,31 +880,50 @@ impl Project {
       let _audio_output_exists =
         audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
 
-      info!("Concatenating");
+      info!("Concatenating with {}", self.concat);
 
-      match concat {
+      match self.concat {
         ConcatMethod::Ivf => {
-          crate::concat::ivf(&Path::new(&temp).join("encode"), Path::new(&output_file)).unwrap();
+          concat::ivf(
+            &Path::new(&self.temp).join("encode"),
+            self.output_file.as_ref(),
+          )
+          .unwrap();
         }
         ConcatMethod::MKVMerge => {
-          crate::concat::mkvmerge(temp.clone(), output_file.clone()).unwrap();
+          concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref()).unwrap();
         }
         ConcatMethod::FFmpeg => {
-          crate::concat::ffmpeg(temp.clone(), output_file.clone(), encoder);
+          concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref(), self.encoder);
         }
       }
 
-      if vmaf {
-        plot_vmaf(&input, &output_file, model).unwrap();
+      if self.vmaf {
+        vmaf::plot(
+          self.output_file.as_ref(),
+          &self.input,
+          self.vmaf_path.as_deref(),
+          match &self.vmaf_res {
+            Some(res) => res.as_str(),
+            None => "1920x1080",
+          },
+          1,
+          match &self.vmaf_filter {
+            Some(filter) => Some(filter.as_str()),
+            None => None,
+          },
+          self.vmaf_threads.unwrap_or_else(num_cpus::get),
+        )
+        .unwrap();
       }
 
-      if !Path::new(&output_file).exists() {
+      if !Path::new(&self.output_file).exists() {
         warn!(
-          "Concatenating failed for unknown reasons! Temp folder will not be deleted: {}",
-          temp
+          "Concatenation failed for unknown reasons! Temp folder will not be deleted: {}",
+          &self.temp
         );
-      } else if !keep {
-        if let Err(e) = fs::remove_dir_all(temp) {
+      } else if !self.keep {
+        if let Err(e) = fs::remove_dir_all(&self.temp) {
           warn!("Failed to delete temp directory: {}", e);
         }
       }

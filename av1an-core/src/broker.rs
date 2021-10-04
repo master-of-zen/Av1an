@@ -1,8 +1,7 @@
 use crate::{
   finish_multi_progress_bar, finish_progress_bar, frame_probe, get_done, project::Project, Chunk,
-  Instant, TargetQuality, VecDeque, Verbosity,
+  Input, Instant, TargetQuality, Verbosity,
 };
-use itertools::Itertools;
 use std::{fs::File, io::Write, path::Path, sync::mpsc::Sender};
 
 pub struct Broker<'a> {
@@ -63,12 +62,11 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), VecDeque<String>> {
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), String> {
     let st_time = Instant::now();
 
     info!("Enc: {}, {} fr", chunk.index, chunk.frames);
 
-    // TODO change logic if other target quality methods are added in the future
     if let Some(ref tq) = self.target_quality {
       tq.per_shot_target_quality_routine(chunk);
     }
@@ -78,12 +76,12 @@ impl<'a> Broker<'a> {
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=MAX_TRIES {
         let res = self.project.create_pipes(chunk, current_pass, worker_id);
-        if let Err((exit_status, output)) = res {
+        if let Err((status, output)) = res {
           warn!(
             "Encoder failed (on chunk {}) with {}:\n{}",
             chunk.index,
-            exit_status,
-            textwrap::indent(&output.iter().join("\n"), /* 8 spaces */ "        ")
+            status,
+            textwrap::indent(&output, /* 8 spaces */ "        ")
           );
           if r#try == MAX_TRIES {
             error!(
@@ -126,7 +124,7 @@ impl<'a> Broker<'a> {
   }
 
   fn frame_check_output(chunk: &Chunk, expected_frames: usize) -> usize {
-    let actual_frames = frame_probe(&chunk.output_path());
+    let actual_frames = frame_probe(&Input::from(&chunk.output()));
 
     if actual_frames != expected_frames {
       warn!(

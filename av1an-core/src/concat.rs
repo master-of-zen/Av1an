@@ -264,7 +264,7 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
 
   let audio_file = temp.join("audio.mkv");
 
-  let audio_cmd = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
+  let audio_args = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
     vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"]
   } else {
     Vec::with_capacity(0)
@@ -291,7 +291,7 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "-i",
         concat_file,
       ])
-      .args(audio_cmd)
+      .args(audio_args)
       .args(&[
         "-c",
         "copy",
@@ -301,8 +301,8 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "0",
         "-f",
         "mp4",
-        output.to_str().unwrap(),
-      ]),
+      ])
+      .arg(output),
     _ => cmd
       .args([
         "-y",
@@ -316,8 +316,9 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "-i",
         concat_file,
       ])
-      .args(audio_cmd)
-      .args(["-c", "copy", output.to_str().unwrap()]),
+      .args(audio_args)
+      .args(["-c", "copy"])
+      .arg(output),
   };
   let out = cmd.output().unwrap();
 

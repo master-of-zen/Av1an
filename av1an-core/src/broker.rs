@@ -1,19 +1,19 @@
 use crate::{
-  finish_multi_progress_bar, finish_progress_bar, frame_probe, get_done, project::Project, Chunk,
-  Input, Instant, TargetQuality, Verbosity,
+  ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done, settings::EncodeArgs, Chunk,
+  Instant, TargetQuality, Verbosity,
 };
 use std::{fs::File, io::Write, path::Path, sync::mpsc::Sender};
 
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
-  pub project: &'a Project,
+  pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
 }
 
 impl<'a> Broker<'a> {
   pub fn new(
     chunk_queue: Vec<Chunk>,
-    project: &'a Project,
+    project: &'a EncodeArgs,
     target_quality: Option<TargetQuality<'a>>,
   ) -> Self {
     Broker {
@@ -23,6 +23,7 @@ impl<'a> Broker<'a> {
     }
   }
 
+  #[allow(clippy::needless_pass_by_value)]
   pub fn encoding_loop(self, tx: Sender<()>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
@@ -124,7 +125,7 @@ impl<'a> Broker<'a> {
   }
 
   fn frame_check_output(chunk: &Chunk, expected_frames: usize) -> usize {
-    let actual_frames = frame_probe(&Input::from(&chunk.output()));
+    let actual_frames = ffmpeg::num_frames(chunk.output().as_ref()).unwrap();
 
     if actual_frames != expected_frames {
       warn!(

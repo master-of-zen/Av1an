@@ -1,22 +1,22 @@
 use crate::{
   chunk::Chunk,
   process_pipe,
-  project::Project,
+  settings::EncodeArgs,
   vmaf::{self, read_weighted_vmaf},
   Encoder,
 };
 use splines::{Interpolation, Key, Spline};
-use std::{cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
+use std::{cmp, cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
 
 // TODO: just make it take a reference to a `Project`
 pub struct TargetQuality<'a> {
-  vmaf_res: String,
+  vmaf_res: &'a str,
   vmaf_filter: Option<&'a str>,
-  n_threads: usize,
+  vmaf_threads: usize,
   model: Option<&'a Path>,
   probing_rate: usize,
   probes: u32,
-  target: f32,
+  target: f64,
   min_q: u32,
   max_q: u32,
   encoder: Encoder,
@@ -28,14 +28,11 @@ pub struct TargetQuality<'a> {
 }
 
 impl<'a> TargetQuality<'a> {
-  pub fn new(project: &'a Project) -> Self {
+  pub fn new(project: &'a EncodeArgs) -> Self {
     Self {
-      vmaf_res: project
-        .vmaf_res
-        .clone()
-        .unwrap_or_else(|| String::with_capacity(0)),
+      vmaf_res: project.vmaf_res.as_str(),
       vmaf_filter: project.vmaf_filter.as_deref(),
-      n_threads: project.vmaf_threads.unwrap_or(0) as usize,
+      vmaf_threads: project.vmaf_threads.unwrap_or(0),
       model: project.vmaf_path.as_deref(),
       probes: project.probes,
       target: project.target_quality.unwrap(),
@@ -72,7 +69,7 @@ impl<'a> TargetQuality<'a> {
     let mut vmaf_cq_upper = last_q;
 
     // Branch
-    let next_q = if score < f64::from(self.target) {
+    let next_q = if score < self.target {
       self.min_q
     } else {
       self.max_q
@@ -84,17 +81,17 @@ impl<'a> TargetQuality<'a> {
     score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
     vmaf_cq.push((score, next_q));
 
-    if (next_q == self.min_q && score < f64::from(self.target))
-      || (next_q == self.max_q && score > f64::from(self.target))
+    if (next_q == self.min_q && score < self.target)
+      || (next_q == self.max_q && score > self.target)
     {
       log_probes(
-        vmaf_cq,
+        &mut vmaf_cq,
         frames as u32,
         self.probing_rate as u32,
         &chunk.name(),
         next_q,
         score,
-        if score < f64::from(self.target) {
+        if score < self.target {
           Skip::Low
         } else {
           Skip::High
@@ -104,7 +101,7 @@ impl<'a> TargetQuality<'a> {
     }
 
     // Set boundary
-    if score < f64::from(self.target) {
+    if score < self.target {
       vmaf_lower = score;
       vmaf_cq_lower = next_q;
     } else {
@@ -119,7 +116,7 @@ impl<'a> TargetQuality<'a> {
         vmaf_lower,
         f64::from(vmaf_cq_upper),
         vmaf_upper,
-        f64::from(self.target),
+        self.target,
       );
 
       if vmaf_cq
@@ -135,7 +132,7 @@ impl<'a> TargetQuality<'a> {
       vmaf_cq.push((score, new_point as u32));
 
       // Update boundary
-      if score < f64::from(self.target) {
+      if score < self.target {
         vmaf_lower = score;
         vmaf_cq_lower = new_point as u32;
       } else {
@@ -144,9 +141,9 @@ impl<'a> TargetQuality<'a> {
       }
     }
 
-    let (q, q_vmaf) = interpolated_target_q(vmaf_cq.clone(), f64::from(self.target));
+    let (q, q_vmaf) = interpolated_target_q(vmaf_cq.clone(), self.target);
     log_probes(
-      vmaf_cq,
+      &mut vmaf_cq,
       frames as u32,
       self.probing_rate as u32,
       &chunk.name(),
@@ -159,19 +156,19 @@ impl<'a> TargetQuality<'a> {
   }
 
   fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
-    let n_threads = if self.n_threads == 0 {
+    let vmaf_threads = if self.vmaf_threads == 0 {
       vmaf_auto_threads(self.workers)
     } else {
-      self.n_threads
+      self.vmaf_threads
     };
 
     let cmd = self.encoder.probe_cmd(
       self.temp.clone(),
-      chunk.name(),
+      &chunk.name(),
       q,
       self.ffmpeg_pipe.clone(),
       self.probing_rate,
-      n_threads,
+      vmaf_threads,
       self.video_params.clone(),
       self.probe_slow,
     );
@@ -241,10 +238,10 @@ impl<'a> TargetQuality<'a> {
       chunk.source.as_slice(),
       &fl_path,
       self.model.as_ref(),
-      &self.vmaf_res,
+      self.vmaf_res,
       self.probing_rate,
       self.vmaf_filter,
-      self.n_threads,
+      self.vmaf_threads,
     )
     .unwrap();
 
@@ -281,7 +278,7 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
   // Logical CPUs
   let threads = num_cpus::get();
 
-  std::cmp::max(
+  cmp::max(
     ((threads / workers) as f64 * OVER_PROVISION_FACTOR) as usize,
     1,
   )
@@ -325,7 +322,7 @@ pub enum Skip {
 }
 
 pub fn log_probes(
-  vmaf_cq_scores: Vec<(f64, u32)>,
+  vmaf_cq_scores: &mut [(f64, u32)],
   frames: u32,
   probing_rate: u32,
   name: &str,
@@ -333,13 +330,12 @@ pub fn log_probes(
   target_vmaf: f64,
   skip: Skip,
 ) {
-  let mut scores_sorted = vmaf_cq_scores;
-  scores_sorted.sort_by_key(|x| x.1);
+  vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
 
   info!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames);
   info!(
     "Probes {:?}{}",
-    scores_sorted,
+    vmaf_cq_scores,
     match skip {
       Skip::High => " Early Skip High Q",
       Skip::Low => " Early Skip Low Q",

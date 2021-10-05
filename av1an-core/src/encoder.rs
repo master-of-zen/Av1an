@@ -594,11 +594,11 @@ impl Encoder {
   pub fn probe_cmd(
     self,
     temp: String,
-    name: String,
+    name: &str,
     q: usize,
     ffmpeg_pipe: Vec<String>,
     probing_rate: usize,
-    n_threads: usize,
+    vmaf_threads: usize,
     mut video_params: Vec<String>,
     probe_slow: bool,
   ) -> (Vec<String>, Vec<Cow<'static, str>>) {
@@ -644,7 +644,7 @@ impl Encoder {
 
       ps
     } else {
-      self.construct_target_quality_command(n_threads, q)
+      self.construct_target_quality_command(vmaf_threads, q)
     };
 
     let output: Vec<Cow<str>> = match self {

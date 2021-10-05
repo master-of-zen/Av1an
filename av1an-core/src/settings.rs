@@ -4,7 +4,7 @@ use crate::{
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
   ffmpeg::compose_ffmpeg_pipe,
-  finish_multi_progress_bar, get_done, hash_path, init_done, into_vec, invalid_params,
+  finish_multi_progress_bar, get_done, hash_path, init_done, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
     update_mp_msg,
@@ -12,7 +12,7 @@ use crate::{
   read_chunk_queue, regex, save_chunk_queue,
   scene_detect::av_scenechange_detect,
   split::{extra_splits, segment, write_scenes_to_file},
-  suggest_fix, vapoursynth,
+  vapoursynth,
   vapoursynth::create_vs_file,
   vmaf, ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
@@ -24,7 +24,7 @@ use itertools::Itertools;
 use path_abs::PathAbs;
 use std::{
   cmp,
-  cmp::Reverse,
+  cmp::{Ordering, Reverse},
   collections::HashSet,
   convert::TryInto,
   ffi::OsString,
@@ -39,7 +39,7 @@ use std::{
 };
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-pub struct Project {
+pub struct EncodeArgs {
   pub frames: usize,
 
   pub input: Input,
@@ -47,7 +47,7 @@ pub struct Project {
   pub output_file: String,
 
   pub chunk_method: ChunkMethod,
-  pub scenes: Option<String>,
+  pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_method: ScenecutMethod,
   pub sc_downscale_height: Option<usize>,
@@ -73,11 +73,11 @@ pub struct Project {
 
   pub vmaf: bool,
   pub vmaf_path: Option<PathBuf>,
-  pub vmaf_res: Option<String>,
+  pub vmaf_res: String,
 
   pub concat: ConcatMethod,
 
-  pub target_quality: Option<f32>,
+  pub target_quality: Option<f64>,
   pub probes: u32,
   pub probe_slow: bool,
   pub min_q: Option<u32>,
@@ -88,7 +88,7 @@ pub struct Project {
   pub vmaf_filter: Option<String>,
 }
 
-impl Project {
+impl EncodeArgs {
   /// Initialize logging routines and create temporary directories
   pub fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg_next::init()?;
@@ -125,7 +125,7 @@ impl Project {
     queue_files.retain(|file| {
       file.is_file() && matches!(file.extension().map(|ext| ext == "mkv"), Some(true))
     });
-    crate::concat::sort_files_by_filename(&mut queue_files);
+    concat::sort_files_by_filename(&mut queue_files);
 
     queue_files
   }
@@ -279,31 +279,47 @@ impl Project {
     self.frames
   }
 
-  /// returns a list of valid parameters
-  #[must_use]
-  fn valid_encoder_params(&self) -> HashSet<String> {
-    let [cmd, arg] = self.encoder.help_command();
-
-    let help_text = String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap();
-
-    regex!(r"\s+(-\w+|(?:--\w+(?:-\w+)*))")
-      .find_iter(&help_text)
-      .filter_map(|m| {
-        m.as_str()
-          .split_ascii_whitespace()
-          .next()
-          .map(ToString::to_string)
-      })
-      .collect::<HashSet<String>>()
-  }
-
-  // TODO remove all of these extra allocations
-  fn validate_input(&self) {
-    if self.force {
-      return;
+  fn validate_encoder_params(&self) {
+    /// Returns the set of valid parameters given a help text of an encoder
+    #[must_use]
+    fn valid_params(help_text: &str) -> HashSet<&str> {
+      regex!(r"\s+(-\w+|(?:--\w+(?:-\w+)*))")
+        .find_iter(help_text)
+        .filter_map(|m| m.as_str().split_ascii_whitespace().next())
+        .collect()
     }
 
-    let video_params: Vec<String> = self
+    #[must_use]
+    fn invalid_params<'a>(
+      params: &'a [&'a str],
+      valid_options: &'a HashSet<&'a str>,
+    ) -> Vec<&'a str> {
+      params
+        .iter()
+        .filter(|param| !valid_options.contains(*param))
+        .copied()
+        .collect()
+    }
+
+    #[must_use]
+    fn suggest_fix<'a>(wrong_arg: &str, arg_dictionary: &'a HashSet<&'a str>) -> Option<&'a str> {
+      // Minimum threshold to consider a suggestion similar enough that it could be a typo
+      const MIN_THRESHOLD: f64 = 0.75;
+
+      arg_dictionary
+        .iter()
+        .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
+        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
+        .and_then(|(suggestion, score)| {
+          if score > MIN_THRESHOLD {
+            Some(*suggestion)
+          } else {
+            None
+          }
+        })
+    }
+
+    let video_params: Vec<&str> = self
       .video_params
       .as_slice()
       .iter()
@@ -314,12 +330,15 @@ impl Project {
           None
         }
       })
-      .map(ToString::to_string)
       .collect();
 
-    let valid_params = self.valid_encoder_params();
+    let help_text = {
+      let [cmd, arg] = self.encoder.help_command();
+      String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap()
+    };
 
-    let invalid_params = invalid_params(video_params.as_slice(), &valid_params);
+    let valid_params = valid_params(&help_text);
+    let invalid_params = invalid_params(&video_params, &valid_params);
 
     for wrong_param in &invalid_params {
       eprintln!(
@@ -346,10 +365,8 @@ impl Project {
       bail!(".ivf only supports VP8, VP9, and AV1");
     }
 
-    let input = self.input.as_path();
-
     ensure!(
-      input.exists(),
+      self.input.as_path().exists(),
       "Input file {:?} does not exist!",
       self.input
     );
@@ -358,14 +375,12 @@ impl Project {
       bail!("FFmpeg not found. Is it installed in system path?");
     }
 
-    if self.concat == ConcatMethod::MKVMerge {
-      if which::which("mkvmerge").is_err() {
-        bail!("mkvmerge not found, but `--concat mkvmerge` was specified. Is it installed in system path?");
-      }
+    if self.concat == ConcatMethod::MKVMerge && which::which("mkvmerge").is_err() {
+      bail!("mkvmerge not found, but `--concat mkvmerge` was specified. Is it installed in system path?");
     }
 
-    if let Some(ref vmaf_path) = self.vmaf_path {
-      ensure!(Path::new(vmaf_path).exists());
+    if let Some(vmaf_path) = &self.vmaf_path {
+      ensure!(vmaf_path.exists());
     }
 
     if self.probes < 4 {
@@ -410,7 +425,9 @@ impl Project {
       );
     }
 
-    self.validate_input();
+    if !self.force {
+      self.validate_encoder_params();
+    }
     self.initialize().unwrap();
 
     self.ffmpeg_pipe = self.ffmpeg.clone();
@@ -461,10 +478,10 @@ impl Project {
     // TODO make self.frames impossible to misuse
     let _ = self.get_frames();
 
-    let scene_file = self.scenes.as_ref().map_or_else(
-      || Path::new(&self.temp).join("scenes.json"),
-      |path| Path::new(&path).to_path_buf(),
-    );
+    let scene_file = self
+      .scenes
+      .clone()
+      .unwrap_or_else(|| Path::new(&self.temp).join("scenes.json"));
 
     let mut scenes = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())
@@ -487,7 +504,7 @@ impl Project {
       }
     }
 
-    self.write_scenes_to_file(&scenes, scene_file.as_path().to_str().unwrap());
+    self.write_scenes_to_file(&scenes, scene_file.to_str().unwrap());
 
     scenes
   }
@@ -750,7 +767,7 @@ impl Project {
 
   fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
     if self.resume {
-      let mut chunks = read_chunk_queue(&self.temp);
+      let mut chunks = read_chunk_queue(self.temp.as_ref());
 
       let done = get_done();
 
@@ -900,10 +917,7 @@ impl Project {
           self.output_file.as_ref(),
           &self.input,
           self.vmaf_path.as_deref(),
-          match &self.vmaf_res {
-            Some(res) => res.as_str(),
-            None => "1920x1080",
-          },
+          self.vmaf_res.as_str(),
           1,
           match &self.vmaf_filter {
             Some(filter) => Some(filter.as_str()),

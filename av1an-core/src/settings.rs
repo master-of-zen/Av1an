@@ -93,6 +93,7 @@ impl EncodeArgs {
   /// Initialize logging routines and create temporary directories
   pub fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg_next::init()?;
+    ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
 
     info!("File hash: {}", hash_path(self.input.as_path()));
 

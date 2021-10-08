@@ -24,7 +24,6 @@ use crate::{
 use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
   collections::hash_map::DefaultHasher,
@@ -145,19 +144,16 @@ fn init_done(done: DoneJson) -> &'static DoneJson {
   DONE_JSON.get_or_init(|| done)
 }
 
-pub fn list_index_of_regex(params: &[impl AsRef<str>], re: &Regex) -> Option<usize> {
-  assert!(
-    !params.is_empty(),
-    "List index of regex got empty list of params"
-  );
+pub fn list_index(params: &[impl AsRef<str>], is_match: fn(&str) -> bool) -> Option<usize> {
+  assert!(!params.is_empty(), "received empty list of parameters");
 
-  for (i, cmd) in params.iter().enumerate() {
-    if re.is_match(cmd.as_ref()) {
-      return Some(i);
+  params.iter().enumerate().find_map(|(idx, s)| {
+    if is_match(s.as_ref()) {
+      Some(idx)
+    } else {
+      None
     }
-  }
-
-  None
+  })
 }
 
 #[derive(Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]

@@ -1,4 +1,4 @@
-use crate::{into_vec, list_index_of_regex, regex};
+use crate::{into_vec, list_index, regex};
 use itertools::chain;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -321,13 +321,13 @@ impl Encoder {
     }
   }
 
-  /// Returns regex used for matching q/crf arguments in command line
-  fn q_regex(self) -> &'static Regex {
-    match &self {
-      Self::aom | Self::vpx => regex!(r"--cq-level=.+"),
-      Self::rav1e => regex!(r"--quantizer"),
-      Self::svt_av1 => regex!(r"(--qp|-q|--crf)"),
-      Self::x264 | Self::x265 => regex!(r"--crf"),
+  /// Returns function pointer used for matching q/crf arguments in command line
+  fn q_match_fn(self) -> fn(&str) -> bool {
+    match self {
+      Self::aom | Self::vpx => |p| p.starts_with("--cq-level="),
+      Self::rav1e => |p| p == "--quantizer",
+      Self::svt_av1 => |p| matches!(p, "--qp" | "-q" | "--crf"),
+      Self::x264 | Self::x265 => |p| p == "--crf",
     }
   }
 
@@ -340,7 +340,7 @@ impl Encoder {
 
   /// Returns changed q/crf in command line arguments
   pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index_of_regex(&params, self.q_regex())
+    let index = list_index(&params, self.q_match_fn())
       .unwrap_or_else(|| panic!("No match found for params: {:#?}", params));
 
     let mut new_params = params;

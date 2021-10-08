@@ -8,7 +8,7 @@
 
 ## Description
 
-Target Quality has a really simple goal, instead of guessing what the CQ/CRF value to choose for desired level of video quality we set quality level we wan, quality goal is set in value of VMAF score we want to achieve and let the algorithm find CRF/CQ value that will result in that score, for each segment. Which simultaneously achieve 3 things, if compared to usual, single value CRF/CQ encode.
+Target Quality has a really simple goal, instead of guessing what the CQ/CRF value to choose for desired level of video quality we set quality level we want, quality goal is set in value of VMAF score we want to achieve and let the algorithm find CRF/CQ value that will result in that score, for each segment. Which simultaneously achieve 3 things, if compared to usual, single value CRF/CQ encode.
 
 - Ensuring better level of visual consistency than default rate controls
 - Give enough bitrate to complex segments to match target quality.

@@ -23,6 +23,7 @@ use flexi_logger::{Duplicate, FileSpec, Logger};
 use itertools::Itertools;
 use path_abs::PathAbs;
 use std::{
+  borrow::Cow,
   cmp,
   cmp::{Ordering, Reverse},
   collections::HashSet,
@@ -92,6 +93,7 @@ impl EncodeArgs {
   /// Initialize logging routines and create temporary directories
   pub fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg_next::init()?;
+    ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
 
     info!("File hash: {}", hash_path(self.input.as_path()));
 
@@ -336,7 +338,6 @@ impl EncodeArgs {
       let [cmd, arg] = self.encoder.help_command();
       String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap()
     };
-
     let valid_params = valid_params(&help_text);
     let invalid_params = invalid_params(&video_params, &valid_params);
 
@@ -400,9 +401,7 @@ impl EncodeArgs {
     }
 
     let encoder_bin = self.encoder.bin();
-    let settings_valid = which::which(&encoder_bin).is_ok();
-
-    if !settings_valid {
+    if which::which(encoder_bin).is_err() {
       bail!(
         "Encoder {} not found. Is it installed in the system path?",
         encoder_bin
@@ -565,7 +564,7 @@ impl EncodeArgs {
   fn create_vs_chunk(
     &self,
     index: usize,
-    vs_script: PathBuf,
+    vs_script: &Path,
     frame_start: usize,
     mut frame_end: usize,
   ) -> Chunk {
@@ -614,16 +613,18 @@ impl EncodeArgs {
       .map(|(start, end)| (*start, *end))
       .collect();
 
-    let vs_script = match &self.input {
-      Input::VapourSynth(path) => path.clone(),
-      Input::Video(path) => create_vs_file(&self.temp, path, self.chunk_method).unwrap(),
+    let vs_script: Cow<Path> = match &self.input {
+      Input::VapourSynth(path) => Cow::Borrowed(path.as_ref()),
+      Input::Video(path) => {
+        Cow::Owned(create_vs_file(&self.temp, path, self.chunk_method).unwrap())
+      }
     };
 
     let chunk_queue: Vec<Chunk> = chunk_boundaries
       .iter()
       .enumerate()
       .map(|(index, (frame_start, frame_end))| {
-        self.create_vs_chunk(index, vs_script.clone(), *frame_start, *frame_end)
+        self.create_vs_chunk(index, &vs_script, *frame_start, *frame_end)
       })
       .collect();
 

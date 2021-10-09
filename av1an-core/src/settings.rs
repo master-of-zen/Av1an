@@ -115,6 +115,17 @@ impl EncodeArgs {
       .duplicate_to_stderr(Duplicate::Warn)
       .start()?;
 
+    self.ffmpeg_pipe = self.ffmpeg.clone();
+    self.ffmpeg_pipe.extend([
+      "-strict".into(),
+      "-1".into(),
+      "-pix_fmt".into(),
+      self.pix_format.clone(),
+      "-f".into(),
+      "yuv4mpegpipe".into(),
+      "-".into(),
+    ]);
+
     Ok(())
   }
 
@@ -147,14 +158,13 @@ impl EncodeArgs {
         .encoder
         .compose_1_1_pass(self.video_params.clone(), chunk.output())
     } else if current_pass == 1 {
-      self.encoder.compose_1_2_pass(
-        self.video_params.clone(),
-        &fpf_file.to_str().unwrap().to_owned(),
-      )
+      self
+        .encoder
+        .compose_1_2_pass(self.video_params.clone(), &fpf_file.to_str().unwrap())
     } else {
       self.encoder.compose_2_2_pass(
         self.video_params.clone(),
-        &fpf_file.to_str().unwrap().to_owned(),
+        &fpf_file.to_str().unwrap(),
         chunk.output(),
       )
     };
@@ -248,9 +258,6 @@ impl EncodeArgs {
 
       let exit_status = pipe.wait_with_output().await.unwrap().status;
 
-      drop(ffmpeg_gen_pipe.kill().await);
-      drop(ffmpeg_pipe.kill().await);
-
       (exit_status, output)
     });
 
@@ -312,9 +319,9 @@ impl EncodeArgs {
         .iter()
         .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
-        .and_then(|(suggestion, score)| {
+        .and_then(|(&suggestion, score)| {
           if score > MIN_THRESHOLD {
-            Some(*suggestion)
+            Some(suggestion)
           } else {
             None
           }
@@ -358,10 +365,11 @@ impl EncodeArgs {
   }
 
   pub fn startup_check(&mut self) -> anyhow::Result<()> {
-    if !matches!(
-      self.encoder,
-      Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
-    ) && self.concat == ConcatMethod::Ivf
+    if self.concat == ConcatMethod::Ivf
+      && !matches!(
+        self.encoder,
+        Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
+      )
     {
       bail!(".ivf only supports VP8, VP9, and AV1");
     }
@@ -393,7 +401,7 @@ impl EncodeArgs {
       None => {
         self.min_q = Some(min as u32);
       }
-      Some(min_q) => assert!(min_q > 1),
+      Some(min_q) => ensure!(min_q > 1),
     }
 
     if self.max_q.is_none() {
@@ -427,18 +435,6 @@ impl EncodeArgs {
     if !self.force {
       self.validate_encoder_params();
     }
-    self.initialize().unwrap();
-
-    self.ffmpeg_pipe = self.ffmpeg.clone();
-    self.ffmpeg_pipe.extend([
-      "-strict".into(),
-      "-1".into(),
-      "-pix_fmt".into(),
-      self.pix_format.clone(),
-      "-f".into(),
-      "yuv4mpegpipe".into(),
-      "-".into(),
-    ]);
 
     Ok(())
   }
@@ -520,7 +516,7 @@ impl EncodeArgs {
     mut frame_end: usize,
   ) -> Chunk {
     assert!(
-      frame_end > frame_start,
+      frame_start < frame_end,
       "Can't make a chunk with <= 0 frames!"
     );
 
@@ -636,21 +632,15 @@ impl EncodeArgs {
 
     let input = self.input.as_video_path();
 
-    let mut split_locs = vec![0];
-    split_locs.extend(splits);
-    split_locs.push(last_frame);
-
-    let chunk_boundaries: Vec<(usize, usize)> = split_locs
-      .iter()
-      .zip(split_locs.iter().skip(1))
-      .map(|(start, end)| (*start, *end))
-      .collect();
+    let chunk_boundaries = iter::once(0)
+      .chain(splits)
+      .chain(iter::once(last_frame))
+      .tuple_windows();
 
     let chunk_queue: Vec<Chunk> = chunk_boundaries
-      .iter()
       .enumerate()
       .map(|(index, (frame_start, frame_end))| {
-        self.create_select_chunk(index, input, *frame_start, *frame_end)
+        self.create_select_chunk(index, input, frame_start, frame_end)
       })
       .collect();
 
@@ -691,11 +681,7 @@ impl EncodeArgs {
 
     let keyframes = ffmpeg::get_keyframes(input);
 
-    let segments_set: Vec<(usize, usize)> = splits
-      .iter()
-      .tuple_windows()
-      .map(|(&x, &y)| (x, y))
-      .collect();
+    let segments_set: Vec<(usize, usize)> = splits.iter().copied().tuple_windows().collect();
 
     let to_split: Vec<usize> = keyframes
       .iter()
@@ -710,17 +696,17 @@ impl EncodeArgs {
     let source_path = Path::new(&self.temp).join("split");
     let queue_files = Self::read_queue_files(&source_path);
 
-    let kf_list: Vec<(usize, usize)> = to_split
+    let kf_list = to_split
       .iter()
-      .zip(to_split.iter().skip(1).chain(iter::once(&self.frames)))
-      .map(|(start, end)| (*start, *end))
-      .collect();
+      .copied()
+      .chain(iter::once(self.frames))
+      .tuple_windows();
 
     let mut segments = Vec::with_capacity(segments_set.len());
-    for (file, (x, y)) in queue_files.iter().zip(kf_list.iter()) {
-      for (s0, s1) in &segments_set {
-        if s0 >= x && s1 <= y && s0 - x < s1 - x {
-          segments.push((file.clone(), (s0 - x, s1 - x)));
+    for (file, (x, y)) in queue_files.iter().zip(kf_list) {
+      for &(s0, s1) in &segments_set {
+        if s0 >= x && s1 <= y && s0 < s1 {
+          segments.push((file.as_path(), (s0 - x, s1 - x)));
         }
       }
     }
@@ -728,9 +714,7 @@ impl EncodeArgs {
     let chunk_queue: Vec<Chunk> = segments
       .iter()
       .enumerate()
-      .map(|(index, (file, (start, end)))| {
-        self.create_select_chunk(index, file.as_path(), *start, *end)
-      })
+      .map(|(index, &(file, (start, end)))| self.create_select_chunk(index, file, start, end))
       .collect();
 
     chunk_queue
@@ -783,7 +767,7 @@ impl EncodeArgs {
     }
   }
 
-  pub fn encode_file(&mut self) {
+  pub fn encode_file(&mut self) -> anyhow::Result<()> {
     let done_path = Path::new(&self.temp).join("done.json");
 
     let splits = self.split_routine();
@@ -793,8 +777,8 @@ impl EncodeArgs {
     if self.resume && done_path.exists() {
       info!("Resuming...");
 
-      let done = fs::read_to_string(done_path).unwrap();
-      let done: DoneJson = serde_json::from_str(&done).unwrap();
+      let done = fs::read_to_string(done_path)?;
+      let done: DoneJson = serde_json::from_str(&done)?;
       init_done(done);
 
       initial_frames = get_done()
@@ -813,14 +797,12 @@ impl EncodeArgs {
       });
 
       let mut done_file = fs::File::create(&done_path).unwrap();
-      done_file
-        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
-        .unwrap();
+      done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
     }
 
     let chunk_queue = self.load_or_gen_chunk_queue(splits);
 
-    crossbeam_utils::thread::scope(|s| {
+    crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
       // vapoursynth audio is currently unsupported
       let audio_thread = if self.input.is_video()
         && (!self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst))
@@ -902,11 +884,10 @@ impl EncodeArgs {
           concat::ivf(
             &Path::new(&self.temp).join("encode"),
             self.output_file.as_ref(),
-          )
-          .unwrap();
+          )?;
         }
         ConcatMethod::MKVMerge => {
-          concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref()).unwrap();
+          concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref())?;
         }
         ConcatMethod::FFmpeg => {
           concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref(), self.encoder);
@@ -920,13 +901,12 @@ impl EncodeArgs {
           self.vmaf_path.as_deref(),
           self.vmaf_res.as_str(),
           1,
-          match &self.vmaf_filter {
-            Some(filter) => Some(filter.as_str()),
+          match self.vmaf_filter.as_deref() {
+            Some(filter) => Some(filter),
             None => None,
           },
           self.vmaf_threads.unwrap_or_else(num_cpus::get),
-        )
-        .unwrap();
+        )?;
       }
 
       if !Path::new(&self.output_file).exists() {
@@ -939,7 +919,11 @@ impl EncodeArgs {
           warn!("Failed to delete temp directory: {}", e);
         }
       }
+
+      Ok(())
     })
-    .unwrap();
+    .unwrap()?;
+
+    Ok(())
   }
 }

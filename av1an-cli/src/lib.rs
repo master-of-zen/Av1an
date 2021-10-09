@@ -1,4 +1,6 @@
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+use anyhow::{bail, ensure};
+use av1an_core::into_vec;
 use av1an_core::Input;
 use av1an_core::ScenecutMethod;
 use path_abs::{PathAbs, PathInfo};
@@ -201,7 +203,7 @@ pub fn cli() -> anyhow::Result<()> {
 
   // TODO parse with normal (non proc-macro) clap methods to simplify this
   // Unify Project/Args
-  let mut project = EncodeArgs {
+  let mut encode = EncodeArgs {
     frames: 0,
     logging: if let Some(log_file) = args.logging {
       Path::new(&format!("{}.log", log_file)).to_owned()
@@ -225,55 +227,32 @@ pub fn cli() -> anyhow::Result<()> {
     } else {
       Vec::new()
     },
-    output_file: if let Some(output) = args.output_file {
-      if output.exists()
-        && !confirm(&format!(
-          "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-          output
-        ))?
-      {
-        println!("Not overwriting, aborting.");
-        return Ok(());
+    output_file: if let Some(path) = args.output_file.as_deref() {
+      let path = PathAbs::new(path)?;
+
+      if let Ok(parent) = path.parent() {
+        ensure!(parent.exists(), "Path to file {:?} is invalid", path);
+      } else {
+        bail!("Failed to get parent directory of path: {:?}", path);
       }
 
-      let output = PathAbs::new(output).context(
-        "Failed to canonicalize output path: the output file must have a valid parent directory",
-      )?;
-
-      if !output
-        .parent()
-        .expect("Failed to get parent directory of canonicalized path")
-        .exists()
-      {
-        eprintln!("Path to file is invalid: {:?}", &output);
-        std::process::exit(1);
-      }
-
-      output.to_str().unwrap().to_owned()
+      path.to_string_lossy().to_string()
     } else {
-      let default_path = format!(
+      format!(
         "{}_{}.mkv",
-        args.input.file_stem().unwrap().to_str().unwrap(),
+        args
+          .input
+          .file_stem()
+          .unwrap_or(args.input.as_ref())
+          .to_string_lossy(),
         args.encoder
-      );
-
-      if Path::new(&*default_path).exists()
-        && !confirm(&format!(
-          "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-          &default_path
-        ))?
-      {
-        println!("Not overwriting, aborting.");
-        return Ok(());
-      }
-
-      default_path
+      )
     },
     audio_params: if let Some(args) = args.audio_params {
       shlex::split(&args)
         .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
     } else {
-      vec!["-c:a".into(), "copy".into()]
+      into_vec!["-c:a", "copy"]
     },
     ffmpeg_pipe: Vec::new(),
     chunk_method: args
@@ -286,7 +265,7 @@ pub fn cli() -> anyhow::Result<()> {
     } else {
       None
     },
-    input: Input::from(args.input),
+    input: Input::from(args.input.as_path()),
     keep: args.keep,
     min_q: args.min_q,
     max_q: args.max_q,
@@ -322,8 +301,34 @@ pub fn cli() -> anyhow::Result<()> {
   })
   .unwrap();
 
-  project.startup_check()?;
-  project.encode_file();
+  encode.startup_check()?;
+
+  if let Some(path) = args.output_file.as_deref() {
+    if path.exists()
+      && !confirm(&format!(
+        "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+        path
+      ))?
+    {
+      println!("Not overwriting, aborting.");
+      return Ok(());
+    }
+  } else {
+    let path: &Path = encode.output_file.as_ref();
+
+    if path.exists()
+      && !confirm(&format!(
+        "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+        path
+      ))?
+    {
+      println!("Not overwriting, aborting.");
+      return Ok(());
+    }
+  }
+
+  encode.initialize()?;
+  encode.encode_file()?;
 
   Ok(())
 }

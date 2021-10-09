@@ -151,7 +151,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
-pub fn mkvmerge(encode_folder: &Path, output: &Path) -> Result<(), anyhow::Error> {
+pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
   let mut encode_folder = PathBuf::from(encode_folder);
 
   let mut audio_file = PathBuf::from(&encode_folder);
@@ -192,7 +192,7 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> Result<(), anyhow::Error
       }
     }
     // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
-    // asserted that the length `files` is odd and nonzero in this branch.
+    // asserted that the length of `files` is odd and nonzero in this branch.
     cmd.arg(chunks.remainder()[0].path());
   } else {
     // The total number of elements at this point is even, and there are at *least* 2 elements,
@@ -221,7 +221,7 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> Result<(), anyhow::Error
 
   assert!(
     output.status.success(),
-    "mkvmerge failed with output: {:?}",
+    "mkvmerge failed with output: {:#?}",
     output
   );
 

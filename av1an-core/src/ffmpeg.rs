@@ -43,7 +43,7 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
 }
 
 /// Returns vec of all keyframes
-pub fn get_keyframes<P: AsRef<Path>>(source: P) -> Vec<usize> {
+pub fn get_keyframes(source: &Path) -> Vec<usize> {
   let mut ictx = input(&source).unwrap();
   let input = ictx
     .streams()

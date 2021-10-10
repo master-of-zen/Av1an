@@ -15,7 +15,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-An easy way to start using AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, SVT-VP9, VPX, x265, x264 are supported.
+### <center>An easy way to start using AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, SVT-VP9, VPX, x265, x264 are supported</center>
 
 Example with default parameters:
 
@@ -75,7 +75,7 @@ With your own parameters:
     --pix-format            Setting custom pixel/bit format for piping
                             (Default: 'yuv420p10le')
 
-<h3 align="center">Segmenting</h3>
+### <center>Segmenting<center>
 
     --split-method          Method used for generating splits.(Default: av-scenedetect)
                             Options: `av-scenedetect`, `none`
@@ -131,52 +131,57 @@ With your own parameters:
 
 **Splitting video by scenes for parallel encoding** because AV1 encoders are currently not very good at multithreading and encoding is limited to a very limited number of threads.
 
--   [Vapoursynth](http://www.vapoursynth.com) script input support.
--   Speed up video encoding.
--   Target Quality mode. Targeting end result reference visual quality. VMAF used as a substructure
--   Resuming encoding without loss of encoded progress.
--   Simple and clean console look.
--   Automatic detection of the number of workers the host can handle.
--   Both video and audio transcoding.
+- [Vapoursynth](http://www.vapoursynth.com) script input support.
+- Speed up video encoding.
+- Target Quality mode. Targeting end result reference visual quality. VMAF used as a substructure
+- Resuming encoding without loss of encoded progress.
+- Simple and clean console look.
+- Automatic detection of the number of workers the host can handle.
+- Both video and audio transcoding.
 
 ## Install
--   With a package manager:
-    -   `cargo install av1an`
-    -   [CARGO](https://crates.io/crates/av1an)  
-    -   [AUR](https://aur.archlinux.org/packages/av1an-git/)
 
--   Prerequisites:
-    -   [Install FFmpeg](https://ffmpeg.org/download.html)
-    -   Recommended to install vapoursynth with lsmash/ffms2 for faster and better processing
+- With a package manager:
+  - `cargo install av1an`
+  - [CARGO](https://crates.io/crates/av1an)
+  - [AUR](https://aur.archlinux.org/packages/av1an-git/)
 
--   Encoder of choice:
-    -   [Install AOMENC](https://aomedia.googlesource.com/aom/)
-    -   [Install rav1e](https://github.com/xiph/rav1e)
-    -   [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
-    -   [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
-    -   [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
+- Prerequisites:
+  - [Install FFmpeg](https://ffmpeg.org/download.html)
+  - Recommended to install vapoursynth with lsmash/ffms2 for faster and better processing
 
--   Optional :
-    -   [Vapoursynth](http://www.vapoursynth.com/)
-    -   [ffms2](https://github.com/FFMS/ffms2)
-    -   [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
-    -   [mkvmerge](https://mkvtoolnix.download/)
+- Encoder of choice:
+  - [Install AOMENC](https://aomedia.googlesource.com/aom/)
+  - [Install rav1e](https://github.com/xiph/rav1e)
+  - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
+  - [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
+  - [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
--   Manually:
-    -   Clone Repo or Download from Releases
-    -   `cargo build --release`
+- Optional :
+  - [Vapoursynth](http://www.vapoursynth.com/)
+  - [ffms2](https://github.com/FFMS/ffms2)
+  - [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
+  - [mkvmerge](https://mkvtoolnix.download/)
+
+- Manually:
+  - Clone Repo or Download from Releases
+  - `cargo build --release`
 
 ## Docker
 
 Av1an can be run in a Docker container with the following command if you are in the current directory
 Linux
+
 ```bash
 docker run --privileged -v "$(pwd):/videos" --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
+
 Windows
+
 ```powershell
 docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
+
 Docker can also be built by using
 
 ```bash

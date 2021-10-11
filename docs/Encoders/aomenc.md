@@ -3,10 +3,12 @@
 GIT: [AOM](https://aomedia.googlesource.com/aom/)
 
 ## Table of Contents
+
 - [Important command line options](#important-command-line-options)
 - [Example settings and explanation](#example-settings-and-explanation)
 
 ### Important command line options
+
 | Command Line | Description  |
 | -------------| -------------|
 | --help | Show usage options and exit |
@@ -38,7 +40,13 @@ GIT: [AOM](https://aomedia.googlesource.com/aom/)
 
 ### Example settings and explanation
 
-##### Constant quality:
+#### Change encoding bit depth
+
+`-b 8` `-b 10` `-b 12`
+
+This command changes output bit depth
+
+##### Constant quality
 
 ` --end-usage=q --cq-level=30 --cpu-used=4 --threads=64 `
 
@@ -46,43 +54,49 @@ It is recommended to set it the rate control --end-usage=q to get the highest qu
 
 It is recommended to the --cq-level in range  20-40 depending on your source.
 
-##### Target Bitrate:
+##### Target Bitrate
 
 `` --end-usage=vbr --target-bitrate=1000 --cpu-used=4 --threads=64 ``
 
 To get good efficiency with VBR, it is strongly recommended to use aomenc in 2-pass mode(which is the default in av1an).
 
 ##### Tiles(tile columns and rows)
-` ... --tile-columns=2 --tile-rows=1 ...`
+
+`... --tile-columns=2 --tile-rows=1 ...`
 
 If tiles required to improve playback on old devices or high framerates, set --tile-columns=2 and --tile-rows=1 at 1080p. For higher resolution/higher framerate  encoding, set it to --tile-columns=3 and --tile-rows=2.
 
-#### CPU preset:
+#### CPU preset
+
 ` ... --cpu-used=6 ... `
 
 --cpu-used=6 requires ~30% less bitrate than x265 for same quality, gains by preset increments are relatively smaller than x264/x265.
 
-#### Bit-depth:
+#### Bit-depth
+
 ` ... --bit-depth=10 ... `
 It is recommended to set it to 10-bit even for 8-bit content for higher efficiency (due to better compression efficiency) and less banding.
 
 #### Lag-in-frames
+
 ` ... --lag-in-frames=35 ... `
 
 More is better, up to a limit of 35 (default is 19).
 
-
 #### Content tune
-` ... --tune-content=default ...`
+
+`... --tune-content=default ...`
 
 default: tuned for most content. screen: tuned for screen recordings
 
 #### Flags used for most native 10-bit HDR content
+
 ` ... --color-primaries=bt2020 --transfer-characteristics=smpte2084 --matrix-coefficients=bt2020ncl ... `
 
 #### Example command line for good quality
+
 ` --end-usage=q --cq-level=22 --cpu-used=4 --threads=8 --bit-depth=10 --lag-in-frames=35 --enable-fwd-kf=1 --enable-qm=1 --enable-chroma-deltaq=1 --quant-b-adapt=1 --mv-cost-upd-freq=2 `
 
 #### Example command line for fast speed
-` --end-usage=q --cq-level=22 --cpu-used=6 --threads=64 --tile-columns=2 --tile-rows=1 --bit-depth=8 `
 
+` --end-usage=q --cq-level=22 --cpu-used=6 --threads=64 --tile-columns=2 --tile-rows=1 --bit-depth=8 `

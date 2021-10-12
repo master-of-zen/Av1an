@@ -333,9 +333,13 @@ impl EncodeArgs {
       .as_slice()
       .iter()
       .filter_map(|param| {
-        if param.starts_with('-') {
+        if param.starts_with('-') && [Encoder::aom, Encoder::vpx].contains(&self.encoder) {
+          // These encoders require args to be passed using an equal sign,
+          // e.g. `--cq-level=30`
           param.split('=').next()
         } else {
+          // The other encoders use a space, so we don't need to do extra splitting,
+          // e.g. `--crf 30`
           None
         }
       })

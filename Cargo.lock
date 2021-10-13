@@ -147,10 +147,11 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.7.1"
-source = "git+https://github.com/rust-av/av-scenechange?branch=hybrid-sc#951d57a042a2ec2fffc9951fa72279ad4e01eaeb"
+source = "git+https://github.com/rust-av/av-scenechange?branch=hybrid-sc#1997afda659b918cd0cebc89980f4fcbceb622f8"
 dependencies = [
  "clap",
  "rav1e",
+ "rust_hawktracer",
  "serde",
  "serde_json",
  "y4m",

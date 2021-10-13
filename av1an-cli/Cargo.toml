@@ -17,5 +17,10 @@ shlex = "1.0.0"
 ctrlc = "3.1.9"
 path_abs = "0.5.1"
 anyhow = "1.0.42"
-serde = { version = "1.0.126", features = ["serde_derive"] }
 av1an-core = { path = "../av1an-core", version = "0.1.0" }
+
+[dependencies.ffmpeg-next]
+version = "4.4.0"
+
+[features]
+ffmpeg_static = ["ffmpeg-next/static", "ffmpeg-next/build"]

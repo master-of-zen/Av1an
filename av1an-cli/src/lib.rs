@@ -3,8 +3,8 @@ use anyhow::{bail, ensure};
 use av1an_core::into_vec;
 use av1an_core::Input;
 use av1an_core::ScenecutMethod;
+use ffmpeg_next::format::Pixel;
 use path_abs::{PathAbs, PathInfo};
-use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use structopt::{clap::AppSettings::ColoredHelp, StructOpt};
@@ -18,7 +18,7 @@ use av1an_core::{
 };
 
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
-#[derive(StructOpt, Debug, Serialize, Deserialize)]
+#[derive(StructOpt, Debug)]
 #[structopt(name = "av1an", setting = ColoredHelp)]
 pub struct Args {
   /// Input file or vapoursynth (.py, .vpy) script
@@ -123,7 +123,7 @@ pub struct Args {
 
   /// FFmpeg pixel format
   #[structopt(long, default_value = "yuv420p10le")]
-  pub pix_format: String,
+  pub pix_format: Pixel,
 
   /// Calculate VMAF after encode
   #[structopt(long)]

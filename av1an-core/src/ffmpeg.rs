@@ -1,5 +1,5 @@
 use crate::into_vec;
-use ffmpeg_next::format::input;
+use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type as MediaType;
 use ffmpeg_next::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
@@ -40,6 +40,19 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
       .filter(|(stream, _)| stream.index() == video_stream_index)
       .count(),
   )
+}
+
+pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
+  let ictx = ffmpeg_next::format::input(&source)?;
+
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)?;
+
+  let decoder = input.codec().decoder().video()?;
+
+  Ok(decoder.format())
 }
 
 /// Returns vec of all keyframes

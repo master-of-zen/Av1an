@@ -19,6 +19,7 @@ use crate::{
 };
 use anyhow::{bail, ensure};
 use crossbeam_utils;
+use ffmpeg_next::format::Pixel;
 use flexi_logger::{Duplicate, FileSpec, Logger};
 use itertools::Itertools;
 use path_abs::PathAbs;
@@ -64,7 +65,7 @@ pub struct EncodeArgs {
   pub ffmpeg_pipe: Vec<String>,
   pub ffmpeg: Vec<String>,
   pub audio_params: Vec<String>,
-  pub pix_format: String,
+  pub pix_format: Pixel,
 
   pub verbosity: Verbosity,
   pub logging: PathBuf,
@@ -120,7 +121,7 @@ impl EncodeArgs {
       "-strict".into(),
       "-1".into(),
       "-pix_fmt".into(),
-      self.pix_format.clone(),
+      self.pix_format.descriptor().unwrap().name().into(),
       "-f".into(),
       "yuv4mpegpipe".into(),
       "-".into(),
@@ -195,26 +196,51 @@ impl EncodeArgs {
       let ffmpeg_gen_pipe_stdout: Stdio =
         ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone());
+      let create_ffmpeg_pipe = |pipe_from: Stdio| {
+        let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone());
 
-      let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
-        tokio::process::Command::new(ffmpeg)
-          .args(args)
-          .stdin(ffmpeg_gen_pipe_stdout)
-          .stdout(Stdio::piped())
-          .stderr(Stdio::piped())
-          .spawn()
-          .unwrap()
-      } else {
-        unreachable!()
+        let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
+          tokio::process::Command::new(ffmpeg)
+            .args(args)
+            .stdin(pipe_from)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+        } else {
+          unreachable!()
+        };
+
+        let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+        ffmpeg_pipe_stdout
       };
 
-      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+      let ffmpeg_pipe = if self.ffmpeg_pipe.is_empty() {
+        // TODO do this for vapoursynth input as well
+        if let Input::Video(input) = &self.input {
+          let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
+            panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
+          });
+
+          // Just pipe the original video if there was no filter specified
+          // and the pixel format is the same
+          if self.pix_format == input_pix_format {
+            ffmpeg_gen_pipe_stdout
+          } else {
+            // a bit messy, but if let chains are unstable
+            create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+          }
+        } else {
+          create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+        }
+      } else {
+        create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+      };
 
       let mut pipe = if let [encoder, args @ ..] = &*enc_cmd {
         tokio::process::Command::new(encoder)
           .args(args)
-          .stdin(ffmpeg_pipe_stdout)
+          .stdin(ffmpeg_pipe)
           .stdout(Stdio::piped())
           .stderr(Stdio::piped())
           .spawn()
@@ -541,7 +567,7 @@ impl EncodeArgs {
         frame_start, frame_end
       ),
       "-pix_fmt",
-      self.pix_format.clone(),
+      self.pix_format.descriptor().unwrap().name(),
       "-strict",
       "-1",
       "-f",
@@ -736,7 +762,7 @@ impl EncodeArgs {
       "-strict",
       "-1",
       "-pix_fmt",
-      self.pix_format.clone(),
+      self.pix_format.descriptor().unwrap().name(),
       "-f",
       "yuv4mpegpipe",
       "-",

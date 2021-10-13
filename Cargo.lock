@@ -147,8 +147,7 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6862bce3788390cfa690dca7f4392646773cbfaef2154ab0059d32b60ff74bf"
+source = "git+https://github.com/rust-av/av-scenechange?branch=hybrid-sc#951d57a042a2ec2fffc9951fa72279ad4e01eaeb"
 dependencies = [
  "clap",
  "rav1e",
@@ -1064,8 +1063,7 @@ dependencies = [
 [[package]]
 name = "rav1e"
 version = "0.5.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "819fe17f51d8eb13046a9602d00b56f2bb2da3c84d16e6d280afd87c5a815698"
+source = "git+https://github.com/xiph/rav1e#beb1839fcd0ef31e94a966e4ed47387712094704"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1560,8 +1558,7 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 [[package]]
 name = "v_frame"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "594718cad812ffd9e3784bdf272a233805b4b7a8d560b9ec30b1ae71d60eb23a"
+source = "git+https://github.com/xiph/rav1e#beb1839fcd0ef31e94a966e4ed47387712094704"
 dependencies = [
  "cfg-if 1.0.0",
  "noop_proc_macro",
@@ -1607,13 +1604,11 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "vergen"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7141e445af09c8919f1d5f8a20dae0b20c3b57a45dee0d5823c6ed5d237f15a"
+version = "3.0.4"
+source = "git+https://github.com/xiph/rav1e#beb1839fcd0ef31e94a966e4ed47387712094704"
 dependencies = [
  "bitflags",
  "chrono",
- "rustc_version",
 ]
 
 [[package]]

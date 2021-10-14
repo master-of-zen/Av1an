@@ -4,7 +4,7 @@ use crate::{
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
   ffmpeg::compose_ffmpeg_pipe,
-  finish_multi_progress_bar, get_done, hash_path, init_done, into_vec,
+  finish_multi_progress_bar, get_done, hash_path, init_done, into_array, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
     update_mp_msg,
@@ -117,17 +117,23 @@ impl EncodeArgs {
       .start()?;
 
     self.ffmpeg_pipe = self.ffmpeg.clone();
-    self.ffmpeg_pipe.extend([
-      "-strict".into(),
-      "-1".into(),
-      "-pix_fmt".into(),
-      self.pix_format.descriptor().unwrap().name().into(),
-      "-f".into(),
-      "yuv4mpegpipe".into(),
-      "-".into(),
-    ]);
+    self
+      .ffmpeg_pipe
+      .extend_from_slice(&self.default_ffmpeg_params());
 
     Ok(())
+  }
+
+  fn default_ffmpeg_params(&self) -> [String; 7] {
+    into_array![
+      "-strict",
+      "-1",
+      "-pix_fmt",
+      self.pix_format.descriptor().as_ref().unwrap().name(),
+      "-f",
+      "yuv4mpegpipe",
+      "-",
+    ]
   }
 
   fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
@@ -215,27 +221,28 @@ impl EncodeArgs {
         ffmpeg_pipe_stdout
       };
 
-      let ffmpeg_pipe = if self.ffmpeg_pipe.is_empty() {
-        // TODO do this for vapoursynth input as well
-        if let Input::Video(input) = &self.input {
-          let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
-            panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
-          });
+      let ffmpeg_pipe =
+        if self.ffmpeg_pipe.is_empty() || self.ffmpeg_pipe == self.default_ffmpeg_params() {
+          // TODO do this for vapoursynth input as well
+          if let Input::Video(input) = &self.input {
+            let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
+              panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
+            });
 
-          // Just pipe the original video if there was no filter specified
-          // and the pixel format is the same
-          if self.pix_format == input_pix_format {
-            ffmpeg_gen_pipe_stdout
+            // Just pipe the original video if there was no filter specified
+            // and the pixel format is the same
+            if self.pix_format == input_pix_format {
+              ffmpeg_gen_pipe_stdout
+            } else {
+              // a bit messy, but if let chains are unstable
+              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+            }
           } else {
-            // a bit messy, but if let chains are unstable
             create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
           }
         } else {
           create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
-        }
-      } else {
-        create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
-      };
+        };
 
       let mut pipe = if let [encoder, args @ ..] = &*enc_cmd {
         tokio::process::Command::new(encoder)

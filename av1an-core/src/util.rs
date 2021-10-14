@@ -31,6 +31,17 @@ macro_rules! ref_vec {
   };
 }
 
+#[macro_export]
+macro_rules! into_array {
+  ($($x:expr),* $(,)?) => {
+    [
+      $(
+        $x.into(),
+      )*
+    ]
+  };
+}
+
 /// Attempts to create the directory if it does not exist, logging and returning
 /// and error if creating the directory failed.
 #[macro_export]

@@ -3,7 +3,7 @@ use crate::{
   chunk::Chunk,
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
-  ffmpeg::{compose_ffmpeg_pipe, get_format_bit_depth},
+  ffmpeg::compose_ffmpeg_pipe,
   finish_multi_progress_bar, get_done, hash_path, init_done, into_array, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
@@ -115,6 +115,9 @@ impl EncodeArgs {
       .log_to_file(FileSpec::try_from(PathAbs::new(&self.logging).unwrap()).unwrap())
       .duplicate_to_stderr(Duplicate::Warn)
       .start()?;
+
+    // Validates that we are using a valid pixel format for this encoder, or panics.
+    self.encoder.get_format_bit_depth(self.pix_format);
 
     self.ffmpeg_pipe = self.ffmpeg.clone();
     self
@@ -246,7 +249,7 @@ impl EncodeArgs {
                     e
                   )
                 });
-              if get_format_bit_depth(&self.pix_format) == input_bit_depth {
+              if self.encoder.get_format_bit_depth(self.pix_format) == input_bit_depth {
                 ffmpeg_gen_pipe_stdout
               } else {
                 create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
@@ -506,6 +509,7 @@ impl EncodeArgs {
     match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
+        &self.encoder,
         self.frames,
         self.min_scene_len,
         self.verbosity,

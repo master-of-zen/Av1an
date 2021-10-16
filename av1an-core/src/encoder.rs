@@ -1,4 +1,5 @@
 use crate::{into_vec, list_index, regex};
+use ffmpeg_next::format::Pixel;
 use itertools::chain;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -661,5 +662,124 @@ impl Encoder {
     };
 
     (pipe, output)
+  }
+
+  pub fn get_format_bit_depth(&self, format: Pixel) -> usize {
+    match self {
+      Encoder::x264 => get_x264_format_bit_depth(format),
+      Encoder::x265 => get_x265_format_bit_depth(format),
+      Encoder::vpx => get_vpx_format_bit_depth(format),
+      Encoder::aom => get_aom_format_bit_depth(format),
+      Encoder::rav1e => get_rav1e_format_bit_depth(format),
+      Encoder::svt_av1 => get_svt_av1_format_bit_depth(format),
+    }
+  }
+}
+
+// The supported bit depths are taken from ffmpeg,
+// e.g.: `ffmpeg -h encoder=libx264`
+fn get_x264_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P
+    | Pixel::YUVJ420P
+    | Pixel::YUV422P
+    | Pixel::YUVJ422P
+    | Pixel::YUV444P
+    | Pixel::YUVJ444P
+    | Pixel::NV12
+    | Pixel::NV16
+    | Pixel::NV21
+    | Pixel::GRAY8 => 8,
+    Pixel::YUV420P10LE
+    | Pixel::YUV422P10LE
+    | Pixel::YUV444P10LE
+    | Pixel::NV20LE
+    | Pixel::GRAY10LE => 10,
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
+fn get_x265_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P
+    | Pixel::YUVJ420P
+    | Pixel::YUV422P
+    | Pixel::YUVJ422P
+    | Pixel::YUV444P
+    | Pixel::YUVJ444P
+    | Pixel::GBRP
+    | Pixel::GRAY8 => 8,
+    Pixel::YUV420P10LE
+    | Pixel::YUV422P10LE
+    | Pixel::YUV444P10LE
+    | Pixel::GBRP10LE
+    | Pixel::GRAY10LE => 10,
+    Pixel::YUV420P12LE
+    | Pixel::YUV422P12LE
+    | Pixel::YUV444P12LE
+    | Pixel::GBRP12LE
+    | Pixel::GRAY12LE => 12,
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
+fn get_vpx_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P
+    | Pixel::YUVA420P
+    | Pixel::YUV422P
+    | Pixel::YUV440P
+    | Pixel::YUV444P
+    | Pixel::GBRP => 8,
+    Pixel::YUV420P10LE
+    | Pixel::YUV422P10LE
+    | Pixel::YUV440P10LE
+    | Pixel::YUV444P10LE
+    | Pixel::GBRP10LE => 10,
+    Pixel::YUV420P12LE
+    | Pixel::YUV422P12LE
+    | Pixel::YUV440P12LE
+    | Pixel::YUV444P12LE
+    | Pixel::GBRP12LE => 12,
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
+fn get_aom_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P | Pixel::YUV422P | Pixel::YUV444P | Pixel::GBRP | Pixel::GRAY8 => 8,
+    Pixel::YUV420P10LE
+    | Pixel::YUV422P10LE
+    | Pixel::YUV444P10LE
+    | Pixel::GBRP10LE
+    | Pixel::GRAY10LE => 10,
+    Pixel::YUV420P12LE
+    | Pixel::YUV422P12LE
+    | Pixel::YUV444P12LE
+    | Pixel::GBRP12LE
+    | Pixel::GRAY12LE => 12,
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
+fn get_rav1e_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P
+    | Pixel::YUVJ420P
+    | Pixel::YUV422P
+    | Pixel::YUVJ422P
+    | Pixel::YUV444P
+    | Pixel::YUVJ444P => 8,
+    Pixel::YUV420P10LE | Pixel::YUV422P10LE | Pixel::YUV444P10LE => 10,
+    Pixel::YUV420P12LE | Pixel::YUV422P12LE | Pixel::YUV444P12LE => 12,
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
+fn get_svt_av1_format_bit_depth(format: Pixel) -> usize {
+  match format {
+    Pixel::YUV420P => 8,
+    Pixel::YUV420P10LE => 10,
+    _ => panic!("Unsupported pixel format: {:?}", format),
   }
 }

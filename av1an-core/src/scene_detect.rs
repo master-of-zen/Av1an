@@ -9,7 +9,6 @@ pub fn av_scenechange_detect(
   min_scene_len: usize,
   verbosity: Verbosity,
   sc_method: ScenecutMethod,
-  sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
   if verbosity != Verbosity::Quiet {
     println!("Scene detection");
@@ -27,7 +26,6 @@ pub fn av_scenechange_detect(
     },
     min_scene_len,
     sc_method,
-    sc_downscale_height,
   )?;
 
   progress_bar::finish_progress_bar();
@@ -47,18 +45,8 @@ pub fn scene_detect(
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
   sc_method: ScenecutMethod,
-  sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
-  let filters: Vec<String> = if let Some(downscale_height) = sc_downscale_height {
-    into_vec![
-      "-pix_fmt",
-      "yuv420p",
-      "-vf",
-      format!("scale=-2:'min({},ih)'", downscale_height)
-    ]
-  } else {
-    into_vec!["-pix_fmt", "yuv420p"]
-  };
+  let filters: Vec<String> = into_vec!["-pix_fmt", "yuv420p"];
 
   Ok(
     detect_scene_changes::<_, u8>(

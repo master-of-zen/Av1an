@@ -76,6 +76,14 @@ pub struct Args {
   #[structopt(long, possible_values=&["standard", "fast"], default_value = "standard")]
   pub sc_method: ScenecutMethod,
 
+  /// Optional downscaling for scenecut detection,
+  /// specify as the desired maximum height to scale to
+  /// (e.g. "720" to downscale to 720p--this will leave lower resolution content untouched).
+  /// Downscaling will improve speed but lower scenecut accuracy,
+  /// especially when scaling to very low resolutions.
+  #[structopt(long)]
+  pub sc_downscale_height: Option<usize>,
+
   /// Number of frames after which make split
   /// Set to 0 to disable
   #[structopt(short = "x", long, default_value = "240")]
@@ -270,6 +278,7 @@ pub fn cli() -> anyhow::Result<()> {
     scenes: args.scenes,
     split_method: args.split_method,
     sc_method: args.sc_method,
+    sc_downscale_height: args.sc_downscale_height,
     target_quality: args.target_quality,
     verbosity: if args.quiet {
       Verbosity::Quiet

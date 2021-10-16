@@ -52,6 +52,7 @@ pub struct EncodeArgs {
   pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_method: ScenecutMethod,
+  pub sc_downscale_height: Option<usize>,
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
 
@@ -509,6 +510,7 @@ impl EncodeArgs {
         self.min_scene_len,
         self.verbosity,
         self.sc_method,
+        self.sc_downscale_height,
       )
       .unwrap(),
       SplitMethod::None => Vec::new(),

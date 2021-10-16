@@ -94,6 +94,23 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   Ok(num_frames)
 }
 
+/// Get the bit depth from an environment that has already been
+/// evaluated on a script.
+fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
+  let info = get_clip_info(env);
+
+  let bits_per_sample = {
+    match info.format {
+      Property::Variable => {
+        bail!("Cannot output clips with variable format");
+      }
+      Property::Constant(x) => x.bits_per_sample(),
+    }
+  };
+
+  Ok(bits_per_sample as usize)
+}
+
 pub fn create_vs_file(
   temp: &str,
   source: &Path,
@@ -159,4 +176,16 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
     .unwrap();
 
   get_num_frames(&mut environment)
+}
+
+pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_bit_depth(&mut environment)
 }

@@ -55,6 +55,51 @@ pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
   Ok(decoder.format())
 }
 
+pub fn get_format_bit_depth(format: &Pixel) -> usize {
+  match format {
+    Pixel::YUV420P
+    | Pixel::YUV422P
+    | Pixel::YUV444P
+    | Pixel::YUVJ420P
+    | Pixel::YUVJ422P
+    | Pixel::YUVJ444P
+    | Pixel::YUVA420P
+    | Pixel::YUVA444P
+    | Pixel::YUVA422P => 8,
+
+    Pixel::YUV420P10
+    | Pixel::YUV422P10
+    | Pixel::YUV444P10
+    | Pixel::YUV420P10BE
+    | Pixel::YUV420P10LE
+    | Pixel::YUV422P10BE
+    | Pixel::YUV422P10LE
+    | Pixel::YUV444P10BE
+    | Pixel::YUV444P10LE
+    | Pixel::YUVA420P10
+    | Pixel::YUVA422P10
+    | Pixel::YUVA444P10
+    | Pixel::YUVA420P10BE
+    | Pixel::YUVA420P10LE
+    | Pixel::YUVA422P10BE
+    | Pixel::YUVA422P10LE
+    | Pixel::YUVA444P10BE
+    | Pixel::YUVA444P10LE => 10,
+
+    Pixel::YUV420P12
+    | Pixel::YUV422P12
+    | Pixel::YUV444P12
+    | Pixel::YUV420P12BE
+    | Pixel::YUV420P12LE
+    | Pixel::YUV422P12BE
+    | Pixel::YUV422P12LE
+    | Pixel::YUV444P12BE
+    | Pixel::YUV444P12LE => 12,
+
+    _ => panic!("Unsupported pixel format: {:?}", format),
+  }
+}
+
 /// Returns vec of all keyframes
 pub fn get_keyframes(source: &Path) -> Vec<usize> {
   let mut ictx = input(&source).unwrap();

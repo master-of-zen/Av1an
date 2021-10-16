@@ -3,7 +3,7 @@ use crate::{
   chunk::Chunk,
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
-  ffmpeg::compose_ffmpeg_pipe,
+  ffmpeg::{compose_ffmpeg_pipe, get_format_bit_depth},
   finish_multi_progress_bar, get_done, hash_path, init_done, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
@@ -215,22 +215,35 @@ impl EncodeArgs {
       };
 
       let ffmpeg_pipe = if self.ffmpeg_pipe.is_empty() {
-        // TODO do this for vapoursynth input as well
-        if let Input::Video(input) = &self.input {
-          let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
-            panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
-          });
+        match &self.input {
+          Input::Video(input) => {
+            let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
+              panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
+            });
 
-          // Just pipe the original video if there was no filter specified
-          // and the pixel format is the same
-          if self.pix_format == input_pix_format {
-            ffmpeg_gen_pipe_stdout
-          } else {
-            // a bit messy, but if let chains are unstable
-            create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+            // Just pipe the original video if there was no filter specified
+            // and the pixel format is the same
+            if self.pix_format == input_pix_format {
+              ffmpeg_gen_pipe_stdout
+            } else {
+              // a bit messy, but if let chains are unstable
+              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+            }
           }
-        } else {
-          create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+          Input::VapourSynth(input) => {
+            let input_bit_depth =
+              crate::vapoursynth::bit_depth(input.as_ref()).unwrap_or_else(|e| {
+                panic!(
+                  "Vapoursynth failed to get pixel format for input video: {:?}",
+                  e
+                )
+              });
+            if get_format_bit_depth(&self.pix_format) == input_bit_depth {
+              ffmpeg_gen_pipe_stdout
+            } else {
+              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+            }
+          }
         }
       } else {
         create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)

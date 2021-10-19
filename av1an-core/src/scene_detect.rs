@@ -87,7 +87,7 @@ pub fn scene_detect(
             .unwrap()
         }
         Input::Video(path) => Command::new("ffmpeg")
-          .arg("-i")
+          .args(["-r", "1", "-i"])
           .arg(path)
           .args(filters)
           .args(["-f", "yuv4mpegpipe", "-"])

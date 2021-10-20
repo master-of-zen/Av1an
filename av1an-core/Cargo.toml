@@ -61,3 +61,4 @@ features = ["serde"]
 
 [features]
 ffmpeg_static = ["ffmpeg-next/static", "ffmpeg-next/build"]
+vapoursynth_new_api = ["vapoursynth/vapoursynth-api-32", "vapoursynth/vsscript-api-31"]

@@ -94,7 +94,7 @@ jobs:
 
       - name: Build Av1an
         run: |
-          cargo build --release
+          cargo build --release --features ffmpeg_static
 
       - name: Download videos
         run: |

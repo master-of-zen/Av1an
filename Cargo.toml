@@ -27,8 +27,9 @@ av1an-cli = { path = "av1an-cli", version = "0.1.1" }
 av1an-core = { path = "av1an-core", version = "0.1.0" }
 
 [features]
-default = ["ffmpeg_static"]
+default = ["vapoursynth_new_api"]
 ffmpeg_static = ["av1an-core/ffmpeg_static", "av1an-cli/ffmpeg_static"]
+vapoursynth_new_api = ["av1an-core/vapoursynth_new_api"]
 
 [workspace]
 members = ["av1an-core", "av1an-cli"]

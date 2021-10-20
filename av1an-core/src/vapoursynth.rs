@@ -5,6 +5,7 @@ use std::{
   path::{Path, PathBuf},
   process::{Command, Stdio},
 };
+use vapoursynth::video_info::VideoInfo;
 
 use once_cell::sync::Lazy;
 
@@ -44,23 +45,24 @@ pub fn best_available_chunk_method() -> ChunkMethod {
   }
 }
 
+fn get_clip_info(env: &mut Environment) -> VideoInfo {
+  // Get the output node.
+  const OUTPUT_INDEX: i32 = 0;
+
+  #[cfg(feature = "vapoursynth_new_api")]
+  let (node, _) = env.get_output(OUTPUT_INDEX).unwrap();
+  #[cfg(not(feature = "vapoursynth_new_api"))]
+  let node = env.get_output(OUTPUT_INDEX).unwrap();
+
+  node.info()
+}
+
 /// Get the number of frames from an environment that has already been
 /// evaluated on a script.
 fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
-  // Get the output node.
-  let output_index = 0;
-
-  #[cfg(feature = "gte-vsscript-api-31")]
-  let (node, alpha_node) = environment.get_output(output_index).context(format!(
-    "Couldn't get the output node at index {}",
-    output_index
-  ))?;
-  #[cfg(not(feature = "gte-vsscript-api-31"))]
-  let (node, _) = (env.get_output(output_index).unwrap(), None::<Node>);
+  let info = get_clip_info(env);
 
   let num_frames = {
-    let info = node.info();
-
     if let Property::Variable = info.format {
       bail!("Cannot output clips with varying format");
     }
@@ -71,10 +73,10 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
       bail!("Cannot output clips with varying framerate");
     }
 
-    #[cfg(feature = "gte-vapoursynth-api-32")]
+    #[cfg(feature = "vapoursynth_new_api")]
     let num_frames = info.num_frames;
 
-    #[cfg(not(feature = "gte-vapoursynth-api-32"))]
+    #[cfg(not(feature = "vapoursynth_new_api"))]
     let num_frames = {
       match info.num_frames {
         Property::Variable => {
@@ -90,6 +92,23 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   assert!(num_frames != 0, "vapoursynth reported 0 frames");
 
   Ok(num_frames)
+}
+
+/// Get the bit depth from an environment that has already been
+/// evaluated on a script.
+fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
+  let info = get_clip_info(env);
+
+  let bits_per_sample = {
+    match info.format {
+      Property::Variable => {
+        bail!("Cannot output clips with variable format");
+      }
+      Property::Constant(x) => x.bits_per_sample(),
+    }
+  };
+
+  Ok(bits_per_sample as usize)
 }
 
 pub fn create_vs_file(
@@ -157,4 +176,16 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
     .unwrap();
 
   get_num_frames(&mut environment)
+}
+
+pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_bit_depth(&mut environment)
 }

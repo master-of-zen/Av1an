@@ -238,21 +238,18 @@ pub fn run_vmaf(
     let mut source_pipe = Command::new(cmd);
     source_pipe.args(args);
     source_pipe.stdout(Stdio::piped());
-    source_pipe.stderr(Stdio::piped());
+    source_pipe.stderr(Stdio::null());
     source_pipe
   } else {
     unreachable!()
   };
 
-  let handle = source_pipe
-    .stderr(Stdio::piped())
-    .spawn()
-    .unwrap_or_else(|e| {
-      panic!(
-        "Failed to execute source pipe: {}\ncommand: {:#?}",
-        e, source_pipe
-      )
-    });
+  let handle = source_pipe.spawn().unwrap_or_else(|e| {
+    panic!(
+      "Failed to execute source pipe: {}\nCommand: {:#?}",
+      e, source_pipe
+    )
+  });
 
   let mut cmd = Command::new("ffmpeg");
   cmd.args([
@@ -278,11 +275,11 @@ pub fn run_vmaf(
 
   cmd.arg(format!("{}{}{}", distorted, reference, vmaf));
   cmd.args(["-f", "null", "-"]);
-  cmd.stderr(Stdio::piped());
-  cmd.stdout(Stdio::piped());
+  cmd.stdin(handle.stdout.unwrap());
+  cmd.stderr(Stdio::null());
+  cmd.stdout(Stdio::null());
 
   let output = cmd
-    .stdin(handle.stdout.unwrap())
     .output()
     .unwrap_or_else(|e| panic!("Failed to execute vmaf pipe: {}\ncommand: {:#?}", e, cmd));
 

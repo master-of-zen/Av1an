@@ -243,7 +243,7 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
     let mut contents = String::new();
 
     for i in files {
-      if cfg!(target_os = "windows") {
+      if cfg!(windows) {
         contents.push_str(&format!("file {}\n", i.path().display()).replace(r"\", r"\\"));
       } else {
         contents.push_str(&format!("file {}\n", i.path().display()));

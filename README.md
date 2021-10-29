@@ -23,14 +23,12 @@ Example with default parameters:
 
 With your own parameters:
 
-    av1an -i input -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 " -w 10
-    --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -log my_log -o output
-
-
+    av1an -i input -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
+    --target-quality 95 -a " -c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 
 <h2 align="center">Usage</h2>
 
-    -i  --input             Input file(s), or Vapoursynth (.py,.vpy) script
+    -i  --input             Input file, or Vapoursynth (.py,.vpy) script
                             (relative or absolute path)
 
     -o  --output-file       Name/Path for output file (Default: (input file name)_(encoder).mkv)

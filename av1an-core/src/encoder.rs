@@ -1,17 +1,14 @@
-use crate::{into_vec, list_index, regex};
+use crate::{ffmpeg::compose_ffmpeg_pipe, into_vec, list_index, regex};
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
+use thiserror::Error;
 
 use std::iter::Iterator;
 
-const NULL: &str = if cfg!(target_os = "windows") {
-  "nul"
-} else {
-  "/dev/null"
-};
+const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 
 #[allow(non_camel_case_types)]
 #[derive(
@@ -235,11 +232,13 @@ impl Encoder {
 
   /// Returns default settings for the encoder
   pub fn get_default_arguments(self) -> Vec<String> {
-    match &self {
+    match self {
+      // aomenc automatically infers the correct bit depth, and thus for aomenc, not specifying
+      // the bit depth is actually more accurate because if for example you specify
+      // `--pix-format yuv420p`, aomenc will encode 10-bit when that is not actually the desired
+      // pixel format.
       Encoder::aom => into_vec![
         "--threads=8",
-        "-b",
-        "10",
         "--cpu-used=6",
         "--end-usage=q",
         "--cq-level=30",
@@ -257,6 +256,8 @@ impl Encoder {
         "100",
         "--no-scene-detection",
       ],
+      // vpxenc does not infer the pixel format from the input, so `-b 10` is still required
+      // to work with the default pixel format (yuv420p10le).
       Encoder::vpx => into_vec![
         "--codec=vp9",
         "-b",
@@ -603,29 +604,21 @@ impl Encoder {
     temp: String,
     name: &str,
     q: usize,
-    ffmpeg_pipe: Vec<String>,
+    pix_fmt: Pixel,
     probing_rate: usize,
     vmaf_threads: usize,
     mut video_params: Vec<String>,
     probe_slow: bool,
   ) -> (Vec<String>, Vec<Cow<'static, str>>) {
-    let pipe: Vec<String> = chain!(
-      into_vec![
-        "ffmpeg",
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        "-",
+    let pipe = compose_ffmpeg_pipe(
+      [
         "-vf",
         format!("select=not(mod(n\\,{}))", probing_rate).as_str(),
         "-vsync",
         "0",
       ],
-      ffmpeg_pipe
-    )
-    .collect();
+      pix_fmt,
+    );
 
     let probe_name = format!("v_{}{}.ivf", q, name);
     let mut probe = PathBuf::from(temp);
@@ -664,122 +657,82 @@ impl Encoder {
     (pipe, output)
   }
 
-  pub fn get_format_bit_depth(&self, format: Pixel) -> usize {
-    match self {
-      Encoder::x264 => get_x264_format_bit_depth(format),
-      Encoder::x265 => get_x265_format_bit_depth(format),
-      Encoder::vpx => get_vpx_format_bit_depth(format),
-      Encoder::aom => get_aom_format_bit_depth(format),
-      Encoder::rav1e => get_rav1e_format_bit_depth(format),
-      Encoder::svt_av1 => get_svt_av1_format_bit_depth(format),
+  #[must_use]
+  pub fn get_format_bit_depth(self, format: Pixel) -> Result<usize, UnsupportedPixelFormatError> {
+    macro_rules! impl_this_function {
+      ($($encoder:ident),*) => {
+        match self {
+          $(
+            Encoder::$encoder => paste::paste! { [<get_ $encoder _format_bit_depth>](format) },
+          )*
+        }
+      };
     }
+    impl_this_function!(x264, x265, vpx, aom, rav1e, svt_av1)
   }
+}
+
+#[derive(Error, Debug)]
+pub enum UnsupportedPixelFormatError {
+  #[error("{0} does not support {1:?}")]
+  UnsupportedFormat(Encoder, Pixel),
+}
+
+macro_rules! create_get_format_bit_depth_function {
+  ($encoder:ident, 8: $_8bit_fmts:expr, 10: $_10bit_fmts:expr, 12: $_12bit_fmts:expr) => {
+    paste::paste! {
+      #[must_use]
+      pub fn [<get_ $encoder _format_bit_depth>](format: Pixel) -> Result<usize, UnsupportedPixelFormatError> {
+        use Pixel::*;
+        if $_8bit_fmts.contains(&format) {
+          Ok(8)
+        } else if $_10bit_fmts.contains(&format) {
+          Ok(10)
+        } else if $_12bit_fmts.contains(&format) {
+          Ok(12)
+        } else {
+          Err(UnsupportedPixelFormatError::UnsupportedFormat(Encoder::$encoder, format))
+        }
+      }
+    }
+  };
 }
 
 // The supported bit depths are taken from ffmpeg,
 // e.g.: `ffmpeg -h encoder=libx264`
-fn get_x264_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P
-    | Pixel::YUVJ420P
-    | Pixel::YUV422P
-    | Pixel::YUVJ422P
-    | Pixel::YUV444P
-    | Pixel::YUVJ444P
-    | Pixel::NV12
-    | Pixel::NV16
-    | Pixel::NV21
-    | Pixel::GRAY8 => 8,
-    Pixel::YUV420P10LE
-    | Pixel::YUV422P10LE
-    | Pixel::YUV444P10LE
-    | Pixel::NV20LE
-    | Pixel::GRAY10LE => 10,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
-
-fn get_x265_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P
-    | Pixel::YUVJ420P
-    | Pixel::YUV422P
-    | Pixel::YUVJ422P
-    | Pixel::YUV444P
-    | Pixel::YUVJ444P
-    | Pixel::GBRP
-    | Pixel::GRAY8 => 8,
-    Pixel::YUV420P10LE
-    | Pixel::YUV422P10LE
-    | Pixel::YUV444P10LE
-    | Pixel::GBRP10LE
-    | Pixel::GRAY10LE => 10,
-    Pixel::YUV420P12LE
-    | Pixel::YUV422P12LE
-    | Pixel::YUV444P12LE
-    | Pixel::GBRP12LE
-    | Pixel::GRAY12LE => 12,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
-
-fn get_vpx_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P
-    | Pixel::YUVA420P
-    | Pixel::YUV422P
-    | Pixel::YUV440P
-    | Pixel::YUV444P
-    | Pixel::GBRP => 8,
-    Pixel::YUV420P10LE
-    | Pixel::YUV422P10LE
-    | Pixel::YUV440P10LE
-    | Pixel::YUV444P10LE
-    | Pixel::GBRP10LE => 10,
-    Pixel::YUV420P12LE
-    | Pixel::YUV422P12LE
-    | Pixel::YUV440P12LE
-    | Pixel::YUV444P12LE
-    | Pixel::GBRP12LE => 12,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
-
-fn get_aom_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P | Pixel::YUV422P | Pixel::YUV444P | Pixel::GBRP | Pixel::GRAY8 => 8,
-    Pixel::YUV420P10LE
-    | Pixel::YUV422P10LE
-    | Pixel::YUV444P10LE
-    | Pixel::GBRP10LE
-    | Pixel::GRAY10LE => 10,
-    Pixel::YUV420P12LE
-    | Pixel::YUV422P12LE
-    | Pixel::YUV444P12LE
-    | Pixel::GBRP12LE
-    | Pixel::GRAY12LE => 12,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
-
-fn get_rav1e_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P
-    | Pixel::YUVJ420P
-    | Pixel::YUV422P
-    | Pixel::YUVJ422P
-    | Pixel::YUV444P
-    | Pixel::YUVJ444P => 8,
-    Pixel::YUV420P10LE | Pixel::YUV422P10LE | Pixel::YUV444P10LE => 10,
-    Pixel::YUV420P12LE | Pixel::YUV422P12LE | Pixel::YUV444P12LE => 12,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
-
-fn get_svt_av1_format_bit_depth(format: Pixel) -> usize {
-  match format {
-    Pixel::YUV420P => 8,
-    Pixel::YUV420P10LE => 10,
-    _ => panic!("Unsupported pixel format: {:?}", format),
-  }
-}
+create_get_format_bit_depth_function!(
+  x264,
+   8: [YUV420P, YUVJ420P, YUV422P, YUVJ422P, YUV444P, YUVJ444P, NV12, NV16, NV21, GRAY8],
+  10: [YUV420P10LE, YUV422P10LE, YUV444P10LE, NV20LE, GRAY10LE],
+  12: []
+);
+create_get_format_bit_depth_function!(
+  x265,
+   8: [YUV420P, YUVJ420P, YUV422P, YUVJ422P, YUV444P, YUVJ444P, GBRP, GRAY8],
+  10: [YUV420P10LE, YUV422P10LE, YUV444P10LE, GBRP10LE, GRAY10LE],
+  12: [YUV420P12LE, YUV422P12LE, YUV444P12LE, GBRP12LE, GRAY12LE]
+);
+create_get_format_bit_depth_function!(
+  vpx,
+   8: [YUV420P, YUVA420P, YUV422P, YUV440P, YUV444P, GBRP],
+  10: [YUV420P10LE, YUV422P10LE, YUV440P10LE, YUV444P10LE, GBRP10LE],
+  12: [YUV420P12LE, YUV422P12LE, YUV440P12LE, YUV444P12LE, GBRP12LE]
+);
+create_get_format_bit_depth_function!(
+  aom,
+   8: [YUV420P, YUV422P, YUV444P, GBRP, GRAY8],
+  10: [YUV420P10LE, YUV422P10LE, YUV444P10LE, GBRP10LE, GRAY10LE],
+  12: [YUV420P12LE, YUV422P12LE, YUV444P12LE, GBRP12LE, GRAY12LE,]
+);
+create_get_format_bit_depth_function!(
+  rav1e,
+   8: [YUV420P, YUVJ420P, YUV422P, YUVJ422P, YUV444P, YUVJ444P],
+  10: [YUV420P10LE, YUV422P10LE, YUV444P10LE],
+  12: [YUV420P12LE, YUV422P12LE, YUV444P12LE,]
+);
+create_get_format_bit_depth_function!(
+  svt_av1,
+   8: [YUV420P],
+  10: [YUV420P10LE],
+  12: []
+);

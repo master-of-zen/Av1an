@@ -19,7 +19,7 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
-  cmd.args(&[
+  cmd.args([
     "-hide_banner",
     "-y",
     "-i",

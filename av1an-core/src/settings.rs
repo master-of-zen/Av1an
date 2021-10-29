@@ -4,7 +4,7 @@ use crate::{
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
   ffmpeg::compose_ffmpeg_pipe,
-  finish_multi_progress_bar, get_done, hash_path, init_done, into_array, into_vec,
+  finish_multi_progress_bar, get_done, hash_path, init_done, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
     update_mp_msg,
@@ -12,7 +12,6 @@ use crate::{
   read_chunk_queue, regex, save_chunk_queue,
   scene_detect::av_scenechange_detect,
   split::{extra_splits, segment, write_scenes_to_file},
-  vapoursynth,
   vapoursynth::create_vs_file,
   vmaf, ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
@@ -35,11 +34,16 @@ use std::{
   io::Write,
   iter,
   path::{Path, PathBuf},
-  process::{Command, ExitStatus, Stdio},
+  process::{exit, Command, ExitStatus, Stdio},
   sync::atomic::{AtomicBool, AtomicUsize},
   sync::{atomic, mpsc},
 };
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+pub struct PixelFormat {
+  pub format: Pixel,
+  pub bit_depth: usize,
+}
 
 pub struct EncodeArgs {
   pub frames: usize,
@@ -62,10 +66,9 @@ pub struct EncodeArgs {
   pub workers: usize,
 
   // FFmpeg params
-  pub ffmpeg_pipe: Vec<String>,
-  pub ffmpeg: Vec<String>,
+  pub ffmpeg_filter_args: Vec<String>,
   pub audio_params: Vec<String>,
-  pub pix_format: Pixel,
+  pub pix_format: PixelFormat,
 
   pub verbosity: Verbosity,
   pub logging: PathBuf,
@@ -116,27 +119,7 @@ impl EncodeArgs {
       .duplicate_to_stderr(Duplicate::Warn)
       .start()?;
 
-    // Validates that we are using a valid pixel format for this encoder, or panics.
-    self.encoder.get_format_bit_depth(self.pix_format);
-
-    self.ffmpeg_pipe = self.ffmpeg.clone();
-    self
-      .ffmpeg_pipe
-      .extend_from_slice(&self.default_ffmpeg_params());
-
     Ok(())
-  }
-
-  fn default_ffmpeg_params(&self) -> [String; 7] {
-    into_array![
-      "-strict",
-      "-1",
-      "-pix_fmt",
-      self.pix_format.descriptor().as_ref().unwrap().name(),
-      "-f",
-      "yuv4mpegpipe",
-      "-",
-    ]
   }
 
   fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
@@ -206,7 +189,8 @@ impl EncodeArgs {
         ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
 
       let create_ffmpeg_pipe = |pipe_from: Stdio| {
-        let ffmpeg_pipe = compose_ffmpeg_pipe(self.ffmpeg_pipe.clone());
+        let ffmpeg_pipe =
+          compose_ffmpeg_pipe(self.ffmpeg_filter_args.as_slice(), self.pix_format.format);
 
         let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
           tokio::process::Command::new(ffmpeg)
@@ -224,41 +208,40 @@ impl EncodeArgs {
         ffmpeg_pipe_stdout
       };
 
-      let ffmpeg_pipe =
-        if self.ffmpeg_pipe.is_empty() || self.ffmpeg_pipe == self.default_ffmpeg_params() {
-          match &self.input {
-            Input::Video(input) => {
-              let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
-                panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
-              });
+      let ffmpeg_pipe = if self.ffmpeg_filter_args.is_empty() {
+        match &self.input {
+          Input::Video(input) => {
+            let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
+              panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
+            });
 
-              // Just pipe the original video if there was no filter specified
-              // and the pixel format is the same
-              if self.pix_format == input_pix_format {
-                ffmpeg_gen_pipe_stdout
-              } else {
-                // a bit messy, but if let chains are unstable
-                create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
-              }
-            }
-            Input::VapourSynth(input) => {
-              let input_bit_depth =
-                crate::vapoursynth::bit_depth(input.as_ref()).unwrap_or_else(|e| {
-                  panic!(
-                    "Vapoursynth failed to get pixel format for input video: {:?}",
-                    e
-                  )
-                });
-              if self.encoder.get_format_bit_depth(self.pix_format) == input_bit_depth {
-                ffmpeg_gen_pipe_stdout
-              } else {
-                create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
-              }
+            // Just pipe the original video if there was no filter specified
+            // and the pixel format is the same
+            if self.pix_format.format == input_pix_format {
+              ffmpeg_gen_pipe_stdout
+            } else {
+              // a bit messy, but if let chains are unstable
+              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
             }
           }
-        } else {
-          create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
-        };
+          Input::VapourSynth(input) => {
+            let input_bit_depth =
+              crate::vapoursynth::bit_depth(input.as_ref()).unwrap_or_else(|e| {
+                panic!(
+                  "Vapoursynth failed to get pixel format for input video: {:?}",
+                  e
+                )
+              });
+            if self.pix_format.bit_depth == input_bit_depth {
+              ffmpeg_gen_pipe_stdout
+            } else {
+              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+            }
+          }
+        }
+      } else {
+        create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+      };
 
       let mut pipe = if let [encoder, args @ ..] = &*enc_cmd {
         tokio::process::Command::new(encoder)
@@ -315,26 +298,6 @@ impl EncodeArgs {
     }
 
     Ok(())
-  }
-
-  fn get_frames(&mut self) -> usize {
-    if self.frames != 0 {
-      return self.frames;
-    }
-
-    self.frames = match &self.input {
-      Input::Video(path) => {
-        if matches!(self.chunk_method, ChunkMethod::FFMS2 | ChunkMethod::LSMASH) {
-          let script = create_vs_file(&self.temp, path.as_ref(), self.chunk_method).unwrap();
-          vapoursynth::num_frames(script.as_ref()).unwrap()
-        } else {
-          ffmpeg::num_frames(path.as_ref()).unwrap()
-        }
-      }
-      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_ref()).unwrap(),
-    };
-
-    self.frames
   }
 
   fn validate_encoder_params(&self) {
@@ -413,7 +376,7 @@ impl EncodeArgs {
 
     if !invalid_params.is_empty() {
       println!("\nTo continue anyway, run av1an with '--force'");
-      std::process::exit(1);
+      exit(1);
     }
   }
 
@@ -509,7 +472,7 @@ impl EncodeArgs {
     match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
-        &self.encoder,
+        self.encoder,
         self.frames,
         self.min_scene_len,
         self.verbosity,
@@ -524,9 +487,6 @@ impl EncodeArgs {
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
   // scenes.json and return that.
   fn split_routine(&mut self) -> Vec<usize> {
-    // TODO make self.frames impossible to misuse
-    let _ = self.get_frames();
-
     let scene_file = self
       .scenes
       .clone()
@@ -553,13 +513,9 @@ impl EncodeArgs {
       }
     }
 
-    self.write_scenes_to_file(&scenes, scene_file.to_str().unwrap());
+    write_scenes_to_file(&scenes, self.frames, scene_file.to_str().unwrap()).unwrap();
 
     scenes
-  }
-
-  fn write_scenes_to_file(&self, scenes: &[usize], path: &str) {
-    write_scenes_to_file(scenes, self.frames, path).unwrap();
   }
 
   fn create_select_chunk(
@@ -591,7 +547,7 @@ impl EncodeArgs {
         frame_start, frame_end
       ),
       "-pix_fmt",
-      self.pix_format.descriptor().unwrap().name(),
+      self.pix_format.format.descriptor().unwrap().name(),
       "-strict",
       "-1",
       "-f",
@@ -651,18 +607,6 @@ impl EncodeArgs {
   }
 
   fn create_video_queue_vs(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
-    let last_frame = self.get_frames();
-
-    let mut split_locs = vec![0];
-    split_locs.extend(splits);
-    split_locs.push(last_frame);
-
-    let chunk_boundaries: Vec<(usize, usize)> = split_locs
-      .iter()
-      .zip(split_locs.iter().skip(1))
-      .map(|(start, end)| (*start, *end))
-      .collect();
-
     let vs_script: Cow<Path> = match &self.input {
       Input::VapourSynth(path) => Cow::Borrowed(path.as_ref()),
       Input::Video(path) => {
@@ -670,11 +614,15 @@ impl EncodeArgs {
       }
     };
 
+    let chunk_boundaries = iter::once(0)
+      .chain(splits)
+      .chain(iter::once(self.frames))
+      .tuple_windows();
+
     let chunk_queue: Vec<Chunk> = chunk_boundaries
-      .iter()
       .enumerate()
       .map(|(index, (frame_start, frame_end))| {
-        self.create_vs_chunk(index, &vs_script, *frame_start, *frame_end)
+        self.create_vs_chunk(index, &vs_script, frame_start, frame_end)
       })
       .collect();
 
@@ -682,7 +630,7 @@ impl EncodeArgs {
   }
 
   fn create_video_queue_select(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
-    let last_frame = self.get_frames();
+    let last_frame = self.frames;
 
     let input = self.input.as_video_path();
 
@@ -729,11 +677,11 @@ impl EncodeArgs {
     let mut splits = Vec::with_capacity(2 + split_locations.len());
     splits.push(0);
     splits.extend(split_locations);
-    splits.push(self.get_frames());
+    splits.push(self.frames);
 
     let input = self.input.as_video_path();
 
-    let keyframes = ffmpeg::get_keyframes(input);
+    let keyframes = ffmpeg::get_keyframes(input).unwrap();
 
     let segments_set: Vec<(usize, usize)> = splits.iter().copied().tuple_windows().collect();
 
@@ -786,7 +734,7 @@ impl EncodeArgs {
       "-strict",
       "-1",
       "-pix_fmt",
-      self.pix_format.descriptor().unwrap().name(),
+      self.pix_format.format.descriptor().unwrap().name(),
       "-f",
       "yuv4mpegpipe",
       "-",
@@ -796,7 +744,7 @@ impl EncodeArgs {
 
     Chunk {
       temp: self.temp.clone(),
-      frames: self.get_frames(),
+      frames: self.frames,
       source: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,
@@ -842,10 +790,8 @@ impl EncodeArgs {
         .sum();
       info!("Resumed with {} encoded clips done", get_done().done.len());
     } else {
-      let total = self.get_frames();
-
       init_done(DoneJson {
-        frames: AtomicUsize::new(total),
+        frames: AtomicUsize::new(self.frames),
         done: DashMap::new(),
         audio_done: AtomicBool::new(false),
       });
@@ -916,7 +862,7 @@ impl EncodeArgs {
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
       // more than MAX_TRIES. So, we have to explicitly exit the program if that happens.
       while let Ok(()) = rx.recv() {
-        std::process::exit(1);
+        exit(1);
       }
 
       handle.join().unwrap();

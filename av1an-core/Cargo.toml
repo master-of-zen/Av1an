@@ -38,6 +38,8 @@ textwrap = "0.14.2"
 path_abs = "0.5.1"
 av-scenechange = "0.7.0"
 y4m = "0.7.0"
+thiserror = "1.0.30"
+paste = "1.0.5"
 
 [dependencies.ffmpeg-next]
 version = "4.4.0"

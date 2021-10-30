@@ -5,6 +5,7 @@ use crate::{
   vmaf::{self, read_weighted_vmaf},
   Encoder,
 };
+use ffmpeg_next::format::Pixel;
 use splines::{Interpolation, Key, Spline};
 use std::{cmp, cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
 
@@ -20,7 +21,7 @@ pub struct TargetQuality<'a> {
   min_q: u32,
   max_q: u32,
   encoder: Encoder,
-  ffmpeg_pipe: Vec<String>,
+  pix_format: Pixel,
   temp: String,
   workers: usize,
   video_params: Vec<String>,
@@ -28,23 +29,23 @@ pub struct TargetQuality<'a> {
 }
 
 impl<'a> TargetQuality<'a> {
-  pub fn new(project: &'a EncodeArgs) -> Self {
+  pub fn new(args: &'a EncodeArgs) -> Self {
     Self {
-      vmaf_res: project.vmaf_res.as_str(),
-      vmaf_filter: project.vmaf_filter.as_deref(),
-      vmaf_threads: project.vmaf_threads.unwrap_or(0),
-      model: project.vmaf_path.as_deref(),
-      probes: project.probes,
-      target: project.target_quality.unwrap(),
-      min_q: project.min_q.unwrap(),
-      max_q: project.max_q.unwrap(),
-      encoder: project.encoder,
-      ffmpeg_pipe: project.ffmpeg_pipe.clone(),
-      temp: project.temp.clone(),
-      workers: project.workers,
-      video_params: project.video_params.clone(),
-      probe_slow: project.probe_slow,
-      probing_rate: adapt_probing_rate(project.probing_rate as usize),
+      vmaf_res: args.vmaf_res.as_str(),
+      vmaf_filter: args.vmaf_filter.as_deref(),
+      vmaf_threads: args.vmaf_threads.unwrap_or(0),
+      model: args.vmaf_path.as_deref(),
+      probes: args.probes,
+      target: args.target_quality.unwrap(),
+      min_q: args.min_q.unwrap(),
+      max_q: args.max_q.unwrap(),
+      encoder: args.encoder,
+      pix_format: args.pix_format.format,
+      temp: args.temp.clone(),
+      workers: args.workers,
+      video_params: args.video_params.clone(),
+      probe_slow: args.probe_slow,
+      probing_rate: adapt_probing_rate(args.probing_rate as usize),
     }
   }
 
@@ -166,7 +167,7 @@ impl<'a> TargetQuality<'a> {
       self.temp.clone(),
       &chunk.name(),
       q,
-      self.ffmpeg_pipe.clone(),
+      self.pix_format,
       self.probing_rate,
       vmaf_threads,
       self.video_params.clone(),

@@ -1,4 +1,4 @@
-use crate::into_vec;
+use crate::{into_array, into_vec};
 use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type as MediaType;
 use ffmpeg_next::Error::StreamNotFound;
@@ -9,7 +9,10 @@ use std::{
   process::{Command, Stdio},
 };
 
-pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
+pub fn compose_ffmpeg_pipe<S: Into<String>>(
+  params: impl IntoIterator<Item = S>,
+  pix_format: Pixel,
+) -> Vec<String> {
   let mut p: Vec<String> = into_vec![
     "ffmpeg",
     "-y",
@@ -20,13 +23,23 @@ pub fn compose_ffmpeg_pipe(params: Vec<String>) -> Vec<String> {
     "-",
   ];
 
-  p.extend(params);
+  p.extend(params.into_iter().map(Into::into));
+
+  p.extend(into_array![
+    "-pix_fmt",
+    pix_format.descriptor().unwrap().name(),
+    "-strict",
+    "-1",
+    "-f",
+    "yuv4mpegpipe",
+    "-"
+  ]);
 
   p
 }
 
 /// Get frame count using FFmpeg
-pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
+pub fn num_frames(source: &Path) -> Result<usize, ffmpeg_next::Error> {
   let mut ictx = input(&source)?;
   let input = ictx
     .streams()
@@ -56,13 +69,12 @@ pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
 }
 
 /// Returns vec of all keyframes
-pub fn get_keyframes(source: &Path) -> Vec<usize> {
-  let mut ictx = input(&source).unwrap();
+pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg_next::Error> {
+  let mut ictx = input(&source)?;
   let input = ictx
     .streams()
     .best(MediaType::Video)
-    .ok_or(StreamNotFound)
-    .unwrap();
+    .ok_or(StreamNotFound)?;
   let video_stream_index = input.index();
 
   let kfs = ictx
@@ -75,10 +87,10 @@ pub fn get_keyframes(source: &Path) -> Vec<usize> {
     .collect::<Vec<_>>();
 
   if kfs.is_empty() {
-    return vec![0];
+    return Ok(vec![0]);
   };
 
-  kfs
+  Ok(kfs)
 }
 
 /// Returns true if input file have audio in it
@@ -132,7 +144,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
 
 /// Escapes paths in ffmpeg filters if on windows
 pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
-  if cfg!(target_os = "windows") {
+  if cfg!(windows) {
     PathAbs::new(path.as_ref())
       .unwrap()
       .to_str()

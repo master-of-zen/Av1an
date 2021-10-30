@@ -1,5 +1,5 @@
-use av1an_cli::cli;
+use av1an_cli::run;
 
 fn main() -> anyhow::Result<()> {
-  cli()
+  run()
 }

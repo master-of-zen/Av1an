@@ -1,7 +1,7 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use once_cell::sync::OnceCell;
 
-const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(target_os = "windows") {
+const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display
   // the characters used for the spinner
   "[{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})"

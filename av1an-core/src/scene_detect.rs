@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 
 pub fn av_scenechange_detect(
   input: &Input,
-  encoder: &Encoder,
+  encoder: Encoder,
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
@@ -47,7 +47,7 @@ pub fn av_scenechange_detect(
 /// Detect scene changes using rav1e scene detector.
 pub fn scene_detect(
   input: &Input,
-  encoder: &Encoder,
+  encoder: Encoder,
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
   sc_method: ScenecutMethod,
@@ -87,11 +87,11 @@ pub fn scene_detect(
     Input::Video(path) => {
       let input_pix_format = ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {:?}", e));
-      bit_depth = encoder.get_format_bit_depth(input_pix_format);
+      bit_depth = encoder.get_format_bit_depth(input_pix_format)?;
       Command::new("ffmpeg")
         .args(["-r", "1", "-i"])
         .arg(path)
-        .args(&filters)
+        .args(filters)
         .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

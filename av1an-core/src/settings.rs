@@ -153,11 +153,11 @@ impl EncodeArgs {
     } else if current_pass == 1 {
       self
         .encoder
-        .compose_1_2_pass(self.video_params.clone(), &fpf_file.to_str().unwrap())
+        .compose_1_2_pass(self.video_params.clone(), fpf_file.to_str().unwrap())
     } else {
       self.encoder.compose_2_2_pass(
         self.video_params.clone(),
-        &fpf_file.to_str().unwrap(),
+        fpf_file.to_str().unwrap(),
         chunk.output(),
       )
     };

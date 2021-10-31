@@ -19,28 +19,44 @@ use av1an_core::{
   {concat::ConcatMethod, ChunkMethod, SplitMethod},
 };
 
-pub fn version() -> &'static str {
-  // This string has to be constructed at compile-time,
-  // since structopt requires a &'static str
-  concat!(
-    env!("VERGEN_BUILD_SEMVER"),
-    " (rev ",
-    env!("VERGEN_GIT_SHA_SHORT"),
-    ") (",
-    env!("VERGEN_CARGO_PROFILE"),
-    ")",
-    "\n\n* Compiler\n  rustc ",
-    env!("VERGEN_RUSTC_SEMVER"),
-    " (LLVM ",
-    env!("VERGEN_RUSTC_LLVM_VERSION"),
-    ")\n\n* Target Triple\n  ",
-    env!("VERGEN_CARGO_TARGET_TRIPLE"),
-    "\n\n* Date Info",
-    "\n   Build Date:  ",
-    env!("VERGEN_BUILD_DATE"),
-    "\n  Commit Date:  ",
-    env!("VERGEN_GIT_COMMIT_DATE"),
-  )
+use once_cell::sync::OnceCell;
+
+// needs to be static, runtime allocated string to avoid evil hacks to
+// concatenate non-trivial strings at compile-time
+fn version() -> &'static str {
+  static INSTANCE: OnceCell<String> = OnceCell::new();
+  INSTANCE.get_or_init(|| {
+    match (
+      option_env!("VERGEN_GIT_SHA_SHORT"),
+      option_env!("VERGEN_GIT_COMMIT_DATE"),
+    ) {
+      (Some(git_hash), Some(commit_date)) => {
+        format!(
+          "{} (rev {}) ({})
+
+* Compiler
+  rustc {} (LLVM {})
+
+* Target Triple
+  {}
+
+* Date Info
+   Build Date:  {}
+  Commit Date:  {}",
+          env!("VERGEN_BUILD_SEMVER"),
+          git_hash,
+          env!("VERGEN_CARGO_PROFILE"),
+          env!("VERGEN_RUSTC_SEMVER"),
+          env!("VERGEN_RUSTC_LLVM_VERSION"),
+          env!("VERGEN_CARGO_TARGET_TRIPLE"),
+          env!("VERGEN_BUILD_DATE"),
+          commit_date
+        )
+      }
+      // only include the semver on a release (when git information isn't available)
+      _ => env!("VERGEN_BUILD_SEMVER").into(),
+    }
+  })
 }
 
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per-scene quality encoding

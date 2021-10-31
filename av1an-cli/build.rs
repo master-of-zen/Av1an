@@ -7,5 +7,6 @@ fn main() {
   *config.git_mut().commit_timestamp_kind_mut() = TimestampKind::All;
   *config.build_mut().kind_mut() = TimestampKind::All;
 
-  vergen(config).unwrap();
+  // ignore error if we can't get the git commit hash
+  let _ = vergen(config);
 }

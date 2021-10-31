@@ -36,7 +36,3 @@ members = ["av1an-core", "av1an-cli"]
 
 [profile.dev.package.av-scenechange]
 opt-level = 3
-
-[patch.crates-io]
-av-scenechange = { git = "https://github.com/rust-av/av-scenechange", branch = "hybrid-sc" }
-rav1e = { git = "https://github.com/xiph/rav1e" }

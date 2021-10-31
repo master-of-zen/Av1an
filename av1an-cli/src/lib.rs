@@ -28,9 +28,22 @@ fn version() -> &'static str {
   INSTANCE.get_or_init(|| {
     match (
       option_env!("VERGEN_GIT_SHA_SHORT"),
+      option_env!("VERGEN_CARGO_PROFILE"),
+      option_env!("VERGEN_RUSTC_SEMVER"),
+      option_env!("VERGEN_RUSTC_LLVM_VERSION"),
+      option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
+      option_env!("VERGEN_BUILD_DATE"),
       option_env!("VERGEN_GIT_COMMIT_DATE"),
     ) {
-      (Some(git_hash), Some(commit_date)) => {
+      (
+        Some(git_hash),
+        Some(cargo_profile),
+        Some(rustc_ver),
+        Some(llvm_ver),
+        Some(target_triple),
+        Some(build_date),
+        Some(commit_date),
+      ) => {
         format!(
           "{} (rev {}) ({})
 
@@ -43,18 +56,18 @@ fn version() -> &'static str {
 * Date Info
    Build Date:  {}
   Commit Date:  {}",
-          env!("VERGEN_BUILD_SEMVER"),
+          env!("CARGO_PKG_VERSION"),
           git_hash,
-          env!("VERGEN_CARGO_PROFILE"),
-          env!("VERGEN_RUSTC_SEMVER"),
-          env!("VERGEN_RUSTC_LLVM_VERSION"),
-          env!("VERGEN_CARGO_TARGET_TRIPLE"),
-          env!("VERGEN_BUILD_DATE"),
+          cargo_profile,
+          rustc_ver,
+          llvm_ver,
+          target_triple,
+          build_date,
           commit_date
         )
       }
       // only include the semver on a release (when git information isn't available)
-      _ => env!("VERGEN_BUILD_SEMVER").into(),
+      _ => env!("CARGO_PKG_VERSION").into(),
     }
   })
 }

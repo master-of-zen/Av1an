@@ -11,7 +11,8 @@
 <h4 align="center">
 <a href="https://discord.gg/Ar8MvJh"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
 <img src="https://github.com/master-of-zen/Av1an/workflows/tests/badge.svg">
-
+<a href="https://crates.io/crates/av1an"><img src="https://img.shields.io/crates/v/av1an.svg"></a>
+    
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
@@ -142,9 +143,8 @@ With your own parameters:
 ## Install
 
 - With a package manager:
-  - `cargo install av1an`
-  - [CARGO](https://crates.io/crates/av1an)
-  - [AUR](https://aur.archlinux.org/packages/av1an-git/)
+  - Cargo: `cargo install av1an`
+  - Arch Linux: `pacman -S av1an`
 
 - Prerequisites:
   - [Install FFmpeg](https://ffmpeg.org/download.html)

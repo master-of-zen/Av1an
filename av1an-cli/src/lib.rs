@@ -179,9 +179,21 @@ pub struct CliOpts {
   #[structopt(short = "f", long = "ffmpeg")]
   pub ffmpeg_filter_args: Option<String>,
 
-  /// Audio encoding parameters. If not specified, "-c:a copy" is used
+  /// Audio encoding parameters. If not specified, "-c:a copy" is used.
+  /// Do not use FFmpeg's `-map` syntax with this option. Instead, use the
+  /// colon syntax with each parameter you specify.
   ///
-  /// Example to encode the audio with libopus: -a="-c:a libopus -b:a 128k -ac 2"
+  /// Subtitles are always copied by default.
+  ///
+  /// Example to encode all audio tracks with libopus at 128k:
+  ///
+  /// -a="-c:a libopus -b:a 128k"
+  ///
+  /// Example to encode the first audio track with libopus at 128k, and the
+  /// second audio track with aac at 24k, where only the second track is
+  /// downmixed to a single channel:
+  ///
+  /// -a="-c:a:0 libopus -b:a:0 128k -c:a:1 aac -ac:a:1 1 -b:a:1 24k"
   #[structopt(short, long)]
   pub audio_params: Option<String>,
 

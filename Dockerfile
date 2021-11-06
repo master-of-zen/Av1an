@@ -11,20 +11,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install VTM
-RUN git clone https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM.git /VTM && \
-    mkdir -p /VTM/build
-WORKDIR /VTM/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j"$(nproc)" && \
-    ln -s ../bin/EncoderAppStatic /usr/local/bin/vvc_encoder
-
 # Create user
 RUN useradd -ms /bin/bash app_user
 USER app_user
 
 # Install rust
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain nightly
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain stable
 ENV PATH="/home/app_user/.cargo/bin:$PATH"
 
 # Copy av1an and build av1an

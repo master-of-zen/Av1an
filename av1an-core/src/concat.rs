@@ -260,32 +260,56 @@ pub fn ffmpeg(temp: &Path, output: &Path) {
 
   write_concat_file(temp);
 
-  let audio_file = temp.join("audio.mkv");
-
-  assert!(audio_file.exists() && audio_file.metadata().unwrap().len() > 1000);
+  let audio_file = {
+    let file = temp.join("audio.mkv");
+    if file.exists() && file.metadata().unwrap().len() > 1000 {
+      Some(file)
+    } else {
+      None
+    }
+  };
 
   let mut cmd = Command::new("ffmpeg");
 
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
-  cmd
-    .args([
-      "-y",
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-f",
-      "concat",
-      "-safe",
-      "0",
-      "-i",
-      concat_file,
-      "-i",
-    ])
-    .arg(audio_file)
-    .args(["-map", "0", "-map", "1", "-c", "copy"])
-    .arg(output);
+  if let Some(file) = audio_file {
+    cmd
+      .args([
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        concat_file,
+        "-i",
+      ])
+      .arg(file)
+      .args(["-map", "0", "-map", "1", "-c", "copy"])
+      .arg(output);
+  } else {
+    cmd
+      .args([
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        concat_file,
+      ])
+      .args(["-map", "0", "-c", "copy"])
+      .arg(output);
+  }
+
   let out = cmd.output().unwrap();
 
   assert!(

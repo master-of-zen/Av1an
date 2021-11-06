@@ -1,5 +1,6 @@
+use crate::broker::EncoderCrash;
 use crate::{ffmpeg, ref_vec, Input};
-use anyhow::Error;
+use anyhow::anyhow;
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::{
@@ -103,7 +104,7 @@ pub fn plot_vmaf_score_file(
   Ok(())
 }
 
-pub fn validate_libvmaf() -> Result<(), Error> {
+pub fn validate_libvmaf() -> anyhow::Result<()> {
   let mut cmd = Command::new("ffmpeg");
   cmd.arg("-h");
 
@@ -114,34 +115,8 @@ pub fn validate_libvmaf() -> Result<(), Error> {
 
   let stdr = String::from_utf8(out.stderr)?;
   if !stdr.contains("--enable-libvmaf") {
-    panic!("FFmpeg is not compiled with --enable-libvmaf");
+    return Err(anyhow!("FFmpeg is not compiled with --enable-libvmaf, but target quality or VMAF plotting was enabled"));
   }
-  Ok(())
-}
-
-pub fn validate_vmaf_test_run(model: &str) -> Result<(), Error> {
-  let mut cmd = Command::new("ffmpeg");
-
-  cmd.args(["-hide_banner", "-filter_complex"]);
-  cmd.arg(format!("testsrc=duration=1:size=1920x1080:rate=1[B];testsrc=duration=1:size=1920x1080:rate=1[A];[B][A]libvmaf{}", model).as_str());
-  cmd.args(["-t", "1", "-f", "null", "-"]);
-
-  cmd.stdout(Stdio::piped());
-  cmd.stderr(Stdio::piped());
-
-  let out = cmd.output()?;
-
-  let stderr = String::from_utf8(out.stderr)?;
-
-  assert!(out.status.success(), "Test VMAF run failed:\n{:?}", stderr);
-
-  Ok(())
-}
-
-pub fn validate_vmaf(vmaf_model: &str) -> Result<(), Error> {
-  validate_libvmaf()?;
-  validate_vmaf_test_run(vmaf_model)?;
-
   Ok(())
 }
 
@@ -153,7 +128,7 @@ pub fn plot(
   sample_rate: usize,
   filter: Option<&str>,
   threads: usize,
-) -> Result<(), Error> {
+) -> Result<(), EncoderCrash> {
   let json_file = encoded.with_extension("json");
   let plot_file = encoded.with_extension("svg");
 
@@ -202,7 +177,7 @@ pub fn run_vmaf(
   sample_rate: usize,
   vmaf_filter: Option<&str>,
   threads: usize,
-) -> Result<(), Error> {
+) -> Result<(), EncoderCrash> {
   let mut filter = if sample_rate > 1 {
     format!(
       "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
@@ -239,17 +214,10 @@ pub fn run_vmaf(
     source_pipe.args(args);
     source_pipe.stdout(Stdio::piped());
     source_pipe.stderr(Stdio::null());
-    source_pipe
+    source_pipe.spawn().unwrap()
   } else {
     unreachable!()
   };
-
-  let handle = source_pipe.spawn().unwrap_or_else(|e| {
-    panic!(
-      "Failed to execute source pipe: {}\nCommand: {:#?}",
-      e, source_pipe
-    )
-  });
 
   let mut cmd = Command::new("ffmpeg");
   cmd.args([
@@ -275,26 +243,26 @@ pub fn run_vmaf(
 
   cmd.arg(format!("{}{}{}", distorted, reference, vmaf));
   cmd.args(["-f", "null", "-"]);
-  cmd.stdin(handle.stdout.unwrap());
-  cmd.stderr(Stdio::null());
+  cmd.stdin(source_pipe.stdout.take().unwrap());
+  cmd.stderr(Stdio::piped());
   cmd.stdout(Stdio::null());
 
-  let output = cmd
-    .output()
-    .unwrap_or_else(|e| panic!("Failed to execute vmaf pipe: {}\ncommand: {:#?}", e, cmd));
+  let output = cmd.spawn().unwrap().wait_with_output().unwrap();
 
-  assert!(
-    output.status.success(),
-    "VMAF calculation failed:\nCommand: {:?}\nOutput: {:#?}",
-    cmd,
-    output
-  );
+  if !output.status.success() {
+    return Err(EncoderCrash {
+      exit_status: output.status,
+      pipe_stderr: String::new().into(),
+      stderr: output.stderr.into(),
+      stdout: String::new().into(),
+    });
+  }
 
   Ok(())
 }
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
-  let json_str = crate::util::read_file_to_string(file).unwrap();
+  let json_str = std::fs::read_to_string(file).unwrap();
   let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
   let v = bazs
     .frames
@@ -317,18 +285,11 @@ pub fn read_weighted_vmaf(
 /// Calculates percentile from an array of values
 pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
   assert!(!scores.is_empty());
-  scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-  let k = (scores.len() - 1) as f64 * percentile;
-  let f = k.floor();
-  let c = k.ceil();
+  let k = ((scores.len() - 1) as f64 * percentile) as usize;
 
-  if f as u64 == c as u64 {
-    return scores[k as usize];
-  }
+  let (_, kth_element, _) =
+    scores.select_nth_unstable_by(k, |a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-  let d0 = scores[f as usize] * (c - k);
-  let d1 = scores[f as usize] * (k - f);
-
-  d0 + d1
+  *kth_element
 }

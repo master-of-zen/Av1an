@@ -133,8 +133,7 @@ pub fn create_vs_file(
       ChunkMethod::LSMASH => "lwi",
       _ => return Err(anyhow!("invalid chunk method")),
     }
-  )))
-  .unwrap();
+  )))?;
 
   load_script.write_all(
     // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python

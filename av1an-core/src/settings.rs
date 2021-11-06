@@ -1,5 +1,5 @@
 use crate::{
-  broker::Broker,
+  broker::{Broker, EncoderCrash},
   chunk::Chunk,
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
@@ -13,7 +13,8 @@ use crate::{
   scene_detect::av_scenechange_detect,
   split::{extra_splits, segment, write_scenes_to_file},
   vapoursynth::create_vs_file,
-  vmaf, ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
+  vmaf::{self, validate_libvmaf},
+  ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
 };
 use anyhow::{bail, ensure};
@@ -22,10 +23,11 @@ use ffmpeg_next::format::Pixel;
 use flexi_logger::{Duplicate, FileSpec, Logger};
 use itertools::Itertools;
 use path_abs::PathAbs;
+use std::cmp::Ordering;
 use std::{
   borrow::Cow,
   cmp,
-  cmp::{Ordering, Reverse},
+  cmp::Reverse,
   collections::HashSet,
   convert::TryInto,
   ffi::OsString,
@@ -34,10 +36,11 @@ use std::{
   io::Write,
   iter,
   path::{Path, PathBuf},
-  process::{exit, Command, ExitStatus, Stdio},
-  sync::atomic::{AtomicBool, AtomicUsize},
-  sync::{atomic, mpsc},
+  process::{exit, Command, Stdio},
+  sync::atomic::{self, AtomicBool, AtomicUsize},
+  sync::{mpsc, Arc},
 };
+
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct PixelFormat {
@@ -141,7 +144,7 @@ impl EncodeArgs {
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
-  ) -> Result<(), (ExitStatus, String)> {
+  ) -> Result<(), EncoderCrash> {
     let fpf_file = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
@@ -162,7 +165,7 @@ impl EncodeArgs {
       )
     };
 
-    if let Some(per_shot_target_quality_cq) = chunk.per_shot_target_quality_cq {
+    if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
       enc_cmd = self
         .encoder
         .man_command(enc_cmd, per_shot_target_quality_cq as usize);
@@ -173,21 +176,34 @@ impl EncodeArgs {
       .build()
       .unwrap();
 
-    let (exit_status, output) = rt.block_on(async {
-      let mut ffmpeg_gen_pipe = if let [source, args @ ..] = &*chunk.source {
+    let (pipe_stderr, enc_output, enc_stderr) = rt.block_on(async {
+      let mut source_pipe = if let [source, args @ ..] = &*chunk.source {
         tokio::process::Command::new(source)
           .args(args)
           .stdout(Stdio::piped())
-          .stderr(Stdio::null())
+          .stderr(Stdio::piped())
           .spawn()
           .unwrap()
       } else {
         unreachable!()
       };
 
-      let ffmpeg_gen_pipe_stdout: Stdio =
-        ffmpeg_gen_pipe.stdout.take().unwrap().try_into().unwrap();
+      let source_pipe_stderr = source_pipe.stderr.take().unwrap();
+      let mut reader = BufReader::new(source_pipe_stderr).lines();
 
+      let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
+      let p_stdr2 = Arc::clone(&pipe_stderr);
+
+      tokio::spawn(async move {
+        while let Some(line) = reader.next_line().await.unwrap() {
+          p_stdr2.lock().push_str(&line);
+          p_stdr2.lock().push('\n');
+        }
+      });
+
+      let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
+
+      // converts the pixel format
       let create_ffmpeg_pipe = |pipe_from: Stdio| {
         let ffmpeg_pipe =
           compose_ffmpeg_pipe(self.ffmpeg_filter_args.as_slice(), self.pix_format.format);
@@ -208,9 +224,10 @@ impl EncodeArgs {
         ffmpeg_pipe_stdout
       };
 
-      let ffmpeg_pipe = if self.ffmpeg_filter_args.is_empty() {
+      let y4m_pipe = if self.ffmpeg_filter_args.is_empty() {
         match &self.input {
           Input::Video(input) => {
+            // TODO: only do this check once
             let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
               panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
             });
@@ -218,10 +235,10 @@ impl EncodeArgs {
             // Just pipe the original video if there was no filter specified
             // and the pixel format is the same
             if self.pix_format.format == input_pix_format {
-              ffmpeg_gen_pipe_stdout
+              source_pipe_stdout
             } else {
               // a bit messy, but if let chains are unstable
-              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+              create_ffmpeg_pipe(source_pipe_stdout)
             }
           }
           Input::VapourSynth(input) => {
@@ -233,20 +250,20 @@ impl EncodeArgs {
                 )
               });
             if self.pix_format.bit_depth == input_bit_depth {
-              ffmpeg_gen_pipe_stdout
+              source_pipe_stdout
             } else {
-              create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+              create_ffmpeg_pipe(source_pipe_stdout)
             }
           }
         }
       } else {
-        create_ffmpeg_pipe(ffmpeg_gen_pipe_stdout)
+        create_ffmpeg_pipe(source_pipe_stdout)
       };
 
-      let mut pipe = if let [encoder, args @ ..] = &*enc_cmd {
+      let mut enc_pipe = if let [encoder, args @ ..] = &*enc_cmd {
         tokio::process::Command::new(encoder)
           .args(args)
-          .stdin(ffmpeg_pipe)
+          .stdin(y4m_pipe)
           .stdout(Stdio::piped())
           .stderr(Stdio::piped())
           .spawn()
@@ -257,17 +274,17 @@ impl EncodeArgs {
 
       let mut frame = 0;
 
-      let mut reader = BufReader::new(pipe.stderr.take().unwrap());
+      let mut reader = BufReader::new(enc_pipe.stderr.take().unwrap());
 
-      let mut buf = Vec::with_capacity(64);
-      let mut output = String::with_capacity(64);
+      let mut buf = Vec::with_capacity(128);
+      let mut enc_stderr = String::with_capacity(128);
 
       while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
         if read == 0 {
           break;
         }
 
-        if let Ok(line) = std::str::from_utf8(&buf) {
+        if let Ok(line) = simdutf8::basic::from_utf8(&buf) {
           if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
             update_mp_msg(worker_id, line.to_string());
           }
@@ -281,20 +298,26 @@ impl EncodeArgs {
               frame = new;
             }
           }
-          output.push_str(line);
-          output.push('\n');
+          enc_stderr.push_str(line);
+          enc_stderr.push('\n');
         }
 
         buf.clear();
       }
 
-      let exit_status = pipe.wait_with_output().await.unwrap().status;
+      let enc_output = enc_pipe.wait_with_output().await.unwrap();
 
-      (exit_status, output)
+      let pipe_stderr = pipe_stderr.lock().clone();
+      (pipe_stderr, enc_output, enc_stderr)
     });
 
-    if !exit_status.success() {
-      return Err((exit_status, output));
+    if !enc_output.status.success() {
+      return Err(EncoderCrash {
+        exit_status: enc_output.status,
+        pipe_stderr: pipe_stderr.into(),
+        stderr: enc_stderr.into(),
+        stdout: enc_output.stdout.into(),
+      });
     }
 
     Ok(())
@@ -395,6 +418,10 @@ impl EncodeArgs {
       "Input file {:?} does not exist!",
       self.input
     );
+
+    if self.target_quality.is_some() || self.vmaf {
+      validate_libvmaf()?;
+    }
 
     if which::which("ffmpeg").is_err() {
       bail!("FFmpeg not found. Is it installed in system path?");
@@ -518,7 +545,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
     }
 
-    write_scenes_to_file(&scenes, self.frames, scene_file.to_str().unwrap()).unwrap();
+    write_scenes_to_file(&scenes, self.frames, scene_file).unwrap();
 
     scenes
   }
@@ -900,7 +927,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
 
       if self.vmaf {
-        vmaf::plot(
+        if let Err(e) = vmaf::plot(
           self.output_file.as_ref(),
           &self.input,
           self.vmaf_path.as_deref(),
@@ -911,7 +938,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             None => None,
           },
           self.vmaf_threads.unwrap_or_else(num_cpus::get),
-        )?;
+        ) {
+          error!("{}", e);
+          error!("VMAF calculation failed, no plot generated.")
+        }
       }
 
       if !Path::new(&self.output_file).exists() {

@@ -8,7 +8,10 @@ pub struct Chunk {
   pub source: Vec<OsString>,
   pub output_ext: String,
   pub frames: usize,
-  pub per_shot_target_quality_cq: Option<u32>,
+  // do not break compatibility with output produced by older versions of av1an
+  /// Optional target quality CQ level
+  #[serde(rename = "per_shot_target_quality_cq")]
+  pub tq_cq: Option<u32>,
 }
 
 impl Chunk {
@@ -26,7 +29,7 @@ impl Chunk {
       source,
       output_ext: output_ext.to_owned(),
       frames,
-      per_shot_target_quality_cq,
+      tq_cq: per_shot_target_quality_cq,
     })
   }
 
@@ -58,7 +61,7 @@ mod tests {
       source: vec!["".into()],
       output_ext: "ivf".to_owned(),
       frames: 5,
-      per_shot_target_quality_cq: None,
+      tq_cq: None,
     };
     assert_eq!("00001", ch.name());
   }
@@ -70,7 +73,7 @@ mod tests {
       source: vec!["".into()],
       output_ext: "ivf".to_owned(),
       frames: 5,
-      per_shot_target_quality_cq: None,
+      tq_cq: None,
     };
     assert_eq!("10000", ch.name());
   }
@@ -83,7 +86,7 @@ mod tests {
       source: vec!["".into()],
       output_ext: "ivf".to_owned(),
       frames: 5,
-      per_shot_target_quality_cq: None,
+      tq_cq: None,
     };
     assert_eq!("d/encode/00001.ivf", ch.output());
   }

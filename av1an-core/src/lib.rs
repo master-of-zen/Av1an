@@ -100,9 +100,10 @@ impl Input {
   }
 
   pub fn frames(&self) -> usize {
+    const FAIL_MSG: &str = "failed to get number of frames for input video";
     match &self {
-      Input::Video(path) => ffmpeg::num_frames(path.as_path()).unwrap(),
-      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).unwrap(),
+      Input::Video(path) => ffmpeg::num_frames(path.as_path()).expect(FAIL_MSG),
+      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).expect(FAIL_MSG),
     }
   }
 }
@@ -215,19 +216,6 @@ pub fn hash_path(path: &Path) -> String {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
   format!("{:x}", s.finish())[..7].to_string()
-}
-
-pub async fn process_pipe(pipe: tokio::process::Child, chunk_index: usize) -> Result<(), String> {
-  let status = pipe.wait_with_output().await.unwrap();
-
-  if !status.status.success() {
-    return Err(format!(
-      "Encoder encountered an error on chunk {}: {:?}",
-      chunk_index, status
-    ));
-  }
-
-  Ok(())
 }
 
 fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) {

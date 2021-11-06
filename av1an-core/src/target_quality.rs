@@ -1,13 +1,22 @@
 use crate::{
+  broker::EncoderCrash,
   chunk::Chunk,
-  process_pipe,
   settings::EncodeArgs,
   vmaf::{self, read_weighted_vmaf},
   Encoder,
 };
 use ffmpeg_next::format::Pixel;
 use splines::{Interpolation, Key, Spline};
-use std::{cmp, cmp::Ordering, convert::TryInto, fmt::Error, path::Path, process::Stdio};
+use std::{
+  cmp,
+  cmp::Ordering,
+  convert::TryInto,
+  fmt::Error,
+  path::{Path, PathBuf},
+  process::Stdio,
+};
+
+const VMAF_PERCENTILE: f64 = 0.25;
 
 // TODO: just make it take a reference to a `Project`
 pub struct TargetQuality<'a> {
@@ -49,7 +58,7 @@ impl<'a> TargetQuality<'a> {
     }
   }
 
-  fn per_shot_target_quality(&self, chunk: &Chunk) -> u32 {
+  fn per_shot_target_quality(&self, chunk: &Chunk) -> Result<u32, EncoderCrash> {
     let mut vmaf_cq = vec![];
     let frames = chunk.frames;
 
@@ -60,7 +69,8 @@ impl<'a> TargetQuality<'a> {
     q_list.push(middle_point);
     let last_q = middle_point;
 
-    let mut score = read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize), 0.25).unwrap();
+    let mut score =
+      read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize)?, VMAF_PERCENTILE).unwrap();
     vmaf_cq.push((score, last_q));
 
     // Initialize search boundary
@@ -79,7 +89,7 @@ impl<'a> TargetQuality<'a> {
     q_list.push(next_q);
 
     // Edge case check
-    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize), 0.25).unwrap();
+    score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize)?, VMAF_PERCENTILE).unwrap();
     vmaf_cq.push((score, next_q));
 
     if (next_q == self.min_q && score < self.target)
@@ -98,7 +108,7 @@ impl<'a> TargetQuality<'a> {
           Skip::High
         },
       );
-      return next_q;
+      return Ok(next_q);
     }
 
     // Set boundary
@@ -129,7 +139,7 @@ impl<'a> TargetQuality<'a> {
       }
 
       q_list.push(new_point as u32);
-      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point), 0.25).unwrap();
+      score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point)?, VMAF_PERCENTILE).unwrap();
       vmaf_cq.push((score, new_point as u32));
 
       // Update boundary
@@ -153,10 +163,10 @@ impl<'a> TargetQuality<'a> {
       Skip::None,
     );
 
-    q as u32
+    Ok(q as u32)
   }
 
-  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> String {
+  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, EncoderCrash> {
     let vmaf_threads = if self.vmaf_threads == 0 {
       vmaf_auto_threads(self.workers)
     } else {
@@ -188,7 +198,7 @@ impl<'a> TargetQuality<'a> {
 
       let source_pipe_stdout: Stdio = source.stdout.take().unwrap().try_into().unwrap();
 
-      let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
+      let mut source_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
         tokio::process::Command::new(ffmpeg)
           .args(args)
           .stdin(source_pipe_stdout)
@@ -200,12 +210,12 @@ impl<'a> TargetQuality<'a> {
         unreachable!()
       };
 
-      let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+      let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let pipe = if let [cmd, args @ ..] = &*cmd.1 {
+      let enc_pipe = if let [cmd, args @ ..] = &*cmd.1 {
         tokio::process::Command::new(cmd.as_ref())
           .args(args.iter().map(AsRef::as_ref))
-          .stdin(ffmpeg_pipe_stdout)
+          .stdin(source_pipe_stdout)
           .stdout(Stdio::piped())
           .stderr(Stdio::piped())
           .spawn()
@@ -214,7 +224,24 @@ impl<'a> TargetQuality<'a> {
         unreachable!()
       };
 
-      process_pipe(pipe, chunk.index).await.unwrap();
+      // TODO: reuse the async version of this code in `create_pipes` (in settings.rs)
+      let source_pipe_output = source_pipe.wait_with_output().await.unwrap();
+
+      // TODO: Expand EncoderCrash to handle io errors as well
+      let enc_output = enc_pipe.wait_with_output().await.unwrap();
+
+      if !enc_output.status.success() {
+        let e = EncoderCrash {
+          exit_status: enc_output.status,
+          stdout: enc_output.stdout.into(),
+          stderr: enc_output.stderr.into(),
+          pipe_stderr: source_pipe_output.stderr.into(),
+        };
+        error!("[chunk {}] {}", chunk.index, e);
+        return Err(e);
+      }
+
+      Ok(())
     };
 
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -222,7 +249,7 @@ impl<'a> TargetQuality<'a> {
       .build()
       .unwrap();
 
-    rt.block_on(future);
+    rt.block_on(future)?;
 
     let probe_name =
       Path::new(&chunk.temp)
@@ -231,8 +258,6 @@ impl<'a> TargetQuality<'a> {
     let fl_path = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}.json", chunk.name()));
-
-    let fl_path = fl_path.to_str().unwrap().to_owned();
 
     vmaf::run_vmaf(
       &probe_name,
@@ -243,14 +268,14 @@ impl<'a> TargetQuality<'a> {
       self.probing_rate,
       self.vmaf_filter,
       self.vmaf_threads,
-    )
-    .unwrap();
+    )?;
 
-    fl_path
+    Ok(fl_path)
   }
 
-  pub fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) {
-    chunk.per_shot_target_quality_cq = Some(self.per_shot_target_quality(chunk));
+  pub fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) -> Result<(), EncoderCrash> {
+    chunk.tq_cq = Some(self.per_shot_target_quality(chunk)?);
+    Ok(())
   }
 }
 

@@ -105,7 +105,7 @@ jobs:
 
       - name: Testing ${{ matrix.name }}
         run: |
-          target/release/av1an -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          target/release/av1an -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an -c mkvmerge --keep -o "bus_cif.mkv" ${{ matrix.flags }}
           du -h bus_cif.mkv
           tree -a
 

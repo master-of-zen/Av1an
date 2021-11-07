@@ -1,4 +1,4 @@
-FROM luigi311/encoders-docker:latest
+FROM luigi311/encoders-docker:20210901
 
 ENV MPLCONFIGDIR="/home/app_user/"
 ARG DEBIAN_FRONTEND=noninteractive

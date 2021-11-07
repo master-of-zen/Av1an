@@ -16,8 +16,6 @@ use std::{
   sync::Arc,
 };
 
-use crate::encoder::Encoder;
-
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
 )]
@@ -228,8 +226,8 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
-/// Concatenates using ffmpeg
-pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
+/// Concatenates using ffmpeg (does not work with x265)
+pub fn ffmpeg(temp: &Path, output: &Path) {
   fn write_concat_file(temp_folder: &Path) {
     let concat_file = &temp_folder.join("concat");
     let encode_folder = &temp_folder.join("encode");
@@ -240,7 +238,7 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
 
     files.sort_by_key(DirEntry::path);
 
-    let mut contents = String::new();
+    let mut contents = String::with_capacity(24 * files.len());
 
     for i in files {
       if cfg!(windows) {
@@ -262,12 +260,13 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
 
   write_concat_file(temp);
 
-  let audio_file = temp.join("audio.mkv");
-
-  let audio_args = if audio_file.exists() && audio_file.metadata().unwrap().len() > 1000 {
-    vec!["-i", audio_file.to_str().unwrap(), "-c", "copy"]
-  } else {
-    Vec::with_capacity(0)
+  let audio_file = {
+    let file = temp.join("audio.mkv");
+    if file.exists() && file.metadata().unwrap().len() > 1000 {
+      Some(file)
+    } else {
+      None
+    }
   };
 
   let mut cmd = Command::new("ffmpeg");
@@ -275,12 +274,10 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
-  match encoder {
-    Encoder::x265 => cmd
-      .args(&[
+  if let Some(file) = audio_file {
+    cmd
+      .args([
         "-y",
-        "-fflags",
-        "+genpts",
         "-hide_banner",
         "-loglevel",
         "error",
@@ -290,20 +287,13 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "0",
         "-i",
         concat_file,
+        "-i",
       ])
-      .args(audio_args)
-      .args(&[
-        "-c",
-        "copy",
-        "-movflags",
-        "frag_keyframe+empty_moov",
-        "-map",
-        "0",
-        "-f",
-        "mp4",
-      ])
-      .arg(output),
-    _ => cmd
+      .arg(file)
+      .args(["-map", "0", "-map", "1", "-c", "copy"])
+      .arg(output);
+  } else {
+    cmd
       .args([
         "-y",
         "-hide_banner",
@@ -316,10 +306,10 @@ pub fn ffmpeg(temp: &Path, output: &Path, encoder: Encoder) {
         "-i",
         concat_file,
       ])
-      .args(audio_args)
-      .args(["-c", "copy"])
-      .arg(output),
-  };
+      .args(["-map", "0", "-c", "copy"])
+      .arg(output);
+  }
+
   let out = cmd.output().unwrap();
 
   assert!(

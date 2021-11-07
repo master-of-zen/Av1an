@@ -404,6 +404,11 @@ impl EncodeArgs {
       bail!("mkvmerge not found, but `--concat mkvmerge` was specified. Is it installed in system path?");
     }
 
+    if self.encoder == Encoder::x265 && self.concat != ConcatMethod::MKVMerge {
+      bail!("mkvmerge is required for concatenating x265, as x265 outputs raw HEVC bitstream files without the timestamps correctly set, which FFmpeg cannot concatenate \
+properly into a mkv file. Specify mkvmerge as the concatenation method by setting `--concat mkvmerge`.");
+    }
+
     if let Some(vmaf_path) = &self.vmaf_path {
       ensure!(vmaf_path.exists());
     }
@@ -890,7 +895,7 @@ impl EncodeArgs {
           concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref())?;
         }
         ConcatMethod::FFmpeg => {
-          concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref(), self.encoder);
+          concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref());
         }
       }
 

@@ -12,7 +12,7 @@ on:
       - "*.md"
 
 env:
-  deps: tree llvm clang
+  deps: tree llvm clang mkvtoolnix
   DEBIAN_FRONTEND: noninteractive
 
 jobs:

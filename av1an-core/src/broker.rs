@@ -2,12 +2,80 @@ use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done, settings::EncodeArgs, Chunk,
   Instant, TargetQuality, Verbosity,
 };
-use std::{fs::File, io::Write, path::Path, sync::mpsc::Sender};
+use std::{
+  fmt::{Debug, Display},
+  fs::File,
+  io::Write,
+  path::Path,
+  process::ExitStatus,
+  sync::mpsc::Sender,
+};
+
+use thiserror::Error;
 
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
+}
+
+#[derive(Clone)]
+pub enum StringOrBytes {
+  String(String),
+  Bytes(Vec<u8>),
+}
+
+impl Debug for StringOrBytes {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::String(s) => {
+        if f.alternate() {
+          f.write_str(&textwrap::indent(&s, /* 8 spaces */ "        "))?;
+        } else {
+          f.write_str(s)?;
+        }
+      }
+      Self::Bytes(b) => write!(f, "raw bytes: {:?}", b)?,
+    }
+
+    Ok(())
+  }
+}
+
+impl From<Vec<u8>> for StringOrBytes {
+  fn from(bytes: Vec<u8>) -> Self {
+    if simdutf8::basic::from_utf8(&bytes).is_ok() {
+      // SAFETY: this branch guarantees that the input is valid UTF8
+      Self::String(unsafe { String::from_utf8_unchecked(bytes) })
+    } else {
+      Self::Bytes(bytes)
+    }
+  }
+}
+
+impl From<String> for StringOrBytes {
+  fn from(s: String) -> Self {
+    Self::String(s)
+  }
+}
+
+#[derive(Error, Debug)]
+pub struct EncoderCrash {
+  pub exit_status: ExitStatus,
+  pub stdout: StringOrBytes,
+  pub stderr: StringOrBytes,
+  pub pipe_stderr: StringOrBytes,
+}
+
+impl Display for EncoderCrash {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "encoder crashed: {}\nstdout:\n{:#?}\nstderr:\n{:#?}\nsource pipe stderr:\n{:#?}",
+      self.exit_status, self.stdout, self.stderr, self.pipe_stderr
+    )?;
+    Ok(())
+  }
 }
 
 impl<'a> Broker<'a> {
@@ -40,7 +108,9 @@ impl<'a> Broker<'a> {
             let tx = tx.clone();
             s.spawn(move |_| {
               while let Ok(mut chunk) = rx.recv() {
-                if queue.encode_chunk(&mut chunk, consumer_idx).is_err() {
+                if let Err(e) = queue.encode_chunk(&mut chunk, consumer_idx) {
+                  error!("[chunk {}] {}", chunk.index, e);
+
                   tx.send(()).unwrap();
                   return Err(());
                 }
@@ -63,13 +133,16 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), String> {
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), EncoderCrash> {
     let st_time = Instant::now();
 
-    info!("Enc: {}, {} fr", chunk.index, chunk.frames);
+    info!(
+      "encoding started for chunk {} ({} frames)",
+      chunk.index, chunk.frames
+    );
 
     if let Some(ref tq) = self.target_quality {
-      tq.per_shot_target_quality_routine(chunk);
+      tq.per_shot_target_quality_routine(chunk)?;
     }
 
     // Run all passes for this chunk
@@ -77,20 +150,17 @@ impl<'a> Broker<'a> {
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=MAX_TRIES {
         let res = self.project.create_pipes(chunk, current_pass, worker_id);
-        if let Err((status, output)) = res {
-          warn!(
-            "Encoder failed (on chunk {}) with {}:\n{}",
-            chunk.index,
-            status,
-            textwrap::indent(&output, /* 8 spaces */ "        ")
-          );
+        if let Err(e) = res {
           if r#try == MAX_TRIES {
             error!(
-              "Encoder crashed (on chunk {}) {} times, terminating thread",
+              "[chunk {}] encoder crashed {} times, shutting down worker",
               chunk.index, MAX_TRIES
             );
-            return Err(output);
+            return Err(e);
           }
+          // avoids double-print of the error message as both a WARN and ERROR,
+          // since `Broker::encoding_loop` will print the error message as well
+          warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
         } else {
           break;
         }
@@ -129,7 +199,7 @@ impl<'a> Broker<'a> {
 
     if actual_frames != expected_frames {
       warn!(
-        "FRAME MISMATCH: Chunk #{}: {}/{} fr",
+        "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
         chunk.index, actual_frames, expected_frames
       );
     }

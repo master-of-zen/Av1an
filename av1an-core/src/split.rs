@@ -48,8 +48,7 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
 
     cmd.args(&["-f", "segment", "-segment_frames", &segments_joined]);
     let split_path = Path::new(temp).join("split").join("%05d.mkv");
-    let split_str = split_path.to_str().unwrap();
-    cmd.arg(split_str);
+    cmd.arg(split_path);
   }
   let out = cmd.output().unwrap();
   assert!(out.status.success(), "FFmpeg failed to segment: {:#?}", out);

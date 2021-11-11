@@ -1,6 +1,3 @@
-use anyhow::Context;
-use std::{fs, path::Path};
-
 #[macro_export]
 macro_rules! regex {
   ($re:literal $(,)?) => {{
@@ -58,8 +55,4 @@ macro_rules! create_dir {
       },
     }
   };
-}
-
-pub fn read_file_to_string(file: impl AsRef<Path>) -> anyhow::Result<String> {
-  fs::read_to_string(&file).with_context(|| format!("Can't open file {:?}", file.as_ref()))
 }

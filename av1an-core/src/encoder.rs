@@ -370,9 +370,6 @@ impl Encoder {
   /// Returs option of q/crf value from cli encoder output
   pub fn match_line(self, line: &str) -> Option<usize> {
     let encoder_regex = self.pipe_match();
-    if !encoder_regex.is_match(line) {
-      return Some(0);
-    }
     let captures = encoder_regex.captures(line)?.get(1)?.as_str();
     captures.parse::<usize>().ok()
   }

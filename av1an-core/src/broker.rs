@@ -11,6 +11,7 @@ use std::{
   sync::mpsc::Sender,
 };
 
+use smallvec::SmallVec;
 use thiserror::Error;
 
 pub struct Broker<'a> {
@@ -91,8 +92,9 @@ impl<'a> Broker<'a> {
     }
   }
 
+  /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   #[allow(clippy::needless_pass_by_value)]
-  pub fn encoding_loop(self, tx: Sender<()>) {
+  pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -101,14 +103,44 @@ impl<'a> Broker<'a> {
       }
       drop(sender);
 
+      if let Some(threads) = set_thread_affinity {
+        let available_threads = num_cpus::get();
+        let requested_threads = threads.saturating_mul(self.project.workers);
+        if requested_threads > available_threads {
+          // extra newline required to actually display warning in terminal
+          // TODO: fix hack and implement correct solution, which is to use a logger that calls `println` on
+          // the progress bar so that it is guaranteed to be displayed properly
+          warn!(
+            "ignoring set_thread_affinity: requested more threads than available ({}/{})\n",
+            requested_threads, available_threads
+          );
+          set_thread_affinity = None;
+        } else if requested_threads == 0 {
+          warn!("ignoring set_thread_affinity: requested 0 threads\n");
+
+          set_thread_affinity = None;
+        }
+      }
+
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.workers)
-          .map(|i| (receiver.clone(), &self, i))
-          .map(|(rx, queue, consumer_idx)| {
+          .map(|idx| (receiver.clone(), &self, idx))
+          .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
             s.spawn(move |_| {
+              if let Some(threads) = set_thread_affinity {
+                let mut cpu_set = SmallVec::<[usize; 16]>::new();
+                cpu_set.extend((threads * worker_id..).take(threads));
+                if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
+                  warn!(
+                    "failed to set thread affinity for worker {}: {}",
+                    worker_id, e
+                  )
+                }
+              }
+
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, consumer_idx) {
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();

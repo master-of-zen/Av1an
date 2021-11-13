@@ -67,6 +67,7 @@ pub struct EncodeArgs {
   pub video_params: Vec<String>,
   pub encoder: Encoder,
   pub workers: usize,
+  pub set_thread_affinity: Option<usize>,
 
   // FFmpeg params
   pub ffmpeg_filter_args: Vec<String>,
@@ -888,7 +889,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(tx);
+        broker.encoding_loop(tx, self.set_thread_affinity);
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)

@@ -171,6 +171,10 @@ pub struct CliOpts {
   #[structopt(short, long, default_value = "0")]
   pub workers: usize,
 
+  /// Optionally pin each worker to this many threads
+  #[structopt(long)]
+  pub set_thread_affinity: Option<usize>,
+
   /// Do not check if the encoder arguments specified by `--video-params` are valid
   #[structopt(long)]
   pub force: bool,
@@ -372,6 +376,7 @@ pub fn parse_cli() -> anyhow::Result<EncodeArgs> {
     vmaf_path: args.vmaf_path,
     vmaf_res: args.vmaf_res,
     workers: args.workers,
+    set_thread_affinity: args.set_thread_affinity,
   };
 
   encode_args.startup_check()?;

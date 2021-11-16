@@ -19,11 +19,9 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
+  cmd.args(["-hide_banner", "-y", "-i"]);
+  cmd.arg(input);
   cmd.args([
-    "-hide_banner",
-    "-y",
-    "-i",
-    input.to_str().unwrap(),
     "-map",
     "0:V:0",
     "-an",

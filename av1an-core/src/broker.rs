@@ -109,16 +109,13 @@ impl<'a> Broker<'a> {
             let available_threads = num_cpus::get();
             let requested_threads = threads.saturating_mul(self.project.workers);
             if requested_threads > available_threads {
-              // extra newline required to actually display warning in terminal
-              // TODO: fix hack and implement correct solution, which is to use a logger that calls `println` on
-              // the progress bar so that it is guaranteed to be displayed properly
               warn!(
-                "ignoring set_thread_affinity: requested more threads than available ({}/{})\n",
+                "ignoring set_thread_affinity: requested more threads than available ({}/{})",
                 requested_threads, available_threads
               );
               set_thread_affinity = None;
             } else if requested_threads == 0 {
-              warn!("ignoring set_thread_affinity: requested 0 threads\n");
+              warn!("ignoring set_thread_affinity: requested 0 threads");
 
               set_thread_affinity = None;
             }
@@ -176,10 +173,8 @@ impl<'a> Broker<'a> {
   fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), EncoderCrash> {
     let st_time = Instant::now();
 
-    info!(
-      "encoding started for chunk {} ({} frames)",
-      chunk.index, chunk.frames
-    );
+    // space padding at the beginning to align with "finished chunk"
+    info!(" started chunk {:05}: {} frames", chunk.index, chunk.frames);
 
     if let Some(ref tq) = self.target_quality {
       tq.per_shot_target_quality_routine(chunk)?;
@@ -207,9 +202,12 @@ impl<'a> Broker<'a> {
       }
     }
 
-    let encoded_frames = Self::frame_check_output(chunk, chunk.frames);
+    let encoded_frames = ffmpeg::num_frames(chunk.output().as_ref()).unwrap();
 
     if encoded_frames == chunk.frames {
+      let enc_time = st_time.elapsed();
+      let fps = encoded_frames as f64 / enc_time.as_secs_f64();
+
       let progress_file = Path::new(&self.project.temp).join("done.json");
       get_done().done.insert(chunk.name(), encoded_frames);
 
@@ -218,32 +216,17 @@ impl<'a> Broker<'a> {
         .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
 
-      let enc_time = st_time.elapsed();
-
       info!(
-        "Done: {} Fr: {}/{}",
+        "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
+        chunk.index, chunk.frames, fps, enc_time
+      )
+    } else {
+      warn!(
+        "finished chunk: FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
         chunk.index, encoded_frames, chunk.frames
-      );
-      info!(
-        "Fps: {:.2} Time: {:?}",
-        encoded_frames as f64 / enc_time.as_secs_f64(),
-        enc_time
       );
     }
 
     Ok(())
-  }
-
-  fn frame_check_output(chunk: &Chunk, expected_frames: usize) -> usize {
-    let actual_frames = ffmpeg::num_frames(chunk.output().as_ref()).unwrap();
-
-    if actual_frames != expected_frames {
-      warn!(
-        "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
-        chunk.index, actual_frames, expected_frames
-      );
-    }
-
-    actual_frames
   }
 }

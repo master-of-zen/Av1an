@@ -189,10 +189,12 @@ dependencies = [
 name = "av1an-cli"
 version = "0.2.1-2"
 dependencies = [
+ "ansi_term 0.12.1",
  "anyhow",
  "av1an-core",
  "ctrlc",
  "ffmpeg-next",
+ "flexi_logger",
  "once_cell",
  "path_abs",
  "shlex 1.1.0",
@@ -216,7 +218,6 @@ dependencies = [
  "crossbeam-utils",
  "dashmap",
  "ffmpeg-next",
- "flexi_logger",
  "indicatif",
  "itertools",
  "log",

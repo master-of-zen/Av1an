@@ -20,14 +20,13 @@ anyhow = "1.0.42"
 av1an-core = { path = "../av1an-core", version = "0.2.0" }
 thiserror = "1.0.30"
 once_cell = "1.8.0"
+flexi_logger = "0.19.6"
+ansi_term = "0.12.1"
 
-[build-dependencies]
-vergen = { version = "5", default-features = false, features = [
-  "git",
-  "build",
-  "rustc",
-  "cargo",
-] }
+[build-dependencies.vergen]
+version = "5"
+default-features = false
+features = ["git", "build", "rustc", "cargo"]
 
 [dependencies.ffmpeg-next]
 version = "4.4.0"

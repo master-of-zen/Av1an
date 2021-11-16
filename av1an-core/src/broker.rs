@@ -103,22 +103,26 @@ impl<'a> Broker<'a> {
       }
       drop(sender);
 
-      if let Some(threads) = set_thread_affinity {
-        let available_threads = num_cpus::get();
-        let requested_threads = threads.saturating_mul(self.project.workers);
-        if requested_threads > available_threads {
-          // extra newline required to actually display warning in terminal
-          // TODO: fix hack and implement correct solution, which is to use a logger that calls `println` on
-          // the progress bar so that it is guaranteed to be displayed properly
-          warn!(
-            "ignoring set_thread_affinity: requested more threads than available ({}/{})\n",
-            requested_threads, available_threads
-          );
-          set_thread_affinity = None;
-        } else if requested_threads == 0 {
-          warn!("ignoring set_thread_affinity: requested 0 threads\n");
+      cfg_if::cfg_if! {
+        if #[cfg(any(target_os = "linux", target_os = "windows"))] {
+          if let Some(threads) = set_thread_affinity {
+            let available_threads = num_cpus::get();
+            let requested_threads = threads.saturating_mul(self.project.workers);
+            if requested_threads > available_threads {
+              // extra newline required to actually display warning in terminal
+              // TODO: fix hack and implement correct solution, which is to use a logger that calls `println` on
+              // the progress bar so that it is guaranteed to be displayed properly
+              warn!(
+                "ignoring set_thread_affinity: requested more threads than available ({}/{})\n",
+                requested_threads, available_threads
+              );
+              set_thread_affinity = None;
+            } else if requested_threads == 0 {
+              warn!("ignoring set_thread_affinity: requested 0 threads\n");
 
-          set_thread_affinity = None;
+              set_thread_affinity = None;
+            }
+          }
         }
       }
 
@@ -128,14 +132,18 @@ impl<'a> Broker<'a> {
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
             s.spawn(move |_| {
-              if let Some(threads) = set_thread_affinity {
-                let mut cpu_set = SmallVec::<[usize; 16]>::new();
-                cpu_set.extend((threads * worker_id..).take(threads));
-                if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
-                  warn!(
-                    "failed to set thread affinity for worker {}: {}",
-                    worker_id, e
-                  )
+              cfg_if::cfg_if! {
+                if #[cfg(any(target_os = "linux", target_os = "windows"))] {
+                  if let Some(threads) = set_thread_affinity {
+                    let mut cpu_set = SmallVec::<[usize; 16]>::new();
+                    cpu_set.extend((threads * worker_id..).take(threads));
+                    if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
+                      warn!(
+                        "failed to set thread affinity for worker {}: {}",
+                        worker_id, e
+                      )
+                    }
+                  }
                 }
               }
 

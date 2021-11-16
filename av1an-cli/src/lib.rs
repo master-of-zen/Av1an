@@ -172,6 +172,9 @@ pub struct CliOpts {
   pub workers: usize,
 
   /// Optionally pin each worker to this many threads
+  ///
+  /// This option does nothing on unsupported platforms (currently only
+  /// supported on Linux and Windows)
   #[structopt(long)]
   pub set_thread_affinity: Option<usize>,
 

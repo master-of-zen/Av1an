@@ -97,7 +97,7 @@ pub struct CliOpts {
   pub concat: ConcatMethod,
 
   /// Disable printing progress to the terminal
-  #[structopt(short, long)]
+  #[structopt(short, long, conflicts_with = "verbose")]
   pub quiet: bool,
 
   /// Print extra progress info and stats to terminal

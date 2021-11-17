@@ -1,10 +1,14 @@
+use ansi_term::{Color, Style};
 use anyhow::anyhow;
 use anyhow::{bail, ensure};
 use av1an_core::into_vec;
+use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::PixelFormat;
 use av1an_core::Input;
 use av1an_core::ScenecutMethod;
 use ffmpeg_next::format::Pixel;
+use flexi_logger::writers::LogWriter;
+use flexi_logger::{FileSpec, Level, Logger};
 use path_abs::{PathAbs, PathInfo};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -93,7 +97,7 @@ pub struct CliOpts {
   pub concat: ConcatMethod,
 
   /// Disable printing progress to the terminal
-  #[structopt(short, long)]
+  #[structopt(short, long, conflicts_with = "verbose")]
   pub quiet: bool,
 
   /// Print extra progress info and stats to terminal
@@ -411,6 +415,56 @@ pub fn parse_cli() -> anyhow::Result<EncodeArgs> {
   Ok(encode_args)
 }
 
+pub struct StderrLogger {
+  level: Level,
+}
+
+impl LogWriter for StderrLogger {
+  fn write(
+    &self,
+    _now: &mut flexi_logger::DeferredNow,
+    record: &flexi_logger::Record,
+  ) -> std::io::Result<()> {
+    if record.level() > self.level {
+      return Ok(());
+    }
+
+    let style = match record.level() {
+      Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
+      Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
+      Level::Info => Style::default().fg(Color::Fixed(8)),
+      _ => Style::default(),
+    };
+
+    let msg = style.paint(format!("{}", record.args()));
+
+    macro_rules! create_format_args {
+      () => {
+        format_args!(
+          "{} [{}] {}",
+          style.paint(format!("{}", record.level())),
+          record.module_path().unwrap_or("<unnamed>"),
+          msg
+        )
+      };
+    }
+
+    if let Some(pbar) = get_first_multi_progress_bar() {
+      pbar.println(std::fmt::format(create_format_args!()));
+    } else if let Some(pbar) = get_progress_bar() {
+      pbar.println(std::fmt::format(create_format_args!()));
+    } else {
+      eprintln!("{}", create_format_args!());
+    }
+
+    Ok(())
+  }
+
+  fn flush(&self) -> std::io::Result<()> {
+    Ok(())
+  }
+}
+
 pub fn run() -> anyhow::Result<()> {
   let mut args = parse_cli()?;
 
@@ -419,7 +473,20 @@ pub fn run() -> anyhow::Result<()> {
     exit(0);
   })?;
 
+  Logger::try_with_str("info")?
+    .log_to_file_and_writer(
+      FileSpec::try_from(PathAbs::new(&args.logging)?)?,
+      Box::new(StderrLogger {
+        level: match args.verbosity {
+          Verbosity::Normal | Verbosity::Quiet => Level::Warn,
+          Verbosity::Verbose => Level::Info,
+        },
+      }),
+    )
+    .start()?;
+
   args.initialize()?;
+
   args.encode_file()?;
 
   Ok(())

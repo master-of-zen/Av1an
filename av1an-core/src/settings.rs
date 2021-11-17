@@ -4,7 +4,7 @@ use crate::{
   concat::{self, ConcatMethod},
   create_dir, determine_workers, ffmpeg,
   ffmpeg::compose_ffmpeg_pipe,
-  finish_multi_progress_bar, get_done, hash_path, init_done, into_vec,
+  finish_multi_progress_bar, get_done, init_done, into_vec,
   progress_bar::{
     finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
     update_mp_msg,
@@ -17,12 +17,10 @@ use crate::{
   ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
 };
-use anyhow::{bail, ensure};
+use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
 use ffmpeg_next::format::Pixel;
-use flexi_logger::{Duplicate, FileSpec, Logger};
 use itertools::Itertools;
-use path_abs::PathAbs;
 use std::cmp::Ordering;
 use std::{
   borrow::Cow,
@@ -103,25 +101,47 @@ impl EncodeArgs {
     ffmpeg_next::init()?;
     ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
 
-    info!("File hash: {}", hash_path(self.input.as_path()));
+    let done_json_exists = Path::new(&self.temp).join("done.json").exists();
+    let chunks_json_exists = Path::new(&self.temp).join("chunks.json").exists();
 
-    self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
-
-    if !self.resume && Path::new(&self.temp).is_dir() {
-      if let Err(e) = fs::remove_dir_all(&self.temp) {
-        warn!("Failed to delete temp directory: {}", e);
+    if self.resume {
+      match (done_json_exists, chunks_json_exists) {
+        // both files exist, so there is no problem
+        (true, true) => {}
+        (false, true) => {
+          warn!(
+            "resume was set but done.json does not exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
+        (true, false) => {
+          warn!(
+            "resume was set but chunks.json does not exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
+        (false, false) => {
+          warn!(
+            "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
       }
     }
 
-    create_dir!(&self.temp)?;
+    if !self.resume && Path::new(&self.temp).is_dir() {
+      fs::remove_dir_all(&self.temp)
+        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.temp))?;
+    }
+
+    create_dir!(Path::new(&self.temp))?;
     create_dir!(Path::new(&self.temp).join("split"))?;
     create_dir!(Path::new(&self.temp).join("encode"))?;
 
-    Logger::try_with_str("info")
-      .unwrap()
-      .log_to_file(FileSpec::try_from(PathAbs::new(&self.logging).unwrap()).unwrap())
-      .duplicate_to_stderr(Duplicate::Warn)
-      .start()?;
+    info!("temporary directory: {}", &self.temp);
 
     Ok(())
   }
@@ -532,18 +552,16 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     } else {
       self.calc_split_locations()
     };
-    info!("SC: Found {} scenes", scenes.len() + 1);
-    if self.verbosity == Verbosity::Verbose {
-      eprintln!("Found {} scenes", scenes.len() + 1);
-    }
+    let scenes_before = scenes.len() + 1;
     if let Some(split_len) = self.extra_splits_len {
-      info!("SC: Applying extra splits every {} frames", split_len);
       scenes = extra_splits(&scenes, self.frames, split_len);
-      info!("SC: Now at {} scenes", scenes.len() + 1);
-      if self.verbosity == Verbosity::Verbose {
-        eprintln!("Applying extra splits every {} frames", split_len);
-        eprintln!("Now at {} scenes", scenes.len() + 1);
-      }
+      let scenes_after = scenes.len() + 1;
+      info!(
+        "scenecut: found {} scene(s) [with extra_splits({} frames): {}]",
+        scenes_before, split_len, scenes_after
+      );
+    } else {
+      info!("scenecut: found {} scene(s)", scenes_before);
     }
 
     write_scenes_to_file(&scenes, self.frames, scene_file).unwrap();
@@ -785,20 +803,20 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
     if self.resume {
-      let mut chunks = read_chunk_queue(self.temp.as_ref());
+      let mut chunks = read_chunk_queue(self.temp.as_ref())?;
 
       let done = get_done();
 
       // only keep the chunks that are not done
       chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
 
-      chunks
+      Ok(chunks)
     } else {
       let chunks = self.create_encoding_queue(splits);
-      save_chunk_queue(&self.temp, &chunks);
-      chunks
+      save_chunk_queue(&self.temp, &chunks)?;
+      Ok(chunks)
     }
   }
 
@@ -810,8 +828,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let mut initial_frames: usize = 0;
 
     if self.resume && done_path.exists() {
-      info!("Resuming...");
-
       let done = fs::read_to_string(done_path)?;
       let done: DoneJson = serde_json::from_str(&done)?;
       init_done(done);
@@ -821,7 +837,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .iter()
         .map(|ref_multi| *ref_multi.value())
         .sum();
-      info!("Resumed with {} encoded clips done", get_done().done.len());
     } else {
       init_done(DoneJson {
         frames: AtomicUsize::new(self.frames),
@@ -833,7 +848,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
     }
 
-    let chunk_queue = self.load_or_gen_chunk_queue(splits);
+    let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
+
+    if self.resume {
+      let chunks_done = get_done().done.len();
+      info!(
+        "encoding resumed with {}/{} chunks completed ({} remaining)",
+        chunks_done,
+        chunk_queue.len() + chunks_done,
+        chunk_queue.len()
+      );
+    }
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
       // vapoursynth audio is currently unsupported
@@ -910,7 +935,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let _audio_output_exists =
         audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
 
-      info!("Concatenating with {}", self.concat);
+      info!("encoding finished, concatenating with {}", self.concat);
 
       match self.concat {
         ConcatMethod::Ivf => {

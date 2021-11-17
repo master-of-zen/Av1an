@@ -11,6 +11,10 @@ const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 
+pub fn get_progress_bar() -> Option<&'static ProgressBar> {
+  PROGRESS_BAR.get()
+}
+
 /// Initialize progress bar
 /// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
@@ -48,6 +52,14 @@ pub fn finish_progress_bar() {
 }
 
 static MULTI_PROGRESS_BAR: OnceCell<(MultiProgress, Vec<ProgressBar>)> = OnceCell::new();
+
+pub fn get_first_multi_progress_bar() -> Option<&'static ProgressBar> {
+  if let Some((_, pbars)) = MULTI_PROGRESS_BAR.get() {
+    pbars.get(0)
+  } else {
+    None
+  }
+}
 
 pub fn init_multi_progress_bar(len: u64, workers: usize) {
   MULTI_PROGRESS_BAR.get_or_init(|| {

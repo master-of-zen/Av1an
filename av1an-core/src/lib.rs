@@ -21,6 +21,7 @@ use crate::{
   progress_bar::{finish_multi_progress_bar, finish_progress_bar},
   target_quality::TargetQuality,
 };
+use anyhow::Context;
 use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
@@ -100,7 +101,8 @@ impl Input {
   }
 
   pub fn frames(&self) -> usize {
-    const FAIL_MSG: &str = "failed to get number of frames for input video";
+    // TODO fix this API
+    const FAIL_MSG: &str = "Failed to get number of frames for input video";
     match &self {
       Input::Video(path) => ffmpeg::num_frames(path.as_path()).expect(FAIL_MSG),
       Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).expect(FAIL_MSG),
@@ -123,8 +125,7 @@ impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
   }
 }
 
-/// Concurrent data structure for keeping track of the finished
-/// chunks in an encode
+/// Concurrent data structure for keeping track of the finished chunks in an encode
 #[derive(Debug, Deserialize, Serialize)]
 struct DoneJson {
   frames: AtomicUsize,
@@ -218,12 +219,16 @@ pub fn hash_path(path: &Path) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) {
-  let mut file = File::create(Path::new(temp).join("chunks.json")).unwrap();
+fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
+  let mut file = File::create(Path::new(temp).join("chunks.json"))
+    .with_context(|| format!("Failed to create chunks.json file"))?;
 
   file
+    // serializing chunk_queue as json should never fail, so unwrap is OK here
     .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
-    .unwrap();
+    .with_context(|| format!("Failed to write serialized chunk_queue data to {:?}", &file))?;
+
+  Ok(())
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -233,8 +238,11 @@ pub enum Verbosity {
   Quiet,
 }
 
-fn read_chunk_queue(temp: &Path) -> Vec<Chunk> {
-  let contents = fs::read_to_string(Path::new(temp).join("chunks.json")).unwrap();
+fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
+  let file = Path::new(temp).join("chunks.json");
 
-  serde_json::from_str(&contents).unwrap()
+  let contents = fs::read_to_string(&file)
+    .with_context(|| format!("Failed to read chunk queue file {:?}", &file))?;
+
+  Ok(serde_json::from_str(&contents)?)
 }

@@ -351,16 +351,21 @@ pub fn log_probes(
   vmaf_cq_scores: &mut [(f64, u32)],
   frames: u32,
   probing_rate: u32,
-  name: &str,
+  chunk_idx: &str,
   target_q: u32,
   target_vmaf: f64,
   skip: Skip,
 ) {
   vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
 
-  info!("Chunk: {}, Rate: {}, Fr {}", name, probing_rate, frames);
+  // TODO: take chunk id as integer instead and format with {:05}
   info!(
-    "Probes {:?}{}",
+    "chunk {}: P-Rate={}, {} frames",
+    chunk_idx, probing_rate, frames
+  );
+  info!(
+    "chunk {}: TQ-Probes: {:.2?}{}",
+    chunk_idx,
     vmaf_cq_scores,
     match skip {
       Skip::High => " Early Skip High Q",
@@ -368,7 +373,10 @@ pub fn log_probes(
       Skip::None => "",
     }
   );
-  info!("Target Q: {:.0} VMAF: {:.2}", target_q, target_vmaf);
+  info!(
+    "chunk {}: Target Q={:.0}, VMAF={:.2}",
+    chunk_idx, target_q, target_vmaf
+  );
 }
 
 pub const fn adapt_probing_rate(rate: usize) -> usize {

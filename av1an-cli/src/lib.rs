@@ -116,6 +116,10 @@ pub struct CliOpts {
   #[structopt(short, long)]
   pub keep: bool,
 
+  /// Overwrite output file without confirmation
+  #[structopt(short = "y")]
+  pub overwrite: bool,
+
   /// Method for creating chunks
   #[structopt(short = "m", long, possible_values=&["segment", "select", "ffms2", "lsmash", "hybrid"])]
   pub chunk_method: Option<ChunkMethod>,
@@ -388,27 +392,29 @@ pub fn parse_cli() -> anyhow::Result<EncodeArgs> {
 
   encode_args.startup_check()?;
 
-  if let Some(path) = args.output_file.as_deref() {
-    if path.exists()
-      && !confirm(&format!(
-        "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-        path
-      ))?
-    {
-      println!("Not overwriting, aborting.");
-      exit(0);
-    }
-  } else {
-    let path: &Path = encode_args.output_file.as_ref();
+  if !args.overwrite {
+    if let Some(path) = args.output_file.as_deref() {
+      if path.exists()
+        && !confirm(&format!(
+          "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          path
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        exit(0);
+      }
+    } else {
+      let path: &Path = encode_args.output_file.as_ref();
 
-    if path.exists()
-      && !confirm(&format!(
-        "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-        path
-      ))?
-    {
-      println!("Not overwriting, aborting.");
-      exit(0);
+      if path.exists()
+        && !confirm(&format!(
+          "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          path
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        exit(0);
+      }
     }
   }
 

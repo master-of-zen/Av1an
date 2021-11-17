@@ -56,3 +56,8 @@ macro_rules! create_dir {
     }
   };
 }
+
+#[inline]
+pub(crate) fn printable_base10_digits(x: usize) -> u32 {
+  (((x as f64).log10() + 1.0).floor() as u32).max(1)
+}

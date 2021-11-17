@@ -39,6 +39,8 @@ use std::{
   sync::{mpsc, Arc},
 };
 
+use ansi_term::{Color, Style};
+
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct PixelFormat {
@@ -888,12 +890,20 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.workers = determine_workers(self.encoder) as usize;
       }
       self.workers = cmp::min(self.workers, chunk_queue.len());
-      println!(
-        "Queue: {} Workers: {} Passes: {}\nParams: {}\n",
-        chunk_queue.len(),
-        self.workers,
-        self.passes,
-        self.video_params.join(" ")
+
+      eprintln!(
+        "{}{} {} {}{} {} {}{} {}\n{}: {}\n",
+        Color::Green.bold().paint("Q"),
+        Color::Green.paint("ueue"),
+        Color::Green.bold().paint(chunk_queue.len().to_string()),
+        Color::Blue.bold().paint("W"),
+        Color::Blue.paint("orkers"),
+        Color::Blue.bold().paint(self.workers.to_string()),
+        Color::Purple.bold().paint("P"),
+        Color::Purple.paint("asses"),
+        Color::Purple.bold().paint(self.passes.to_string()),
+        Style::default().bold().paint("Params"),
+        Color::Fixed(239).paint(self.video_params.join(" "))
       );
 
       if self.verbosity == Verbosity::Normal {

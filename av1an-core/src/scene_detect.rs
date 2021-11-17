@@ -1,5 +1,6 @@
 use crate::Encoder;
 use crate::{ffmpeg, into_vec, progress_bar, Input, ScenecutMethod, Verbosity};
+use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
 use std::process::{Command, Stdio};
@@ -14,7 +15,7 @@ pub fn av_scenechange_detect(
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
   if verbosity != Verbosity::Quiet {
-    println!("Scene detection");
+    eprintln!("{}", Style::default().bold().paint("Scene detection"));
     progress_bar::init_progress_bar(total_frames as u64);
   }
 

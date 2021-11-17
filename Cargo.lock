@@ -208,6 +208,7 @@ name = "av1an-core"
 version = "0.2.0"
 dependencies = [
  "affinity",
+ "ansi_term 0.12.1",
  "anyhow",
  "av-format",
  "av-ivf",
@@ -234,7 +235,7 @@ dependencies = [
  "smallvec",
  "splines",
  "strsim 0.10.0",
- "strum 0.22.0",
+ "strum 0.23.0",
  "sysinfo",
  "textwrap 0.14.2",
  "thiserror",
@@ -408,6 +409,7 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
+ "regex",
  "terminal_size",
  "winapi",
 ]
@@ -710,12 +712,11 @@ dependencies = [
 [[package]]
 name = "indicatif"
 version = "0.17.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "500f7e5a63596852b9bf7583fe86f9ad08e0df9b4eb58d12e9729071cb4952ca"
+source = "git+https://github.com/mitsuhiko/indicatif#5a38ab70b75be5fc9f4a00c4d9d58adabb817398"
 dependencies = [
  "console",
- "lazy_static",
  "number_prefix",
+ "once_cell",
  "regex",
 ]
 
@@ -1426,9 +1427,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.70"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e277c495ac6cd1a01a58d0a0c574568b4d1ddf14f59965c6a58b8d96400b54f3"
+checksum = "063bf466a64011ac24040a49009724ee60a57da1b437617ceb32e53ad61bfb19"
 dependencies = [
  "itoa",
  "ryu",
@@ -1555,11 +1556,11 @@ checksum = "aaf86bbcfd1fa9670b7a129f64fc0c9fcbbfe4f1bc4210e9e98fe71ffc12cde2"
 
 [[package]]
 name = "strum"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7ac893c7d471c8a21f31cfe213ec4f6d9afeed25537c772e08ef3f005f8729e"
+checksum = "cae14b91c7d11c9a851d3fbc80a963198998c2a64eec840477fa92d8ce9b70bb"
 dependencies = [
- "strum_macros 0.22.0",
+ "strum_macros 0.23.0",
 ]
 
 [[package]]
@@ -1576,13 +1577,14 @@ dependencies = [
 
 [[package]]
 name = "strum_macros"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "339f799d8b549e3744c7ac7feb216383e4005d94bdb22561b3ab8f3b808ae9fb"
+checksum = "00ad150e9d51e33e8142984f577662c1324d49f3be45ed37bac8645fdcbe0fe5"
 dependencies = [
  "heck",
  "proc-macro2",
  "quote",
+ "rustversion",
  "syn",
 ]
 

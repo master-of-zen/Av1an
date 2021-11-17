@@ -1,4 +1,5 @@
 use crate::broker::EncoderCrash;
+use crate::util::printable_base10_digits;
 use crate::{ffmpeg, ref_vec, Input};
 use anyhow::anyhow;
 use plotters::prelude::*;
@@ -24,11 +25,6 @@ struct Metrics {
 #[derive(Deserialize, Debug)]
 struct VmafResult {
   frames: Vec<Metrics>,
-}
-
-#[inline]
-fn printable_base10_digits(x: usize) -> u32 {
-  (((x as f64).log10() + 1.0).floor() as u32).max(1)
 }
 
 pub fn plot_vmaf_score_file(

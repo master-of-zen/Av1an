@@ -17,7 +17,7 @@ use crate::{
   ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
 };
-use anyhow::{bail, ensure};
+use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
@@ -101,10 +101,40 @@ impl EncodeArgs {
     ffmpeg_next::init()?;
     ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
 
-    self.resume = self.resume && Path::new(&self.temp).join("done.json").exists();
+    let done_json_exists = Path::new(&self.temp).join("done.json").exists();
+    let chunks_json_exists = Path::new(&self.temp).join("chunks.json").exists();
+
+    if self.resume {
+      match (done_json_exists, chunks_json_exists) {
+        // both files exist, so there is no problem
+        (true, true) => {}
+        (false, true) => {
+          warn!(
+            "resume was set but done.json does not exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
+        (true, false) => {
+          warn!(
+            "resume was set but chunks.json does not exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
+        (false, false) => {
+          warn!(
+            "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
+            &self.temp
+          );
+          self.resume = false;
+        }
+      }
+    }
 
     if !self.resume && Path::new(&self.temp).is_dir() {
-      fs::remove_dir_all(&self.temp)?;
+      fs::remove_dir_all(&self.temp)
+        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.temp))?;
     }
 
     create_dir!(Path::new(&self.temp))?;
@@ -773,20 +803,20 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
     if self.resume {
-      let mut chunks = read_chunk_queue(self.temp.as_ref());
+      let mut chunks = read_chunk_queue(self.temp.as_ref())?;
 
       let done = get_done();
 
       // only keep the chunks that are not done
       chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
 
-      chunks
+      Ok(chunks)
     } else {
       let chunks = self.create_encoding_queue(splits);
-      save_chunk_queue(&self.temp, &chunks);
-      chunks
+      save_chunk_queue(&self.temp, &chunks)?;
+      Ok(chunks)
     }
   }
 
@@ -818,7 +848,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
     }
 
-    let chunk_queue = self.load_or_gen_chunk_queue(splits);
+    let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
 
     if self.resume {
       let chunks_done = get_done().done.len();

@@ -101,6 +101,17 @@ impl EncodeArgs {
     ffmpeg_next::init()?;
     ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
 
+    if !self.resume && Path::new(&self.temp).is_dir() {
+      fs::remove_dir_all(&self.temp)
+        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.temp))?;
+    }
+
+    create_dir!(Path::new(&self.temp))?;
+    create_dir!(Path::new(&self.temp).join("split"))?;
+    create_dir!(Path::new(&self.temp).join("encode"))?;
+
+    info!("temporary directory: {}", &self.temp);
+
     let done_json_exists = Path::new(&self.temp).join("done.json").exists();
     let chunks_json_exists = Path::new(&self.temp).join("chunks.json").exists();
 
@@ -131,17 +142,6 @@ impl EncodeArgs {
         }
       }
     }
-
-    if !self.resume && Path::new(&self.temp).is_dir() {
-      fs::remove_dir_all(&self.temp)
-        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.temp))?;
-    }
-
-    create_dir!(Path::new(&self.temp))?;
-    create_dir!(Path::new(&self.temp).join("split"))?;
-    create_dir!(Path::new(&self.temp).join("encode"))?;
-
-    info!("temporary directory: {}", &self.temp);
 
     Ok(())
   }

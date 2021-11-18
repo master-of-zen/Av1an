@@ -903,7 +903,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         Color::Purple.paint("asses"),
         Color::Purple.bold().paint(self.passes.to_string()),
         Style::default().bold().paint("Params"),
-        Color::Fixed(239).paint(self.video_params.join(" "))
+        Style::default().dimmed().paint(self.video_params.join(" "))
       );
 
       if self.verbosity == Verbosity::Normal {

@@ -1,12 +1,14 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use once_cell::sync::OnceCell;
 
+use crate::util::printable_base10_digits;
+
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display
   // the characters used for the spinner
-  "[{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})"
+  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta})"
 } else {
-  "{spinner} [{elapsed_precise}] [{wide_bar}] {percent:>3}% {pos}/{len} ({fps} fps, eta {eta})"
+  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta})"
 };
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
@@ -15,17 +17,25 @@ pub fn get_progress_bar() -> Option<&'static ProgressBar> {
   PROGRESS_BAR.get()
 }
 
+fn pretty_progress_style() -> ProgressStyle {
+  ProgressStyle::default_bar()
+    .template(INDICATIF_PROGRESS_TEMPLATE)
+    .with_key("fps", |state| match state.per_sec() {
+      fps if fps.abs() < f64::EPSILON => "0 fps".into(),
+      fps if fps < 1.0 => format!("{:.2} s/fr", 1.0 / fps),
+      fps => format!("{:.2} fps", fps),
+    })
+    .with_key("pos", |state| format!("{}/{}", state.pos, state.len))
+    .with_key("percent", |state| {
+      format!("{:>3.0}%", state.fraction() * 100f32)
+    })
+    .progress_chars("#>-")
+}
+
 /// Initialize progress bar
 /// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
-  let pb = PROGRESS_BAR.get_or_init(|| {
-    ProgressBar::new(len).with_style(
-      ProgressStyle::default_bar()
-        .template(INDICATIF_PROGRESS_TEMPLATE)
-        .with_key("fps", |state| format!("{:.2}", state.per_sec()))
-        .progress_chars("#>-"),
-    )
-  });
+  let pb = PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()));
   pb.enable_steady_tick(100);
   pb.reset();
   pb.reset_eta();
@@ -67,20 +77,22 @@ pub fn init_multi_progress_bar(len: u64, workers: usize) {
 
     let mut pbs = Vec::new();
 
-    for i in 0..workers {
+    let digits = printable_base10_digits(workers) as usize;
+
+    for i in 1..=workers {
       let pb = ProgressBar::hidden()
-        .with_style(ProgressStyle::default_spinner().template("[{prefix}] {msg}"));
-      pb.set_prefix(format!("Worker {:02}", i + 1));
+        // no spinner on windows, so we remove the prefix to line up with the progress bar
+        .with_style(ProgressStyle::default_spinner().template(if cfg!(windows) {
+          "{prefix:.dim} {msg}"
+        } else {
+          "  {prefix:.dim} {msg}"
+        }));
+      pb.set_prefix(format!("[Worker {:>digits$}]", i, digits = digits));
       pbs.push(mpb.add(pb));
     }
 
     let pb = ProgressBar::hidden();
-    pb.set_style(
-      ProgressStyle::default_bar()
-        .template(INDICATIF_PROGRESS_TEMPLATE)
-        .with_key("fps", |state| format!("{:.2}", state.per_sec()))
-        .progress_chars("#>-"),
-    );
+    pb.set_style(pretty_progress_style());
     pb.enable_steady_tick(100);
     pb.reset_elapsed();
     pb.reset_eta();

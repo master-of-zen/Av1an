@@ -438,7 +438,7 @@ impl LogWriter for StderrLogger {
     let style = match record.level() {
       Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
       Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
-      Level::Info => Style::default().fg(Color::Fixed(8)),
+      Level::Info => Style::default().dimmed(),
       _ => Style::default(),
     };
 

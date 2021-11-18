@@ -174,7 +174,7 @@ impl<'a> Broker<'a> {
     let st_time = Instant::now();
 
     // space padding at the beginning to align with "finished chunk"
-    info!(" started chunk {:05}: {} frames", chunk.index, chunk.frames);
+    debug!(" started chunk {:05}: {} frames", chunk.index, chunk.frames);
 
     if let Some(ref tq) = self.target_quality {
       tq.per_shot_target_quality_routine(chunk)?;
@@ -216,7 +216,7 @@ impl<'a> Broker<'a> {
         .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
 
-      info!(
+      debug!(
         "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
         chunk.index, chunk.frames, fps, enc_time
       )

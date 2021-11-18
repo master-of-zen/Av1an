@@ -610,7 +610,6 @@ dependencies = [
  "glob",
  "lazy_static",
  "log",
- "regex",
  "rustversion",
  "thiserror",
  "time 0.3.5",

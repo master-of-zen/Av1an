@@ -8,7 +8,7 @@ use av1an_core::Input;
 use av1an_core::ScenecutMethod;
 use ffmpeg_next::format::Pixel;
 use flexi_logger::writers::LogWriter;
-use flexi_logger::{FileSpec, Level, Logger};
+use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use path_abs::{PathAbs, PathInfo};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -106,7 +106,22 @@ pub struct CliOpts {
 
   /// Specify this option to log to a non-default file
   #[structopt(short, long)]
-  pub logging: Option<String>,
+  pub log_file: Option<String>,
+
+  /// Set log level for log file (does not affect command-line log level)
+  ///
+  /// error: Designates very serious errors.
+  ///
+  /// warn: Designates hazardous situations.
+  ///
+  /// info: Designates useful information.
+  ///
+  /// debug: Designates lower priority information. Includes rav1e scenechange decision info.
+  ///
+  /// trace: Designates very low priority, often extremely verbose, information.
+  #[structopt(long, default_value = "info", possible_values=&["error", "warn", "info", "debug", "trace"])]
+  // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
+  pub log_level: LevelFilter,
 
   /// Resume previous session
   #[structopt(short, long)]
@@ -164,7 +179,7 @@ pub struct CliOpts {
   /// Specify number encoding passes
   ///
   /// When using vpx or aom with RT, set this option to 1.
-  #[structopt(short, long)]
+  #[structopt(short, long, possible_values=&["1", "2"])]
   pub passes: Option<u8>,
 
   /// Video encoder parameters
@@ -284,9 +299,7 @@ fn confirm(prompt: &str) -> io::Result<bool> {
   }
 }
 
-pub fn parse_cli() -> anyhow::Result<EncodeArgs> {
-  let args = CliOpts::from_args();
-
+pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   let temp = if let Some(path) = args.temp {
     path.to_str().unwrap().to_owned()
   } else {
@@ -297,7 +310,7 @@ pub fn parse_cli() -> anyhow::Result<EncodeArgs> {
 
   let mut encode_args = EncodeArgs {
     frames: input.frames(),
-    logging: if let Some(log_file) = args.logging {
+    log_file: if let Some(log_file) = args.log_file {
       Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
       Path::new(&temp).join("log.log")
@@ -472,16 +485,20 @@ impl LogWriter for StderrLogger {
 }
 
 pub fn run() -> anyhow::Result<()> {
-  let mut args = parse_cli()?;
+  let cli_args = CliOpts::from_args();
+  let log_level = cli_args.log_level;
+  let mut args = parse_cli(cli_args)?;
 
   ctrlc::set_handler(|| {
     println!("Stopped");
     exit(0);
   })?;
 
-  Logger::try_with_str("info")?
+  let log = LogSpecBuilder::new().default(log_level).build();
+
+  Logger::with(log)
     .log_to_file_and_writer(
-      FileSpec::try_from(PathAbs::new(&args.logging)?)?,
+      FileSpec::try_from(PathAbs::new(&args.log_file)?)?,
       Box::new(StderrLogger {
         level: match args.verbosity {
           Verbosity::Normal | Verbosity::Quiet => Level::Warn,

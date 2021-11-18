@@ -75,7 +75,7 @@ pub struct EncodeArgs {
   pub pix_format: PixelFormat,
 
   pub verbosity: Verbosity,
-  pub logging: PathBuf,
+  pub log_file: PathBuf,
   pub resume: bool,
   pub keep: bool,
   pub force: bool,

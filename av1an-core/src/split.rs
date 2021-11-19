@@ -1,7 +1,7 @@
+use anyhow::Context;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{
-  error,
   fs::File,
   io::prelude::*,
   io::BufReader,
@@ -102,6 +102,7 @@ pub fn write_scenes_to_file(
     frames: total_frames,
   };
 
+  // serializing the data should never fail, so unwrap is OK
   let serialized = serde_json::to_string(&data).unwrap();
 
   let mut file = File::create(scene_path)?;
@@ -111,14 +112,17 @@ pub fn write_scenes_to_file(
   Ok(())
 }
 
-pub fn read_scenes_from_file(
-  scene_path: &Path,
-) -> Result<(Vec<usize>, usize), Box<dyn error::Error>> {
+pub fn read_scenes_from_file(scene_path: &Path) -> anyhow::Result<(Vec<usize>, usize)> {
   let file = File::open(scene_path)?;
 
   let reader = BufReader::new(file);
 
-  let data: ScenesData = serde_json::from_reader(reader)?;
+  let data: ScenesData = serde_json::from_reader(reader).with_context(|| {
+    format!(
+      "Failed to parse scenes file {:?}, this likely means that the scenes file is corrupted",
+      scene_path
+    )
+  })?;
 
   Ok((data.scenes, data.frames))
 }

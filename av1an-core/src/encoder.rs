@@ -1,7 +1,7 @@
 use crate::{ffmpeg::compose_ffmpeg_pipe, into_vec, list_index, regex};
+use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
 use thiserror::Error;
@@ -327,7 +327,7 @@ impl Encoder {
     }
   }
 
-  /// Returns function pointer used for matching q/crf arguments in command line
+  /// Returns function pointer used for matching Q/CRF arguments in command line
   fn q_match_fn(self) -> fn(&str) -> bool {
     match self {
       Self::aom | Self::vpx => |p| p.starts_with("--cq-level="),
@@ -356,22 +356,35 @@ impl Encoder {
     new_params
   }
 
-  /// Retuns regex for matching encoder progress in cli
-  fn pipe_match(self) -> &'static Regex {
-    match self {
-      Self::aom | Self::vpx => regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) "),
+  /// Parses the number of encoded frames
+  ///
+  /// # Safety
+  ///
+  /// The caller should not attempt to read the contents of `line` after
+  /// this function has been called.
+  pub(crate) unsafe fn parse_encoded_frames(self, line: &mut str) -> Option<u64> {
+    let regex = match self {
+      Self::aom | Self::vpx => {
+        cfg_if! {
+          if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
+            if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
+              return crate::simd::parse_aom_vpx_frames_sse41(line.as_bytes_mut());
+            }
+          }
+        }
+
+        // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
+        // second number (actual encoded frames)
+        regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ")
+      }
       Self::rav1e => regex!(r"encoded.*? ([^ ]+?) "),
       Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),
       Self::x264 => regex!(r"^[^\d]*(\d+)"),
       Self::x265 => regex!(r"(\d+) frames"),
-    }
-  }
+    };
 
-  /// Returs option of q/crf value from cli encoder output
-  pub fn match_line(self, line: &str) -> Option<usize> {
-    let encoder_regex = self.pipe_match();
-    let captures = encoder_regex.captures(line)?.get(1)?.as_str();
-    captures.parse::<usize>().ok()
+    let captures = regex.captures(line)?.get(1)?.as_str();
+    captures.parse().ok()
   }
 
   /// Returns command used for target quality probing

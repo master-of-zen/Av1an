@@ -148,18 +148,23 @@ impl EncodeArgs {
     Ok(())
   }
 
-  fn read_queue_files(source_path: &Path) -> Vec<PathBuf> {
+  fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     let mut queue_files = fs::read_dir(&source_path)
-      .unwrap()
+      .with_context(|| {
+        format!(
+          "Failed to read queue files from source path {:?}",
+          source_path
+        )
+      })?
       .map(|res| res.map(|e| e.path()))
-      .collect::<Result<Vec<_>, _>>()
-      .unwrap();
+      .collect::<Result<Vec<_>, _>>()?;
+
     queue_files.retain(|file| {
       file.is_file() && matches!(file.extension().map(|ext| ext == "mkv"), Some(true))
     });
     concat::sort_files_by_filename(&mut queue_files);
 
-    queue_files
+    Ok(queue_files)
   }
 
   pub fn create_pipes(
@@ -510,17 +515,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(())
   }
 
-  fn create_encoding_queue(&mut self, splits: Vec<usize>) -> Vec<Chunk> {
+  fn create_encoding_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
     let mut chunks = match self.chunk_method {
       ChunkMethod::FFMS2 | ChunkMethod::LSMASH => self.create_video_queue_vs(splits),
-      ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits),
+      ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits)?,
       ChunkMethod::Select => self.create_video_queue_select(splits),
-      ChunkMethod::Segment => self.create_video_queue_segment(&splits),
+      ChunkMethod::Segment => self.create_video_queue_segment(&splits)?,
     };
 
     chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
 
-    chunks
+    Ok(chunks)
   }
 
   fn calc_split_locations(&self) -> Vec<usize> {
@@ -541,16 +546,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
   // scenes.json and return that.
-  fn split_routine(&mut self) -> Vec<usize> {
+  fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
     let scene_file = self
       .scenes
       .clone()
       .unwrap_or_else(|| Path::new(&self.temp).join("scenes.json"));
 
     let mut scenes = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
-      crate::split::read_scenes_from_file(scene_file.as_path())
-        .unwrap()
-        .0
+      crate::split::read_scenes_from_file(scene_file.as_path())?.0
     } else {
       self.calc_split_locations()
     };
@@ -566,9 +569,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       info!("scenecut: found {} scene(s)", scenes_before);
     }
 
-    write_scenes_to_file(&scenes, self.frames, scene_file).unwrap();
+    write_scenes_to_file(&scenes, self.frames, scene_file)?;
 
-    scenes
+    Ok(scenes)
   }
 
   fn create_select_chunk(
@@ -702,7 +705,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     chunk_queue
   }
 
-  fn create_video_queue_segment(&mut self, splits: &[usize]) -> Vec<Chunk> {
+  fn create_video_queue_segment(&mut self, splits: &[usize]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.input.as_video_path();
 
     info!("Split video");
@@ -710,7 +713,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     info!("Split done");
 
     let source_path = Path::new(&self.temp).join("split");
-    let queue_files = Self::read_queue_files(&source_path);
+    let queue_files = Self::read_queue_files(&source_path)?;
 
     assert!(
       !queue_files.is_empty(),
@@ -723,10 +726,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .map(|(index, file)| self.create_chunk_from_segment(index, file.as_path().to_str().unwrap()))
       .collect();
 
-    chunk_queue
+    Ok(chunk_queue)
   }
 
-  fn create_video_queue_hybrid(&mut self, split_locations: Vec<usize>) -> Vec<Chunk> {
+  fn create_video_queue_hybrid(
+    &mut self,
+    split_locations: Vec<usize>,
+  ) -> anyhow::Result<Vec<Chunk>> {
     let mut splits = Vec::with_capacity(2 + split_locations.len());
     splits.push(0);
     splits.extend(split_locations);
@@ -749,7 +755,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     info!("Segment done");
 
     let source_path = Path::new(&self.temp).join("split");
-    let queue_files = Self::read_queue_files(&source_path);
+    let queue_files = Self::read_queue_files(&source_path)?;
 
     let kf_list = to_split
       .iter()
@@ -772,7 +778,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .map(|(index, &(file, (start, end)))| self.create_select_chunk(index, file, start, end))
       .collect();
 
-    chunk_queue
+    Ok(chunk_queue)
   }
 
   fn create_chunk_from_segment(&mut self, index: usize, file: &str) -> Chunk {
@@ -816,7 +822,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       Ok(chunks)
     } else {
-      let chunks = self.create_encoding_queue(splits);
+      let chunks = self.create_encoding_queue(splits)?;
       save_chunk_queue(&self.temp, &chunks)?;
       Ok(chunks)
     }
@@ -825,7 +831,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
     let done_path = Path::new(&self.temp).join("done.json");
 
-    let splits = self.split_routine();
+    let splits = self.split_routine()?;
 
     let mut initial_frames: usize = 0;
 

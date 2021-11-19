@@ -36,3 +36,7 @@ members = ["av1an-core", "av1an-cli"]
 
 [profile.dev.package.av-scenechange]
 opt-level = 3
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

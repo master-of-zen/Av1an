@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context};
 use av_format::{
   buffer::AccReader,
   demuxer::{Context as DemuxerContext, Event},
@@ -8,8 +9,7 @@ use path_abs::PathAbs;
 use serde::{Deserialize, Serialize};
 use std::{
   fmt::Display,
-  fs,
-  fs::{read_dir, DirEntry, File},
+  fs::{self, DirEntry, File},
   io::Write,
   path::{Path, PathBuf},
   process::{Command, Stdio},
@@ -149,6 +149,14 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
+fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
+  Ok(
+    fs::read_dir(&encode_dir)
+      .with_context(|| format!("Failed to read encoded chunks from {:?}", &encode_dir))?
+      .collect::<Result<Vec<_>, _>>()?,
+  )
+}
+
 pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
   let mut encode_folder = PathBuf::from(encode_folder);
 
@@ -158,10 +166,7 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
   encode_folder.push("encode");
   let output = PathBuf::from(output);
 
-  let mut files: Vec<_> = read_dir(&encode_folder)
-    .unwrap()
-    .map(Result::unwrap)
-    .collect();
+  let mut files = read_encoded_chunks(&encode_folder)?;
 
   assert!(!files.is_empty());
 
@@ -215,26 +220,32 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     cmd.arg(end[1].path());
   }
 
-  let output = cmd.output()?;
+  debug!("mkvmerge concat command: {:?}", cmd);
 
-  assert!(
-    output.status.success(),
-    "mkvmerge failed with output: {:#?}",
-    output
-  );
+  let out = cmd
+    .output()
+    .with_context(|| "Failed to execute mkvmerge command for concatenation")?;
+
+  if !out.status.success() {
+    // TODO: make an EncoderCrash-like struct, but without all the other fields so it
+    // can be used in a more broad scope than just for the pipe/encoder
+    error!(
+      "mkvmerge concatenation failed with output: {:#?}\ncommand: {:?}",
+      out, cmd
+    );
+    return Err(anyhow!("mkvmerge concatenation failed"));
+  }
 
   Ok(())
 }
 
 /// Concatenates using ffmpeg (does not work with x265)
-pub fn ffmpeg(temp: &Path, output: &Path) {
-  fn write_concat_file(temp_folder: &Path) {
-    let concat_file = &temp_folder.join("concat");
-    let encode_folder = &temp_folder.join("encode");
-    let mut files: Vec<_> = read_dir(encode_folder)
-      .unwrap()
-      .map(Result::unwrap)
-      .collect();
+pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
+  fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
+    let concat_file = temp_folder.join("concat");
+    let encode_folder = temp_folder.join("encode");
+
+    let mut files = read_encoded_chunks(&encode_folder)?;
 
     files.sort_by_key(DirEntry::path);
 
@@ -248,17 +259,19 @@ pub fn ffmpeg(temp: &Path, output: &Path) {
       }
     }
 
-    let mut file = File::create(concat_file).unwrap();
-    file.write_all(contents.as_bytes()).unwrap();
+    let mut file = File::create(concat_file)?;
+    file.write_all(contents.as_bytes())?;
+
+    Ok(())
   }
 
-  let temp = PathAbs::new(temp).unwrap();
+  let temp = PathAbs::new(temp)?;
   let temp = temp.as_path();
 
   let concat = temp.join("concat");
   let concat_file = concat.to_str().unwrap();
 
-  write_concat_file(temp);
+  write_concat_file(temp)?;
 
   let audio_file = {
     let file = temp.join("audio.mkv");
@@ -310,12 +323,19 @@ pub fn ffmpeg(temp: &Path, output: &Path) {
       .arg(output);
   }
 
-  let out = cmd.output().unwrap();
+  debug!("FFmpeg concat command: {:?}", cmd);
 
-  assert!(
-    out.status.success(),
-    "FFmpeg failed with output: {:?}\nCommand: {:?}",
-    out,
-    cmd
-  );
+  let out = cmd
+    .output()
+    .with_context(|| "Failed to execute FFmpeg command for concatenation")?;
+
+  if !out.status.success() {
+    error!(
+      "FFmpeg concatenation failed with output: {:#?}\ncommand: {:?}",
+      out, cmd
+    );
+    return Err(anyhow!("FFmpeg concatenation failed"));
+  }
+
+  Ok(())
 }

@@ -964,7 +964,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref())?;
         }
         ConcatMethod::FFmpeg => {
-          concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref());
+          concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref())?;
         }
       }
 

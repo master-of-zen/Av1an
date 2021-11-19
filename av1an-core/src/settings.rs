@@ -122,21 +122,21 @@ impl EncodeArgs {
         // both files exist, so there is no problem
         (true, true) => {}
         (false, true) => {
-          warn!(
+          info!(
             "resume was set but done.json does not exist in temporary directory {:?}",
             &self.temp
           );
           self.resume = false;
         }
         (true, false) => {
-          warn!(
+          info!(
             "resume was set but chunks.json does not exist in temporary directory {:?}",
             &self.temp
           );
           self.resume = false;
         }
         (false, false) => {
-          warn!(
+          info!(
             "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
             &self.temp
           );

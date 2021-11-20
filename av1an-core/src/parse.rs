@@ -1,4 +1,54 @@
-//! SIMD-optimized functions for parsing
+//! Functions for parsing frames from encoder output.
+//!
+//! Some functions are optimized with SIMD, and need
+//! runtime detection that the corresponding feature
+//! set is available before calling them.
+
+// We can safely always ignore this prefix, as the second number will
+// always be at some point after this prefix. See examples of aomenc
+// output below to see why this is the case.
+#[rustfmt::skip]
+const AOM_VPX_IGNORED_PREFIX: &str =
+  "Pass x/x frame    x/";
+// Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]
+//                     ^ relevant output starts at this character
+// Pass 1/1 frame   84/83     81091B  132314 us 634.85 fps [ETA  unknown]
+//                     ^
+// Pass 1/1 frame  142/141   156465B  208875 us 679.83 fps [ETA  unknown]
+//                     ^
+// Pass 1/1 frame 4232/4231 5622510B 5518075 us 766.93 fps [ETA  unknown]
+//                     ^
+// Pass 1/1 frame 13380/13379 17860525B   16760 ms 798.31 fps [ETA  unknown]
+//                      ^
+// Pass 1/1 frame 102262/102261 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
+//                       ^
+// Pass 1/1 frame 1022621/1022611 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
+//                        ^
+//
+// As you can see, the relevant part of the output always starts past
+// the length of the ignored prefix.
+
+pub unsafe fn parse_aom_vpx_frames(s: &mut str) -> Option<u64> {
+  if !(s.starts_with("Pass 2/2") || s.starts_with("Pass 1/1")) {
+    return None;
+  }
+
+  // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
+  // second number (actual encoded frames)
+  let first_space_index = s
+    .get_mut(AOM_VPX_IGNORED_PREFIX.len()..)?
+    .as_bytes_mut()
+    .iter()
+    .position(|&c| c == b' ')?;
+
+  let first_digit_index = (first_space_index / 2).saturating_sub(2);
+  s.get(
+    AOM_VPX_IGNORED_PREFIX.len() + first_digit_index
+      ..AOM_VPX_IGNORED_PREFIX.len() + first_space_index,
+  )?
+  .parse()
+  .ok()
+}
 
 /// x86 SIMD implementation of parsing aomenc/vpxenc output using
 /// SSSE3+SSE4.1, returning the number of frames processed, or `None`
@@ -42,34 +92,10 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // to parse the fewest number of bytes possible to get the correct result.
   const CHUNK_SIZE: usize = 16;
 
-  // We can safely always ignore this prefix, as the second number will
-  // always be at some point after this prefix. See examples of aomenc
-  // output below to see why this is the case.
-  #[rustfmt::skip]
-  const IGNORED_PREFIX: &str =
-    "Pass x/x frame    x/";
-  // Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]
-  //                     ^ relevant output starts at this character
-  // Pass 1/1 frame   84/83     81091B  132314 us 634.85 fps [ETA  unknown]
-  //                     ^
-  // Pass 1/1 frame  142/141   156465B  208875 us 679.83 fps [ETA  unknown]
-  //                     ^
-  // Pass 1/1 frame 4232/4231 5622510B 5518075 us 766.93 fps [ETA  unknown]
-  //                     ^
-  // Pass 1/1 frame 13380/13379 17860525B   16760 ms 798.31 fps [ETA  unknown]
-  //                      ^
-  // Pass 1/1 frame 102262/102261 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
-  //                       ^
-  // Pass 1/1 frame 1022621/1022611 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
-  //                        ^
-  //
-  // As you can see, the relevant part of the output always starts past
-  // the length of the ignored prefix.
-
   // This implementation needs to read `CHUNK_SIZE` bytes past the ignored
   // prefix, so we pay the cost of the bounds check only once at the start
   // of this function. This also serves as an input validation check.
-  if s.len() < IGNORED_PREFIX.len() + CHUNK_SIZE {
+  if s.len() < AOM_VPX_IGNORED_PREFIX.len() + CHUNK_SIZE {
     return None;
   }
   // Sanity check to see if we should parse the line. Processing invalid input
@@ -88,7 +114,11 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // Load the relevant part of the output, which are the 16 bytes after the ignored prefix.
   // This is safe because we already asserted that at least `IGNORED_PREFIX.len() + CHUNK_SIZE`
   // bytes are available, and `_mm_loadu_si128` loads `CHUNK_SIZE` (16) bytes.
-  let relevant_output = _mm_loadu_si128(s.get_unchecked(IGNORED_PREFIX.len()..).as_ptr().cast());
+  let relevant_output = _mm_loadu_si128(
+    s.get_unchecked(AOM_VPX_IGNORED_PREFIX.len()..)
+      .as_ptr()
+      .cast(),
+  );
 
   // Compare the relevant output to spaces to create a mask where each bit
   // is set to 1 if the corresponding character was a space, and 0 otherwise.
@@ -161,7 +191,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // bytes that are absolutely necessary because using a fixed size allows LLVM to avoid
   // a call to memset and instead use movaps/movups.
   for byte in s
-    .get_unchecked_mut(IGNORED_PREFIX.len() + first_digit_index - CHUNK_SIZE..)
+    .get_unchecked_mut(AOM_VPX_IGNORED_PREFIX.len() + first_digit_index - CHUNK_SIZE..)
     .get_unchecked_mut(..CHUNK_SIZE)
   {
     *byte = b'0';
@@ -172,7 +202,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
   let mut chunk = _mm_loadu_si128(
     s.as_ptr()
-      .add(IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
+      .add(AOM_VPX_IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
       .cast(),
   );
 
@@ -192,9 +222,73 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   Some(((chunk[0] & 0xffff_ffff) * 100_000_000) + (chunk[0] >> 32))
 }
 
+pub unsafe fn parse_rav1e_frames(s: &mut str) -> Option<u64> {
+  // rav1e never prints "encoded 0 frames", it always starts at 1
+  #[rustfmt::skip]
+  const RAV1E_IGNORED_PREFIX: &str =
+    "encoded ";
+  // encoded 1 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+  // encoded 12 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+  // encoded 122 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+  // encoded 1220 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+  // encoded 12207 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+
+  if !s.starts_with("encoded ") {
+    return None;
+  }
+
+  let first_space_index = s
+    .as_bytes_mut()
+    .get(RAV1E_IGNORED_PREFIX.len()..)?
+    .iter()
+    .position(|&c| c == b' ')?;
+
+  s.get(RAV1E_IGNORED_PREFIX.len()..)?
+    .get(..first_space_index)?
+    .parse()
+    .ok()
+}
+
 #[cfg(test)]
 mod tests {
-  use crate::simd::parse_aom_vpx_frames_sse41;
+  use crate::parse::*;
+
+  #[test]
+  fn rav1e_parsing() {
+    let test_cases = [
+      (
+        "encoded 1 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        Some(1),
+      ),
+      (
+        "encoded 12 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        Some(12),
+      ),
+      (
+        "encoded 122 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        Some(122),
+      ),
+      (
+        "encoded 1220 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        Some(1220),
+      ),
+      (
+        "encoded 12207 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        Some(12207),
+      ),
+      ("invalid", None),
+      (
+        "encoded xxxx frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s",
+        None,
+      ),
+    ];
+
+    for (s, ans) in test_cases {
+      let mut s = String::from(s);
+
+      assert_eq!(unsafe { parse_rav1e_frames(&mut s) }, ans)
+    }
+  }
 
   #[test]
   #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -239,12 +333,18 @@ mod tests {
       ),
     ];
 
-    if is_x86_feature_detected!("sse4.1") {
+    if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
       for (s, ans) in test_cases {
         let mut s = String::from(s);
 
         assert_eq!(unsafe { parse_aom_vpx_frames_sse41(s.as_bytes_mut()) }, ans);
       }
+    }
+
+    for (s, ans) in test_cases {
+      let mut s = String::from(s);
+
+      assert_eq!(unsafe { parse_aom_vpx_frames(&mut s) }, ans);
     }
   }
 }

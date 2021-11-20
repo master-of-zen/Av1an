@@ -32,7 +32,7 @@ impl Debug for StringOrBytes {
     match self {
       Self::String(s) => {
         if f.alternate() {
-          f.write_str(&textwrap::indent(&s, /* 8 spaces */ "        "))?;
+          f.write_str(&textwrap::indent(s, /* 8 spaces */ "        "))?;
         } else {
           f.write_str(s)?;
         }
@@ -139,7 +139,7 @@ impl<'a> Broker<'a> {
                       warn!(
                         "failed to set thread affinity for worker {}: {}",
                         worker_id, e
-                      )
+                      );
                     }
                   }
                 }
@@ -220,7 +220,7 @@ impl<'a> Broker<'a> {
       debug!(
         "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
         chunk.index, chunk.frames, fps, enc_time
-      )
+      );
     } else {
       warn!(
         "finished chunk: FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",

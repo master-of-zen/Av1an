@@ -27,7 +27,7 @@ fn pretty_progress_style() -> ProgressStyle {
     })
     .with_key("pos", |state| format!("{}/{}", state.pos, state.len))
     .with_key("percent", |state| {
-      format!("{:>3.0}%", state.fraction() * 100f32)
+      format!("{:>3.0}%", state.fraction() * 100_f32)
     })
     .progress_chars("#>-")
 }

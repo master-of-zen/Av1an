@@ -14,7 +14,7 @@
 #[inline]
 #[target_feature(enable = "ssse3,sse4.1")]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub(crate) unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
+pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   #[cfg(target_arch = "x86")]
   use std::arch::x86::*;
   #[cfg(target_arch = "x86_64")]
@@ -88,8 +88,7 @@ pub(crate) unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // Load the relevant part of the output, which are the 16 bytes after the ignored prefix.
   // This is safe because we already asserted that at least `IGNORED_PREFIX.len() + CHUNK_SIZE`
   // bytes are available, and `_mm_loadu_si128` loads `CHUNK_SIZE` (16) bytes.
-  let relevant_output =
-    _mm_loadu_si128(s.get_unchecked(IGNORED_PREFIX.len()..).as_ptr() as *const _);
+  let relevant_output = _mm_loadu_si128(s.get_unchecked(IGNORED_PREFIX.len()..).as_ptr().cast());
 
   // Compare the relevant output to spaces to create a mask where each bit
   // is set to 1 if the corresponding character was a space, and 0 otherwise.
@@ -173,7 +172,8 @@ pub(crate) unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
   let mut chunk = _mm_loadu_si128(
     s.as_ptr()
-      .add(IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE) as *const _,
+      .add(IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
+      .cast(),
   );
 
   let zeros = _mm_set1_epi8(b'0' as i8);
@@ -189,7 +189,7 @@ pub(crate) unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
 
   let chunk = transmute::<_, [u64; 2]>(chunk);
 
-  Some(((chunk[0] & 0xffffffff) * 100000000) + (chunk[0] >> 32))
+  Some(((chunk[0] & 0xffff_ffff) * 100_000_000) + (chunk[0] >> 32))
 }
 
 #[cfg(test)]

@@ -314,7 +314,7 @@ impl EncodeArgs {
 
         if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
           if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
-            update_mp_msg(worker_id, line.to_string());
+            update_mp_msg(worker_id, (*line).to_string());
           }
           // This needs to be done before parse_encoded_frames, as it potentially
           // mutates the string
@@ -323,6 +323,8 @@ impl EncodeArgs {
 
           // SAFETY: we do not read the contents of `line` after this function call
           if let Some(new) = unsafe { self.encoder.parse_encoded_frames(line) } {
+            // clippy is actually wrong that this does nothing, dropping a mutable
+            // reference does prevent it from being used again.
             drop(line);
             if new > frame {
               if self.verbosity == Verbosity::Normal {
@@ -838,18 +840,16 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let splits = self.split_routine()?;
 
-    let mut initial_frames: usize = 0;
-
-    if self.resume && done_path.exists() {
+    let initial_frames = if self.resume && done_path.exists() {
       let done = fs::read_to_string(done_path)?;
       let done: DoneJson = serde_json::from_str(&done)?;
       init_done(done);
 
-      initial_frames = get_done()
+      get_done()
         .done
         .iter()
         .map(|ref_multi| *ref_multi.value())
-        .sum();
+        .sum()
     } else {
       init_done(DoneJson {
         frames: AtomicUsize::new(self.frames),
@@ -859,7 +859,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       let mut done_file = fs::File::create(&done_path).unwrap();
       done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
-    }
+
+      0
+    };
 
     let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
 
@@ -987,7 +989,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           self.vmaf_threads.unwrap_or_else(num_cpus::get),
         ) {
           error!("{}", e);
-          error!("VMAF calculation failed, no plot generated.")
+          error!("VMAF calculation failed, no plot generated.");
         }
       }
 

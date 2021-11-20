@@ -368,16 +368,14 @@ impl Encoder {
         cfg_if! {
           if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
             if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-              return crate::simd::parse_aom_vpx_frames_sse41(line.as_bytes_mut());
+              return crate::parse::parse_aom_vpx_frames_sse41(line.as_bytes_mut());
             }
           }
         }
 
-        // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
-        // second number (actual encoded frames)
-        regex!(r".*Pass (?:1/1|2/2) .*frame.*?/([^ ]+?) ")
+        return crate::parse::parse_aom_vpx_frames(line);
       }
-      Self::rav1e => regex!(r"encoded.*? ([^ ]+?) "),
+      Self::rav1e => return crate::parse::parse_rav1e_frames(line),
       Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),
       Self::x264 => regex!(r"^[^\d]*(\d+)"),
       Self::x265 => regex!(r"(\d+) frames"),

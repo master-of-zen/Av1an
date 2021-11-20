@@ -48,6 +48,11 @@ pub struct PixelFormat {
   pub bit_depth: usize,
 }
 
+pub enum InputPixelFormat {
+  VapourSynth { bit_depth: usize },
+  FFmpeg { format: Pixel },
+}
+
 pub struct EncodeArgs {
   pub frames: usize,
 
@@ -72,7 +77,8 @@ pub struct EncodeArgs {
   // FFmpeg params
   pub ffmpeg_filter_args: Vec<String>,
   pub audio_params: Vec<String>,
-  pub pix_format: PixelFormat,
+  pub input_pix_format: InputPixelFormat,
+  pub output_pix_format: PixelFormat,
 
   pub verbosity: Verbosity,
   pub log_file: PathBuf,
@@ -233,8 +239,10 @@ impl EncodeArgs {
 
       // converts the pixel format
       let create_ffmpeg_pipe = |pipe_from: Stdio| {
-        let ffmpeg_pipe =
-          compose_ffmpeg_pipe(self.ffmpeg_filter_args.as_slice(), self.pix_format.format);
+        let ffmpeg_pipe = compose_ffmpeg_pipe(
+          self.ffmpeg_filter_args.as_slice(),
+          self.output_pix_format.format,
+        );
 
         let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
           tokio::process::Command::new(ffmpeg)
@@ -253,31 +261,16 @@ impl EncodeArgs {
       };
 
       let y4m_pipe = if self.ffmpeg_filter_args.is_empty() {
-        match &self.input {
-          Input::Video(input) => {
-            // TODO: only do this check once
-            let input_pix_format = ffmpeg::get_pixel_format(input.as_ref()).unwrap_or_else(|e| {
-              panic!("FFmpeg failed to get pixel format for input video: {:?}", e)
-            });
-
-            // Just pipe the original video if there was no filter specified
-            // and the pixel format is the same
-            if self.pix_format.format == input_pix_format {
+        match &self.input_pix_format {
+          InputPixelFormat::FFmpeg { format } => {
+            if self.output_pix_format.format == *format {
               source_pipe_stdout
             } else {
-              // a bit messy, but if let chains are unstable
               create_ffmpeg_pipe(source_pipe_stdout)
             }
           }
-          Input::VapourSynth(input) => {
-            let input_bit_depth =
-              crate::vapoursynth::bit_depth(input.as_ref()).unwrap_or_else(|e| {
-                panic!(
-                  "Vapoursynth failed to get pixel format for input video: {:?}",
-                  e
-                )
-              });
-            if self.pix_format.bit_depth == input_bit_depth {
+          InputPixelFormat::VapourSynth { bit_depth } => {
+            if self.output_pix_format.bit_depth == *bit_depth {
               source_pipe_stdout
             } else {
               create_ffmpeg_pipe(source_pipe_stdout)
@@ -610,7 +603,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         frame_start, frame_end
       ),
       "-pix_fmt",
-      self.pix_format.format.descriptor().unwrap().name(),
+      self.output_pix_format.format.descriptor().unwrap().name(),
       "-strict",
       "-1",
       "-f",
@@ -800,7 +793,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       "-strict",
       "-1",
       "-pix_fmt",
-      self.pix_format.format.descriptor().unwrap().name(),
+      self.output_pix_format.format.descriptor().unwrap().name(),
       "-f",
       "yuv4mpegpipe",
       "-",

@@ -1,11 +1,11 @@
 use ansi_term::{Color, Style};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use anyhow::{bail, ensure};
-use av1an_core::into_vec;
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
-use av1an_core::settings::PixelFormat;
+use av1an_core::settings::{InputPixelFormat, PixelFormat};
 use av1an_core::Input;
 use av1an_core::ScenecutMethod;
+use av1an_core::{ffmpeg, into_vec};
 use ffmpeg_next::format::Pixel;
 use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
@@ -308,6 +308,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
 
   let input = Input::from(args.input.as_path());
 
+  // TODO make an actual constructor for this
   let mut encode_args = EncodeArgs {
     frames: input.frames(),
     log_file: if let Some(log_file) = args.log_file {
@@ -369,13 +370,33 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     } else {
       None
     },
-    input,
     keep: args.keep,
     min_q: args.min_q,
     max_q: args.max_q,
     min_scene_len: args.min_scene_len,
     vmaf_threads: args.vmaf_threads,
-    pix_format: PixelFormat {
+    input_pix_format: {
+      match &input {
+        Input::Video(path) => InputPixelFormat::FFmpeg {
+          format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
+            format!(
+              "FFmpeg failed to get pixel format for input video {:?}",
+              path
+            )
+          })?,
+        },
+        Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
+          bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
+            format!(
+              "VapourSynth failed to get bit depth for input video {:?}",
+              path
+            )
+          })?,
+        },
+      }
+    },
+    input,
+    output_pix_format: PixelFormat {
       format: args.pix_format,
       bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
     },

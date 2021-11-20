@@ -47,6 +47,7 @@ pub mod ffmpeg;
 pub mod progress_bar;
 pub mod scene_detect;
 pub mod settings;
+pub(crate) mod simd;
 pub mod split;
 pub mod target_quality;
 pub mod util;

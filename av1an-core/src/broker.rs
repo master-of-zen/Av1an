@@ -11,6 +11,7 @@ use std::{
   sync::mpsc::Sender,
 };
 
+use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
 
@@ -103,7 +104,7 @@ impl<'a> Broker<'a> {
       }
       drop(sender);
 
-      cfg_if::cfg_if! {
+      cfg_if! {
         if #[cfg(any(target_os = "linux", target_os = "windows"))] {
           if let Some(threads) = set_thread_affinity {
             let available_threads = num_cpus::get();
@@ -129,7 +130,7 @@ impl<'a> Broker<'a> {
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
             s.spawn(move |_| {
-              cfg_if::cfg_if! {
+              cfg_if! {
                 if #[cfg(any(target_os = "linux", target_os = "windows"))] {
                   if let Some(threads) = set_thread_affinity {
                     let mut cpu_set = SmallVec::<[usize; 16]>::new();

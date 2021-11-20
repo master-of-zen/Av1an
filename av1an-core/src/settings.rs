@@ -312,11 +312,18 @@ impl EncodeArgs {
           break;
         }
 
-        if let Ok(line) = simdutf8::basic::from_utf8(&buf) {
+        if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
           if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
             update_mp_msg(worker_id, line.to_string());
           }
-          if let Some(new) = self.encoder.match_line(line) {
+          // This needs to be done before parse_encoded_frames, as it potentially
+          // mutates the string
+          enc_stderr.push_str(line);
+          enc_stderr.push('\n');
+
+          // SAFETY: we do not read the contents of `line` after this function call
+          if let Some(new) = unsafe { self.encoder.parse_encoded_frames(line) } {
+            drop(line);
             if new > frame {
               if self.verbosity == Verbosity::Normal {
                 update_bar((new - frame) as u64);
@@ -326,8 +333,6 @@ impl EncodeArgs {
               frame = new;
             }
           }
-          enc_stderr.push_str(line);
-          enc_stderr.push('\n');
         }
 
         buf.clear();
@@ -898,7 +903,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       self.workers = cmp::min(self.workers, chunk_queue.len());
 
       eprintln!(
-        "{}{} {} {}{} {} {}{} {}\n{}: {}\n",
+        "{}{} {} {}{} {} {}{} {}\n{}: {}",
         Color::Green.bold().paint("Q"),
         Color::Green.paint("ueue"),
         Color::Green.bold().paint(chunk_queue.len().to_string()),

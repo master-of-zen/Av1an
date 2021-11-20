@@ -263,11 +263,11 @@ pub struct CliOpts {
   #[structopt(long)]
   pub probe_slow: bool,
 
-  /// Min q for target quality
+  /// Min Q for target quality
   #[structopt(long)]
   pub min_q: Option<u32>,
 
-  /// Max q for target quality
+  /// Max Q for target quality
   #[structopt(long)]
   pub max_q: Option<u32>,
 

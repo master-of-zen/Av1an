@@ -36,6 +36,7 @@ fn pretty_progress_style() -> ProgressStyle {
 /// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
   let pb = PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()));
+  pb.set_draw_target(ProgressDrawTarget::stderr());
   pb.enable_steady_tick(100);
   pb.reset();
   pb.reset_eta();

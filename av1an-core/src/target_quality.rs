@@ -49,7 +49,7 @@ impl<'a> TargetQuality<'a> {
       min_q: args.min_q.unwrap(),
       max_q: args.max_q.unwrap(),
       encoder: args.encoder,
-      pix_format: args.pix_format.format,
+      pix_format: args.output_pix_format.format,
       temp: args.temp.clone(),
       workers: args.workers,
       video_params: args.video_params.clone(),

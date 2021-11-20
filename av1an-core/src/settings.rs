@@ -222,19 +222,6 @@ impl EncodeArgs {
         unreachable!()
       };
 
-      let source_pipe_stderr = source_pipe.stderr.take().unwrap();
-      let mut reader = BufReader::new(source_pipe_stderr).lines();
-
-      let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
-      let p_stdr2 = Arc::clone(&pipe_stderr);
-
-      tokio::spawn(async move {
-        while let Some(line) = reader.next_line().await.unwrap() {
-          p_stdr2.lock().push_str(&line);
-          p_stdr2.lock().push('\n');
-        }
-      });
-
       let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
 
       // converts the pixel format
@@ -257,21 +244,24 @@ impl EncodeArgs {
         };
 
         let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
-        ffmpeg_pipe_stdout
+        let ffmpeg_pipe_stderr = ffmpeg_pipe.stderr.take().unwrap();
+        (ffmpeg_pipe_stdout, ffmpeg_pipe_stderr)
       };
 
-      let y4m_pipe = if self.ffmpeg_filter_args.is_empty() {
+      let source_pipe_stderr = source_pipe.stderr.take().unwrap();
+
+      let (y4m_pipe, y4m_pipe_stderr) = if self.ffmpeg_filter_args.is_empty() {
         match &self.input_pix_format {
           InputPixelFormat::FFmpeg { format } => {
             if self.output_pix_format.format == *format {
-              source_pipe_stdout
+              (source_pipe_stdout, source_pipe_stderr)
             } else {
               create_ffmpeg_pipe(source_pipe_stdout)
             }
           }
           InputPixelFormat::VapourSynth { bit_depth } => {
             if self.output_pix_format.bit_depth == *bit_depth {
-              source_pipe_stdout
+              (source_pipe_stdout, source_pipe_stderr)
             } else {
               create_ffmpeg_pipe(source_pipe_stdout)
             }
@@ -280,6 +270,18 @@ impl EncodeArgs {
       } else {
         create_ffmpeg_pipe(source_pipe_stdout)
       };
+
+      let mut reader = BufReader::new(y4m_pipe_stderr).lines();
+
+      let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
+      let p_stdr2 = Arc::clone(&pipe_stderr);
+
+      tokio::spawn(async move {
+        while let Some(line) = reader.next_line().await.unwrap() {
+          p_stdr2.lock().push_str(&line);
+          p_stdr2.lock().push('\n');
+        }
+      });
 
       let mut enc_pipe = if let [encoder, args @ ..] = &*enc_cmd {
         tokio::process::Command::new(encoder)

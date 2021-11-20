@@ -222,7 +222,7 @@ pub fn hash_path(path: &Path) -> String {
 
 fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
   let mut file = File::create(Path::new(temp).join("chunks.json"))
-    .with_context(|| format!("Failed to create chunks.json file"))?;
+    .with_context(|| "Failed to create chunks.json file")?;
 
   file
     // serializing chunk_queue as json should never fail, so unwrap is OK here

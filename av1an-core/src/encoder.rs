@@ -667,7 +667,6 @@ impl Encoder {
     (pipe, output)
   }
 
-  #[must_use]
   pub fn get_format_bit_depth(self, format: Pixel) -> Result<usize, UnsupportedPixelFormatError> {
     macro_rules! impl_this_function {
       ($($encoder:ident),*) => {
@@ -691,7 +690,6 @@ pub enum UnsupportedPixelFormatError {
 macro_rules! create_get_format_bit_depth_function {
   ($encoder:ident, 8: $_8bit_fmts:expr, 10: $_10bit_fmts:expr, 12: $_12bit_fmts:expr) => {
     paste::paste! {
-      #[must_use]
       pub fn [<get_ $encoder _format_bit_depth>](format: Pixel) -> Result<usize, UnsupportedPixelFormatError> {
         use Pixel::*;
         if $_8bit_fmts.contains(&format) {

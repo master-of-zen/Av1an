@@ -1,5 +1,5 @@
-use crate::Encoder;
-use crate::{ffmpeg, into_vec, progress_bar, Input, ScenecutMethod, Verbosity};
+use crate::{ffmpeg, progress_bar, Input, ScenecutMethod, Verbosity};
+use crate::{into_array, Encoder};
 use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
@@ -55,9 +55,10 @@ pub fn scene_detect(
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
   let bit_depth;
-  let filters: Vec<String> = sc_downscale_height.map_or_else(Vec::new, |downscale_height| {
-    into_vec!["-vf", format!("scale=-2:'min({},ih)'", downscale_height)]
-  });
+
+  let filters: Option<[String; 2]> = sc_downscale_height
+    .map(|downscale_height| into_array!["-vf", format!("scale=-2:'min({},ih)'", downscale_height)]);
+
   let decoder = &mut y4m::Decoder::new(match input {
     Input::VapourSynth(path) => {
       bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
@@ -65,14 +66,14 @@ pub fn scene_detect(
         .arg("-y")
         .arg(path)
         .arg("-")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()?
         .stdout
         .unwrap();
-      if filters.is_empty() {
-        vspipe
-      } else {
+
+      if let Some(filters) = &filters {
         Command::new("ffmpeg")
           .stdin(vspipe)
           .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
@@ -83,6 +84,8 @@ pub fn scene_detect(
           .spawn()?
           .stdout
           .unwrap()
+      } else {
+        vspipe
       }
     }
     Input::Video(path) => {
@@ -92,8 +95,13 @@ pub fn scene_detect(
       Command::new("ffmpeg")
         .args(["-r", "1", "-i"])
         .arg(path)
-        .args(filters)
+        .args(if let Some(filters) = &filters {
+          &filters[..]
+        } else {
+          &[]
+        })
         .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()?

@@ -222,8 +222,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   Some(((chunk[0] & 0xffff_ffff) * 100_000_000) + (chunk[0] >> 32))
 }
 
-pub unsafe fn parse_rav1e_frames(s: &mut str) -> Option<u64> {
-  // rav1e never prints "encoded 0 frames", it always starts at 1
+pub fn parse_rav1e_frames(s: &str) -> Option<u64> {
   #[rustfmt::skip]
   const RAV1E_IGNORED_PREFIX: &str =
     "encoded ";
@@ -233,20 +232,33 @@ pub unsafe fn parse_rav1e_frames(s: &mut str) -> Option<u64> {
   // encoded 1220 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
   // encoded 12207 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
 
-  if !s.starts_with("encoded ") {
+  if !s.starts_with(RAV1E_IGNORED_PREFIX) {
     return None;
   }
 
-  let first_space_index = s
-    .as_bytes_mut()
-    .get(RAV1E_IGNORED_PREFIX.len()..)?
-    .iter()
-    .position(|&c| c == b' ')?;
-
   s.get(RAV1E_IGNORED_PREFIX.len()..)?
-    .get(..first_space_index)?
-    .parse()
-    .ok()
+    .split_ascii_whitespace()
+    .next()
+    .and_then(|s| s.parse().ok())
+}
+
+pub fn parse_svt_av1_frames(s: &str) -> Option<u64> {
+  const SVT_AV1_IGNORED_PREFIX: &str = "Encoding frame";
+
+  if !s.starts_with(SVT_AV1_IGNORED_PREFIX) {
+    return None;
+  }
+
+  s.get(SVT_AV1_IGNORED_PREFIX.len()..)?
+    .split_ascii_whitespace()
+    .next()
+    .and_then(|s| s.parse().ok())
+}
+
+pub fn parse_x26x_frames(s: &str) -> Option<u64> {
+  s.split_ascii_whitespace()
+    .next()
+    .and_then(|s| s.parse().ok())
 }
 
 #[cfg(test)]
@@ -284,9 +296,44 @@ mod tests {
     ];
 
     for (s, ans) in test_cases {
-      let mut s = String::from(s);
+      assert_eq!(parse_rav1e_frames(s), ans);
+    }
+  }
 
-      assert_eq!(unsafe { parse_rav1e_frames(&mut s) }, ans)
+  #[test]
+  fn x26x_parsing() {
+    let test_cases = [
+      ("24 frames: 39.11 fps, 14.60 kb/s", Some(24)),
+      ("240 frames: 39.11 fps, 14.60 kb/s", Some(240)),
+      ("2445 frames: 39.11 fps, 14.60 kb/s", Some(2445)),
+      ("24145 frames: 39.11 fps, 14.60 kb/s", Some(24145)),
+      ("246434 frames: 39.11 fps, 14.60 kb/s", Some(246434)),
+      ("2448732 frames: 39.11 fps, 14.60 kb/s", Some(2448732)),
+      ("invalid data", None),
+      ("", None),
+    ];
+
+    for (s, ans) in test_cases {
+      assert_eq!(parse_x26x_frames(s), ans);
+    }
+  }
+
+  #[test]
+  fn svt_av1_parsing() {
+    let test_cases = [
+      ("Encoding frame    0 1.08 kbps 2.00 fps", Some(0)),
+      ("Encoding frame    7 1.08 kbps 2.00 fps", Some(7)),
+      ("Encoding frame   22 2.03 kbps 3.68 fps", Some(22)),
+      ("Encoding frame  7654 1.08 kbps 2.00 fps", Some(7654)),
+      ("Encoding frame 72415 1.08 kbps 2.00 fps", Some(72415)),
+      ("Encoding frame 778743 1.08 kbps 2.00 fps", Some(778743)),
+      ("Encoding frame 53298734 1.08 kbps 2.00 fps", Some(53298734)),
+      ("invalid input", None),
+      ("", None),
+    ];
+
+    for (s, ans) in test_cases {
+      assert_eq!(parse_svt_av1_frames(s), ans);
     }
   }
 

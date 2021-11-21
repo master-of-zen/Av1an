@@ -1,4 +1,4 @@
-use crate::{ffmpeg::compose_ffmpeg_pipe, into_vec, list_index, regex};
+use crate::{ffmpeg::compose_ffmpeg_pipe, into_vec, list_index};
 use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
@@ -363,26 +363,24 @@ impl Encoder {
   /// The caller should not attempt to read the contents of `line` after
   /// this function has been called.
   pub(crate) unsafe fn parse_encoded_frames(self, line: &mut str) -> Option<u64> {
-    let regex = match self {
+    use crate::parse::*;
+
+    match self {
       Self::aom | Self::vpx => {
         cfg_if! {
           if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
             if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-              return crate::parse::parse_aom_vpx_frames_sse41(line.as_bytes_mut());
+              return parse_aom_vpx_frames_sse41(line.as_bytes_mut());
             }
           }
         }
 
-        return crate::parse::parse_aom_vpx_frames(line);
+        parse_aom_vpx_frames(line)
       }
-      Self::rav1e => return crate::parse::parse_rav1e_frames(line),
-      Self::svt_av1 => regex!(r"Encoding frame\s+(\d+)"),
-      Self::x264 => regex!(r"^[^\d]*(\d+)"),
-      Self::x265 => regex!(r"(\d+) frames"),
-    };
-
-    let captures = regex.captures(line)?.get(1)?.as_str();
-    captures.parse().ok()
+      Self::rav1e => parse_rav1e_frames(line),
+      Self::svt_av1 => parse_svt_av1_frames(line),
+      Self::x264 | Self::x265 => parse_x26x_frames(line),
+    }
   }
 
   /// Returns command used for target quality probing

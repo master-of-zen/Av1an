@@ -252,22 +252,13 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
     let mut contents = String::with_capacity(24 * files.len());
 
     for i in files {
-      if cfg!(windows) {
-        contents.push_str(&format!(
-          "file {}\n",
-          format!("{}", i.path().display())
-            .replace(r"\", r"\\")
-            .replace(" ", r"\ ")
-            .replace("'", r"\'")
-        ));
-      } else {
-        contents.push_str(&format!(
-          "file {}\n",
-          format!("{}", i.path().display())
-            .replace(" ", r"\ ")
-            .replace("'", r"\'")
-        ));
-      }
+      contents.push_str(&format!(
+        "file {}\n",
+        format!("{}", i.path().display())
+          .replace(r"\", r"\\")
+          .replace(" ", r"\ ")
+          .replace("'", r"\'")
+      ));
     }
 
     let mut file = File::create(concat_file)?;

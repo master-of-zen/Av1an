@@ -253,9 +253,20 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
 
     for i in files {
       if cfg!(windows) {
-        contents.push_str(&format!("file {}\n", i.path().display()).replace(r"\", r"\\"));
+        contents.push_str(&format!(
+          "file {}\n",
+          format!("{}", i.path().display())
+            .replace(r"\", r"\\")
+            .replace(" ", r"\ ")
+            .replace("'", r"\'")
+        ));
       } else {
-        contents.push_str(&format!("file {}\n", i.path().display()));
+        contents.push_str(&format!(
+          "file {}\n",
+          format!("{}", i.path().display())
+            .replace(" ", r"\ ")
+            .replace("'", r"\'")
+        ));
       }
     }
 

@@ -422,6 +422,8 @@ impl Encoder {
         "--enable-global-motion=0",
         "--enable-cdef=0",
         "--max-reference-frames=3",
+        "--arnr-strength=0",
+        "--arnr-maxframes=1",
         "--cdf-update-mode=2",
         "--deltaq-mode=0",
         "--enable-tpl-model=0",

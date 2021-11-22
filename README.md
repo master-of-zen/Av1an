@@ -16,7 +16,7 @@
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 
-### <center>An easy way to start using AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, SVT-VP9, VPX, x265, x264 are supported</center>
+### <center>An easy way to start using AV1 / HEVC / H264 / VP9 / VP8 encoding. AOM, RAV1E, SVT-AV1, VPX, x265, x264 are supported</center>
 
 Example with default parameters:
 
@@ -43,7 +43,7 @@ With your own parameters:
                             Must be inside ' ' or " "
 
     -p  --passes            Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1, SVT-VP9: 1,
+                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1,
                             VPX: 2, x265: 1, x264: 1)
 
     -w  --workers           Override number of workers.
@@ -78,8 +78,8 @@ With your own parameters:
 
 ### <center>Segmenting<center>
 
-    --split-method          Method used for generating splits.(Default: av-scenedetect)
-                            Options: `av-scenedetect`, `none`
+    --split-method          Method used for generating splits. (Default: av-scenechange)
+                            Options: `av-scenechange`, `none`
                             `none` -  skips scenedetection.
 
     -m  --chunk-method      Determine the method in which chunks are made for encoding.
@@ -154,7 +154,6 @@ With your own parameters:
   - [Install AOMENC](https://aomedia.googlesource.com/aom/)
   - [Install rav1e](https://github.com/xiph/rav1e)
   - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
-  - [Install SVT-VP9](https://github.com/OpenVisualCloud/SVT-VP9)
   - [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
 - Optional :

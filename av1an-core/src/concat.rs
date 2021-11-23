@@ -158,6 +158,24 @@ fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
 }
 
 pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
+  /// Path cannot be a UNC path on Windows for mkvmerge
+  #[cfg(windows)]
+  fn fix_path<P: AsRef<Path>>(p: P) -> String {
+    const UNC_PREFIX: &str = r#"\\?\"#;
+
+    let p = p.as_ref().display().to_string();
+    if p.starts_with(UNC_PREFIX) {
+      p[UNC_PREFIX.len()..].to_string()
+    } else {
+      p
+    }
+  }
+
+  #[cfg(not(windows))]
+  fn fix_path<P: AsRef<Path>>(p: P) -> P {
+    p
+  }
+
   let mut encode_folder = PathBuf::from(encode_folder);
 
   let mut audio_file = PathBuf::from(&encode_folder);
@@ -174,11 +192,10 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
 
   let mut cmd = Command::new("mkvmerge");
   cmd.arg("-o");
-  cmd.arg(output);
-  cmd.args(["--append-mode", "file"]);
+  cmd.arg(fix_path(output));
 
   if audio_file.exists() {
-    cmd.arg(audio_file);
+    cmd.arg(fix_path(audio_file));
   }
 
   // `std::process::Command` does not support removing arguments after they have been added,
@@ -190,13 +207,13 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     for files in &mut chunks {
       // Each chunk always has exactly 2 elements.
       for file in files {
-        cmd.arg(file.path());
+        cmd.arg(fix_path(file.path()));
         cmd.arg("+");
       }
     }
     // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
     // asserted that the length of `files` is odd and nonzero in this branch.
-    cmd.arg(chunks.remainder()[0].path());
+    cmd.arg(fix_path(chunks.remainder()[0].path()));
   } else {
     // The total number of elements at this point is even, and there are at *least* 2 elements,
     // since `files` is not empty and the case of exactly one element would have been handled by
@@ -209,15 +226,15 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     // `start` will be empty if there are exactly 2 elements in `files`, in which case
     // this loop will not run.
     for file in start {
-      cmd.arg(file.path());
+      cmd.arg(fix_path(file.path()));
       cmd.arg("+");
     }
 
     // There are always *exactly* 2 elements in `end`, since we used `split_at(files.len() - 2)`,
     // which will always succeed given that `files` has at least 2 elements at this point.
-    cmd.arg(end[0].path());
+    cmd.arg(fix_path(end[0].path()));
     cmd.arg("+");
-    cmd.arg(end[1].path());
+    cmd.arg(fix_path(end[1].path()));
   }
 
   debug!("mkvmerge concat command: {:?}", cmd);

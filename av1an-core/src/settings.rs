@@ -1,3 +1,4 @@
+use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::{
   broker::{Broker, EncoderCrash},
   chunk::Chunk,
@@ -464,6 +465,19 @@ impl EncodeArgs {
     if self.encoder == Encoder::x265 && self.concat != ConcatMethod::MKVMerge {
       bail!("mkvmerge is required for concatenating x265, as x265 outputs raw HEVC bitstream files without the timestamps correctly set, which FFmpeg cannot concatenate \
 properly into a mkv file. Specify mkvmerge as the concatenation method by setting `--concat mkvmerge`.");
+    }
+
+    if self.chunk_method == ChunkMethod::LSMASH {
+      ensure!(
+        is_lsmash_installed(),
+        "LSMASH is not installed, but it was specified as the chunk method"
+      );
+    }
+    if self.chunk_method == ChunkMethod::FFMS2 {
+      ensure!(
+        is_ffms2_installed(),
+        "FFMS2 is not installed, but it was specified as the chunk method"
+      );
     }
 
     if let Some(vmaf_path) = &self.vmaf_path {

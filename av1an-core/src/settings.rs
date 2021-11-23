@@ -586,14 +586,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let scenes_before = scenes.len() + 1;
     if let Some(split_len) = self.extra_splits_len {
       scenes = extra_splits(&scenes, self.frames, split_len);
-      let scenes_after = scenes.len() + 1;
-      info!(
-        "scenecut: found {} scene(s) [with extra_splits({} frames): {}]",
-        scenes_before, split_len, scenes_after
-      );
-    } else {
-      info!("scenecut: found {} scene(s)", scenes_before);
     }
+    eprintln!(
+      "{}{} {}",
+      Color::Cyan.bold().paint("S"),
+      Color::Cyan.paint("cenecuts Detected"),
+      Color::Cyan.bold().paint(scenes_before.to_string())
+    );
 
     write_scenes_to_file(&scenes, self.frames, scene_file)?;
 

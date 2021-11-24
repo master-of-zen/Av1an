@@ -173,7 +173,7 @@ pub struct CliOpts {
   pub extra_split: usize,
 
   /// Minimum number of frames for a scenecut
-  #[structopt(long, default_value = "60")]
+  #[structopt(long, default_value = "24")]
   pub min_scene_len: usize,
 
   /// Specify number encoding passes

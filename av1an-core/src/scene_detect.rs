@@ -95,11 +95,11 @@ pub fn scene_detect(
       Command::new("ffmpeg")
         .args(["-r", "1", "-i"])
         .arg(path)
-        .args(if let Some(filters) = &filters {
-          &filters[..]
-        } else {
-          &[]
-        })
+        .args(
+          filters
+            .as_ref()
+            .map_or(&[] as &[String], |filters| &filters[..]),
+        )
         .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

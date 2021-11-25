@@ -300,7 +300,7 @@ fn confirm(prompt: &str) -> io::Result<bool> {
 }
 
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
-  let temp = if let Some(path) = args.temp {
+  let temp = if let Some(path) = args.temp.as_ref() {
     path.to_str().unwrap().to_owned()
   } else {
     format!(".{}", hash_path(args.input.as_path()))
@@ -311,13 +311,13 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   // TODO make an actual constructor for this
   let mut encode_args = EncodeArgs {
     frames: input.frames(),
-    log_file: if let Some(log_file) = args.log_file {
+    log_file: if let Some(log_file) = args.log_file.as_ref() {
       Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
       Path::new(&temp).join("log.log")
     },
-    ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args {
-      shlex::split(&args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
+    ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
+      shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
     } else {
       Vec::new()
     },
@@ -328,12 +328,12 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     } else {
       args.encoder.get_default_pass()
     },
-    video_params: if let Some(args) = args.video_params {
-      shlex::split(&args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
+    video_params: if let Some(args) = args.video_params.as_ref() {
+      shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
     } else {
       Vec::new()
     },
-    output_file: if let Some(path) = args.output_file.as_deref() {
+    output_file: if let Some(path) = args.output_file.as_ref() {
       let path = PathAbs::new(path)?;
 
       if let Ok(parent) = path.parent() {
@@ -349,14 +349,13 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
         args
           .input
           .file_stem()
-          .unwrap_or(args.input.as_ref())
+          .unwrap_or_else(|| args.input.as_ref())
           .to_string_lossy(),
         args.encoder
       )
     },
-    audio_params: if let Some(args) = args.audio_params {
-      shlex::split(&args)
-        .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
+    audio_params: if let Some(args) = args.audio_params.as_ref() {
+      shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
     } else {
       into_vec!["-c:a", "copy"]
     },
@@ -427,7 +426,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   encode_args.startup_check()?;
 
   if !args.overwrite {
-    if let Some(path) = args.output_file.as_deref() {
+    if let Some(path) = args.output_file.as_ref() {
       if path.exists()
         && !confirm(&format!(
           "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",

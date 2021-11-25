@@ -7,7 +7,7 @@ use crate::{
   ffmpeg::compose_ffmpeg_pipe,
   finish_multi_progress_bar, get_done, init_done, into_vec,
   progress_bar::{
-    finish_progress_bar, init_multi_progress_bar, init_progress_bar, update_bar, update_mp_bar,
+    finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
     update_mp_msg,
   },
   read_chunk_queue, regex, save_chunk_queue,
@@ -175,12 +175,13 @@ impl EncodeArgs {
     Ok(queue_files)
   }
 
+  /// Returns the number of frames encoded if crashed, to reset the progress bar.
   pub fn create_pipes(
     &self,
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
-  ) -> Result<(), EncoderCrash> {
+  ) -> Result<(), (EncoderCrash, u64)> {
     let fpf_file = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
@@ -212,7 +213,7 @@ impl EncodeArgs {
       .build()
       .unwrap();
 
-    let (pipe_stderr, enc_output, enc_stderr) = rt.block_on(async {
+    let (pipe_stderr, enc_output, enc_stderr, frame) = rt.block_on(async {
       let mut source_pipe = if let [source, args @ ..] = &*chunk.source {
         tokio::process::Command::new(source)
           .args(args)
@@ -325,9 +326,9 @@ impl EncodeArgs {
             drop(line);
             if new > frame {
               if self.verbosity == Verbosity::Normal {
-                update_bar((new - frame) as u64);
+                inc_bar((new - frame) as u64);
               } else if self.verbosity == Verbosity::Verbose {
-                update_mp_bar((new - frame) as u64);
+                inc_mp_bar((new - frame) as u64);
               }
               frame = new;
             }
@@ -340,16 +341,19 @@ impl EncodeArgs {
       let enc_output = enc_pipe.wait_with_output().await.unwrap();
 
       let pipe_stderr = pipe_stderr.lock().clone();
-      (pipe_stderr, enc_output, enc_stderr)
+      (pipe_stderr, enc_output, enc_stderr, frame)
     });
 
     if !enc_output.status.success() {
-      return Err(EncoderCrash {
-        exit_status: enc_output.status,
-        pipe_stderr: pipe_stderr.into(),
-        stderr: enc_stderr.into(),
-        stdout: enc_output.stdout.into(),
-      });
+      return Err((
+        EncoderCrash {
+          exit_status: enc_output.status,
+          pipe_stderr: pipe_stderr.into(),
+          stderr: enc_stderr.into(),
+          stdout: enc_output.stdout.into(),
+        },
+        frame,
+      ));
     }
 
     Ok(())

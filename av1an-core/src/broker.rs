@@ -1,6 +1,8 @@
 use crate::{
-  ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done, settings::EncodeArgs, Chunk,
-  Instant, TargetQuality, Verbosity,
+  ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
+  progress_bar::{dec_bar, dec_mp_bar},
+  settings::EncodeArgs,
+  Chunk, Instant, TargetQuality, Verbosity,
 };
 use std::{
   fmt::{Debug, Display},
@@ -186,7 +188,13 @@ impl<'a> Broker<'a> {
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=MAX_TRIES {
         let res = self.project.create_pipes(chunk, current_pass, worker_id);
-        if let Err(e) = res {
+        if let Err((e, frames)) = res {
+          if self.project.verbosity == Verbosity::Normal {
+            dec_bar(frames);
+          } else if self.project.verbosity == Verbosity::Verbose {
+            dec_mp_bar(frames);
+          }
+
           if r#try == MAX_TRIES {
             error!(
               "[chunk {}] encoder crashed {} times, shutting down worker",

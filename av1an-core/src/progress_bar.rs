@@ -78,6 +78,22 @@ pub fn get_first_multi_progress_bar() -> Option<&'static ProgressBar> {
   }
 }
 
+pub fn reset_bar() {
+  if let Some(pb) = PROGRESS_BAR.get() {
+    pb.reset_elapsed();
+    pb.reset_eta();
+  }
+}
+
+pub fn reset_mp_bar() {
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    if let Some(pb) = pbs.get(0) {
+      pb.reset_elapsed();
+      pb.reset_eta();
+    }
+  }
+}
+
 pub fn init_multi_progress_bar(len: u64, workers: usize) {
   MULTI_PROGRESS_BAR.get_or_init(|| {
     let mpb = MultiProgress::new();

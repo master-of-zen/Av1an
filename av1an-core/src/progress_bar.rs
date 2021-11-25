@@ -44,9 +44,15 @@ pub fn init_progress_bar(len: u64) {
   pb.set_position(0);
 }
 
-pub fn update_bar(inc: u64) {
+pub fn inc_bar(inc: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.inc(inc);
+  }
+}
+
+pub fn dec_bar(dec: u64) {
+  if let Some(pb) = PROGRESS_BAR.get() {
+    pb.set_position(pb.position().saturating_sub(dec));
   }
 }
 
@@ -114,9 +120,16 @@ pub fn update_mp_msg(worker_idx: usize, msg: String) {
   }
 }
 
-pub fn update_mp_bar(inc: u64) {
+pub fn inc_mp_bar(inc: u64) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     pbs.last().unwrap().inc(inc);
+  }
+}
+
+pub fn dec_mp_bar(dec: u64) {
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    let pb = pbs.last().unwrap();
+    pb.set_position(pb.position().saturating_sub(dec));
   }
 }
 

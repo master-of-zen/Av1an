@@ -28,7 +28,7 @@ const AOM_VPX_IGNORED_PREFIX: &str =
 // As you can see, the relevant part of the output always starts past
 // the length of the ignored prefix.
 
-pub unsafe fn parse_aom_vpx_frames(s: &mut str) -> Option<u64> {
+pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
   if !(s.starts_with("Pass 2/2") || s.starts_with("Pass 1/1")) {
     return None;
   }
@@ -36,8 +36,8 @@ pub unsafe fn parse_aom_vpx_frames(s: &mut str) -> Option<u64> {
   // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
   // second number (actual encoded frames)
   let first_space_index = s
-    .get_mut(AOM_VPX_IGNORED_PREFIX.len()..)?
-    .as_bytes_mut()
+    .get(AOM_VPX_IGNORED_PREFIX.len()..)?
+    .as_bytes()
     .iter()
     .position(|&c| c == b' ')?;
 

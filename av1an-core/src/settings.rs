@@ -54,6 +54,7 @@ pub enum InputPixelFormat {
   FFmpeg { format: Pixel },
 }
 
+#[allow(clippy::struct_excessive_bools)]
 pub struct EncodeArgs {
   pub frames: usize,
 

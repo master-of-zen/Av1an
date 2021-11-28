@@ -310,7 +310,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
 
   // TODO make an actual constructor for this
   let mut encode_args = EncodeArgs {
-    frames: input.frames(),
+    frames: 0,
     log_file: if let Some(log_file) = args.log_file.as_ref() {
       Path::new(&format!("{}.log", log_file)).to_owned()
     } else {
@@ -424,6 +424,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   };
 
   encode_args.startup_check()?;
+
+  encode_args.frames = encode_args.input.frames();
 
   if !args.overwrite {
     if let Some(path) = args.output_file.as_ref() {

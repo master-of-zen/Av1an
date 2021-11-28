@@ -76,6 +76,19 @@ fn version() -> &'static str {
   })
 }
 
+fn max_tries_valid(tries: String) -> Result<(), String> {
+  match tries.parse::<usize>() {
+    Ok(tries) => {
+      if tries == 0 {
+        Err("max_tries must be greater than 0".into())
+      } else {
+        Ok(())
+      }
+    }
+    Err(e) => Err(format!("{}", e)),
+  }
+}
+
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per-scene quality encoding
 #[derive(StructOpt, Debug)]
 #[structopt(name = "av1an", setting = ColoredHelp, version = version())]
@@ -134,6 +147,10 @@ pub struct CliOpts {
   /// Overwrite output file without confirmation
   #[structopt(short = "y")]
   pub overwrite: bool,
+
+  /// Maximum number of chunk restarts for an encode
+  #[structopt(long, default_value = "3", validator = max_tries_valid)]
+  pub max_tries: usize,
 
   /// Method for creating chunks
   #[structopt(short = "m", long, possible_values=&["segment", "select", "ffms2", "lsmash", "hybrid"])]
@@ -370,6 +387,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
       None
     },
     keep: args.keep,
+    max_tries: args.max_tries,
     min_q: args.min_q,
     max_q: args.max_q,
     min_scene_len: args.min_scene_len,

@@ -18,6 +18,7 @@ use smallvec::SmallVec;
 use thiserror::Error;
 
 pub struct Broker<'a> {
+  pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
@@ -83,18 +84,6 @@ impl Display for EncoderCrash {
 }
 
 impl<'a> Broker<'a> {
-  pub fn new(
-    chunk_queue: Vec<Chunk>,
-    project: &'a EncodeArgs,
-    target_quality: Option<TargetQuality<'a>>,
-  ) -> Self {
-    Broker {
-      chunk_queue,
-      project,
-      target_quality,
-    }
-  }
-
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   #[allow(clippy::needless_pass_by_value)]
   pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
@@ -184,9 +173,8 @@ impl<'a> Broker<'a> {
     }
 
     // Run all passes for this chunk
-    const MAX_TRIES: usize = 3;
     for current_pass in 1..=self.project.passes {
-      for r#try in 1..=MAX_TRIES {
+      for r#try in 1..=self.max_tries {
         let res = self.project.create_pipes(chunk, current_pass, worker_id);
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {
@@ -195,10 +183,10 @@ impl<'a> Broker<'a> {
             dec_mp_bar(frames);
           }
 
-          if r#try == MAX_TRIES {
+          if r#try == self.max_tries {
             error!(
               "[chunk {}] encoder crashed {} times, shutting down worker",
-              chunk.index, MAX_TRIES
+              chunk.index, self.max_tries
             );
             return Err(e);
           }

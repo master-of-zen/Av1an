@@ -425,8 +425,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
 
   encode_args.startup_check()?;
 
-  encode_args.frames = encode_args.input.frames();
-
   if !args.overwrite {
     if let Some(path) = args.output_file.as_ref() {
       if path.exists()
@@ -452,6 +450,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
       }
     }
   }
+
+  encode_args.frames = encode_args.input.frames();
 
   Ok(encode_args)
 }

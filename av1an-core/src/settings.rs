@@ -71,6 +71,8 @@ pub struct EncodeArgs {
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
 
+  pub max_tries: usize,
+
   pub passes: u8,
   pub video_params: Vec<String>,
   pub encoder: Encoder,
@@ -449,6 +451,8 @@ impl EncodeArgs {
     {
       bail!(".ivf only supports VP8, VP9, and AV1");
     }
+
+    ensure!(self.max_tries > 0);
 
     ensure!(
       self.input.as_path().exists(),
@@ -950,6 +954,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         } else {
           None
         },
+        max_tries: self.max_tries,
       };
 
       let (tx, rx) = mpsc::channel();

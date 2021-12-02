@@ -857,11 +857,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
     let done_path = Path::new(&self.temp).join("done.json");
 
-    let splits = self.split_routine()?;
-
+    // TODO move this to `initialize`?
     let initial_frames = if self.resume && done_path.exists() {
       let done = fs::read_to_string(done_path)?;
       let done: DoneJson = serde_json::from_str(&done)?;
+      self.frames = done.frames.load(atomic::Ordering::Relaxed);
       init_done(done);
 
       get_done()
@@ -870,6 +870,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .map(|ref_multi| *ref_multi.value())
         .sum()
     } else {
+      self.frames = self.input.frames();
       init_done(DoneJson {
         frames: AtomicUsize::new(self.frames),
         done: DashMap::new(),
@@ -881,6 +882,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       0
     };
+
+    let splits = self.split_routine()?;
 
     let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
 

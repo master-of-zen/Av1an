@@ -469,8 +469,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     }
   }
 
-  encode_args.frames = encode_args.input.frames();
-
   Ok(encode_args)
 }
 

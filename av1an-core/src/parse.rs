@@ -389,9 +389,7 @@ mod tests {
     }
 
     for (s, ans) in test_cases {
-      let mut s = String::from(s);
-
-      assert_eq!(unsafe { parse_aom_vpx_frames(&mut s) }, ans);
+      assert_eq!(parse_aom_vpx_frames(&s), ans);
     }
   }
 }

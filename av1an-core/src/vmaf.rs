@@ -1,9 +1,10 @@
 use crate::broker::EncoderCrash;
 use crate::util::printable_base10_digits;
-use crate::{ffmpeg, ref_vec, Input};
+use crate::{ffmpeg, ref_smallvec, Input};
 use anyhow::anyhow;
 use plotters::prelude::*;
 use serde::Deserialize;
+use smallvec::SmallVec;
 use std::{
   cmp::Ordering,
   ffi::OsStr,
@@ -130,9 +131,10 @@ pub fn plot(
 
   println!(":: VMAF Run");
 
-  let pipe_cmd: Vec<&OsStr> = match &reference {
-    Input::Video(ref path) => ref_vec![
+  let pipe_cmd: SmallVec<[&OsStr; 8]> = match reference {
+    Input::Video(ref path) => ref_smallvec!(
       OsStr,
+      8,
       [
         "ffmpeg",
         "-i",
@@ -143,10 +145,8 @@ pub fn plot(
         "yuv4mpegpipe",
         "-"
       ]
-    ],
-    Input::VapourSynth(ref path) => {
-      ref_vec![OsStr, ["vspipe", "-y", path, "-"]]
-    }
+    ),
+    Input::VapourSynth(ref path) => ref_smallvec!(OsStr, 8, ["vspipe", "-y", path, "-"]),
   };
 
   run_vmaf(

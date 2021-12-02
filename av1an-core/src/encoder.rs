@@ -1,4 +1,4 @@
-use crate::{ffmpeg::compose_ffmpeg_pipe, into_vec, list_index};
+use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_vec, list_index};
 use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
@@ -390,7 +390,7 @@ impl Encoder {
     q: usize,
   ) -> Vec<Cow<'static, str>> {
     match &self {
-      Self::aom => into_vec![
+      Self::aom => inplace_vec![
         "aomenc",
         "--passes=1",
         format!("--threads={}", threads),
@@ -430,7 +430,7 @@ impl Encoder {
         "--max-partition-size=32",
         "--kf-min-dist=12",
       ],
-      Self::rav1e => into_vec![
+      Self::rav1e => inplace_vec![
         "rav1e",
         "-y",
         "-s",
@@ -446,7 +446,7 @@ impl Encoder {
         "5",
         "--no-scene-detection",
       ],
-      Self::vpx => into_vec![
+      Self::vpx => inplace_vec![
         "vpxenc",
         "-b",
         "10",
@@ -460,7 +460,7 @@ impl Encoder {
         format!("--cq-level={}", q),
         "--row-mt=1",
       ],
-      Self::svt_av1 => into_vec![
+      Self::svt_av1 => inplace_vec![
         "SvtAv1EncApp",
         "-i",
         "stdin",
@@ -523,7 +523,7 @@ impl Encoder {
         "--tf-level",
         "3",
       ],
-      Self::x264 => into_vec![
+      Self::x264 => inplace_vec![
         "x264",
         "--log-level",
         "error",
@@ -538,7 +538,7 @@ impl Encoder {
         "--crf",
         format!("{}", q),
       ],
-      Self::x265 => into_vec![
+      Self::x265 => inplace_vec![
         "x265",
         "--log-level",
         "0",
@@ -557,9 +557,9 @@ impl Encoder {
   /// Returns command used for target quality probing (slow, correctness focused version)
   pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
     match &self {
-      Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
-      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", format!("{}", q)],
-      Self::vpx => into_vec![
+      Self::aom => inplace_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
+      Self::rav1e => inplace_vec!["rav1e", "-y", "--quantizer", format!("{}", q)],
+      Self::vpx => inplace_vec![
         "vpxenc",
         "--passes=1",
         "--pass=1",
@@ -567,8 +567,8 @@ impl Encoder {
         "--end-usage=q",
         format!("--cq-level={}", q),
       ],
-      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", format!("{}", q)],
-      Self::x264 => into_vec![
+      Self::svt_av1 => inplace_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", format!("{}", q)],
+      Self::x264 => inplace_vec![
         "x264",
         "--log-level",
         "error",
@@ -579,7 +579,7 @@ impl Encoder {
         "--crf",
         format!("{}", q),
       ],
-      Self::x265 => into_vec![
+      Self::x265 => inplace_vec![
         "x265",
         "--log-level",
         "0",

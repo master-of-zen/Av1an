@@ -40,15 +40,6 @@ dependencies = [
 
 [[package]]
 name = "ansi_term"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
-dependencies = [
- "winapi",
-]
-
-[[package]]
-name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
@@ -58,9 +49,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.48"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62e1f47f7dc0422027a4e370dd4548d4d66b26782e513e98dca1e689e058a80e"
+checksum = "8b26702f315f53b6071259e15dd9d64528213b44d61de1ec926eca7715d62203"
 
 [[package]]
 name = "arbitrary"
@@ -189,7 +180,7 @@ dependencies = [
 name = "av1an-cli"
 version = "0.2.1-2"
 dependencies = [
- "ansi_term 0.12.1",
+ "ansi_term",
  "anyhow",
  "av1an-core",
  "ctrlc",
@@ -200,7 +191,7 @@ dependencies = [
  "shlex 1.1.0",
  "structopt",
  "thiserror",
- "vergen 5.1.17",
+ "vergen 5.1.18",
 ]
 
 [[package]]
@@ -208,7 +199,7 @@ name = "av1an-core"
 version = "0.2.0"
 dependencies = [
  "affinity",
- "ansi_term 0.12.1",
+ "ansi_term",
  "anyhow",
  "av-format",
  "av-ivf",
@@ -387,11 +378,11 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "2.33.3"
+version = "2.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37e58ac78573c40708d45522f0d80fa2f01cc4f9b4e2bf749807255454312002"
+checksum = "a0610544180c38b88101fecf2dd634b174a62eef6946f84dfc6a7127512b381c"
 dependencies = [
- "ansi_term 0.11.0",
+ "ansi_term",
  "atty",
  "bitflags",
  "strsim 0.8.0",
@@ -605,7 +596,7 @@ version = "0.19.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b329d8ed052ce3f1e7c9109659d4d999b8f7b1bd2e9d2cecc703cb5a98c8b46"
 dependencies = [
- "ansi_term 0.12.1",
+ "ansi_term",
  "atty",
  "glob",
  "lazy_static",
@@ -644,9 +635,9 @@ dependencies = [
 
 [[package]]
 name = "getset"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24b328c01a4d71d2d8173daa93562a73ab0fe85616876f02500f53d82948c504"
+checksum = "e45727250e75cc04ff2846a66397da8ef2b3db8e40e0cef4df67950a07621eb9"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -662,9 +653,9 @@ checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
 
 [[package]]
 name = "git2"
-version = "0.13.24"
+version = "0.13.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "845e007a28f1fcac035715988a234e8ec5458fd825b20a20c7dec74237ef341f"
+checksum = "f29229cc1b24c0e6062f6e742aa3e256492a5323365e5ed3413599f8a5eff7d6"
 dependencies = [
  "bitflags",
  "libc",
@@ -815,9 +806,9 @@ dependencies = [
 
 [[package]]
 name = "libgit2-sys"
-version = "0.12.25+1.3.0"
+version = "0.12.26+1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f68169ef08d6519b2fe133ecc637408d933c0174b23b80bb2f79828966fbaab"
+checksum = "19e1c899248e606fbfe68dcb31d8b0176ebab833b103824af31bddf4b7457494"
 dependencies = [
  "cc",
  "libc",
@@ -1388,9 +1379,9 @@ checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 
 [[package]]
 name = "ryu"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+checksum = "3c9613b5a66ab9ba26415184cfc41156594925a9cf3a2057e57f31ff145f6568"
 
 [[package]]
 name = "scopeguard"
@@ -1876,9 +1867,9 @@ dependencies = [
 
 [[package]]
 name = "vergen"
-version = "5.1.17"
+version = "5.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cf88d94e969e7956d924ba70741316796177fa0c79a2c9f4ab04998d96e966e"
+checksum = "1d48696c0fbbdafd9553e14c4584b4b9583931e9474a3ae506f1872b890d0b47"
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",

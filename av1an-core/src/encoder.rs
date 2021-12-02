@@ -340,7 +340,7 @@ impl Encoder {
   fn replace_q(self, index: usize, q: usize) -> (usize, String) {
     match self {
       Self::aom | Self::vpx => (index, format!("--cq-level={}", q)),
-      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, q.to_string()),
+      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, format!("{}", q)),
     }
   }
 
@@ -436,11 +436,11 @@ impl Encoder {
         "-s",
         "10",
         "--threads",
-        threads.to_string(),
+        format!("{}", threads),
         "--tiles",
         "16",
         "--quantizer",
-        q.to_string(),
+        format!("{}", q),
         "--low-latency",
         "--rdo-lookahead-frames",
         "5",
@@ -465,13 +465,13 @@ impl Encoder {
         "-i",
         "stdin",
         "--lp",
-        threads.to_string(),
+        format!("{}", threads),
         "--preset",
         "8",
         "--keyint",
         "240",
         "--crf",
-        q.to_string(),
+        format!("{}", q),
         "--tile-rows",
         "1",
         "--tile-columns",
@@ -532,11 +532,11 @@ impl Encoder {
         "-",
         "--no-progress",
         "--threads",
-        threads.to_string(),
+        format!("{}", threads),
         "--preset",
         "medium",
         "--crf",
-        q.to_string(),
+        format!("{}", q),
       ],
       Self::x265 => into_vec![
         "x265",
@@ -545,11 +545,11 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--frame-threads",
-        cmp::min(threads, 16).to_string(),
+        format!("{}", cmp::min(threads, 16)),
         "--preset",
         "fast",
         "--crf",
-        q.to_string(),
+        format!("{}", q),
       ],
     }
   }
@@ -558,7 +558,7 @@ impl Encoder {
   pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
     match &self {
       Self::aom => into_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
-      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", q.to_string()],
+      Self::rav1e => into_vec!["rav1e", "-y", "--quantizer", format!("{}", q)],
       Self::vpx => into_vec![
         "vpxenc",
         "--passes=1",
@@ -567,7 +567,7 @@ impl Encoder {
         "--end-usage=q",
         format!("--cq-level={}", q),
       ],
-      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q.to_string()],
+      Self::svt_av1 => into_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", format!("{}", q)],
       Self::x264 => into_vec![
         "x264",
         "--log-level",
@@ -577,7 +577,7 @@ impl Encoder {
         "-",
         "--no-progress",
         "--crf",
-        q.to_string(),
+        format!("{}", q),
       ],
       Self::x265 => into_vec![
         "x265",
@@ -586,7 +586,7 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--crf",
-        q.to_string(),
+        format!("{}", q),
       ],
     }
   }

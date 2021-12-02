@@ -671,9 +671,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       "-y",
       "-",
       "-s",
-      frame_start.to_string(),
+      format!("{}", frame_start),
       "-e",
-      frame_end.to_string(),
+      format!("{}", frame_end),
     ];
 
     let output_ext = self.encoder.output_extension();
@@ -930,13 +930,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         "{}{} {} {}{} {} {}{} {}\n{}: {}",
         Color::Green.bold().paint("Q"),
         Color::Green.paint("ueue"),
-        Color::Green.bold().paint(chunk_queue.len().to_string()),
+        Color::Green.bold().paint(format!("{}", chunk_queue.len())),
         Color::Blue.bold().paint("W"),
         Color::Blue.paint("orkers"),
-        Color::Blue.bold().paint(self.workers.to_string()),
+        Color::Blue.bold().paint(format!("{}", self.workers)),
         Color::Purple.bold().paint("P"),
         Color::Purple.paint("asses"),
-        Color::Purple.bold().paint(self.passes.to_string()),
+        Color::Purple.bold().paint(format!("{}", self.passes)),
         Style::default().bold().paint("Params"),
         Style::default().dimmed().paint(self.video_params.join(" "))
       );

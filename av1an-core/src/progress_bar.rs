@@ -1,3 +1,5 @@
+use crate::get_done;
+use crate::Verbosity;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use once_cell::sync::OnceCell;
 
@@ -6,9 +8,9 @@ use crate::util::printable_base10_digits;
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display
   // the characters used for the spinner
-  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta})"
+  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
 } else {
-  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta})"
+  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
 };
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
@@ -53,6 +55,12 @@ pub fn inc_bar(inc: u64) {
 pub fn dec_bar(dec: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.set_position(pb.position().saturating_sub(dec));
+  }
+}
+
+pub fn update_bar_info(kbps: f64, est_mb: f64) {
+  if let Some(pb) = PROGRESS_BAR.get() {
+    pb.set_message(format!(", {:.1} Kbps, est. {:.1} MB", kbps, est_mb));
   }
 }
 
@@ -153,10 +161,41 @@ pub fn dec_mp_bar(dec: u64) {
   }
 }
 
+pub fn update_mp_bar_info(kbps: f64, est_mb: f64) {
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    pbs
+      .last()
+      .unwrap()
+      .set_message(format!(", {:.1} Kbps, est. {:.1} MB", kbps, est_mb));
+  }
+}
+
 pub fn finish_multi_progress_bar() {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     for pb in pbs.iter() {
       pb.finish();
     }
+  }
+}
+
+pub fn update_progress_bar_estimates(frame_rate: f64, total_frames: usize, verbosity: Verbosity) {
+  let completed_frames: usize = get_done()
+    .done
+    .iter()
+    .map(|ref_multi| ref_multi.value().frames)
+    .sum();
+  let total_kb: u32 = get_done()
+    .done
+    .iter()
+    .map(|ref_multi| ref_multi.value().size_kb)
+    .sum();
+  let seconds_completed = completed_frames as f64 / frame_rate;
+  let kbps = f64::from(total_kb) * 8. / seconds_completed;
+  let progress = completed_frames as f64 / total_frames as f64;
+  let est_mb = f64::from(total_kb) / progress / 1000.;
+  if verbosity == Verbosity::Normal {
+    update_bar_info(kbps, est_mb);
+  } else if verbosity == Verbosity::Verbose {
+    update_mp_bar_info(kbps, est_mb);
   }
 }

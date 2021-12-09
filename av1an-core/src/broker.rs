@@ -1,3 +1,5 @@
+use crate::progress_bar::update_progress_bar_estimates;
+use crate::DoneChunk;
 use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
   progress_bar::{dec_bar, dec_mp_bar},
@@ -115,6 +117,8 @@ impl<'a> Broker<'a> {
         }
       }
 
+      let frame_rate = self.project.input.frame_rate();
+
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.workers)
           .map(|idx| (receiver.clone(), &self, idx))
@@ -137,7 +141,7 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, frame_rate) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -162,7 +166,12 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), EncoderCrash> {
+  fn encode_chunk(
+    &self,
+    chunk: &mut Chunk,
+    worker_id: usize,
+    frame_rate: f64,
+  ) -> Result<(), EncoderCrash> {
     let st_time = Instant::now();
 
     // space padding at the beginning to align with "finished chunk"
@@ -206,12 +215,24 @@ impl<'a> Broker<'a> {
       let fps = encoded_frames as f64 / enc_time.as_secs_f64();
 
       let progress_file = Path::new(&self.project.temp).join("done.json");
-      get_done().done.insert(chunk.name(), encoded_frames);
+      get_done().done.insert(
+        chunk.name(),
+        DoneChunk {
+          frames: encoded_frames,
+          size_kb: (Path::new(&chunk.output())
+            .metadata()
+            .expect("Unable to get size of finished chunk")
+            .len()
+            / 1000) as u32,
+        },
+      );
 
       let mut progress_file = File::create(&progress_file).unwrap();
       progress_file
         .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
+
+      update_progress_bar_estimates(frame_rate, self.project.frames, self.project.verbosity);
 
       debug!(
         "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",

@@ -55,6 +55,16 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg_next::Error> {
   )
 }
 
+pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg_next::Error> {
+  let ictx = input(&source)?;
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)?;
+  let rate = input.avg_frame_rate();
+  Ok(rate.numerator() as f64 / rate.denominator() as f64)
+}
+
 pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
   let ictx = ffmpeg_next::format::input(&source)?;
 

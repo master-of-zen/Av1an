@@ -1,3 +1,4 @@
+use crate::progress_bar::update_progress_bar_estimates;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::{
@@ -862,12 +863,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let done = fs::read_to_string(done_path)?;
       let done: DoneJson = serde_json::from_str(&done)?;
       self.frames = done.frames.load(atomic::Ordering::Relaxed);
-      init_done(done);
 
-      get_done()
+      init_done(done)
         .done
         .iter()
-        .map(|ref_multi| *ref_multi.value())
+        .map(|ref_multi| ref_multi.frames)
         .sum()
     } else {
       self.frames = self.input.frames();
@@ -947,6 +947,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       } else if self.verbosity == Verbosity::Verbose {
         init_multi_progress_bar(self.frames as u64, self.workers);
         reset_mp_bar_at(initial_frames as u64);
+      }
+
+      if !get_done().done.is_empty() {
+        let frame_rate = self.input.frame_rate();
+        update_progress_bar_estimates(frame_rate, self.frames, self.verbosity);
       }
 
       let broker = Broker {

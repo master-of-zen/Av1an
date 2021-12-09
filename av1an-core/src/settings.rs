@@ -1,3 +1,4 @@
+use crate::progress_bar::update_progress_bar_estimates;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::{
@@ -24,6 +25,7 @@ use crossbeam_utils;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
 use std::cmp::Ordering;
+use std::sync::atomic::AtomicUsize;
 use std::{
   borrow::Cow,
   cmp,
@@ -37,7 +39,7 @@ use std::{
   iter,
   path::{Path, PathBuf},
   process::{exit, Command, Stdio},
-  sync::atomic::{self, AtomicBool, AtomicUsize},
+  sync::atomic::{self, AtomicBool, AtomicU64},
   sync::{mpsc, Arc},
 };
 
@@ -864,12 +866,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let done = fs::read_to_string(done_path)?;
       let done: DoneJson = serde_json::from_str(&done)?;
       self.frames = done.frames.load(atomic::Ordering::Relaxed);
-      init_done(done);
 
-      get_done()
+      init_done(done)
         .done
         .iter()
-        .map(|ref_multi| *ref_multi.value())
+        .map(|ref_multi| ref_multi.frames)
         .sum()
     } else {
       self.frames = self.input.frames();
@@ -901,14 +902,16 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
       // vapoursynth audio is currently unsupported
+      let audio_size_bytes = Arc::new(AtomicU64::new(0));
       let audio_thread = if self.input.is_video()
         && (!self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst))
       {
         let input = self.input.as_video_path();
         let temp = self.temp.as_str();
         let audio_params = self.audio_params.as_slice();
+        let audio_size_ref = Arc::clone(&audio_size_bytes);
         Some(s.spawn(move |_| {
-          let audio_output_exists = ffmpeg::encode_audio(input, temp, audio_params);
+          let audio_output = ffmpeg::encode_audio(input, temp, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
 
           let progress_file = Path::new(temp).join("done.json");
@@ -917,7 +920,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
             .unwrap();
 
-          audio_output_exists
+          if let Some(ref audio_output) = audio_output {
+            audio_size_ref.store(
+              audio_output.metadata().unwrap().len(),
+              atomic::Ordering::SeqCst,
+            );
+          }
+
+          audio_output.is_some()
         }))
       } else {
         None
@@ -951,6 +961,16 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         reset_mp_bar_at(initial_frames as u64);
       }
 
+      if !get_done().done.is_empty() {
+        let frame_rate = self.input.frame_rate();
+        update_progress_bar_estimates(
+          frame_rate,
+          self.frames,
+          self.verbosity,
+          audio_size_bytes.load(atomic::Ordering::SeqCst),
+        );
+      }
+
       let broker = Broker {
         chunk_queue,
         project: self,
@@ -962,9 +982,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         max_tries: self.max_tries,
       };
 
+      let audio_size_ref = Arc::clone(&audio_size_bytes);
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(tx, self.set_thread_affinity);
+        broker.encoding_loop(tx, self.set_thread_affinity, audio_size_ref);
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)

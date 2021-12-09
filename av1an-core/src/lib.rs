@@ -112,6 +112,14 @@ impl Input {
       Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).expect(FAIL_MSG),
     }
   }
+
+  pub fn frame_rate(&self) -> f64 {
+    const FAIL_MSG: &str = "Failed to get frame rate for input video";
+    match &self {
+      Input::Video(path) => ffmpeg::frame_rate(path.as_path()).expect(FAIL_MSG),
+      Input::VapourSynth(path) => vapoursynth::frame_rate(path.as_path()).expect(FAIL_MSG),
+    }
+  }
 }
 
 impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
@@ -129,11 +137,17 @@ impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
   }
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+struct DoneChunk {
+  frames: usize,
+  size_bytes: u64,
+}
+
 /// Concurrent data structure for keeping track of the finished chunks in an encode
 #[derive(Debug, Deserialize, Serialize)]
 struct DoneJson {
   frames: AtomicUsize,
-  done: DashMap<String, usize>,
+  done: DashMap<String, DoneChunk>,
   audio_done: AtomicBool,
 }
 

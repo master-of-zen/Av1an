@@ -1,9 +1,13 @@
+use crate::progress_bar::update_progress_bar_estimates;
+use crate::DoneChunk;
 use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
   progress_bar::{dec_bar, dec_mp_bar},
   settings::EncodeArgs,
   Chunk, Instant, TargetQuality, Verbosity,
 };
+use std::sync::atomic::{self, AtomicU64};
+use std::sync::Arc;
 use std::{
   fmt::{Debug, Display},
   fs::File,
@@ -86,7 +90,12 @@ impl Display for EncoderCrash {
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   #[allow(clippy::needless_pass_by_value)]
-  pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
+  pub fn encoding_loop(
+    self,
+    tx: Sender<()>,
+    mut set_thread_affinity: Option<usize>,
+    audio_size_bytes: Arc<AtomicU64>,
+  ) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -115,11 +124,14 @@ impl<'a> Broker<'a> {
         }
       }
 
+      let frame_rate = self.project.input.frame_rate();
+
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.workers)
           .map(|idx| (receiver.clone(), &self, idx))
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
+            let audio_size_ref = Arc::clone(&audio_size_bytes);
             s.spawn(move |_| {
               cfg_if! {
                 if #[cfg(any(target_os = "linux", target_os = "windows"))] {
@@ -137,7 +149,12 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
+                if let Err(e) = queue.encode_chunk(
+                  &mut chunk,
+                  worker_id,
+                  frame_rate,
+                  Arc::clone(&audio_size_ref),
+                ) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -162,7 +179,13 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), EncoderCrash> {
+  fn encode_chunk(
+    &self,
+    chunk: &mut Chunk,
+    worker_id: usize,
+    frame_rate: f64,
+    audio_size_bytes: Arc<AtomicU64>,
+  ) -> Result<(), EncoderCrash> {
     let st_time = Instant::now();
 
     // space padding at the beginning to align with "finished chunk"
@@ -206,12 +229,28 @@ impl<'a> Broker<'a> {
       let fps = encoded_frames as f64 / enc_time.as_secs_f64();
 
       let progress_file = Path::new(&self.project.temp).join("done.json");
-      get_done().done.insert(chunk.name(), encoded_frames);
+      get_done().done.insert(
+        chunk.name(),
+        DoneChunk {
+          frames: encoded_frames,
+          size_bytes: Path::new(&chunk.output())
+            .metadata()
+            .expect("Unable to get size of finished chunk")
+            .len(),
+        },
+      );
 
       let mut progress_file = File::create(&progress_file).unwrap();
       progress_file
         .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
         .unwrap();
+
+      update_progress_bar_estimates(
+        frame_rate,
+        self.project.frames,
+        self.project.verbosity,
+        audio_size_bytes.load(atomic::Ordering::SeqCst),
+      );
 
       debug!(
         "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",

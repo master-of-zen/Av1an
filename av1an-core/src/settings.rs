@@ -969,7 +969,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
       // more than MAX_TRIES. So, we have to explicitly exit the program if that happens.
-      while let Ok(()) = rx.recv() {
+      while rx.recv().is_ok() {
         exit(1);
       }
 

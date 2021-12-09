@@ -257,7 +257,7 @@ impl<'a> TargetQuality<'a> {
         .join(format!("v_{}{}.ivf", q, chunk.name()));
     let fl_path = Path::new(&chunk.temp)
       .join("split")
-      .join(format!("{}.json", chunk.name()));
+      .join(format!("{}.bin", chunk.name()));
 
     vmaf::run_vmaf(
       &probe_name,

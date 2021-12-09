@@ -1,3 +1,7 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
 #[macro_export]
 macro_rules! regex {
   ($re:literal $(,)?) => {{
@@ -120,6 +124,19 @@ macro_rules! create_dir {
 #[inline]
 pub(crate) fn printable_base10_digits(x: usize) -> u32 {
   (((x as f64).log10() + 1.0).floor() as u32).max(1)
+}
+
+pub(crate) fn read_bytes<P: AsRef<Path>>(p: P) -> Result<Vec<u8>, std::io::Error> {
+  fn inner(path: &Path) -> Result<Vec<u8>, std::io::Error> {
+    let mut buffer = Vec::with_capacity(4096);
+
+    let mut file = File::open(path)?;
+    file.read_to_end(&mut buffer)?;
+
+    Ok(buffer)
+  }
+
+  inner(p.as_ref())
 }
 
 #[cfg(test)]

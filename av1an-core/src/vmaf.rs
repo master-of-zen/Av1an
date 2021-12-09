@@ -1,5 +1,5 @@
 use crate::broker::EncoderCrash;
-use crate::util::printable_base10_digits;
+use crate::util::{printable_base10_digits, read_bytes};
 use crate::{ffmpeg, ref_smallvec, Input};
 use anyhow::anyhow;
 use plotters::prelude::*;
@@ -257,9 +257,9 @@ pub fn run_vmaf(
   Ok(())
 }
 
-pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
-  let json_str = std::fs::read_to_string(file).unwrap();
-  let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
+pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, bincode::Error> {
+  let buffer = read_bytes(file)?;
+  let bazs = bincode::deserialize::<VmafResult>(&buffer)?;
   let v = bazs
     .frames
     .into_iter()
@@ -269,10 +269,7 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
   Ok(v)
 }
 
-pub fn read_weighted_vmaf(
-  file: impl AsRef<Path>,
-  percentile: f64,
-) -> Result<f64, serde_json::Error> {
+pub fn read_weighted_vmaf(file: impl AsRef<Path>, percentile: f64) -> Result<f64, bincode::Error> {
   let mut scores = read_vmaf_file(file).unwrap();
 
   Ok(get_percentile(&mut scores, percentile))

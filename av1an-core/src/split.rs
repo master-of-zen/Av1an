@@ -4,12 +4,13 @@ use serde::{Deserialize, Serialize};
 use std::{
   fs::File,
   io::prelude::*,
-  io::BufReader,
   iter,
   path::Path,
   process::{Command, Stdio},
   string::ToString,
 };
+
+use crate::util::read_bytes;
 
 pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usize]) {
   let input = input.as_ref();
@@ -103,23 +104,21 @@ pub fn write_scenes_to_file(
   };
 
   // serializing the data should never fail, so unwrap is OK
-  let serialized = serde_json::to_string(&data).unwrap();
+  let serialized = bincode::serialize(&data).unwrap();
 
   let mut file = File::create(scene_path)?;
 
-  file.write_all(serialized.as_bytes())?;
+  file.write_all(&serialized)?;
 
   Ok(())
 }
 
 pub fn read_scenes_from_file(scene_path: &Path) -> anyhow::Result<(Vec<usize>, usize)> {
-  let file = File::open(scene_path)?;
+  let buffer = read_bytes(scene_path)?;
 
-  let reader = BufReader::new(file);
-
-  let data: ScenesData = serde_json::from_reader(reader).with_context(|| {
+  let data: ScenesData = bincode::deserialize(&buffer).with_context(|| {
     format!(
-      "Failed to parse scenes file {:?}, this likely means that the scenes file is corrupted",
+      "Failed to deserialize scenes file {:?}, this likely means that the scenes file is corrupted",
       scene_path
     )
   })?;

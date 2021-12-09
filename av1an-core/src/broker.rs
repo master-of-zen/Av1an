@@ -228,9 +228,9 @@ impl<'a> Broker<'a> {
       let enc_time = st_time.elapsed();
       let fps = encoded_frames as f64 / enc_time.as_secs_f64();
 
-      let progress_file = Path::new(&self.project.temp).join("done.json");
+      let progress_file = Path::new(&self.project.temp).join("done.bin");
       get_done().done.insert(
-        chunk.name(),
+        chunk.index,
         DoneChunk {
           frames: encoded_frames,
           size_bytes: Path::new(&chunk.output())
@@ -242,7 +242,7 @@ impl<'a> Broker<'a> {
 
       let mut progress_file = File::create(&progress_file).unwrap();
       progress_file
-        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
+        .write_all(&bincode::serialize(get_done()).unwrap())
         .unwrap();
 
       update_progress_bar_estimates(

@@ -31,7 +31,6 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::{
   collections::hash_map::DefaultHasher,
-  fs,
   fs::File,
   hash::{Hash, Hasher},
   io::Write,
@@ -41,6 +40,7 @@ use std::{
   time::Instant,
 };
 use sysinfo::SystemExt;
+use util::read_bytes;
 
 pub mod broker;
 pub mod chunk;
@@ -145,23 +145,23 @@ struct DoneChunk {
 
 /// Concurrent data structure for keeping track of the finished chunks in an encode
 #[derive(Debug, Deserialize, Serialize)]
-struct DoneJson {
+struct Done {
   frames: AtomicUsize,
-  done: DashMap<String, DoneChunk>,
+  done: DashMap<usize, DoneChunk>,
   audio_done: AtomicBool,
 }
 
-static DONE_JSON: OnceCell<DoneJson> = OnceCell::new();
+static DONE: OnceCell<Done> = OnceCell::new();
 
 // once_cell::sync::Lazy cannot be used here due to Lazy<T> not implementing
 // Serialize or Deserialize, we need to get a reference directly to the global
 // data
-fn get_done() -> &'static DoneJson {
-  DONE_JSON.get().unwrap()
+fn get_done() -> &'static Done {
+  DONE.get().unwrap()
 }
 
-fn init_done(done: DoneJson) -> &'static DoneJson {
-  DONE_JSON.get_or_init(|| done)
+fn init_done(done: Done) -> &'static Done {
+  DONE.get_or_init(|| done)
 }
 
 pub fn list_index(params: &[impl AsRef<str>], is_match: fn(&str) -> bool) -> Option<usize> {
@@ -238,12 +238,12 @@ pub fn hash_path(path: &Path) -> String {
 }
 
 fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
-  let mut file = File::create(Path::new(temp).join("chunks.json"))
-    .with_context(|| "Failed to create chunks.json file")?;
+  let mut file = File::create(Path::new(temp).join("chunks.bin"))
+    .with_context(|| "Failed to create chunks.bin file")?;
 
   file
-    // serializing chunk_queue as json should never fail, so unwrap is OK here
-    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
+    // serializing chunk_queue should never fail, so unwrap is OK here
+    .write_all(&bincode::serialize(&chunk_queue).unwrap())
     .with_context(|| format!("Failed to write serialized chunk_queue data to {:?}", &file))?;
 
   Ok(())
@@ -257,10 +257,10 @@ pub enum Verbosity {
 }
 
 fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
-  let file = Path::new(temp).join("chunks.json");
+  let file = Path::new(temp).join("chunks.bin");
 
-  let contents = fs::read_to_string(&file)
-    .with_context(|| format!("Failed to read chunk queue file {:?}", &file))?;
+  let buffer =
+    read_bytes(&file).with_context(|| format!("Failed to read chunk queue file {:?}", &file))?;
 
-  Ok(serde_json::from_str(&contents)?)
+  Ok(bincode::deserialize(&buffer)?)
 }

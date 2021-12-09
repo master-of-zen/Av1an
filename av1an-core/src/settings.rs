@@ -1,5 +1,6 @@
 use crate::progress_bar::update_progress_bar_estimates;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
+use crate::util::read_bytes;
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::{
   broker::{Broker, EncoderCrash},
@@ -17,7 +18,7 @@ use crate::{
   split::{extra_splits, segment, write_scenes_to_file},
   vapoursynth::create_vs_file,
   vmaf::{self, validate_libvmaf},
-  ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
+  ChunkMethod, DashMap, Done, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
   Verbosity,
 };
 use anyhow::{bail, ensure, Context};
@@ -128,30 +129,30 @@ impl EncodeArgs {
 
     info!("temporary directory: {}", &self.temp);
 
-    let done_json_exists = Path::new(&self.temp).join("done.json").exists();
-    let chunks_json_exists = Path::new(&self.temp).join("chunks.json").exists();
+    let done_bin_exists = Path::new(&self.temp).join("done.bin").exists();
+    let chunks_bin_exists = Path::new(&self.temp).join("chunks.bin").exists();
 
     if self.resume {
-      match (done_json_exists, chunks_json_exists) {
+      match (done_bin_exists, chunks_bin_exists) {
         // both files exist, so there is no problem
         (true, true) => {}
         (false, true) => {
           info!(
-            "resume was set but done.json does not exist in temporary directory {:?}",
+            "resume was set but done.bin does not exist in temporary directory {:?}",
             &self.temp
           );
           self.resume = false;
         }
         (true, false) => {
           info!(
-            "resume was set but chunks.json does not exist in temporary directory {:?}",
+            "resume was set but chunks.bin does not exist in temporary directory {:?}",
             &self.temp
           );
           self.resume = false;
         }
         (false, false) => {
           info!(
-            "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
+            "resume was set but neither chunks.bin nor done.bin exist in temporary directory {:?}",
             &self.temp
           );
           self.resume = false;
@@ -575,12 +576,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   }
 
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
-  // scenes.json and return that.
+  // scenes.bin and return that.
   fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
     let scene_file = self
       .scenes
       .clone()
-      .unwrap_or_else(|| Path::new(&self.temp).join("scenes.json"));
+      .unwrap_or_else(|| Path::new(&self.temp).join("scenes.bin"));
 
     let mut scenes = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())?.0
@@ -848,7 +849,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let done = get_done();
 
       // only keep the chunks that are not done
-      chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
+      chunks.retain(|chunk| !done.done.contains_key(&chunk.index));
 
       Ok(chunks)
     } else {
@@ -859,12 +860,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   }
 
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
-    let done_path = Path::new(&self.temp).join("done.json");
+    let done_path = Path::new(&self.temp).join("done.bin");
 
     // TODO move this to `initialize`?
     let initial_frames = if self.resume && done_path.exists() {
-      let done = fs::read_to_string(done_path)?;
-      let done: DoneJson = serde_json::from_str(&done)?;
+      let done = read_bytes(done_path)?;
+      let done: Done = bincode::deserialize(&done)?;
       self.frames = done.frames.load(atomic::Ordering::Relaxed);
 
       init_done(done)
@@ -874,14 +875,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .sum()
     } else {
       self.frames = self.input.frames();
-      init_done(DoneJson {
+      init_done(Done {
         frames: AtomicUsize::new(self.frames),
         done: DashMap::new(),
         audio_done: AtomicBool::new(false),
       });
 
       let mut done_file = fs::File::create(&done_path).unwrap();
-      done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
+      done_file.write_all(&bincode::serialize(get_done())?)?;
 
       0
     };
@@ -914,10 +915,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           let audio_output = ffmpeg::encode_audio(input, temp, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
 
-          let progress_file = Path::new(temp).join("done.json");
+          let progress_file = Path::new(temp).join("done.bin");
           let mut progress_file = File::create(&progress_file).unwrap();
           progress_file
-            .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
+            .write_all(&bincode::serialize(get_done()).unwrap())
             .unwrap();
 
           if let Some(ref audio_output) = audio_output {

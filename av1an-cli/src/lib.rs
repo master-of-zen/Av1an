@@ -49,7 +49,7 @@ fn version() -> &'static str {
         Some(commit_date),
       ) => {
         format!(
-          "{} (rev {}) ({})
+          "{}-unstable (rev {}) ({})
 
 * Compiler
   rustc {} (LLVM {})

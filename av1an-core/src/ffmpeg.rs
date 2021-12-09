@@ -3,6 +3,7 @@ use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type as MediaType;
 use ffmpeg_next::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
+use std::path::PathBuf;
 use std::{
   ffi::OsStr,
   path::Path,
@@ -111,14 +112,14 @@ pub fn has_audio(file: &Path) -> bool {
 
 /// Encodes the audio using FFmpeg, blocking the current thread.
 ///
-/// This function returns `true` if the audio exists and the audio
-/// successfully encoded, or `false` otherwise.
+/// This function returns `Some(output)` if the audio exists and the audio
+/// successfully encoded, or `None` otherwise.
 #[must_use]
 pub fn encode_audio<S: AsRef<OsStr>>(
   input: impl AsRef<Path>,
   temp: impl AsRef<Path>,
   audio_params: &[S],
-) -> bool {
+) -> Option<PathBuf> {
   let input = input.as_ref();
   let temp = temp.as_ref();
 
@@ -147,7 +148,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
     ]);
 
     encode_audio.args(audio_params);
-    encode_audio.arg(audio_file);
+    encode_audio.arg(&audio_file);
 
     let output = encode_audio.output().unwrap();
 
@@ -156,12 +157,12 @@ pub fn encode_audio<S: AsRef<OsStr>>(
         "FFmpeg failed to encode audio!\n{:#?}\nParams: {:?}",
         output, encode_audio
       );
-      return false;
+      return None;
     }
 
-    true
+    Some(audio_file)
   } else {
-    false
+    None
   }
 }
 

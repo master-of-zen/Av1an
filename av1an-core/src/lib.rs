@@ -140,9 +140,7 @@ impl<P: AsRef<Path> + Into<PathBuf>> From<P> for Input {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 struct DoneChunk {
   frames: usize,
-  // Currently an Option for backwards compatibility,
-  // since this field was added recently.
-  size_kb: u32,
+  size_bytes: u64,
 }
 
 /// Concurrent data structure for keeping track of the finished chunks in an encode

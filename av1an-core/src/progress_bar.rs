@@ -1,5 +1,6 @@
 use crate::get_done;
 use crate::Verbosity;
+use indicatif::HumanBytes;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use once_cell::sync::OnceCell;
 
@@ -58,9 +59,9 @@ pub fn dec_bar(dec: u64) {
   }
 }
 
-pub fn update_bar_info(kbps: f64, est_mb: f64) {
+pub fn update_bar_info(kbps: f64, est_size: HumanBytes) {
   if let Some(pb) = PROGRESS_BAR.get() {
-    pb.set_message(format!(", {:.1} Kbps, est. {:.1} MB", kbps, est_mb));
+    pb.set_message(format!(", {:.1} Kbps, est. {}", kbps, est_size));
   }
 }
 
@@ -161,12 +162,12 @@ pub fn dec_mp_bar(dec: u64) {
   }
 }
 
-pub fn update_mp_bar_info(kbps: f64, est_mb: f64) {
+pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     pbs
       .last()
       .unwrap()
-      .set_message(format!(", {:.1} Kbps, est. {:.1} MB", kbps, est_mb));
+      .set_message(format!(", {:.1} Kbps, est. {}", kbps, est_size));
   }
 }
 
@@ -178,24 +179,30 @@ pub fn finish_multi_progress_bar() {
   }
 }
 
-pub fn update_progress_bar_estimates(frame_rate: f64, total_frames: usize, verbosity: Verbosity) {
+pub fn update_progress_bar_estimates(
+  frame_rate: f64,
+  total_frames: usize,
+  verbosity: Verbosity,
+  audio_size: u64,
+) {
   let completed_frames: usize = get_done()
     .done
     .iter()
     .map(|ref_multi| ref_multi.value().frames)
     .sum();
-  let total_kb: u32 = get_done()
+  let total_size: u64 = get_done()
     .done
     .iter()
-    .map(|ref_multi| ref_multi.value().size_kb)
-    .sum();
+    .map(|ref_multi| ref_multi.value().size_bytes)
+    .sum::<u64>()
+    + audio_size;
   let seconds_completed = completed_frames as f64 / frame_rate;
-  let kbps = f64::from(total_kb) * 8. / seconds_completed;
+  let kbps = total_size as f64 * 8. / 1000. / seconds_completed;
   let progress = completed_frames as f64 / total_frames as f64;
-  let est_mb = f64::from(total_kb) / progress / 1000.;
+  let est_size = total_size as f64 / progress;
   if verbosity == Verbosity::Normal {
-    update_bar_info(kbps, est_mb);
+    update_bar_info(kbps, HumanBytes(est_size as u64));
   } else if verbosity == Verbosity::Verbose {
-    update_mp_bar_info(kbps, est_mb);
+    update_mp_bar_info(kbps, HumanBytes(est_size as u64));
   }
 }

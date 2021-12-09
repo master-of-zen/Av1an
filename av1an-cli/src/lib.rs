@@ -173,6 +173,10 @@ pub struct CliOpts {
   #[structopt(long, possible_values=&["standard", "fast"], default_value = "standard")]
   pub sc_method: ScenecutMethod,
 
+  /// Perform scene detection with this pixel format
+  #[structopt(long)]
+  pub sc_pix_format: Option<Pixel>,
+
   /// Optional downscaling for scenecut detection.
   /// Specify as the desired maximum height to scale to
   /// (e.g. "720" to downscale to 720p--this will leave lower resolution content untouched).
@@ -386,6 +390,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     } else {
       None
     },
+    sc_pix_format: args.sc_pix_format,
     keep: args.keep,
     max_tries: args.max_tries,
     min_q: args.min_q,

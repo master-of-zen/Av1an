@@ -88,6 +88,17 @@ macro_rules! into_array {
   };
 }
 
+#[macro_export]
+macro_rules! into_smallvec {
+  ($($x:expr),* $(,)?) => {
+    smallvec::smallvec![
+      $(
+        $x.into(),
+      )*
+    ]
+  };
+}
+
 /// Attempts to create the directory if it does not exist, logging and returning
 /// and error if creating the directory failed.
 #[macro_export]

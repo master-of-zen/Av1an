@@ -39,7 +39,7 @@ fn pretty_progress_style() -> ProgressStyle {
 /// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
   let pb = PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()));
-  pb.set_draw_target(ProgressDrawTarget::stderr());
+  pb.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
   pb.enable_steady_tick(100);
   pb.reset();
   pb.reset_eta();
@@ -137,7 +137,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize) {
     pb.reset();
     pbs.push(mpb.add(pb));
 
-    mpb.set_draw_target(ProgressDrawTarget::stderr());
+    mpb.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
 
     (mpb, pbs)
   });

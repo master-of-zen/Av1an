@@ -1,0 +1,255 @@
+Usage: aomenc <options> -o dst_filename src_filename
+
+Options:
+            --help                      Show usage options and exit
+  -c <arg>, --cfg=<arg>                 Config file to use
+  -D,       --debug                     Debug mode (makes output deterministic)
+  -o <arg>, --output=<arg>              Output filename
+            --codec=<arg>               Codec to use
+  -p <arg>, --passes=<arg>              Number of passes (1/2/3)
+            --pass=<arg>                Pass to execute (1/2/3)
+            --fpf=<arg>                 First pass statistics file name
+            --limit=<arg>               Stop encoding after n input frames
+            --skip=<arg>                Skip the first n input frames
+            --good                      Use Good Quality Deadline
+            --rt                        Use Realtime Quality Deadline
+            --allintra                  Use all intra mode
+  -q,       --quiet                     Do not print encode progress
+  -v,       --verbose                   Show encoder parameters
+            --psnr=<arg>                Show PSNR in status line(0: Disable PSNR status line display, 1: PSNR calculated using input bit-depth (default), 2: PSNR calculated using stream bit-depth), takes default option when arguments are not specified
+            --webm                      Output WebM (default when WebM IO is enabled)
+            --ivf                       Output IVF
+            --obu                       Output OBU
+            --q-hist=<arg>              Show quantizer histogram (n-buckets)
+            --rate-hist=<arg>           Show rate histogram (n-buckets)
+            --disable-warnings          Disable warnings about potentially incorrect encode settings.
+  -y,       --disable-warning-prompt    Display warnings, but do not prompt user to continue.
+            --test-decode=<arg>         Test encode/decode mismatch
+                                       	  off, fatal, warn
+
+Encoder Global Options:
+            --yv12                      Input file is YV12
+            --i420                      Input file is I420 (default)
+            --i422                      Input file is I422
+            --i444                      Input file is I444
+  -u <arg>, --usage=<arg>               Usage profile number to use (0: good, 1: rt, 2: allintra)
+  -t <arg>, --threads=<arg>             Max number of threads to use
+            --profile=<arg>             Bitstream profile number to use
+  -w <arg>, --width=<arg>               Frame width
+  -h <arg>, --height=<arg>              Frame height
+            --forced_max_frame_width=<arg>
+                                        Maximum frame width value to force
+            --forced_max_frame_height=<arg>
+                                        Maximum frame height value to force
+            --stereo-mode=<arg>         Stereo 3D video format
+                                       	  mono, left-right, bottom-top, top-bottom, right-left
+            --timebase=<arg>            Output timestamp precision (fractional seconds)
+            --fps=<arg>                 Stream frame rate (rate/scale)
+            --global-error-resilient=<arg>
+                                        Enable global error resiliency features
+  -b <arg>, --bit-depth=<arg>           Bit depth for codec (8 for version <=1, 10 or 12 for version 2)
+                                       	  8, 10, 12
+            --input-bit-depth=<arg>     Bit depth of input
+            --lag-in-frames=<arg>       Max number of frames to lag
+            --large-scale-tile=<arg>    Large scale tile coding (0: off (default), 1: on (ivf output only))
+            --monochrome                Monochrome video (no chroma planes)
+            --full-still-picture-hdr    Use full header for still picture
+            --use-16bit-internal        Force use of 16-bit pipeline
+            --annexb=<arg>              Save as Annex-B
+
+Rate Control Options:
+            --drop-frame=<arg>          Temporal resampling threshold (buf %)
+            --resize-mode=<arg>         Frame resize mode
+            --resize-denominator=<arg>  Frame resize denominator
+            --resize-kf-denominator=<arg>
+                                        Frame resize keyframe denominator
+            --superres-mode=<arg>       Frame super-resolution mode
+            --superres-denominator=<arg>
+                                        Frame super-resolution denominator
+            --superres-kf-denominator=<arg>
+                                        Frame super-resolution keyframe denominator
+            --superres-qthresh=<arg>    Frame super-resolution qindex threshold
+            --superres-kf-qthresh=<arg> Frame super-resolution keyframe qindex threshold
+            --end-usage=<arg>           Rate control mode
+                                       	  vbr, cbr, cq, q
+            --target-bitrate=<arg>      Bitrate (kbps)
+            --min-q=<arg>               Minimum (best) quantizer
+            --max-q=<arg>               Maximum (worst) quantizer
+            --undershoot-pct=<arg>      Datarate undershoot (min) target (%)
+            --overshoot-pct=<arg>       Datarate overshoot (max) target (%)
+            --buf-sz=<arg>              Client buffer size (ms)
+            --buf-initial-sz=<arg>      Client initial buffer size (ms)
+            --buf-optimal-sz=<arg>      Client optimal buffer size (ms)
+            --bias-pct=<arg>            CBR/VBR bias (0=CBR, 100=VBR)
+            --minsection-pct=<arg>      GOP min bitrate (% of target)
+            --maxsection-pct=<arg>      GOP max bitrate (% of target)
+
+Keyframe Placement Options:
+            --enable-fwd-kf=<arg>       Enable forward reference keyframes
+            --kf-min-dist=<arg>         Minimum keyframe interval (frames)
+            --kf-max-dist=<arg>         Maximum keyframe interval (frames)
+            --disable-kf                Disable keyframe placement
+            --sframe-dist=<arg>         S-Frame interval (frames)
+            --sframe-mode=<arg>         S-Frame insertion mode (1..2)
+
+AV1 Specific Options:
+            --cpu-used=<arg>            Speed setting (0..6 in good mode, 6..9 in realtime mode)
+            --auto-alt-ref=<arg>        Enable automatic alt reference frames
+            --sharpness=<arg>           Bias towards block sharpness in rate-distortion optimization of transform coefficients (0..7), default is 0
+            --static-thresh=<arg>       Motion detection threshold
+            --row-mt=<arg>              Enable row based multi-threading (0: off, 1: on (default))
+            --tile-columns=<arg>        Number of tile columns to use, log2
+            --tile-rows=<arg>           Number of tile rows to use, log2
+            --enable-tpl-model=<arg>    RDO based on frame temporal dependency (0: off, 1: backward source based). This is required for deltaq mode.
+            --enable-keyframe-filtering=<arg>
+                                        Apply temporal filtering on key frame(0: no filter, 1: filter without overlay (default), 2: filter with overlay - experimental, may break random access in players.)
+            --arnr-maxframes=<arg>      AltRef max frames (0..15)
+            --arnr-strength=<arg>       AltRef filter strength (0..6)
+            --tune=<arg>                Distortion metric tuned with
+                                       	  psnr, ssim, vmaf_with_preprocessing, vmaf_without_preprocessing, vmaf, vmaf_neg, butteraugli, image_perceptual_quality
+            --cq-level=<arg>            Constant/Constrained Quality level
+            --max-intra-rate=<arg>      Max I-frame bitrate (pct)
+            --max-inter-rate=<arg>      Max P-frame bitrate (pct)
+            --gf-cbr-boost=<arg>        Boost for Golden Frame in CBR mode (pct)
+            --lossless=<arg>            Lossless mode (0: false (default), 1: true)
+            --enable-cdef=<arg>         Enable the constrained directional enhancement filter (0: false, 1: true (default), 2: disable for non-reference frames)
+            --enable-restoration=<arg>  Enable the loop restoration filter (0: false (default in Realtime mode), 1: true (default in Non-realtime mode))
+            --enable-rect-partitions=<arg>
+                                        Enable rectangular partitions (0: false, 1: true (default))
+            --enable-ab-partitions=<arg>
+                                        Enable ab partitions (0: false, 1: true (default))
+            --enable-1to4-partitions=<arg>
+                                        Enable 1:4 and 4:1 partitions (0: false, 1: true (default))
+            --min-partition-size=<arg>  Set min partition size (4:4x4, 8:8x8, 16:16x16, 32:32x32, 64:64x64, 128:128x128). On frame with 4k+ resolutions or higher speed settings, the min partition size will have a minimum of 8.
+            --max-partition-size=<arg>  Set max partition size (4:4x4, 8:8x8, 16:16x16, 32:32x32, 64:64x64, 128:128x128)
+            --enable-dual-filter=<arg>  Enable dual filter (0: false, 1: true (default))
+            --enable-chroma-deltaq=<arg>
+                                        Enable chroma delta quant (0: false (default), 1: true)
+            --enable-intra-edge-filter=<arg>
+                                        Enable intra edge filtering (0: false, 1: true (default))
+            --enable-order-hint=<arg>   Enable order hint (0: false, 1: true (default))
+            --enable-tx64=<arg>         Enable 64-pt transform (0: false, 1: true (default))
+            --enable-flip-idtx=<arg>    Enable extended transform type (0: false, 1: true (default)) including FLIPADST_DCT, DCT_FLIPADST, FLIPADST_FLIPADST, ADST_FLIPADST, FLIPADST_ADST, IDTX, V_DCT, H_DCT, V_ADST, H_ADST, V_FLIPADST, H_FLIPADST
+            --enable-rect-tx=<arg>      Enable rectangular transform (0: false, 1: true (default))
+            --enable-dist-wtd-comp=<arg>
+                                        Enable distance-weighted compound (0: false, 1: true (default))
+            --enable-masked-comp=<arg>  Enable masked (wedge/diff-wtd) compound (0: false, 1: true (default))
+            --enable-onesided-comp=<arg>
+                                        Enable one sided compound (0: false, 1: true (default))
+            --enable-interintra-comp=<arg>
+                                        Enable interintra compound (0: false, 1: true (default))
+            --enable-smooth-interintra=<arg>
+                                        Enable smooth interintra mode (0: false, 1: true (default))
+            --enable-diff-wtd-comp=<arg>
+                                        Enable difference-weighted compound (0: false, 1: true (default))
+            --enable-interinter-wedge=<arg>
+                                        Enable interinter wedge compound (0: false, 1: true (default))
+            --enable-interintra-wedge=<arg>
+                                        Enable interintra wedge compound (0: false, 1: true (default))
+            --enable-global-motion=<arg>
+                                        Enable global motion (0: false, 1: true (default))
+            --enable-warped-motion=<arg>
+                                        Enable local warped motion (0: false, 1: true (default))
+            --enable-filter-intra=<arg> Enable filter intra prediction mode (0: false, 1: true (default))
+            --enable-smooth-intra=<arg> Enable smooth intra prediction modes (0: false, 1: true (default))
+            --enable-paeth-intra=<arg>  Enable Paeth intra prediction mode (0: false, 1: true (default))
+            --enable-cfl-intra=<arg>    Enable chroma from luma intra prediction mode (0: false, 1: true (default))
+            --enable-diagonal-intra=<arg>
+                                        Enable diagonal (D45 to D203) intra prediction modes, which are a subset of directional modes. Has no effect if enable-directional-intra is 0 (0: false, 1: true (default))
+            --force-video-mode=<arg>    Force video mode (0: false, 1: true (default))
+            --enable-obmc=<arg>         Enable OBMC (0: false, 1: true (default))
+            --enable-overlay=<arg>      Enable coding overlay frames (0: false, 1: true (default))
+            --enable-palette=<arg>      Enable palette prediction mode (0: false, 1: true (default))
+            --enable-intrabc=<arg>      Enable intra block copy prediction mode (0: false, 1: true (default))
+            --enable-angle-delta=<arg>  Enable intra angle delta (0: false, 1: true (default))
+            --disable-trellis-quant=<arg>
+                                        Disable trellis optimization of quantized coefficients (0: false 1: true  2: true for rd search 3: true for estimate yrd serch (default))
+            --enable-qm=<arg>           Enable quantisation matrices (0: false (default), 1: true)
+            --qm-min=<arg>              Min quant matrix flatness (0..15), default is 8
+            --qm-max=<arg>              Max quant matrix flatness (0..15), default is 15
+            --reduced-tx-type-set=<arg> Use reduced set of transform types
+            --use-intra-dct-only=<arg>  Use DCT only for INTRA modes
+            --use-inter-dct-only=<arg>  Use DCT only for INTER modes
+            --use-intra-default-tx-only=<arg>
+                                        Use Default-transform only for INTRA modes
+            --quant-b-adapt=<arg>       Use adaptive quantize_b
+            --coeff-cost-upd-freq=<arg> Update freq for coeff costs. 0: SB, 1: SB Row per Tile, 2: Tile, 3: Off
+            --mode-cost-upd-freq=<arg>  Update freq for mode costs. 0: SB, 1: SB Row per Tile, 2: Tile, 3: Off
+            --mv-cost-upd-freq=<arg>    Update freq for mv costs. 0: SB, 1: SB Row per Tile, 2: Tile, 3: Off
+            --frame-parallel=<arg>      Enable frame parallel decodability features (0: false (default), 1: true)
+            --error-resilient=<arg>     Enable error resilient features (0: false (default), 1: true)
+            --aq-mode=<arg>             Adaptive quantization mode (0: off (default), 1: variance 2: complexity, 3: cyclic refresh)
+            --deltaq-mode=<arg>         Delta qindex mode (0: off, 1: deltaq objective (default), 2: deltaq placeholder, 3: key frame visual quality, 4: user rating based visual quality optimization). Currently this requires enable-tpl-model as a prerequisite.
+            --deltaq-strength=<arg>     Deltaq strength for --deltaq-mode=4 (%)
+            --delta-lf-mode=<arg>       Enable delta-lf-mode (0: off (default), 1: on)
+            --frame-boost=<arg>         Enable frame periodic boost (0: off (default), 1: on)
+            --noise-sensitivity=<arg>   Noise sensitivity (frames to blur)
+            --tune-content=<arg>        Tune content type
+                                       	  default, screen, film
+            --cdf-update-mode=<arg>     CDF update mode for entropy coding (0: no CDF update, 1: update CDF on all frames(default), 2: selectively update CDF on some frames)
+            --color-primaries=<arg>     Color primaries (CICP) of input content:
+                                       	  bt709, unspecified, bt601, bt470m, bt470bg, smpte240, film, bt2020, xyz, smpte431, smpte432, ebu3213
+            --transfer-characteristics=<arg>
+                                        Transfer characteristics (CICP) of input content:
+                                       	  unspecified, bt709, bt470m, bt470bg, bt601, smpte240, lin, log100, log100sq10, iec61966, bt1361, srgb, bt2020-10bit, bt2020-12bit, smpte2084, hlg, smpte428
+            --matrix-coefficients=<arg> Matrix coefficients (CICP) of input content:
+                                       	  identity, bt709, unspecified, fcc73, bt470bg, bt601, smpte240, ycgco, bt2020ncl, bt2020cl, smpte2085, chromncl, chromcl, ictcp
+            --chroma-sample-position=<arg>
+                                        The chroma sample position when chroma 4:2:0 is signaled:
+                                       	  unknown, vertical, colocated
+            --min-gf-interval=<arg>     min gf/arf frame interval (default 0, indicating in-built behavior)
+            --max-gf-interval=<arg>     max gf/arf frame interval (default 0, indicating in-built behavior)
+            --gf-min-pyr-height=<arg>   Min height for GF group pyramid structure (0 (default) to 5)
+            --gf-max-pyr-height=<arg>   maximum height for GF group pyramid structure (0 to 5 (default))
+            --sb-size=<arg>             Superblock size to use
+                                       	  dynamic, 64, 128
+            --num-tile-groups=<arg>     Maximum number of tile groups, default is 1
+            --mtu-size=<arg>            MTU size for a tile group, default is 0 (no MTU targeting), overrides maximum number of tile groups
+            --timing-info=<arg>         Signal timing info in the bitstream (model unly works for no hidden frames, no super-res yet):
+                                       	  unspecified, constant, model
+            --film-grain-test=<arg>     Film grain test vectors (0: none (default), 1: test-1  2: test-2, ... 16: test-16)
+            --film-grain-table=<arg>    Path to file containing film grain parameters
+            --denoise-noise-level=<arg> Amount of noise (from 0 = don't denoise, to 50)
+            --denoise-block-size=<arg>  Denoise block size (default = 32)
+            --enable-dnl-denoising=<arg>
+                                        Apply denoising to the frame being encoded when denoise-noise-level is enabled (0: false, 1: true (default))
+            --max-reference-frames=<arg>
+                                        maximum number of reference frames allowed per frame (3 to 7 (default))
+            --reduced-reference-set=<arg>
+                                        Use reduced set of single and compound references (0: off (default), 1: on)
+            --enable-ref-frame-mvs=<arg>
+                                        Enable temporal mv prediction (default is 1)
+            --target-seq-level-idx=<arg>
+                                        Target sequence level index. Possible values are in the form of "ABxy"(pad leading zeros if less than 4 digits). AB: Operating point(OP) index, xy: Target level index for the OP. E.g. "0" means target level index 0 for the 0th OP, "1021" means target level index 21 for the 10th OP.
+            --set-tier-mask=<arg>       Set bit mask to specify which tier each of the 32 possible operating points conforms to. Bit value 0(defualt): Main Tier, 1: High Tier.
+            --min-cr=<arg>              Set minimum compression ratio. Take integer values. Default is 0. If non-zero, encoder will try to keep the compression ratio of each frame to be higher than the given value divided by 100.
+            --vbr-corpus-complexity-lap=<arg>
+                                        Set average corpus complexity per mb for single pass VBR using lap. (0..10000), default is 0
+            --input-chroma-subsampling-x=<arg>
+                                        chroma subsampling x value.
+            --input-chroma-subsampling-y=<arg>
+                                        chroma subsampling y value.
+            --dv-cost-upd-freq=<arg>    Update freq for dv costs. 0: SB, 1: SB Row per Tile, 2: Tile, 3: Off
+            --partition-info-path=<arg> Partition information read and write path
+            --enable-directional-intra=<arg>
+                                        Enable directional intra prediction modes (0: false, 1: true (default))
+            --enable-tx-size-search=<arg>
+                                        Enable transform size search to find the best size for each block. If false, transforms always have the largest possible size (0: false, 1: true (default))
+            --loopfilter-control=<arg>  Control loop filtering (0: Loopfilter disabled for all frames, 1: Enable loopfilter for all frames (default), 2: Disable loopfilter for non-reference frames, 3: Disable loopfilter for frames with low motion
+            --auto-intra-tools-off=<arg>
+                                        Automatically turn off several intra coding tools for allintra mode. Only in effect if --deltaq-mode=3.
+  -p <arg>, --passes=<arg>              Number of passes (1/2/3)
+            --two-pass-output=<arg>     The output file for the first two passes for three-pass encoding.
+  -spf <arg>, --second-pass-log=<arg>   Log file from second pass.
+            --fwd-kf-dist=<arg>         Set distance between forward keyframes. A value of -1 means no repetitive forward keyframes. Default is -1.
+
+Stream timebase (--timebase):
+  The desired precision of timestamps in the output, expressed
+  in fractional seconds. Default is 1/1000.
+
+Included encoders:
+
+    av1    - AOMedia Project AV1 Encoder 3.2.0-295-g00d80b8bcb (default)
+
+        Use --codec to switch to a non-default encoder.
+

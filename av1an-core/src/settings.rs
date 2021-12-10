@@ -1,3 +1,4 @@
+use crate::parse::valid_params;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
     finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
     update_mp_msg,
   },
-  read_chunk_queue, regex, save_chunk_queue,
+  read_chunk_queue, save_chunk_queue,
   scene_detect::av_scenechange_detect,
   split::{extra_splits, segment, write_scenes_to_file},
   vapoursynth::create_vs_file,
@@ -23,6 +24,7 @@ use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::{
   borrow::Cow,
@@ -363,29 +365,23 @@ impl EncodeArgs {
   }
 
   fn validate_encoder_params(&self) {
-    /// Returns the set of valid parameters given a help text of an encoder
-    #[must_use]
-    fn valid_params(help_text: &str) -> HashSet<&str> {
-      regex!(r"\s+(-\w+|(?:--\w+(?:-\w+)*))")
-        .find_iter(help_text)
-        .filter_map(|m| m.as_str().split_ascii_whitespace().next())
-        .collect()
-    }
-
     #[must_use]
     fn invalid_params<'a>(
       params: &'a [&'a str],
-      valid_options: &'a HashSet<&'a str>,
+      valid_options: &'a HashSet<Cow<'a, str>>,
     ) -> Vec<&'a str> {
       params
         .iter()
-        .filter(|param| !valid_options.contains(*param))
+        .filter(|param| !valid_options.contains(Borrow::<str>::borrow(&**param)))
         .copied()
         .collect()
     }
 
     #[must_use]
-    fn suggest_fix<'a>(wrong_arg: &str, arg_dictionary: &'a HashSet<&'a str>) -> Option<&'a str> {
+    fn suggest_fix<'a>(
+      wrong_arg: &str,
+      arg_dictionary: &'a HashSet<Cow<'a, str>>,
+    ) -> Option<&'a str> {
       // Minimum threshold to consider a suggestion similar enough that it could be a typo
       const MIN_THRESHOLD: f64 = 0.75;
 
@@ -393,9 +389,9 @@ impl EncodeArgs {
         .iter()
         .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
-        .and_then(|(&suggestion, score)| {
+        .and_then(|(suggestion, score)| {
           if score > MIN_THRESHOLD {
-            Some(suggestion)
+            Some(suggestion.borrow())
           } else {
             None
           }
@@ -423,7 +419,7 @@ impl EncodeArgs {
       let [cmd, arg] = self.encoder.help_command();
       String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap()
     };
-    let valid_params = valid_params(&help_text);
+    let valid_params = valid_params(&help_text, self.encoder);
     let invalid_params = invalid_params(&video_params, &valid_params);
 
     for wrong_param in &invalid_params {

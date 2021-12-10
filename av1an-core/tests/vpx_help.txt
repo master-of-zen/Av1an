@@ -1,0 +1,167 @@
+Usage: vpxenc <options> -o dst_filename src_filename
+
+Options:
+            --help                     	Show usage options and exit
+  -D,       --debug                    	Debug mode (makes output deterministic)
+  -o <arg>, --output=<arg>             	Output filename
+            --codec=<arg>              	Codec to use
+  -p <arg>, --passes=<arg>             	Number of passes (1/2)
+            --pass=<arg>               	Pass to execute (1/2)
+            --fpf=<arg>                	First pass statistics file name
+            --limit=<arg>              	Stop encoding after n input frames
+            --skip=<arg>               	Skip the first n input frames
+  -d <arg>, --deadline=<arg>           	Deadline per frame (usec)
+            --best                     	Use Best Quality Deadline
+            --good                     	Use Good Quality Deadline
+            --rt                       	Use Realtime Quality Deadline
+  -q,       --quiet                    	Do not print encode progress
+  -v,       --verbose                  	Show encoder parameters
+            --psnr                     	Show PSNR in status line
+            --webm                     	Output WebM (default when WebM IO is enabled)
+            --ivf                      	Output IVF
+  -P,       --output-partitions        	Makes encoder output partitions. Requires IVF output!
+            --q-hist=<arg>             	Show quantizer histogram (n-buckets)
+            --rate-hist=<arg>          	Show rate histogram (n-buckets)
+            --disable-warnings         	Disable warnings about potentially incorrect encode settings.
+  -y,       --disable-warning-prompt   	Display warnings, but do not prompt user to continue.
+            --test-decode=<arg>        	Test encode/decode mismatch
+                                       	  off, fatal, warn
+
+Encoder Global Options:
+            --nv12                     	Input file is NV12
+            --yv12                     	Input file is YV12
+            --i420                     	Input file is I420 (default)
+            --i422                     	Input file is I422
+            --i444                     	Input file is I444
+            --i440                     	Input file is I440
+  -u <arg>, --usage=<arg>              	Usage profile number to use
+  -t <arg>, --threads=<arg>            	Max number of threads to use
+            --profile=<arg>            	Bitstream profile number to use
+  -w <arg>, --width=<arg>              	Frame width
+  -h <arg>, --height=<arg>             	Frame height
+            --stereo-mode=<arg>        	Stereo 3D video format
+                                       	  mono, left-right, bottom-top, top-bottom, right-left
+            --timebase=<arg>           	Output timestamp precision (fractional seconds)
+            --fps=<arg>                	Stream frame rate (rate/scale)
+            --error-resilient=<arg>    	Enable error resiliency features
+            --test-16bit-internal      	Force use of 16 bit internal buffer
+            --lag-in-frames=<arg>      	Max number of frames to lag
+
+Rate Control Options:
+            --drop-frame=<arg>         	Temporal resampling threshold (buf %)
+            --resize-allowed=<arg>     	Spatial resampling enabled (bool)
+            --resize-width=<arg>       	Width of encoded frame
+            --resize-height=<arg>      	Height of encoded frame
+            --resize-up=<arg>          	Upscale threshold (buf %)
+            --resize-down=<arg>        	Downscale threshold (buf %)
+            --end-usage=<arg>          	Rate control mode
+                                       	  vbr, cbr, cq, q
+            --target-bitrate=<arg>     	Bitrate (kbps)
+            --min-q=<arg>              	Minimum (best) quantizer
+            --max-q=<arg>              	Maximum (worst) quantizer
+            --undershoot-pct=<arg>     	Datarate undershoot (min) target (%)
+            --overshoot-pct=<arg>      	Datarate overshoot (max) target (%)
+            --buf-sz=<arg>             	Client buffer size (ms)
+            --buf-initial-sz=<arg>     	Client initial buffer size (ms)
+            --buf-optimal-sz=<arg>     	Client optimal buffer size (ms)
+
+Twopass Rate Control Options:
+            --bias-pct=<arg>           	CBR/VBR bias (0=CBR, 100=VBR)
+            --minsection-pct=<arg>     	GOP min bitrate (% of target)
+            --maxsection-pct=<arg>     	GOP max bitrate (% of target)
+            --corpus-complexity=<arg>  	corpus vbr complexity midpoint
+
+Keyframe Placement Options:
+            --kf-min-dist=<arg>        	Minimum keyframe interval (frames)
+            --kf-max-dist=<arg>        	Maximum keyframe interval (frames)
+            --disable-kf               	Disable keyframe placement
+
+VP8 Specific Options:
+            --cpu-used=<arg>           	CPU Used (-16..16)
+            --auto-alt-ref=<arg>       	Enable automatic alt reference frames. (0..1)
+            --noise-sensitivity=<arg>  	Noise sensitivity (frames to blur)
+            --sharpness=<arg>          	Increase sharpness at the expense of lower PSNR. (0..7)
+            --static-thresh=<arg>      	Motion detection threshold
+            --token-parts=<arg>        	Number of token partitions to use, log2
+            --arnr-maxframes=<arg>     	AltRef max frames (0..15)
+            --arnr-strength=<arg>      	AltRef filter strength (0..6)
+            --arnr-type=<arg>          	AltRef filter type (1..3)
+            --tune=<arg>               	Material to favor
+                                       	  psnr, ssim
+            --cq-level=<arg>           	Constant/Constrained Quality level
+            --max-intra-rate=<arg>     	Max I-frame bitrate (pct)
+            --gf-cbr-boost=<arg>       	Boost for Golden Frame in CBR mode (pct)
+            --screen-content-mode=<arg 	Screen content mode
+
+VP9 Specific Options:
+            --cpu-used=<arg>           	CPU Used (-9..9)
+            --auto-alt-ref=<arg>       	Enable automatic alt reference frames, 2+ enables multi-layer. (0..6)
+            --sharpness=<arg>          	Increase sharpness at the expense of lower PSNR. (0..7)
+            --static-thresh=<arg>      	Motion detection threshold
+            --tile-columns=<arg>       	Number of tile columns to use, log2
+            --tile-rows=<arg>          	Number of tile rows to use, log2 (set to 0 while threads > 1)
+            --enable-tpl=<arg>         	Enable temporal dependency model
+            --arnr-maxframes=<arg>     	AltRef max frames (0..15)
+            --arnr-strength=<arg>      	AltRef filter strength (0..6)
+            --arnr-type=<arg>          	AltRef filter type (1..3)
+            --tune=<arg>               	Material to favor
+                                       	  psnr, ssim
+            --cq-level=<arg>           	Constant/Constrained Quality level
+            --max-intra-rate=<arg>     	Max I-frame bitrate (pct)
+            --max-inter-rate=<arg>     	Max P-frame bitrate (pct)
+            --gf-cbr-boost=<arg>       	Boost for Golden Frame in CBR mode (pct)
+            --lossless=<arg>           	Lossless mode (0: false (default), 1: true)
+            --frame-parallel=<arg>     	Enable frame parallel decodability features
+            --aq-mode=<arg>            	Adaptive quantization mode (0: off (default), 1: variance 2: complexity, 3: cyclic refresh, 4: equator360)
+            --alt-ref-aq=<arg>         	Special adaptive quantization for the alternate reference frames.
+            --frame-boost=<arg>        	Enable frame periodic boost (0: off (default), 1: on)
+            --noise-sensitivity=<arg>  	Noise sensitivity (frames to blur)
+            --tune-content=<arg>       	Tune content type
+                                       	  default, screen, film
+            --color-space=<arg>        	The color space of input content:
+                                       	  unknown, bt601, bt709, smpte170, smpte240, bt2020, reserved, sRGB
+            --min-gf-interval=<arg>    	min gf/arf frame interval (default 0, indicating in-built behavior)
+            --max-gf-interval=<arg>    	max gf/arf frame interval (default 0, indicating in-built behavior)
+            --target-level=<arg>       	Target level
+                                        255: off (default)
+                                          0: only keep level stats
+                                          1: adaptively set alt-ref distance and column tile limit based on picture size, and keep level stats
+                                         10: level 1.0  11: level 1.1  ...  62: level 6.2
+            --row-mt=<arg>             	Enable row based non-deterministic multi-threading in VP9
+            --disable-loopfilter=<arg> 	Control Loopfilter in VP9
+0: Loopfilter on for all frames (default)
+1: Loopfilter off for non reference frames
+2: Loopfilter off for all frames
+  -b <arg>, --bit-depth=<arg>          	Bit depth for codec (8 for version <=1, 10 or 12 for version 2)
+                                       	  8, 10, 12
+            --input-bit-depth=<arg>    	Bit depth of input
+
+Vizier Rate Control Options:
+            --use-vizier-rc-params=<ar 	Use vizier rc params
+            --active-wq-factor=<arg>   	Active worst quality factor
+            --err-per-mb-factor=<arg>  	Error per macroblock factor
+            --sr-default-decay-limit=< 	Second reference default decay limit
+            --sr-diff-factor=<arg>     	Second reference diff factor
+            --kf-err-per-mb-factor=<ar 	Keyframe error per macroblock factor
+            --kf-frame-min-boost-facto 	Keyframe min boost
+            --kf-frame-max-boost-first 	Max keyframe boost adjustment factor for first frame
+            --kf-frame-max-boost-subs- 	Max boost adjustment factor for subsequent KFs
+            --kf-max-total-boost-facto 	Keyframe max total boost factor
+            --gf-max-total-boost-facto 	Golden frame max total boost factor
+            --gf-frame-max-boost-facto 	Golden frame max per frame boost factor
+            --zm-factor=<arg>          	Zero motion power factor
+            --rd-mult-inter-qp-fac=<ar 	RD multiplier adjustment for inter frames
+            --rd-mult-arf-qp-fac=<arg> 	RD multiplier adjustment for alt-ref frames
+            --rd-mult-key-qp-fac=<arg> 	RD multiplier adjustment for key frames
+
+Stream timebase (--timebase):
+  The desired precision of timestamps in the output, expressed
+  in fractional seconds. Default is 1/1000.
+
+Included encoders:
+
+    vp8    - WebM Project VP8 Encoder v1.11.0
+    vp9    - WebM Project VP9 Encoder v1.11.0 (default)
+
+        Use --codec to switch to a non-default encoder.
+

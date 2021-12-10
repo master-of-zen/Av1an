@@ -1,0 +1,138 @@
+Usage: SvtAv1EncApp <options> -b dst_filename -i src_filename
+
+Examples:
+Two passes encode (VBR only):
+    SvtAv1EncApp <--stats svtav1_2pass.log> --rc 1 --tbr 1000 --pass 1 -b dst_filename -i src_filename
+    SvtAv1EncApp <--stats svtav1_2pass.log> --rc 1 --tbr 1000 --pass 2 -b dst_filename -i src_filename
+Or a combined cli:
+    SvtAv1EncApp <--stats svtav1_2pass.log> --passes 2 --rc 1 --tbr 1000 -b dst_filename -i src_filename
+
+Options:
+      --help                       Show usage options and exit
+  -i, --input                      Input filename
+  -b, --output                     Output filename
+      --errlog                     Error filename
+  -o, --recon                      Recon filename
+      --stat-file                  Stat filename
+      --preset                     Encoder mode/Preset used (-2 (debugging preset),-1 (debugging preset),0 - 8 [default]) thehigher the preset, the higher the speed, the lower the preset, the lower the quality
+
+Encoder Global Options:
+  -w, --width                      Frame width
+  -h, --height                     Frame height
+  -n, --frames                     Stop encoding after n input frames
+      --nb                         Buffer n input frames
+      --progress                   Change verbosity of the output (0: no progress is printed, 1: default, 2: aomenc style machine parsable output)
+      --no-progress                Do not print out progress, if set to 1 it is equivalent to `--progress 0`, else  `--progress 1`
+      --color-format               Set encoder color format(YUV400, YUV420, YUV422, YUV444 : YUV420 [default])
+      --profile                    Bitstream profile number to use(0: main profile[default], 1: high profile, 2: professional profile)
+      --fps                        Stream frame rate (rate/scale)
+      --fps-num                    Stream frame rate numerator
+      --fps-denom                  Stream frame rate denominator
+      --input-depth                Bit depth for codec(8 or 10)
+      --16bit-pipeline             Bit depth for enc-dec(0: lbd[default], 1: hbd)
+      --compressed-ten-bit-format    Offline packing of the 2bits: requires two bits packed input (0: OFF[default], 1: ON)
+      --inj                        Inject pictures at defined frame rate(0: OFF[default],1: ON)
+      --inj-frm-rt                 Set injector frame rate
+      --hierarchical-levels        Set hierarchical levels (0 - 5 : 4 [default])
+      --pred-struct                Set prediction structure( 0: low delay P, 1: low delay B, 2: random access [default])
+      --enable-stat-report         outputs psnr ssim metrics at the end of the encode    (0: OFF[default], 1: ON)
+      --asm                        Limit assembly instruction set [0 - 11] or [c, mmx, sse, sse2, sse3, ssse3, sse4_1, sse4_2, avx, avx2, avx512, max], by default highest level supported by CPU
+      --lp                          target number of logical cores to be used (1-max number of cores on machine[default])
+      --unpin                      Allows the execution to be pined/unpined to/from specific cores set by --lp
+The combinational use of --unpin with --lp results in memory reduction while allowing the execution to work on any of the cores and not restrict it to specific cores
+--unpin is overwritten to 0 when --ss is set to 0 or 1. ( 0: OFF ,1: ON [default])
+Example: 72 core machine:
+72 jobs x -- lp 1 -- unpin 1
+36 jobs x -- lp 2 -- unpin 1
+18 jobs x -- lp 4 -- unpin 1
+      --ss                         Specify  which socket the encoder runs on--unpin is overwritten to 0 when --ss is set to 0 or 1
+
+Rate Control Options:
+      --rc                         Rate control mode(0 = CQP if --enable-tpl-la is set to 0, else CRF , 1 = VBR)
+      --tbr                        Target Bitrate (kbps)
+      --use-q-file                 Overwrite QP assignment using qp values in QP file
+      --use-fixed-qindex-offsets   Use fixed QIndex offset
+      --key-frame-qindex-offset    Key Frame QIndex Offset
+      --key-frame-chroma-qindex-offset   Key Frame Chroma QIndex Offset
+      --qindex-offsets             QIndexOffsets
+      --chroma-qindex-offsets      ChromaQIndexOffsets
+      --qpfile                     Path to Qp file
+  -q, --qp                         Constant/Constrained Quality level
+      --crf                        Constant Rate Factor, equal to --rc 0 --enable-tpl-la 1 --qp x
+      --max-qp                     Maximum (worst) quantizer[0-63] only applicable  when --rc > 0
+      --min-qp                     Minimum (best) quantizer[0-63] only applicable when --rc > 0
+      --adaptive-quantization      Set adaptive QP level(0: OFF ,1: variance base using segments ,2: Deltaq pred efficiency)
+      --vbv-bufsize                VBV buffer size
+      --undershoot-pct             Datarate undershoot (min) target (%)
+      --overshoot-pct              Datarate overshoot (max) target (%)
+      --recode-loop                Recode loop levels    (0 : OFF, 1: Allow recode for KF and exceeding maximum frame bandwidth, 2:Allow recode only for KF/ARF/GF frames, 3: Allow recode for all frames based on bitrate constraints, 4: preset based decision [Default])
+
+Twopass Options:
+      --pass                       Multipass bitrate control (1: first pass, generates stats file , 2: second pass, uses stats file)
+      --stats                      Filename for 2 pass stats("svtav1_2pass.log" : [Default])
+      --passes                     Number of passes (1: one pass encode, 2: two passes encode) applicable only for rc > 0
+      --bias-pct                   CBR/VBR bias (0=CBR-like, 100=VBR-like)
+      --minsection-pct             GOP min bitrate (% of target)
+      --maxsection-pct             GOP max bitrate (% of target)
+
+GOP size and type Options:
+      --keyint                     Intra period interval(frames) (-2: default intra period , -1: No intra update or [0 - 2^31-2]; [-2-255] if RateControlMode >= 1)
+      --irefresh-type              Intra refresh type (1: FWD Frame (Open GOP), 2: KEY Frame (Closed GOP)[default])
+  --lookahead, -lad                         The lookahead option is currently disabled (forced to 0) until further work is done on rate control
+
+AV1 Specific Options:
+      --tile-rows                  Number of tile rows to use, log2[0-6]
+      --tile-columns               Number of tile columns to use, log2[0-4]
+      --disable-dlf                Disable loop filter(0: loop filter enabled[default] ,1: loop filter disabled)
+      --cdef-level                 CDEF Level, 0: OFF, 1-5: ON with 64,16,8,4,1 step refinement, -1: DEFAULT
+      --enable-restoration-filtering    Enable the loop restoration filter(0: OFF ,1: ON ,-1:DEFAULT)
+      --sg-filter-mode             Self-guided filter mode (0:OFF, 1: step 0, 2: step 1, 3: step 4, 4: step 16, -1: DEFAULT)
+      --wn-filter-mode             Wiener filter mode (0:OFF, 1: 3-Tap luma/ 3-Tap chroma, 2: 5-Tap luma/ 5-Tap chroma, 3: 7-Tap luma/ 7-Tap chroma, -1: DEFAULT)
+      --mrp-level                  Multi reference frame levels( 0: OFF, 1: FULL, 2: Level1 .. 9: Level8,  -1: DEFAULT)
+      --enable-tpl-la              RDO based on frame temporal dependency (0: off, 1: backward source based)
+      --enable-mfmv                Enable motion field motion vector( 0: OFF, 1: ON, -1: DEFAULT)
+      --enable-redundant-blk       Use the same md results(mode, residual , cost,etc..)as the previously processed identical block(0: OFF, 1: ON, -1: DEFAULT)
+      --enable-spatial-sse-full-loop-level    Enable spatial sse full loop(0: OFF, 1: ON, -1: DEFAULT)
+      --enable-over-bndry-blk      Enable over boundary block mode (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-new-nrst-near-comb    Enable new nearest near comb injection (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-nsq-table-use       Enable nsq table (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-framend-cdf-upd-mode    Enable frame end cdf update mode (0: OFF, 1: ON, -1: DEFAULT)
+      --chroma-mode                Select chroma mode([0-3], -1: DEFAULT)
+      --disable-cfl                Disable chroma from luma (CFL) flag (0: OFF (do not disable), 1: ON (disable), -1: DEFAULT)
+      --enable-local-warp          Enable warped motion use , 0 = OFF, 1 = ON, -1 = DEFAULT
+      --enable-global-motion       Enable global motion (0: OFF, 1: ON [default])
+      --intra-angle-delta          Enable intra angle delta filtering filtering (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-interintra-comp     Enable interintra compound (0: OFF, 1: ON (default))
+      --enable-paeth               Enable paeth (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-smooth              Enable smooth (0: OFF, 1: ON, -1: DEFAULT)
+      --obmc-level                 OBMC Level(0: OFF, 1: Fully ON, 2 and 3 are faster levels, -1: DEFAULT)
+      --rdoq-level                 Enable RDOQ (0: OFF, 1: ON, -1: DEFAULT)
+      --filter-intra-level         Enable filter intra prediction mode (0: OFF, 1: ON [default])
+      --enable-intra-edge-filter    Enable intra edge filter (0: OFF, 1: ON, -1: DEFAULT)
+      --enable-pic-based-rate-est    Enable picture based rate estimation (0: OFF, 1: ON, -1: DEFAULT)
+      --pred-me                    Set predictive motion estimation level(-1: default, [0-5])
+      --bipred-3x3                 Set bipred3x3 injection (0: OFF, 1: ON FULL, 2: Reduced set, -1: DEFAULT)
+      --compound                   Enable compound mode(0: OFF, 1:ON[AVG/DIST/DIFF], 2: ON[AVG/DIST/DIFF/WEDGE], -1: default)
+      --use-default-me-hme         Use default motion estimation/hierarchical motion estimation settings(0: OFF, 1: ON[default])
+      --hme                        Enable hierarchical motion estimation(0: OFF, 1: ON)
+      --hme-l0                     Enable hierarchical motion estimation Level 0 (0: OFF, 1: ON)
+      --hme-l1                     Enable hierarchical motion estimation Level 1 (0: OFF, 1: ON)
+      --hme-l2                     Enable hierarchical motion estimation Level 2 (0: OFF, 1: ON)
+      --ext-block                  Enable the rectangular and asymetric block (0: OFF, 1: ON)
+      --search-w                   Set search area in width[1-256]
+      --search-h                   Set search area in height[1-256]
+      --scm                        Set screen content detection level([0-2], 2 Content adaptive decision: DEFAULT)
+      --intrabc-mode               Set intraBC mode (0: OFF, 1: ON slow, 2: ON faster, 3: ON fastest, -1: DEFAULT)
+      --hbd-md                     Enable high bit depth mode decision(0: OFF, 1: ON partially[default],2: fully ON)
+      --palette-level              Set palette prediction mode(-1: default or [0-6])
+      --umv                        Allow motion vectors to reach outside of the picture boundary(O: OFF, 1: ON[default])
+      --film-grain                 Enable film grain(0: OFF[default], 1-50: ON, film-grain denoising strength)
+      --tf-level                   Set altref level(-1: Default; 0: OFF; 1: ON)
+      --enable-overlays            Enable the insertion of an extra picture called overlayer picture which will be used as an extra reference frame for the base-layer picture(0: OFF[default], 1: ON)
+      --enable-intra-angle-delta    Enable intra angle delta filtering filtering (0: OFF, 1: ON, -1: DEFAULT)
+
+Color Description Options:
+      --color-primaries            Color primaries (2: DEFAULT)
+      --transfer-characteristics    Transfer characteristics (2: DEFAULT)
+      --matrix-coefficients        Matrix coefficients (2: DEFAULT)
+      --color-range                Color range, 0: Studio (default), 1: Full

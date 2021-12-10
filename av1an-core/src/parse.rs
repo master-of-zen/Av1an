@@ -4,6 +4,10 @@
 //! runtime detection that the corresponding feature
 //! set is available before calling them.
 
+use std::{borrow::Cow, collections::HashSet};
+
+use crate::encoder::Encoder;
+
 // We can safely always ignore this prefix, as the second number will
 // always be at some point after this prefix. See examples of aomenc
 // output below to see why this is the case.
@@ -261,9 +265,123 @@ pub fn parse_x26x_frames(s: &str) -> Option<u64> {
     .and_then(|s| s.parse().ok())
 }
 
+/// Returns the set of valid parameters given a help text for the given encoder
+#[must_use]
+pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> {
+  // x265 has 292 parameters, which is the most of any encoder, so we round up
+  // slightly just in case
+  let mut params = HashSet::with_capacity(300);
+
+  for s in help_text.split_ascii_whitespace() {
+    if s.starts_with('-') {
+      if s.len() == 1 || s == "--" {
+        continue;
+      }
+
+      if encoder == Encoder::x265 {
+        // x265 does this: -m/--subme
+        //        or even: -w/--[no-]weightp
+        // So we need to ensure that in this case the short parameter is also handled.
+        let s = {
+          let s_without_short = s.get("-x".len()..);
+
+          if let Some(s_without_short) = s_without_short {
+            if s_without_short.starts_with("/--") {
+              params.insert(Cow::Borrowed(&s[..2]));
+
+              &s["-x/".len()..]
+            } else {
+              s
+            }
+          } else {
+            s
+          }
+        };
+
+        // Somehow x265 manages to have a buggy --help, where a single option (--[no-]-hrd-concat)
+        // has an extra dash.
+        let arg = if s.starts_with("--[no-]") {
+          if s.len() < "--[no-]-".len() {
+            None
+          } else {
+            if s.as_bytes()["--[no-]-".len() - 1] == b'-' {
+              Some(&s["--[no-]-".len()..])
+            } else {
+              Some(&s["--[no-]".len()..])
+            }
+          }
+        } else {
+          None
+        };
+
+        if let Some(arg) = arg {
+          params.insert(Cow::Owned(format!("--{}", arg)));
+          params.insert(Cow::Owned(format!("--no-{}", arg)));
+          continue;
+        }
+      }
+
+      // aomenc outputs '--tune=<arg>' for example, so we have to find the character
+      // from the left so as to not miss the leftmost char
+      if let Some(idx) = s.find(|c: char| !c.is_ascii_alphanumeric() && c != '-' && c != '_') {
+        // In some weird cases (like with x264) there may be a dash followed by a non alphanumeric
+        // character, so we just ignore that.
+        if idx != 1 {
+          params.insert(Cow::Borrowed(&s[..idx]));
+        }
+      } else {
+        // It's a little concerning how *two* encoders manage to have buggy help output.
+        let arg = if encoder == Encoder::vpx {
+          // vpxenc randomly truncates the "Vizier Rate Control Options" in the help
+          // outout, which sometimes causes it to truncate at a dash, which breaks the
+          // tests if we don't do this. Not sure what the correct solution in this case is.
+          let dash_offset = if s.ends_with('-') { 1 } else { 0 };
+          &s[..s.len() - dash_offset]
+        } else {
+          &s[..]
+        };
+
+        params.insert(Cow::Borrowed(arg));
+      }
+    }
+  }
+
+  params
+}
+
 #[cfg(test)]
 mod tests {
   use crate::parse::*;
+
+  #[test]
+  fn valid_params_works() {
+    use std::borrow::Borrow;
+
+    macro_rules! generate_tests {
+      ($($x:ident),* $(,)?) => {
+        $(
+          let returned: HashSet<String> = valid_params(include_str!(concat!("../tests/", stringify!($x), "_help.txt")), Encoder::$x)
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+          let expected: HashSet<String> = include_str!(concat!("../tests/", stringify!($x), "_params.txt"))
+            .split_ascii_whitespace()
+            .map(|s| s.to_string())
+            .collect();
+
+          for arg in expected.iter() {
+            assert!(returned.contains(Borrow::<str>::borrow(&**arg)), "expected '{}', but it was missing in return value (for encoder {})", arg, stringify!($x));
+          }
+          for arg in returned.iter() {
+            assert!(expected.contains(Borrow::<str>::borrow(&**arg)), "return value contains '{}', but it was not expected (for encoder {})", arg, stringify!($x));
+          }
+          assert_eq!(returned, expected);
+        )*
+      };
+    }
+
+    generate_tests!(aom, rav1e, svt_av1, vpx, x264, x265);
+  }
 
   #[test]
   fn rav1e_parsing() {

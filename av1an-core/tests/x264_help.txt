@@ -1,0 +1,515 @@
+x264 core:163 r3060 5db6aa6
+Syntax: x264 [options] -o outfile infile
+
+Infile can be raw (in which case resolution is required),
+  or YUV4MPEG (*.y4m),
+  or Avisynth if compiled with support (no).
+  or libav* formats if compiled with lavf support (no) or ffms support (no).
+Outfile type is selected by filename:
+ .264 -> Raw bytestream
+ .mkv -> Matroska
+ .flv -> Flash Video
+ .mp4 -> MP4 if compiled with GPAC or L-SMASH support (lsmash)
+Output bit depth: 8/10
+.
+Options:
+
+  -h, --help                  List basic options
+      --longhelp              List more options
+      --fullhelp              List all options
+
+Example usage:
+
+      Constant quality mode:
+            x264 --crf 24 -o <output> <input>
+
+      Two-pass with a bitrate of 1000kbps:
+            x264 --pass 1 --bitrate 1000 -o <output> <input>
+            x264 --pass 2 --bitrate 1000 -o <output> <input>
+
+      Lossless:
+            x264 --qp 0 -o <output> <input>
+
+      Maximum PSNR at the cost of speed and visual quality:
+            x264 --preset placebo --tune psnr -o <output> <input>
+
+      Constant bitrate at 1000kbps with a 2 second-buffer:
+            x264 --vbv-bufsize 2000 --bitrate 1000 -o <output> <input>
+
+Presets:
+
+      --profile <string>      Force the limits of an H.264 profile
+                                  Overrides all settings.
+                                  - baseline, main, high, high10, high422, high444
+      --preset <string>       Use a preset to select encoding settings [medium]
+                                  Overridden by user settings.
+                                  - ultrafast,superfast,veryfast,faster,fast
+                                  - medium,slow,slower,veryslow,placebo
+      --tune <string>         Tune the settings for a particular type of source
+                              or situation
+                                  Overridden by user settings.
+                                  Multiple tunings are separated by commas.
+                                  Only one psy tuning can be used at a time.
+                                  - psy tunings: film,animation,grain,
+                                                 stillimage,psnr,ssim
+                                  - other tunings: fastdecode,zerolatency
+
+Frame-type options:
+
+  -I, --keyint <integer or "infinite"> Maximum GOP size [250]
+      --tff                   Enable interlaced mode (top field first)
+      --bff                   Enable interlaced mode (bottom field first)
+      --pulldown <string>     Use soft pulldown to change frame rate
+                                  - none, 22, 32, 64, double, triple, euro (requires cfr input)
+
+Ratecontrol:
+
+  -B, --bitrate <integer>     Set bitrate (kbit/s)
+      --crf <float>           Quality-based VBR (-12-51) [23.0]
+      --vbv-maxrate <integer> Max local bitrate (kbit/s) [0]
+      --vbv-bufsize <integer> Set size of the VBV buffer (kbit) [0]
+  -p, --pass <integer>        Enable multipass ratecontrol
+                                  - 1: First pass, creates stats file
+                                  - 2: Last pass, does not overwrite stats file
+
+Input/Output:
+
+  -o, --output <string>       Specify output file
+      --sar width:height      Specify Sample Aspect Ratio
+      --fps <float|rational>  Specify framerate
+      --seek <integer>        First frame to encode
+      --frames <integer>      Maximum number of frames to encode
+      --level <string>        Specify level (as defined by Annex A)
+      --quiet                 Quiet Mode
+
+Filtering:
+
+      --vf, --video-filter <filter0>/<filter1>/... Apply video filtering to the input file
+
+      Filter options may be specified in <filter>:<option>=<value> format.
+
+      Available filters:
+      crop:left,top,right,bottom
+      select_every:step,offset1[,...]
+
+redzic@threadripper ~> x264 --fullhelp
+x264 core:163 r3060 5db6aa6
+Syntax: x264 [options] -o outfile infile
+
+Infile can be raw (in which case resolution is required),
+  or YUV4MPEG (*.y4m),
+  or Avisynth if compiled with support (no).
+  or libav* formats if compiled with lavf support (no) or ffms support (no).
+Outfile type is selected by filename:
+ .264 -> Raw bytestream
+ .mkv -> Matroska
+ .flv -> Flash Video
+ .mp4 -> MP4 if compiled with GPAC or L-SMASH support (lsmash)
+Output bit depth: 8/10
+.
+Options:
+
+  -h, --help                  List basic options
+      --longhelp              List more options
+      --fullhelp              List all options
+
+Example usage:
+
+      Constant quality mode:
+            x264 --crf 24 -o <output> <input>
+
+      Two-pass with a bitrate of 1000kbps:
+            x264 --pass 1 --bitrate 1000 -o <output> <input>
+            x264 --pass 2 --bitrate 1000 -o <output> <input>
+
+      Lossless:
+            x264 --qp 0 -o <output> <input>
+
+      Maximum PSNR at the cost of speed and visual quality:
+            x264 --preset placebo --tune psnr -o <output> <input>
+
+      Constant bitrate at 1000kbps with a 2 second-buffer:
+            x264 --vbv-bufsize 2000 --bitrate 1000 -o <output> <input>
+
+Presets:
+
+      --profile <string>      Force the limits of an H.264 profile
+                                  Overrides all settings.
+                                  - baseline:
+                                    --no-8x8dct --bframes 0 --no-cabac
+                                    --cqm flat --weightp 0
+                                    No interlaced.
+                                    No lossless.
+                                  - main:
+                                    --no-8x8dct --cqm flat
+                                    No lossless.
+                                  - high:
+                                    No lossless.
+                                  - high10:
+                                    No lossless.
+                                    Support for bit depth 8-10.
+                                  - high422:
+                                    No lossless.
+                                    Support for bit depth 8-10.
+                                    Support for 4:2:0/4:2:2 chroma subsampling.
+                                  - high444:
+                                    Support for bit depth 8-10.
+                                    Support for 4:2:0/4:2:2/4:4:4 chroma subsampling.
+      --preset <string>       Use a preset to select encoding settings [medium]
+                                  Overridden by user settings.
+                                  - ultrafast:
+                                    --no-8x8dct --aq-mode 0 --b-adapt 0
+                                    --bframes 0 --no-cabac --no-deblock
+                                    --no-mbtree --me dia --no-mixed-refs
+                                    --partitions none --rc-lookahead 0 --ref 1
+                                    --scenecut 0 --subme 0 --trellis 0
+                                    --no-weightb --weightp 0
+                                  - superfast:
+                                    --no-mbtree --me dia --no-mixed-refs
+                                    --partitions i8x8,i4x4 --rc-lookahead 0
+                                    --ref 1 --subme 1 --trellis 0 --weightp 1
+                                  - veryfast:
+                                    --no-mixed-refs --rc-lookahead 10
+                                    --ref 1 --subme 2 --trellis 0 --weightp 1
+                                  - faster:
+                                    --no-mixed-refs --rc-lookahead 20
+                                    --ref 2 --subme 4 --weightp 1
+                                  - fast:
+                                    --rc-lookahead 30 --ref 2 --subme 6
+                                    --weightp 1
+                                  - medium:
+                                    Default settings apply.
+                                  - slow:
+                                    --direct auto --rc-lookahead 50 --ref 5
+                                    --subme 8 --trellis 2
+                                  - slower:
+                                    --b-adapt 2 --direct auto --me umh
+                                    --partitions all --rc-lookahead 60
+                                    --ref 8 --subme 9 --trellis 2
+                                  - veryslow:
+                                    --b-adapt 2 --bframes 8 --direct auto
+                                    --me umh --merange 24 --partitions all
+                                    --ref 16 --subme 10 --trellis 2
+                                    --rc-lookahead 60
+                                  - placebo:
+                                    --bframes 16 --b-adapt 2 --direct auto
+                                    --slow-firstpass --no-fast-pskip
+                                    --me tesa --merange 24 --partitions all
+                                    --rc-lookahead 60 --ref 16 --subme 11
+                                    --trellis 2
+      --tune <string>         Tune the settings for a particular type of source
+                              or situation
+                                  Overridden by user settings.
+                                  Multiple tunings are separated by commas.
+                                  Only one psy tuning can be used at a time.
+                                  - film (psy tuning):
+                                    --deblock -1:-1 --psy-rd <unset>:0.15
+                                  - animation (psy tuning):
+                                    --bframes {+2} --deblock 1:1
+                                    --psy-rd 0.4:<unset> --aq-strength 0.6
+                                    --ref {Double if >1 else 1}
+                                  - grain (psy tuning):
+                                    --aq-strength 0.5 --no-dct-decimate
+                                    --deadzone-inter 6 --deadzone-intra 6
+                                    --deblock -2:-2 --ipratio 1.1
+                                    --pbratio 1.1 --psy-rd <unset>:0.25
+                                    --qcomp 0.8
+                                  - stillimage (psy tuning):
+                                    --aq-strength 1.2 --deblock -3:-3
+                                    --psy-rd 2.0:0.7
+                                  - psnr (psy tuning):
+                                    --aq-mode 0 --no-psy
+                                  - ssim (psy tuning):
+                                    --aq-mode 2 --no-psy
+                                  - fastdecode:
+                                    --no-cabac --no-deblock --no-weightb
+                                    --weightp 0
+                                  - zerolatency:
+                                    --bframes 0 --force-cfr --no-mbtree
+                                    --sync-lookahead 0 --sliced-threads
+                                    --rc-lookahead 0
+      --slow-firstpass        Don't force these faster settings with --pass 1:
+                                  --no-8x8dct --me dia --partitions none
+                                  --ref 1 --subme {2 if >2 else unchanged}
+                                  --trellis 0 --fast-pskip
+
+Frame-type options:
+
+  -I, --keyint <integer or "infinite"> Maximum GOP size [250]
+  -i, --min-keyint <integer>  Minimum GOP size [auto]
+      --no-scenecut           Disable adaptive I-frame decision
+      --scenecut <integer>    How aggressively to insert extra I-frames [40]
+      --intra-refresh         Use Periodic Intra Refresh instead of IDR frames
+  -b, --bframes <integer>     Number of B-frames between I and P [3]
+      --b-adapt <integer>     Adaptive B-frame decision method [1]
+                                  Higher values may lower threading efficiency.
+                                  - 0: Disabled
+                                  - 1: Fast
+                                  - 2: Optimal (slow with high --bframes)
+      --b-bias <integer>      Influences how often B-frames are used [0]
+      --b-pyramid <string>    Keep some B-frames as references [normal]
+                                  - none: Disabled
+                                  - strict: Strictly hierarchical pyramid
+                                  - normal: Non-strict (not Blu-ray compatible)
+      --open-gop              Use recovery points to close GOPs
+                              Only available with b-frames
+      --no-cabac              Disable CABAC
+  -r, --ref <integer>         Number of reference frames [3]
+      --no-deblock            Disable loop filter
+  -f, --deblock <alpha:beta>  Loop filter parameters [0:0]
+      --slices <integer>      Number of slices per frame; forces rectangular
+                              slices and is overridden by other slicing options
+      --slices-max <integer>  Absolute maximum slices per frame; overrides
+                              slice-max-size/slice-max-mbs when necessary
+      --slice-max-size <integer> Limit the size of each slice in bytes
+      --slice-max-mbs <integer> Limit the size of each slice in macroblocks (max)
+      --slice-min-mbs <integer> Limit the size of each slice in macroblocks (min)
+      --tff                   Enable interlaced mode (top field first)
+      --bff                   Enable interlaced mode (bottom field first)
+      --constrained-intra     Enable constrained intra prediction.
+      --pulldown <string>     Use soft pulldown to change frame rate
+                                  - none, 22, 32, 64, double, triple, euro (requires cfr input)
+      --fake-interlaced       Flag stream as interlaced but encode progressive.
+                              Makes it possible to encode 25p and 30p Blu-Ray
+                              streams. Ignored in interlaced mode.
+      --frame-packing <integer> For stereoscopic videos define frame arrangement
+                                  - 0: checkerboard - pixels are alternatively from L and R
+                                  - 1: column alternation - L and R are interlaced by column
+                                  - 2: row alternation - L and R are interlaced by row
+                                  - 3: side by side - L is on the left, R on the right
+                                  - 4: top bottom - L is on top, R on bottom
+                                  - 5: frame alternation - one view per frame
+                                  - 6: mono - 2D frame without any frame packing
+                                  - 7: tile format - L is on top-left, R split across
+
+Ratecontrol:
+
+  -q, --qp <integer>          Force constant QP (0-81, 0=lossless)
+  -B, --bitrate <integer>     Set bitrate (kbit/s)
+      --crf <float>           Quality-based VBR (-12-51) [23.0]
+      --rc-lookahead <integer> Number of frames for frametype lookahead [40]
+      --vbv-maxrate <integer> Max local bitrate (kbit/s) [0]
+      --vbv-bufsize <integer> Set size of the VBV buffer (kbit) [0]
+      --vbv-init <float>      Initial VBV buffer occupancy [0.9]
+      --crf-max <float>       With CRF+VBV, limit RF to this value
+                                  May cause VBV underflows!
+      --qpmin <integer>       Set min QP [0]
+      --qpmax <integer>       Set max QP [81]
+      --qpstep <integer>      Set max QP step [4]
+      --ratetol <float>       Tolerance of ABR ratecontrol and VBV [1.0]
+      --ipratio <float>       QP factor between I and P [1.40]
+      --pbratio <float>       QP factor between P and B [1.30]
+      --chroma-qp-offset <integer>  QP difference between chroma and luma [0]
+      --aq-mode <integer>     AQ method [1]
+                                  - 0: Disabled
+                                  - 1: Variance AQ (complexity mask)
+                                  - 2: Auto-variance AQ
+                                  - 3: Auto-variance AQ with bias to dark scenes
+      --aq-strength <float>   Reduces blocking and blurring in flat and
+                              textured areas. [1.0]
+
+  -p, --pass <integer>        Enable multipass ratecontrol
+                                  - 1: First pass, creates stats file
+                                  - 2: Last pass, does not overwrite stats file
+                                  - 3: Nth pass, overwrites stats file
+      --stats <string>        Filename for 2 pass stats ["x264_2pass.log"]
+      --no-mbtree             Disable mb-tree ratecontrol.
+      --qcomp <float>         QP curve compression [0.60]
+      --cplxblur <float>      Reduce fluctuations in QP (before curve compression) [20.0]
+      --qblur <float>         Reduce fluctuations in QP (after curve compression) [0.5]
+      --zones <zone0>/<zone1>/...  Tweak the bitrate of regions of the video
+                              Each zone is of the form
+                                  <start frame>,<end frame>,<option>
+                                  where <option> is either
+                                      q=<integer> (force QP)
+                                  or  b=<float> (bitrate multiplier)
+      --qpfile <string>       Force frametypes and QPs for some or all frames
+                              Format of each line: framenumber frametype QP
+                              QP is optional (none lets x264 choose). Frametypes: I,i,K,P,B,b.
+                                  K=<I or i> depending on open-gop setting
+                              QPs are restricted by qpmin/qpmax.
+
+Analysis:
+
+  -A, --partitions <string>   Partitions to consider ["p8x8,b8x8,i8x8,i4x4"]
+                                  - p8x8, p4x4, b8x8, i8x8, i4x4, none, all
+                                  (p4x4 requires p8x8. i8x8 requires --8x8dct.)
+      --direct <string>       Direct MV prediction mode ["spatial"]
+                                  - none, spatial, temporal, auto
+      --no-weightb            Disable weighted prediction for B-frames
+      --weightp <integer>     Weighted prediction for P-frames [2]
+                                  - 0: Disabled
+                                  - 1: Weighted refs
+                                  - 2: Weighted refs + Duplicates
+      --me <string>           Integer pixel motion estimation method ["hex"]
+                                  - dia: diamond search, radius 1 (fast)
+                                  - hex: hexagonal search, radius 2
+                                  - umh: uneven multi-hexagon search
+                                  - esa: exhaustive search
+                                  - tesa: hadamard exhaustive search (slow)
+      --merange <integer>     Maximum motion vector search range [16]
+      --mvrange <integer>     Maximum motion vector length [-1 (auto)]
+      --mvrange-thread <int>  Minimum buffer between threads [-1 (auto)]
+  -m, --subme <integer>       Subpixel motion estimation and mode decision [7]
+                                  - 0: fullpel only (not recommended)
+                                  - 1: SAD mode decision, one qpel iteration
+                                  - 2: SATD mode decision
+                                  - 3-5: Progressively more qpel
+                                  - 6: RD mode decision for I/P-frames
+                                  - 7: RD mode decision for all frames
+                                  - 8: RD refinement for I/P-frames
+                                  - 9: RD refinement for all frames
+                                  - 10: QP-RD - requires trellis=2, aq-mode>0
+                                  - 11: Full RD: disable all early terminations
+      --psy-rd <float:float>  Strength of psychovisual optimization ["1.0:0.0"]
+                                  #1: RD (requires subme>=6)
+                                  #2: Trellis (requires trellis, experimental)
+      --no-psy                Disable all visual optimizations that worsen
+                              both PSNR and SSIM.
+      --no-mixed-refs         Don't decide references on a per partition basis
+      --no-chroma-me          Ignore chroma in motion estimation
+      --no-8x8dct             Disable adaptive spatial transform size
+  -t, --trellis <integer>     Trellis RD quantization. [1]
+                                  - 0: disabled
+                                  - 1: enabled only on the final encode of a MB
+                                  - 2: enabled on all mode decisions
+      --no-fast-pskip         Disables early SKIP detection on P-frames
+      --no-dct-decimate       Disables coefficient thresholding on P-frames
+      --nr <integer>          Noise reduction [0]
+
+      --deadzone-inter <int>  Set the size of the inter luma quantization deadzone [21]
+      --deadzone-intra <int>  Set the size of the intra luma quantization deadzone [11]
+                                  Deadzones should be in the range 0 - 32.
+      --cqm <string>          Preset quant matrices ["flat"]
+                                  - flat, jvt
+      --cqmfile <string>      Read custom quant matrices from a JM-compatible file
+                                  Overrides any other --cqm* options.
+      --cqm4 <list>           Set all 4x4 quant matrices
+                                  Takes a comma-separated list of 16 integers.
+      --cqm8 <list>           Set all 8x8 quant matrices
+                                  Takes a comma-separated list of 64 integers.
+      --cqm4i, --cqm4p, --cqm8i, --cqm8p <list>
+                              Set both luma and chroma quant matrices
+      --cqm4iy, --cqm4ic, --cqm4py, --cqm4pc <list>
+                              Set individual quant matrices
+
+Video Usability Info (Annex E):
+The VUI settings are not used by the encoder but are merely suggestions to
+the playback equipment. See doc/vui.txt for details. Use at your own risk.
+
+      --overscan <string>     Specify crop overscan setting ["undef"]
+                                  - undef, show, crop
+      --videoformat <string>  Specify video format ["undef"]
+                                  - component, pal, ntsc, secam, mac, undef
+      --range <string>        Specify color range ["auto"]
+                                  - auto, tv, pc
+      --colorprim <string>    Specify color primaries ["undef"]
+                                  - undef, bt709, bt470m, bt470bg, smpte170m,
+                                    smpte240m, film, bt2020, smpte428,
+                                    smpte431, smpte432
+      --transfer <string>     Specify transfer characteristics ["undef"]
+                                  - undef, bt709, bt470m, bt470bg, smpte170m,
+                                    smpte240m, linear, log100, log316,
+                                    iec61966-2-4, bt1361e, iec61966-2-1,
+                                    bt2020-10, bt2020-12, smpte2084, smpte428,
+                                    arib-std-b67
+      --colormatrix <string>  Specify color matrix setting ["???"]
+                                  - undef, bt709, fcc, bt470bg, smpte170m,
+                                    smpte240m, GBR, YCgCo, bt2020nc, bt2020c,
+                                    smpte2085, chroma-derived-nc,
+                                    chroma-derived-c, ICtCp
+      --chromaloc <integer>   Specify chroma sample location (0 to 5) [0]
+      --mastering-display <string> Specify 'G(x,y)B(x,y)R(x,y)WP(x,y)L(max,min)'
+                              for primaries, white point, and display brightness
+      --cll <string>          Specify 'max_content,max_frame_average' content
+                              light levels
+      --alternative-transfer <string> Specify an alternative transfer
+                              characteristics ["undef"]
+                                  - same values as --transfer
+      --nal-hrd <string>      Signal HRD information (requires vbv-bufsize)
+                                  - none, vbr, cbr (cbr not allowed in .mp4)
+      --filler                Force hard-CBR and generate filler (implied by
+                              --nal-hrd cbr)
+      --pic-struct            Force pic_struct in Picture Timing SEI
+      --crop-rect <string>    Add 'left,top,right,bottom' to the bitstream-level
+                              cropping rectangle
+
+Input/Output:
+
+  -o, --output <string>       Specify output file
+      --muxer <string>        Specify output container format ["auto"]
+                                  - auto, raw, mkv, flv, mp4
+      --demuxer <string>      Specify input container format ["auto"]
+                                  - auto, raw, y4m
+      --input-fmt <string>    Specify input file format (requires lavf support)
+      --input-csp <string>    Specify input colorspace format for raw input
+                              - valid csps for `raw' demuxer:
+                                i400, i420, yv12, nv12, nv21, i422, yv16, nv16,
+                                yuyv, uyvy, i444, yv24, bgr, bgra, rgb
+      --output-csp <string>   Specify output colorspace ["i420"]
+                                  - i400, i420, i422, i444, rgb
+      --input-depth <integer> Specify input bit depth for raw input
+      --output-depth <integer> Specify output bit depth
+      --input-range <string>  Specify input color range ["auto"]
+                                  - auto, tv, pc
+      --input-res <intxint>   Specify input resolution (width x height)
+      --index <string>        Filename for input index file
+      --sar width:height      Specify Sample Aspect Ratio
+      --fps <float|rational>  Specify framerate
+      --seek <integer>        First frame to encode
+      --frames <integer>      Maximum number of frames to encode
+      --level <string>        Specify level (as defined by Annex A)
+      --bluray-compat         Enable compatibility hacks for Blu-ray support
+      --avcintra-class <integer> Use compatibility hacks for AVC-Intra class
+                                  - 50, 100, 200
+      --avcintra-flavor <string> AVC-Intra flavor ["panasonic"]
+                                  - panasonic, sony
+      --stitchable            Don't optimize headers based on video content
+                              Ensures ability to recombine a segmented encode
+
+  -v, --verbose               Print stats for each frame
+      --no-progress           Don't show the progress indicator while encoding
+      --quiet                 Quiet Mode
+      --log-level <string>    Specify the maximum level of logging ["info"]
+                                  - none, error, warning, info, debug
+      --psnr                  Enable PSNR computation
+      --ssim                  Enable SSIM computation
+      --threads <integer>     Force a specific number of threads
+      --lookahead-threads <integer> Force a specific number of lookahead threads
+      --sliced-threads        Low-latency but lower-efficiency threading
+      --thread-input          Run Avisynth in its own thread
+      --sync-lookahead <integer> Number of buffer frames for threaded lookahead
+      --non-deterministic     Slightly improve quality of SMP, at the cost of repeatability
+      --cpu-independent       Ensure exact reproducibility across different cpus,
+                                  as opposed to letting them select different algorithms
+      --asm <integer>         Override CPU detection
+      --no-asm                Disable all CPU optimizations
+      --opencl                Enable use of OpenCL
+      --opencl-clbin <string> Specify path of compiled OpenCL kernel cache
+      --opencl-device <integer> Specify OpenCL device ordinal
+      --dump-yuv <string>     Save reconstructed frames
+      --sps-id <integer>      Set SPS and PPS id numbers [0]
+      --aud                   Use access unit delimiters
+      --force-cfr             Force constant framerate timestamp generation
+      --tcfile-in <string>    Force timestamp generation with timecode file
+      --tcfile-out <string>   Output timecode v2 file from input timestamps
+      --timebase <int/int>    Specify timebase numerator and denominator
+                 <integer>    Specify timebase numerator for input timecode file
+                              or specify timebase denominator for other input
+      --dts-compress          Eliminate initial delay with container DTS hack
+
+Filtering:
+
+      --vf, --video-filter <filter0>/<filter1>/... Apply video filtering to the input file
+
+      Filter options may be specified in <filter>:<option>=<value> format.
+
+      Available filters:
+      crop:left,top,right,bottom
+            removes pixels from the edges of the frame
+      select_every:step,offset1[,...]
+            apply a selection pattern to input frames
+            step: the number of frames in the pattern
+            offsets: the offset into the step to select a frame
+            see: http://avisynth.nl/index.php/Select#SelectEvery
+

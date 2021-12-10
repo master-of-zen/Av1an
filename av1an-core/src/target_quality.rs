@@ -175,7 +175,7 @@ impl<'a> TargetQuality<'a> {
 
     let cmd = self.encoder.probe_cmd(
       self.temp.clone(),
-      &chunk.name(),
+      chunk.index,
       q,
       self.pix_format,
       self.probing_rate,
@@ -251,13 +251,12 @@ impl<'a> TargetQuality<'a> {
 
     rt.block_on(future)?;
 
-    let probe_name =
-      Path::new(&chunk.temp)
-        .join("split")
-        .join(format!("v_{}{}.ivf", q, chunk.name()));
+    let probe_name = Path::new(&chunk.temp)
+      .join("split")
+      .join(format!("v_{}_{}.ivf", q, chunk.index));
     let fl_path = Path::new(&chunk.temp)
       .join("split")
-      .join(format!("{}.json", chunk.name()));
+      .join(format!("{}.json", chunk.index));
 
     vmaf::run_vmaf(
       &probe_name,

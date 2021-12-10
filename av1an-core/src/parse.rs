@@ -282,37 +282,25 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
         // x265 does this: -m/--subme
         //        or even: -w/--[no-]weightp
         // So we need to ensure that in this case the short parameter is also handled.
-        let s = {
-          let s_without_short = s.get("-x".len()..);
+        let s = s.get("-x".len()..).map_or(s, |stripped_s| {
+          if stripped_s.starts_with("/--") {
+            params.insert(Cow::Borrowed(&s[..2]));
 
-          if let Some(s_without_short) = s_without_short {
-            if s_without_short.starts_with("/--") {
-              params.insert(Cow::Borrowed(&s[..2]));
-
-              &s["-x/".len()..]
-            } else {
-              s
-            }
+            &s["-x/".len()..]
           } else {
             s
           }
-        };
+        });
 
         // Somehow x265 manages to have a buggy --help, where a single option (--[no-]-hrd-concat)
         // has an extra dash.
-        let arg = if s.starts_with("--[no-]") {
-          if s.len() < "--[no-]-".len() {
-            None
+        let arg = s.strip_prefix("--[no-]").map(|stripped| {
+          if s.len() >= "--[no-]-".len() && s.as_bytes()["--[no-]-".len() - 1] == b'-' {
+            &stripped[1..]
           } else {
-            if s.as_bytes()["--[no-]-".len() - 1] == b'-' {
-              Some(&s["--[no-]-".len()..])
-            } else {
-              Some(&s["--[no-]".len()..])
-            }
+            stripped
           }
-        } else {
-          None
-        };
+        });
 
         if let Some(arg) = arg {
           params.insert(Cow::Owned(format!("--{}", arg)));
@@ -338,7 +326,7 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
           let dash_offset = if s.ends_with('-') { 1 } else { 0 };
           &s[..s.len() - dash_offset]
         } else {
-          &s[..]
+          s
         };
 
         params.insert(Cow::Borrowed(arg));

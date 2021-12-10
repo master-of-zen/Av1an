@@ -282,11 +282,11 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
         // x265 does this: -m/--subme
         //        or even: -w/--[no-]weightp
         // So we need to ensure that in this case the short parameter is also handled.
-        let s = s.get("-x".len()..).map_or(s, |stripped_s| {
-          if stripped_s.starts_with("/--") {
+        let s = s.get("-x/".len()..).map_or(s, |stripped| {
+          if stripped.starts_with("--") {
             params.insert(Cow::Borrowed(&s[..2]));
 
-            &s["-x/".len()..]
+            stripped
           } else {
             s
           }
@@ -294,13 +294,9 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
 
         // Somehow x265 manages to have a buggy --help, where a single option (--[no-]-hrd-concat)
         // has an extra dash.
-        let arg = s.strip_prefix("--[no-]").map(|stripped| {
-          if s.len() >= "--[no-]-".len() && s.as_bytes()["--[no-]-".len() - 1] == b'-' {
-            &stripped[1..]
-          } else {
-            stripped
-          }
-        });
+        let arg = s
+          .strip_prefix("--[no-]")
+          .map(|stripped| stripped.strip_prefix('-').unwrap_or(stripped));
 
         if let Some(arg) = arg {
           params.insert(Cow::Owned(format!("--{}", arg)));
@@ -323,8 +319,7 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
           // vpxenc randomly truncates the "Vizier Rate Control Options" in the help
           // outout, which sometimes causes it to truncate at a dash, which breaks the
           // tests if we don't do this. Not sure what the correct solution in this case is.
-          let dash_offset = if s.ends_with('-') { 1 } else { 0 };
-          &s[..s.len() - dash_offset]
+          s.strip_suffix('-').unwrap_or(s)
         } else {
           s
         };

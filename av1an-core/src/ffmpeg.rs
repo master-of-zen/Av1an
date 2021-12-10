@@ -164,8 +164,8 @@ pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
       .unwrap()
       // This is needed because of how FFmpeg handles absolute file paths on Windows.
       // https://stackoverflow.com/questions/60440793/how-can-i-use-windows-absolute-paths-with-the-movie-filter-on-ffmpeg
-      .replace(r"\", "/")
-      .replace(":", r"\\:")
+      .replace('\\', "/")
+      .replace(':', r"\\:")
   } else {
     PathAbs::new(path.as_ref())
       .unwrap()

@@ -272,9 +272,9 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
       contents.push_str(&format!(
         "file {}\n",
         format!("{}", i.path().display())
-          .replace(r"\", r"\\")
-          .replace(" ", r"\ ")
-          .replace("'", r"\'")
+          .replace('\\', r"\\")
+          .replace(' ', r"\ ")
+          .replace('\'', r"\'")
       ));
     }
 

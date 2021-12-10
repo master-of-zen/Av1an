@@ -554,7 +554,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(chunks)
   }
 
-  fn calc_split_locations(&self) -> Vec<usize> {
+  fn calc_split_locations(&self) -> anyhow::Result<Vec<usize>> {
     match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
@@ -564,9 +564,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.verbosity,
         self.sc_method,
         self.sc_downscale_height,
-      )
-      .unwrap(),
-      SplitMethod::None => Vec::new(),
+      ),
+      SplitMethod::None => Ok(Vec::new()),
     }
   }
 
@@ -581,7 +580,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let mut scenes = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
       crate::split::read_scenes_from_file(scene_file.as_path())?.0
     } else {
-      self.calc_split_locations()
+      self.calc_split_locations()?
     };
     let scenes_before = scenes.len() + 1;
     if let Some(split_len) = self.extra_splits_len {

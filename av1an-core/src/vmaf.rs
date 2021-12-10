@@ -2,6 +2,7 @@ use crate::broker::EncoderCrash;
 use crate::util::printable_base10_digits;
 use crate::{ffmpeg, ref_smallvec, Input};
 use anyhow::anyhow;
+use anyhow::Context;
 use plotters::prelude::*;
 use serde::Deserialize;
 use smallvec::SmallVec;
@@ -28,20 +29,19 @@ struct VmafResult {
   frames: Vec<Metrics>,
 }
 
-pub fn plot_vmaf_score_file(
-  scores_file: &Path,
-  plot_path: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
-  let scores = read_vmaf_file(scores_file).unwrap();
+pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
+  let mut scores = read_vmaf_file(scores_file).with_context(|| "Failed to parse VMAF file")?;
+  scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let plot_width = 1600 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 600;
 
   let length = scores.len() as u32;
-  let perc_1 = read_weighted_vmaf(scores_file, 0.01).unwrap();
-  let perc_25 = read_weighted_vmaf(scores_file, 0.25).unwrap();
-  let perc_75 = read_weighted_vmaf(scores_file, 0.75).unwrap();
-  let perc_mean = read_weighted_vmaf(scores_file, 0.50).unwrap();
+
+  let perc_1 = percentile_of_sorted(&scores, 0.01);
+  let perc_25 = percentile_of_sorted(&scores, 0.25);
+  let perc_50 = percentile_of_sorted(&scores, 0.50);
+  let perc_75 = percentile_of_sorted(&scores, 0.75);
 
   let root = SVGBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
 
@@ -69,20 +69,17 @@ pub fn plot_vmaf_score_file(
     .label(format!("25%: {}", perc_25))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &YELLOW));
 
+  // 50% (median, except not averaged in the case of an even number of elements)
+  chart
+    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_50)), &BLACK))?
+    .label(format!("50%: {}", perc_50))
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
+
   // 75%
   chart
     .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_75)), &GREEN))?
     .label(format!("75%: {}", perc_75))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
-
-  // Mean
-  chart
-    .draw_series(LineSeries::new(
-      (0..=length).map(|x| (x, perc_mean)),
-      &BLACK,
-    ))?
-    .label(format!("Mean: {}", perc_mean))
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
 
   // Data
   chart.draw_series(LineSeries::new(
@@ -259,33 +256,47 @@ pub fn run_vmaf(
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
   let json_str = std::fs::read_to_string(file).unwrap();
-  let bazs = serde_json::from_str::<VmafResult>(&json_str)?;
-  let v = bazs
+  let vmaf_results = serde_json::from_str::<VmafResult>(&json_str)?;
+  let v = vmaf_results
     .frames
     .into_iter()
-    .map(|x| x.metrics.vmaf)
-    .collect::<Vec<_>>();
+    .map(|metric| metric.metrics.vmaf)
+    .collect();
 
   Ok(v)
 }
 
-pub fn read_weighted_vmaf(
-  file: impl AsRef<Path>,
+/// Read a certain percentile VMAF score from the VMAF json file
+///
+/// Do not call this function more than once on the same json file,
+/// as this function is only more efficient for a single read.
+pub fn read_weighted_vmaf<P: AsRef<Path>>(
+  file: P,
   percentile: f64,
 ) -> Result<f64, serde_json::Error> {
-  let mut scores = read_vmaf_file(file).unwrap();
+  fn inner(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
+    let mut scores = read_vmaf_file(file)?;
 
-  Ok(get_percentile(&mut scores, percentile))
+    assert!(!scores.is_empty());
+
+    let k = ((scores.len() - 1) as f64 * percentile) as usize;
+
+    // if we are just calling this function a single time for this file, it is more efficient
+    // to use select_nth_unstable_by than it is to completely sort scores
+    let (_, kth_element, _) =
+      scores.select_nth_unstable_by(k, |a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+
+    Ok(*kth_element)
+  }
+
+  inner(file.as_ref(), percentile)
 }
 
-/// Calculates percentile from an array of values
-pub fn get_percentile(scores: &mut [f64], percentile: f64) -> f64 {
+/// Calculates percentile from an array of sorted values
+pub fn percentile_of_sorted(scores: &[f64], percentile: f64) -> f64 {
   assert!(!scores.is_empty());
 
   let k = ((scores.len() - 1) as f64 * percentile) as usize;
 
-  let (_, kth_element, _) =
-    scores.select_nth_unstable_by(k, |a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-  *kth_element
+  scores[k]
 }

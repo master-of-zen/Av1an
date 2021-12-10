@@ -191,7 +191,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   let first_digit_index = (first_space_index / 2).saturating_sub(2);
 
   // Set `CHUNK_SIZE` bytes before the real first digit index (including the ignored prefix)
-  // to b'0'. Uncoditionally zeroing `CHUNK_SIZE` bytes is better than only setting the
+  // to b'0'. Unconditionally zeroing `CHUNK_SIZE` bytes is better than only setting the
   // bytes that are absolutely necessary because using a fixed size allows LLVM to avoid
   // a call to memset and instead use movaps/movups.
   for byte in s
@@ -317,7 +317,7 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
         // It's a little concerning how *two* encoders manage to have buggy help output.
         let arg = if encoder == Encoder::vpx {
           // vpxenc randomly truncates the "Vizier Rate Control Options" in the help
-          // outout, which sometimes causes it to truncate at a dash, which breaks the
+          // output, which sometimes causes it to truncate at a dash, which breaks the
           // tests if we don't do this. Not sure what the correct solution in this case is.
           s.strip_suffix('-').unwrap_or(s)
         } else {

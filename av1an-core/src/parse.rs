@@ -314,7 +314,7 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
       if let Some(idx) = s.find(|c: char| !c.is_ascii_alphanumeric() && c != '-' && c != '_') {
         // In some weird cases (like with x264) there may be a dash followed by a non alphanumeric
         // character, so we just ignore that.
-        if idx != 1 {
+        if idx > 1 {
           params.insert(Cow::Borrowed(&s[..idx]));
         }
       } else {

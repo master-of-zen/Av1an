@@ -608,7 +608,7 @@ impl Encoder {
   pub fn probe_cmd(
     self,
     temp: String,
-    name: &str,
+    chunk_index: usize,
     q: usize,
     pix_fmt: Pixel,
     probing_rate: usize,
@@ -626,7 +626,7 @@ impl Encoder {
       pix_fmt,
     );
 
-    let probe_name = format!("v_{}{}.ivf", q, name);
+    let probe_name = format!("v_{}_{}.ivf", q, chunk_index);
     let mut probe = PathBuf::from(temp);
     probe.push("split");
     probe.push(&probe_name);

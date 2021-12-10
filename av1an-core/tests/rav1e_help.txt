@@ -1,0 +1,131 @@
+rav1e 0.4.1 (release)
+AV1 video encoder
+
+USAGE:
+    rav1e [FLAGS] [OPTIONS] <INPUT> --output <OUTPUT>
+
+FLAGS:
+        --fullhelp
+            Prints more detailed help information
+
+        --low-latency
+            Low latency mode; disables frame reordering
+            Has a significant speed-to-quality trade-off
+        --still-picture
+            Still picture mode
+
+        --benchmark
+            Provide a benchmark report at the end of the encoding
+
+    -v, --verbose
+            Verbose logging; outputs info for every frame
+
+    -q, --quiet
+            Do not output any status message
+
+        --psnr
+            Calculate and display PSNR metrics
+
+        --metrics
+            Calulate and display several metrics including PSNR, SSIM, CIEDE2000 etc
+
+    -y
+            Overwrite output file.
+
+    -h, --help
+            Prints help information
+
+    -V, --version
+            Prints version information
+
+
+OPTIONS:
+        --threads <THREADS>
+            Set the threadpool size [default: 0]
+
+    -o, --output <OUTPUT>
+            Compressed AV1 in IVF video output
+
+        --first-pass <FIRST_PASS>
+            Perform the first pass of a two-pass encode, saving the pass data to the specified file for future passes
+
+        --second-pass <SECOND_PASS>
+            Perform the second pass of a two-pass encode, reading the pass data saved from a previous pass from the
+            specified file
+    -l, --limit <LIMIT>
+            Maximum number of frames to encode [default: 0]
+
+        --skip <SKIP>
+            Skip n number of frames and encode [default: 0]
+
+        --quantizer <QP>
+            Quantizer (0-255), smaller values are higher quality [default: 100]
+
+        --min-quantizer <MINQP>
+            Minimum quantizer (0-255) to use in bitrate mode [default: 0]
+
+    -b, --bitrate <BITRATE>
+            Bitrate (kbps)
+
+    -s, --speed <SPEED>
+            Speed level (0 is best quality, 10 is fastest)
+            Speeds 10 and 0 are extremes and are generally not recommended [default: 6]
+    -i, --min-keyint <MIN_KEYFRAME_INTERVAL>
+            Minimum interval between keyframes [default: 12]
+
+    -I, --keyint <KEYFRAME_INTERVAL>
+            Maximum interval between keyframes. When set to 0, disables fixed-interval keyframes. [default: 240]
+
+    -S, --switch-frame-interval <SWITCH_FRAME_INTERVAL>
+            Maximum interval between switch frames. When set to 0, disables switch frames. [default: 0]
+
+        --reservoir-frame-delay <RESERVOIR_FRAME_DELAY>
+            Number of frames over which rate control should distribute the reservoir [default: min(240, 1.5x keyint)]
+            A minimum value of 12 is enforced.
+        --rdo-lookahead-frames <RDO_LOOKAHEAD_FRAMES>
+            Number of frames encoder should lookahead for RDO purposes [default: 40]
+        --tune <TUNE>
+            Quality tuning [default: Psychovisual]  [possible values: Psnr, Psychovisual]
+
+        --tile-rows <TILE_ROWS>
+            Number of tile rows. Must be a power of 2. rav1e may override this based on video resolution. [default: 0]
+
+        --tile-cols <TILE_COLS>
+            Number of tile columns. Must be a power of 2. rav1e may override this based on video resolution. [default:
+            0]
+        --tiles <TILES>
+            Number of tiles. Tile-cols and tile-rows are overridden
+            so that the video has at least this many tiles. [default: 0]
+        --range <PIXEL_RANGE>
+            Pixel range [default: limited]  [possible values: Limited, Full]
+
+        --primaries <COLOR_PRIMARIES>
+            Color primaries used to describe color parameters [default: unspecified]  [possible values: BT709,
+            Unspecified, BT470M, BT470BG, BT601, SMPTE240, GenericFilm, BT2020, XYZ, SMPTE431, SMPTE432, EBU3213]
+        --transfer <TRANSFER_CHARACTERISTICS>
+            Transfer characteristics used to describe color parameters [default: unspecified]  [possible values: BT709,
+            Unspecified, BT470M, BT470BG, BT601, SMPTE240, Linear, Log100, Log100Sqrt10, IEC61966, BT1361, SRGB,
+            BT2020_10Bit, BT2020_12Bit, SMPTE2084, SMPTE428, HLG]
+        --matrix <MATRIX_COEFFICIENTS>
+            Matrix coefficients used to describe color parameters [default: unspecified]  [possible values: Identity,
+            BT709, Unspecified, FCC, BT470BG, BT601, SMPTE240, YCgCo, BT2020NCL, BT2020CL, SMPTE2085, ChromatNCL,
+            ChromatCL, ICtCp]
+        --mastering-display <MASTERING_DISPLAY>
+            Mastering display primaries in the form of G(x,y)B(x,y)R(x,y)WP(x,y)L(max,min) [default: unspecified]
+
+        --content-light <CONTENT_LIGHT>
+            Content light level used to describe content luminosity (cll,fall) [default: 0,0]
+
+        --frame-rate <FRAME_RATE>
+            Constant frame rate to set at the output (inferred from input when omitted)
+
+        --time-scale <TIME_SCALE>
+            The time scale associated with the frame rate if provided (ignored otherwise) [default: 1]
+
+    -r, --reconstruction <RECONSTRUCTION>
+            Outputs a Y4M file containing the output from the decoder
+
+
+ARGS:
+    <INPUT>
+            Uncompressed YUV4MPEG2 video input

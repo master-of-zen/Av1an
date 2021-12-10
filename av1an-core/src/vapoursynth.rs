@@ -71,13 +71,13 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   let info = get_clip_info(env);
 
   let num_frames = {
-    if let Property::Variable = info.format {
+    if Property::Variable == info.format {
       bail!("Cannot output clips with varying format");
     }
-    if let Property::Variable = info.resolution {
+    if Property::Variable == info.resolution {
       bail!("Cannot output clips with varying dimensions");
     }
-    if let Property::Variable = info.framerate {
+    if Property::Variable == info.framerate {
       bail!("Cannot output clips with varying framerate");
     }
 

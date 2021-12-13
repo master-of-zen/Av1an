@@ -17,6 +17,7 @@ license = "GPL-3.0"
 log = "0.4.14"
 av-format = "0.3.1"
 av-ivf = "0.2.2"
+memchr = "2.4.1"
 num_cpus = "1.13.0"
 anyhow = "1.0.42"
 serde = { version = "1.0", features = ["derive"] }

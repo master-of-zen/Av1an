@@ -186,25 +186,27 @@ impl EncodeArgs {
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
+    tpl_crash_workaround: bool,
   ) -> Result<(), (EncoderCrash, u64)> {
     let fpf_file = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
+    let mut video_params = self.video_params.clone();
+    if tpl_crash_workaround {
+      // In aomenc for duplicate arguments, whichever is specified last takes precedence.
+      video_params.push("--enable-tpl-model=0".to_string());
+    }
     let mut enc_cmd = if self.passes == 1 {
-      self
-        .encoder
-        .compose_1_1_pass(self.video_params.clone(), chunk.output())
+      self.encoder.compose_1_1_pass(video_params, chunk.output())
     } else if current_pass == 1 {
       self
         .encoder
-        .compose_1_2_pass(self.video_params.clone(), fpf_file.to_str().unwrap())
+        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
     } else {
-      self.encoder.compose_2_2_pass(
-        self.video_params.clone(),
-        fpf_file.to_str().unwrap(),
-        chunk.output(),
-      )
+      self
+        .encoder
+        .compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
     };
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {

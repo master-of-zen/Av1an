@@ -2,7 +2,7 @@ use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
   progress_bar::{dec_bar, dec_mp_bar},
   settings::EncodeArgs,
-  Chunk, Instant, TargetQuality, Verbosity,
+  Chunk, Encoder, Instant, TargetQuality, Verbosity,
 };
 use std::{
   fmt::{Debug, Display},
@@ -14,6 +14,7 @@ use std::{
 };
 
 use cfg_if::cfg_if;
+use memchr::memmem;
 use smallvec::SmallVec;
 use thiserror::Error;
 
@@ -61,6 +62,15 @@ impl From<Vec<u8>> for StringOrBytes {
 impl From<String> for StringOrBytes {
   fn from(s: String) -> Self {
     Self::String(s)
+  }
+}
+
+impl StringOrBytes {
+  pub fn as_bytes(&self) -> &[u8] {
+    match self {
+      Self::String(s) => s.as_bytes(),
+      Self::Bytes(b) => &b,
+    }
   }
 }
 
@@ -173,9 +183,12 @@ impl<'a> Broker<'a> {
     }
 
     // Run all passes for this chunk
+    let mut tpl_crash_workaround = false;
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=self.max_tries {
-        let res = self.project.create_pipes(chunk, current_pass, worker_id);
+        let res = self
+          .project
+          .create_pipes(chunk, current_pass, worker_id, tpl_crash_workaround);
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {
             dec_bar(frames);
@@ -193,6 +206,18 @@ impl<'a> Broker<'a> {
           // avoids double-print of the error message as both a WARN and ERROR,
           // since `Broker::encoding_loop` will print the error message as well
           warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
+
+          if self.project.encoder == Encoder::aom
+            && memmem::rfind(e.stderr.as_bytes(), b"av1_tpl_stats_ready").is_some()
+          {
+            // aomenc has had a history of crashes related to TPL on certain chunks,
+            // particularly in videos with less motion, such as animated content.
+            // This workaround retries a chunk with TPL disabled if such a crash is detected.
+            // Although there is some amount of psychovisual quality loss with TPL disabled,
+            // this is preferable to being unable to complete the encode.
+            warn!("TPL-based crash, retrying chunk without TPL");
+            tpl_crash_workaround = true;
+          }
         } else {
           break;
         }

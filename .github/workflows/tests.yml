@@ -12,12 +12,12 @@ on:
       - "*.md"
 
 env:
-  AOM_FAST_PARAMS: -v " --cpu-used=9 --rt --threads=4 " -p1
-  RAV1E_FAST_PARAMS: -v " --speed 10 --low-latency "
-  SVT_FAST_PARAMS: -v " --preset 8 "
-  VPXENC_FAST_PARAMS: -v " --cpu-used=9 --rt --threads=4 " -p1
-  X265_FAST_PARAMS: -v " --preset ultrafast "
-  X264_FAST_PARAMS: -v " --preset ultrafast "
+  AOM_FAST_PARAMS: -v="--cpu-used=9 --rt --threads=4" -p1
+  RAV1E_FAST_PARAMS: -v="--speed 10 --low-latency"
+  SVT_FAST_PARAMS: -v="--preset 8"
+  VPXENC_FAST_PARAMS: -v="--cpu-used=9 --rt --threads=4" -p1
+  X265_FAST_PARAMS: -v="--preset ultrafast"
+  X264_FAST_PARAMS: -v="--preset ultrafast"
   DEBIAN_FRONTEND: noninteractive
 
 jobs:

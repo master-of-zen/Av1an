@@ -40,3 +40,9 @@ opt-level = 3
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+[profile.ci]
+inherits = "release"
+lto = false
+debug-assertions = true
+overflow-checks = true

@@ -73,7 +73,7 @@ jobs:
 
       - name: Testing baseline x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline x264
@@ -103,7 +103,7 @@ jobs:
 
       - name: Testing baseline-select x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select x264
@@ -133,7 +133,7 @@ jobs:
 
       - name: Testing target-quality x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x264
@@ -163,7 +163,7 @@ jobs:
 
       - name: Testing probe-slow x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x264

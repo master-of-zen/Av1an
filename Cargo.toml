@@ -44,6 +44,6 @@ codegen-units = 1
 [profile.ci]
 inherits = "release"
 lto = "off"
-codegen-units = 16
+codegen-units = 1024
 debug-assertions = true
 overflow-checks = true

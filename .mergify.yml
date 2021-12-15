@@ -1,0 +1,28 @@
+pull_request_rules:
+  - name: automatic merge for main when CI passes and approved
+    conditions:
+      - "#approved-reviews-by>=1"
+      # Unfortunately, we cannot just say "all CI must pass".
+      # This is not a bot limitation, but a limitation in Github itself.
+      - check-success=tests / all-tests
+      - check-success=tests / docker
+      - check-success=SonarCloud Code Analysis
+      - base=master
+    actions:
+      merge:
+        method: squash
+        rebase_fallback: none
+        strict: smart+fasttrack
+        strict_method: rebase
+  - name: copy patches to stable branch
+    conditions:
+      - base=master
+      - label!=unstable
+    actions:
+      backport:
+        branches:
+          - stable
+        assignees:
+          - "@master-of-zen"
+          - "@redzic"
+          - "@shssoichiro"

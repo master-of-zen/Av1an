@@ -102,6 +102,15 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   Ok(num_frames)
 }
 
+fn get_frame_rate(env: &mut Environment) -> anyhow::Result<f64> {
+  let info = get_clip_info(env);
+
+  match info.framerate {
+    Property::Variable => bail!("Cannot output clips with varying framerate"),
+    Property::Constant(fps) => Ok(fps.numerator as f64 / fps.denominator as f64),
+  }
+}
+
 /// Get the bit depth from an environment that has already been
 /// evaluated on a script.
 fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
@@ -195,4 +204,16 @@ pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
     .unwrap();
 
   get_bit_depth(&mut environment)
+}
+
+pub fn frame_rate(source: &Path) -> anyhow::Result<f64> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_frame_rate(&mut environment)
 }

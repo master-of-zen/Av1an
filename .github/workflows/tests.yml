@@ -62,7 +62,7 @@ jobs:
 
       - name: Testing baseline vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline x265
@@ -92,7 +92,7 @@ jobs:
 
       - name: Testing baseline-select vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select x265
@@ -122,7 +122,7 @@ jobs:
 
       - name: Testing target-quality vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x265
@@ -152,7 +152,7 @@ jobs:
 
       - name: Testing probe-slow vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x265

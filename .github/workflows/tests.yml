@@ -83,147 +83,147 @@ jobs:
 
       - name: Testing baseline-select aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" "$RAV1E_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" $RAV1E_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" "$SVT_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" $SVT_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" "$VPXENC_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" $VPXENC_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" $X265_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" "$X264_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" $X264_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing target-quality aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" "$RAV1E_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" $RAV1E_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" "$SVT_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" $SVT_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" "$VPXENC_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" $VPXENC_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" $X265_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" "$X264_FAST_PARAMS" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" $X264_FAST_PARAMS --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing probe-slow aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" "$RAV1E_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" $RAV1E_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" "$SVT_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" $SVT_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" "$VPXENC_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e vpx --sc-method fast -y -o "tt_sif.mkv" $VPXENC_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" "$X265_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" $X265_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" "$X264_FAST_PARAMS" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" $X264_FAST_PARAMS --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing chunk_hybrid aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --chunk-method hybrid
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --chunk-method hybrid
           du -h tt_sif.mkv
 
       - name: Testing chunk_select aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing chunk_ffms2 aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --chunk-method ffms2
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --chunk-method ffms2
           du -h tt_sif.mkv
 
       - name: Testing chunk_lsmash aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --chunk-method lsmash
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --chunk-method lsmash
           du -h tt_sif.mkv
 
       - name: Testing scenes aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" -s scenes.json
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS -s scenes.json
           du -h tt_sif.mkv
 
       - name: Testing workers aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" -w 2
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS -w 2
           du -h tt_sif.mkv
 
       - name: Testing vmaf aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --vmaf
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --vmaf
           du -h tt_sif.mkv
 
       - name: Testing extra_splits aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" -x 10
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS -x 10
           du -h tt_sif.mkv
 
       - name: Testing temp aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" --temp temporary
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS --temp temporary
           du -h tt_sif.mkv
 
       - name: Testing concat mkvmerge aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" "$AOM_FAST_PARAMS" -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" $AOM_FAST_PARAMS -c mkvmerge
           du -h tt_sif.mkv
 
       - name: Testing slow scenechange aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom "tt_sif.mkv" "$AOM_FAST_PARAMS" -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom "tt_sif.mkv" $AOM_FAST_PARAMS -c mkvmerge
           du -h tt_sif.mkv
 
   docker:

@@ -4,16 +4,41 @@ pull_request_rules:
       - "#approved-reviews-by>=1"
       # Unfortunately, we cannot just say "all CI must pass".
       # This is not a bot limitation, but a limitation in Github itself.
-      - check-success=tests / all-tests
-      - check-success=tests / docker
+      - or:
+          - and:
+              - check-success=tests / all-tests
+              - check-success=tests / docker
+          - and:
+              - check-success=tests / all-tests (pull_request)
+              - check-success=tests / docker (pull_request)
       - check-success=SonarCloud Code Analysis
       - base=master
     actions:
-      merge:
+      queue:
+        name: default
         method: squash
         rebase_fallback: none
-        strict: smart+fasttrack
-        strict_method: rebase
+        update_method: rebase
+  - name: automatic merge for stable backports when CI passes
+    conditions:
+      - or:
+          - and:
+              - check-success=tests / all-tests
+              - check-success=tests / docker
+          - and:
+              - check-success=tests / all-tests (pull_request)
+              - check-success=tests / docker (pull_request)
+      - check-success=SonarCloud Code Analysis
+      - base=stable
+      - or:
+          - "#approved-reviews-by>=1"
+          - author=mergify[bot]
+    actions:
+      queue:
+        name: stable
+        method: rebase
+        rebase_fallback: none
+        update_method: rebase
   - name: copy patches to stable branch
     conditions:
       - base=master
@@ -23,6 +48,27 @@ pull_request_rules:
         branches:
           - stable
         assignees:
-          - "@master-of-zen"
-          - "@redzic"
-          - "@shssoichiro"
+          - master-of-zen
+          - redzic
+          - shssoichiro
+
+queue_rules:
+  - name: stable
+    conditions:
+      - or:
+          - and:
+              - check-success=tests / all-tests
+              - check-success=tests / docker
+          - and:
+              - check-success=tests / all-tests (pull_request)
+              - check-success=tests / docker (pull_request)
+
+  - name: default
+    conditions:
+      - or:
+          - and:
+              - check-success=tests / all-tests
+              - check-success=tests / docker
+          - and:
+              - check-success=tests / all-tests (pull_request)
+              - check-success=tests / docker (pull_request)

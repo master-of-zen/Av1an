@@ -12,13 +12,12 @@ on:
       - "*.md"
 
 env:
-  deps: tree llvm clang mkvtoolnix
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
   all-tests:
     runs-on: ubuntu-latest
-    container: luigi311/encoders-docker:20210901
+    container: shssoichiro/av1an-ci:latest
     steps:
       - uses: actions/checkout@v2
       - name: Validate encoders
@@ -26,24 +25,13 @@ jobs:
           aomenc --help
           SvtAv1EncApp --help
           rav1e --help
-          x265 --help || true
-
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          profile: default
-          default: true
-          components: rustfmt, clippy
-
-      - name: Install requirements
-        run: |
-          apt-get update && apt-get install -y ${{ env.deps }}
+          vpxenc --help
+          x265 --help
+          x264 --help
 
       - name: Build Av1an
         run: |
-          cargo build --release --features ffmpeg_static
+          cargo build --release
 
       # 352x240 112 frames test video
       - name: Download test video

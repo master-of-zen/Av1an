@@ -47,17 +47,17 @@ jobs:
       # it works without params passed
       - name: Testing baseline aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline vpx
@@ -67,27 +67,27 @@ jobs:
 
       - name: Testing baseline x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv"
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"
           du -h tt_sif.mkv
 
       - name: Testing baseline-select aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency" --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8" --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select vpx
@@ -97,28 +97,28 @@ jobs:
 
       - name: Testing baseline-select x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing baseline-select x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
           du -h tt_sif.mkv
 
       # TODO: remove the --crf/--quantizer/--cq-level params once the bug of not specifying them resulting in a panic is fixed
       - name: Testing target-quality aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4 --cq-level=0" -p1 --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4 --cq-level=0" -p1 --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality vpx
@@ -128,27 +128,27 @@ jobs:
 
       - name: Testing target-quality x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing probe-slow aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow vpx
@@ -158,67 +158,67 @@ jobs:
 
       - name: Testing probe-slow x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing chunk_hybrid aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method hybrid
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method hybrid
           du -h tt_sif.mkv
 
       - name: Testing chunk_select aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method select
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method select
           du -h tt_sif.mkv
 
       - name: Testing chunk_ffms2 aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method ffms2
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method ffms2
           du -h tt_sif.mkv
 
       - name: Testing chunk_lsmash aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method lsmash
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --chunk-method lsmash
           du -h tt_sif.mkv
 
       - name: Testing scenes aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -s scenes.json
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -s scenes.json
           du -h tt_sif.mkv
 
       - name: Testing workers aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -w 2
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -w 2
           du -h tt_sif.mkv
 
       - name: Testing vmaf aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --vmaf
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --vmaf
           du -h tt_sif.mkv
 
       - name: Testing extra_splits aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -x 10
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -x 10
           du -h tt_sif.mkv
 
       - name: Testing temp aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --temp temporary
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --temp temporary
           du -h tt_sif.mkv
 
       - name: Testing concat mkvmerge aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -c mkvmerge
           du -h tt_sif.mkv
 
       - name: Testing slow scenechange aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 -c mkvmerge
           du -h tt_sif.mkv
 
   docker:

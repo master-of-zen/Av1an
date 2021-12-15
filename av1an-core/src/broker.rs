@@ -208,6 +208,7 @@ impl<'a> Broker<'a> {
           warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
 
           if self.project.encoder == Encoder::aom
+            && !tpl_crash_workaround
             && memmem::rfind(e.stderr.as_bytes(), b"av1_tpl_stats_ready").is_some()
           {
             // aomenc has had a history of crashes related to TPL on certain chunks,

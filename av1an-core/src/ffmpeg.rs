@@ -63,7 +63,7 @@ pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg_next::Error> {
     .best(MediaType::Video)
     .ok_or(StreamNotFound)?;
   let rate = input.avg_frame_rate();
-  Ok(rate.numerator() as f64 / rate.denominator() as f64)
+  Ok(f64::from(rate.numerator()) / f64::from(rate.denominator()))
 }
 
 pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {

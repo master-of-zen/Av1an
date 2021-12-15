@@ -15,6 +15,7 @@
 #![allow(clippy::wildcard_imports)]
 #![allow(clippy::drop_ref)]
 #![allow(clippy::unsafe_derive_deserialize)]
+#![allow(clippy::needless_pass_by_value)]
 
 #[macro_use]
 extern crate log;

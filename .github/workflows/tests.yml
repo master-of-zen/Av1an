@@ -28,12 +28,12 @@ jobs:
       - uses: actions/checkout@v2
       - name: Validate encoders
         run: |
-          aomenc --help
-          SvtAv1EncApp --help
-          rav1e --help
-          vpxenc --help
-          x265 --help
-          x264 --help
+          which aomenc
+          which SvtAv1EncApp
+          which rav1e
+          which vpxenc
+          which x265
+          which x264
 
       - name: Build Av1an
         run: |

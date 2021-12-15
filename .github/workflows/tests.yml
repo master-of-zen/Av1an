@@ -16,54 +16,9 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  validate:
-    name: ${{ matrix.name }} ${{ matrix.enc }}
+  all-tests:
     runs-on: ubuntu-latest
     container: luigi311/encoders-docker:20210901
-    strategy:
-      fail-fast: false
-      matrix:
-        enc: [aom, rav1e, svt-av1, vpx, x265, x264]
-        name: [baseline, baseline-select, target-quality, probe-slow]
-        include:
-          - name: baseline
-            flags: ""
-          - name: baseline-select
-            flags: "--chunk-method select"
-          - name: target-quality
-            flags: --target-quality 95
-          - name: probe-slow
-            flags: --target-quality 95 --probe-slow
-          - name: chunk_hybrid
-            enc: aom
-            flags: --chunk-method hybrid
-          - name: chunk_select
-            enc: aom
-            flags: --chunk-method select
-          - name: chunk_ffms2
-            enc: aom
-            flags: --chunk-method ffms2
-          - name: chunk_lsmash
-            enc: aom
-            flags: --chunk-method lsmash
-          - name: scenes
-            enc: aom
-            flags: -s scenes.json
-          - name: workers
-            enc: aom
-            flags: -w 2
-          - name: vmaf
-            enc: aom
-            flags: --vmaf
-          - name: extra_splits
-            enc: aom
-            flags: -x 10
-          - name: video_settings
-            enc: aom
-            flags: -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
-          - name: temp
-            enc: aom
-            flags: --temp temporary
     steps:
       - uses: actions/checkout@v2
       - name: Validate encoders
@@ -76,11 +31,11 @@ jobs:
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: nightly
-            override: true
-            profile: default
-            default: true
-            components: rustfmt, clippy
+          toolchain: nightly
+          override: true
+          profile: default
+          default: true
+          components: rustfmt, clippy
 
       - name: Install requirements
         run: |
@@ -103,15 +58,214 @@ jobs:
           done
           tar xf video.tar.gz
 
-      - name: Testing ${{ matrix.name }}
+      - name: Testing unit tests
+        working-directory: ./av1an-core
         run: |
-          target/release/av1an -i bus_cif.y4m -e ${{ matrix.enc }} -l log_av1an -c mkvmerge --keep -o "bus_cif.mkv" ${{ matrix.flags }}
+          cargo test
+
+      - name: Testing baseline aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv"
           du -h bus_cif.mkv
           tree -a
 
-      - name: Cat log
-        if: always()
-        run: cat log_av1an.log
+      - name: Testing baseline rav1e
+        run: |
+          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv"
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline svt-av1
+        run: |
+          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv"
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline vpx
+        run: |
+          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv"
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline x265
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv"
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline x264
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv"
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select rav1e
+        run: |
+          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select svt-av1
+        run: |
+          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select vpx
+        run: |
+          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select x265
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baseline-select x264
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality rav1e
+        run: |
+          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality svt-av1
+        run: |
+          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality vpx
+        run: |
+          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality x265
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing target-quality x264
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow rav1e
+        run: |
+          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow svt-av1
+        run: |
+          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow vpx
+        run: |
+          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow x265
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing probe-slow x264
+        run: |
+          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing chunk_hybrid aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method hybrid
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing chunk_select aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing chunk_ffms2 aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method ffms2
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing chunk_lsmash aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method lsmash
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing scenes aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -s scenes.json
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing workers aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -w 2
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing vmaf aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --vmaf
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing extra_splits aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -x 10
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing baselivideo_settingsne aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
+          du -h bus_cif.mkv
+          tree -a
+
+      - name: Testing temp aom
+        run: |
+          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --temp temporary
+          du -h bus_cif.mkv
+          tree -a
 
   docker:
     runs-on: ubuntu-latest
@@ -148,7 +302,7 @@ jobs:
           path: /tmp/docker-cache.tar
 
   docker-publish:
-    needs: [validate, docker]
+    needs: [all-tests, docker]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
@@ -157,8 +311,8 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-         name: docker-cache
-         path: /tmp/
+          name: docker-cache
+          path: /tmp/
 
       - name: Extract docker cache
         run: tar -xf /tmp/docker-cache.tar -C /

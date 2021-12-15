@@ -41,22 +41,14 @@ jobs:
         run: |
           apt-get update && apt-get install -y ${{ env.deps }}
 
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --no-default-features
-
       - name: Build Av1an
         run: |
           cargo build --release --features ffmpeg_static
 
-      - name: Download videos
+      # 352x240 112 frames test video
+      - name: Download test video
         run: |
-          for url in raw.githubusercontent.com/OpenVisualCloud/SVT-AV1-Resources/master randomderp.com; do
-            curl -LO https://$url/video.tar.gz && break
-          done
-          tar xf video.tar.gz
+          curl -LO https://media.xiph.org/video/derf/y4m/tt_sif.y4m
 
       - name: Testing unit tests
         working-directory: ./av1an-core
@@ -65,207 +57,173 @@ jobs:
 
       - name: Testing baseline aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline rav1e
         run: |
-          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e rav1e -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline svt-av1
         run: |
-          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e svt-av1 -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline vpx
         run: |
-          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e vpx -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline x265
         run: |
-          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x265 -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline x264
         run: |
-          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv"
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x264 -c mkvmerge -y -o "tt_sif.mkv"
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select rav1e
         run: |
-          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e rav1e -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select svt-av1
         run: |
-          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e svt-av1 -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select vpx
         run: |
-          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e vpx -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select x265
         run: |
-          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x265 -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing baseline-select x264
         run: |
-          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x264 -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing target-quality aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing target-quality rav1e
         run: |
-          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e rav1e -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing target-quality svt-av1
         run: |
-          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e svt-av1 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing target-quality vpx
         run: |
-          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e vpx -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing target-quality x265
         run: |
-          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x265 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing target-quality x264
         run: |
-          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x264 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow rav1e
         run: |
-          target/release/av1an -i bus_cif.y4m -e rav1e -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e rav1e -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow svt-av1
         run: |
-          target/release/av1an -i bus_cif.y4m -e svt-av1 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e svt-av1 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow vpx
         run: |
-          target/release/av1an -i bus_cif.y4m -e vpx -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e vpx -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow x265
         run: |
-          target/release/av1an -i bus_cif.y4m -e x265 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x265 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing probe-slow x264
         run: |
-          target/release/av1an -i bus_cif.y4m -e x264 -c mkvmerge -y -o "bus_cif.mkv" --target-quality 95 --probe-slow
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e x264 -c mkvmerge -y -o "tt_sif.mkv" --target-quality 95 --probe-slow
+          du -h tt_sif.mkv
 
       - name: Testing chunk_hybrid aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method hybrid
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --chunk-method hybrid
+          du -h tt_sif.mkv
 
       - name: Testing chunk_select aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method select
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --chunk-method select
+          du -h tt_sif.mkv
 
       - name: Testing chunk_ffms2 aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method ffms2
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --chunk-method ffms2
+          du -h tt_sif.mkv
 
       - name: Testing chunk_lsmash aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --chunk-method lsmash
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --chunk-method lsmash
+          du -h tt_sif.mkv
 
       - name: Testing scenes aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -s scenes.json
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" -s scenes.json
+          du -h tt_sif.mkv
 
       - name: Testing workers aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -w 2
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" -w 2
+          du -h tt_sif.mkv
 
       - name: Testing vmaf aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --vmaf
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --vmaf
+          du -h tt_sif.mkv
 
       - name: Testing extra_splits aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -x 10
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" -x 10
+          du -h tt_sif.mkv
 
-      - name: Testing baselivideo_settingsne aom
+      - name: Testing video_settings aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8 "
+          du -h tt_sif.mkv
 
       - name: Testing temp aom
         run: |
-          target/release/av1an -i bus_cif.y4m -e aom -c mkvmerge -y -o "bus_cif.mkv" --temp temporary
-          du -h bus_cif.mkv
-          tree -a
+          target/release/av1an -i tt_sif.y4m -e aom -c mkvmerge -y -o "tt_sif.mkv" --temp temporary
+          du -h tt_sif.mkv
 
   docker:
     runs-on: ubuntu-latest

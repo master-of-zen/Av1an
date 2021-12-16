@@ -69,7 +69,7 @@ impl StringOrBytes {
   pub fn as_bytes(&self) -> &[u8] {
     match self {
       Self::String(s) => s.as_bytes(),
-      Self::Bytes(b) => &b,
+      Self::Bytes(b) => b,
     }
   }
 }
@@ -95,7 +95,6 @@ impl Display for EncoderCrash {
 
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
-  #[allow(clippy::needless_pass_by_value)]
   pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());

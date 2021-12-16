@@ -4,13 +4,8 @@ pull_request_rules:
       - "#approved-reviews-by>=1"
       # Unfortunately, we cannot just say "all CI must pass".
       # This is not a bot limitation, but a limitation in Github itself.
-      - or:
-          - and:
-              - check-success=tests / all-tests
-              - check-success=tests / docker
-          - and:
-              - check-success=tests / all-tests (pull_request)
-              - check-success=tests / docker (pull_request)
+      - check-success=all-tests
+      - check-success=docker
       - check-success=SonarCloud Code Analysis
       - base=master
     actions:
@@ -21,13 +16,8 @@ pull_request_rules:
         update_method: rebase
   - name: automatic merge for stable backports when CI passes
     conditions:
-      - or:
-          - and:
-              - check-success=tests / all-tests
-              - check-success=tests / docker
-          - and:
-              - check-success=tests / all-tests (pull_request)
-              - check-success=tests / docker (pull_request)
+      - check-success=all-tests
+      - check-success=docker
       - check-success=SonarCloud Code Analysis
       - base=stable
       - or:

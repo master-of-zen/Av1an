@@ -45,10 +45,5 @@ pull_request_rules:
 queue_rules:
   - name: default
     conditions:
-      - or:
-          - and:
-              - check-success=tests / all-tests
-              - check-success=tests / docker
-          - and:
-              - check-success=tests / all-tests (pull_request)
-              - check-success=tests / docker (pull_request)
+      - check-success=all-tests
+      - check-success=docker

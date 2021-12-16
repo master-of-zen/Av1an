@@ -63,5 +63,14 @@ pull_request_rules:
 queue_rules:
   - name: default
     conditions:
-      - check-success=all-tests
-      - check-success=docker
+      - or:
+          - and:
+              - check-success=all-tests
+              - check-success=docker
+              - check-success=SonarCloud Code Analysis
+          - and:
+              - -files~=^av1an-cli/
+              - -files~=^av1an-core/
+              - -files~=^src/
+              - -files~=^Cargo.*
+              - -files~=^Dockerfile

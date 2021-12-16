@@ -2,11 +2,21 @@ pull_request_rules:
   - name: automatic merge for main when CI passes and approved
     conditions:
       - "#approved-reviews-by>=1"
-      # Unfortunately, we cannot just say "all CI must pass".
-      # This is not a bot limitation, but a limitation in Github itself.
-      - check-success=all-tests
-      - check-success=docker
-      - check-success=SonarCloud Code Analysis
+      - or:
+          # Unfortunately, we cannot just say "all CI must pass".
+          # This is not a bot limitation, but a limitation in Github itself.
+          - and:
+              - check-success=all-tests
+              - check-success=docker
+              - check-success=SonarCloud Code Analysis
+          # Auto-merge in the case where tests were not run
+          # because no source files were modified
+          - and:
+              - -files~=^av1an-cli/
+              - -files~=^av1an-core/
+              - -files~=^src/
+              - -files~=^Cargo.*
+              - -files~=^Dockerfile
       - base=master
     actions:
       queue:
@@ -16,9 +26,17 @@ pull_request_rules:
         update_method: rebase
   - name: automatic merge for stable backports when CI passes
     conditions:
-      - check-success=all-tests
-      - check-success=docker
-      - check-success=SonarCloud Code Analysis
+      - or:
+          - and:
+              - check-success=all-tests
+              - check-success=docker
+              - check-success=SonarCloud Code Analysis
+          - and:
+              - -files~=^av1an-cli/
+              - -files~=^av1an-core/
+              - -files~=^src/
+              - -files~=^Cargo.*
+              - -files~=^Dockerfile
       - base=stable
       - or:
           - "#approved-reviews-by>=1"

@@ -702,12 +702,10 @@ dependencies = [
 [[package]]
 name = "indicatif"
 version = "0.17.0-beta.1"
-source = "git+https://github.com/mitsuhiko/indicatif?rev=1fa875fefab83e8aee6bc80d881decf155382d8a#1fa875fefab83e8aee6bc80d881decf155382d8a"
+source = "git+https://github.com/mitsuhiko/indicatif?rev=ddc9fa9f0af35fa86c9e74784b3874003235e141#ddc9fa9f0af35fa86c9e74784b3874003235e141"
 dependencies = [
  "console",
  "number_prefix",
- "once_cell",
- "regex",
 ]
 
 [[package]]
@@ -1734,11 +1732,10 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.14.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e992e41e0d2fb9f755b37446f20900f64446ef54874f40a60c78f021ac6144"
+checksum = "fbbf1c778ec206785635ce8ad57fe52b3009ae9e0c9f574a728f3049d3e55838"
 dependencies = [
- "autocfg",
  "bytes",
  "libc",
  "memchr",

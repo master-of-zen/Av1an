@@ -25,7 +25,7 @@ pull_request_rules:
           - author=mergify[bot]
     actions:
       queue:
-        name: stable
+        name: default
         method: rebase
         rebase_fallback: none
         update_method: rebase
@@ -43,16 +43,6 @@ pull_request_rules:
           - shssoichiro
 
 queue_rules:
-  - name: stable
-    conditions:
-      - or:
-          - and:
-              - check-success=tests / all-tests
-              - check-success=tests / docker
-          - and:
-              - check-success=tests / all-tests (pull_request)
-              - check-success=tests / docker (pull_request)
-
   - name: default
     conditions:
       - or:

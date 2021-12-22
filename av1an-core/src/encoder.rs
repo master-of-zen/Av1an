@@ -1,4 +1,5 @@
 use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_vec, list_index};
+use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
@@ -344,16 +345,36 @@ impl Encoder {
     }
   }
 
+  fn insert_q(self, q: usize) -> ArrayVec<String, 2> {
+    let mut output = ArrayVec::new();
+    match self {
+      Self::aom | Self::vpx => {
+        output.push(format!("--cq-level={}", q));
+      }
+      Self::rav1e => {
+        output.push("--quantizer".into());
+        output.push(format!("{}", q));
+      }
+      Self::svt_av1 | Self::x264 | Self::x265 => {
+        output.push("--crf".into());
+        output.push(format!("{}", q));
+      }
+    }
+    output
+  }
+
   /// Returns changed q/crf in command line arguments
-  pub fn man_command(self, params: Vec<String>, q: usize) -> Vec<String> {
-    let index = list_index(&params, self.q_match_fn())
-      .unwrap_or_else(|| panic!("No match found for params: {:#?}", params));
+  pub fn man_command(self, mut params: Vec<String>, q: usize) -> Vec<String> {
+    let index = list_index(&params, self.q_match_fn());
+    if let Some(index) = index {
+      let (replace_index, replace_q) = self.replace_q(index, q);
+      params[replace_index] = replace_q;
+    } else {
+      let args = self.insert_q(q);
+      params.extend_from_slice(&args);
+    }
 
-    let mut new_params = params;
-    let (replace_index, replace_q) = self.replace_q(index, q);
-    new_params[replace_index] = replace_q;
-
-    new_params
+    params
   }
 
   /// Parses the number of encoded frames

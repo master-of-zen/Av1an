@@ -352,12 +352,12 @@ impl Encoder {
         output.push(format!("--cq-level={}", q));
       }
       Self::rav1e => {
-        output.push("--quantizer".to_string());
-        output.push(q.to_string());
+        output.push("--quantizer".into());
+        output.push(format!("{}", q));
       }
       Self::svt_av1 | Self::x264 | Self::x265 => {
-        output.push("--crf".to_string());
-        output.push(q.to_string());
+        output.push("--crf".into());
+        output.push(format!("{}", q));
       }
     }
     output

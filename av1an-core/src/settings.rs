@@ -532,6 +532,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       );
     }
 
+    if matches!(self.encoder, Encoder::aom | Encoder::vpx)
+      && self.passes != 1
+      && self.video_params.iter().any(|param| param == "--rt")
+    {
+      // --rt must be used with 1-pass mode
+      self.passes = 1;
+    }
+
     if !self.force {
       self.validate_encoder_params();
     }

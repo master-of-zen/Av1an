@@ -93,19 +93,36 @@ fn max_tries_valid(tries: String) -> Result<(), String> {
 #[derive(StructOpt, Debug)]
 #[structopt(name = "av1an", setting = ColoredHelp, version = version())]
 pub struct CliOpts {
-  /// Input file or vapoursynth (.py, .vpy) script
+  /// Input file to encode
+  ///
+  /// Can be a video or vapoursynth (.py, .vpy) script.
   #[structopt(short, parse(from_os_str))]
   pub input: PathBuf,
 
   /// Temporary directory to use
+  ///
+  /// If not specified, the temporary directory name is a hash of the input file name.
   #[structopt(long, parse(from_os_str))]
   pub temp: Option<PathBuf>,
 
-  /// Specify output file
+  /// Video output file
   #[structopt(short, parse(from_os_str))]
   pub output_file: Option<PathBuf>,
 
-  /// Method to use for concatenating encoded chunks
+  /// Determines method used for concatenating encoded chunks and audio into output file
+  ///
+  /// ffmpeg - Uses ffmpeg for concatenation. Unfortunately, ffmpeg sometimes produces files
+  /// with partially broken audio seeking, so mkvmerge should generally be preferred if available.
+  /// ffmpeg concatenation also produces broken files with the --enable-keyframe-filtering=2 option
+  /// in aomenc, so it is disabled if that option is used. However, ffmpeg can mux into formats other
+  /// than matroska (.mkv), such as WebM. To output WebM, use a .webm extension in the output file.
+  ///
+  /// mkvmerge - Generally the best concatenation method (as it does not have either of the
+  /// aforementioned issues that ffmpeg has), but can only produce matroska (.mkv) files. Requires mkvmerge
+  /// to be installed.
+  ///
+  /// ivf - Experimental concatenation method implemented in av1an itself to concatenate to an ivf
+  /// file (which only supports VP8, VP9, and AV1, and does not support audio).
   #[structopt(short, long, possible_values = &["ffmpeg", "mkvmerge", "ivf"], default_value = "ffmpeg")]
   pub concat: ConcatMethod,
 
@@ -117,7 +134,7 @@ pub struct CliOpts {
   #[structopt(long)]
   pub verbose: bool,
 
-  /// Specify this option to log to a non-default file
+  /// Log file location [default: <temp dir>/log.log]
   #[structopt(short, long)]
   pub log_file: Option<String>,
 
@@ -136,7 +153,7 @@ pub struct CliOpts {
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
-  /// Resume previous session
+  /// Resume previous session from temporary directory
   #[structopt(short, long)]
   pub resume: bool,
 
@@ -152,7 +169,32 @@ pub struct CliOpts {
   #[structopt(long, default_value = "3", validator = max_tries_valid)]
   pub max_tries: usize,
 
-  /// Method for creating chunks
+  /// Method used for piping exact ranges of frames to the encoder
+  ///
+  /// Methods that require an external vapoursynth plugin:
+  ///
+  /// lsmash - Generally the best and most accurate method. Does not require intermediate files. Errors generally only
+  /// occur if the input file itself is broken (for example, if the video bitstream is invalid in some way, video players usually try
+  /// to recover from the errors as much as possible even if it results in visible artifacts, while lsmash will instead throw an error).
+  /// Requires the lsmashsource vapoursynth plugin to be installed.
+  ///
+  /// ffms2 - Accurate and does not require intermediate files. Can sometimes have bizarre bugs that are not present in lsmash (that can
+  /// cause artifacts in the piped output). Slightly faster than lsmash for y4m input. Requires the ffms2 vapoursynth plugin to be
+  /// installed.
+  ///
+  /// Methods that only require ffmpeg:
+  ///
+  /// hybrid - Uses a combination of segment and select. Usually accurate but requires intermediate files (which can be large). Avoids
+  /// decoding irrelevant frames by seeking to the first keyframe before the requested frame and decoding only a (usually very small)
+  /// number of irrelevant frames until relevant frames are decoded and piped to the encoder.
+  ///
+  /// select - Extremely slow, but accurate. Does not require intermediate files. Decodes from the first frame to the requested frame,
+  /// without skipping irrelevant frames (causing quadratic decoding complexity).
+  ///
+  /// segment - Create chunks based on keyframes in the source. Not frame exact, as it can only split on keyframes in the source.
+  /// Requires intermediate files (which can be large).
+  ///
+  /// Default: lsmash (if available), otherwise ffms2 (if available), otherwise hybrid.
   #[structopt(short = "m", long, possible_values=&["segment", "select", "ffms2", "lsmash", "hybrid"])]
   pub chunk_method: Option<ChunkMethod>,
 
@@ -160,16 +202,19 @@ pub struct CliOpts {
   #[structopt(short, long, parse(from_os_str))]
   pub scenes: Option<PathBuf>,
 
-  /// Method used to detect scenecuts. `av-scenechange` uses an algorithm to analyze which frames of
-  /// the video are the start of new scenes, while `none` disable scene detection entirely (and only
-  /// rely on `-x`/`--extra-split` to add extra scenecuts).
+  /// Method used to determine chunk boundaries
+  ///
+  /// "av-scenechange" uses an algorithm to analyze which frames of the video are the start of new
+  /// scenes, while "none" disables scene detection entirely (and only relies on -x/--extra-split to
+  /// add extra scenecuts).
   #[structopt(long, possible_values=&["av-scenechange", "none"], default_value = "av-scenechange")]
   pub split_method: SplitMethod,
 
-  /// Specify scenecut method
+  /// Scene detection algorithm to use for av-scenechange
   ///
-  /// Standard: Most accurate, still reasonably fast.
-  /// Fast: Very fast, but less accurate.
+  /// Standard: Most accurate, still reasonably fast. Uses a cost-based algorithm to determine keyframes.
+  ///
+  /// Fast: Very fast, but less accurate. Determines keyframes based on the raw difference between pixels.
   #[structopt(long, possible_values=&["standard", "fast"], default_value = "standard")]
   pub sc_method: ScenecutMethod,
 
@@ -177,11 +222,13 @@ pub struct CliOpts {
   #[structopt(long)]
   pub sc_pix_format: Option<Pixel>,
 
-  /// Optional downscaling for scenecut detection.
-  /// Specify as the desired maximum height to scale to
-  /// (e.g. "720" to downscale to 720p--this will leave lower resolution content untouched).
-  /// Downscaling will improve speed but lower scenecut accuracy,
-  /// especially when scaling to very low resolutions.
+  /// Optional downscaling for scene detection
+  ///
+  /// Specify as the desired maximum height to scale to (e.g. "720" to downscale to
+  /// 720p — this will leave lower resolution content untouched). Downscaling improves
+  /// scene detection speed but lowers accuracy, especially when scaling to very low resolutions.
+  ///
+  /// By default, no downscaling is performed.
   #[structopt(long)]
   pub sc_downscale_height: Option<usize>,
 
@@ -197,13 +244,27 @@ pub struct CliOpts {
   #[structopt(long, default_value = "24")]
   pub min_scene_len: usize,
 
-  /// Specify number encoding passes
+  /// Number of encoder passes
   ///
-  /// When using vpx or aom with RT, set this option to 1.
+  /// Since aom and vpx benefit from two-pass mode even with constant quality mode (unlike other
+  /// encoders in which two-pass mode is used for more accurate VBR rate control), two-pass mode is
+  /// used by default for these encoders.
+  ///
+  /// When using aom or vpx with RT mode (--rt), one-pass mode is always used regardless of the
+  /// value specified by this flag (as RT mode in aom and vpx only supports one-pass encoding).
   #[structopt(short, long, possible_values=&["1", "2"])]
   pub passes: Option<u8>,
 
-  /// Video encoder parameters
+  /// Parameters for video encoder
+  ///
+  /// These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be used.
+  /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
+  /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
+  /// a list of valid options.
+  ///
+  /// To disambiguate the value of this argument from options to av1an itself, either preceding
+  /// whitespace is required for this argument, or the equal sign syntax must be used
+  /// (e.g. -v="--crf 20" or -v " --crf 20").
   #[structopt(short, long)]
   pub video_params: Option<String>,
 
@@ -211,18 +272,18 @@ pub struct CliOpts {
   #[structopt(short, long, default_value = "aom", possible_values=&["aom", "rav1e", "vpx", "svt-av1", "x264", "x265"])]
   pub encoder: Encoder,
 
-  /// Number of workers. 0 = automatic
+  /// Number of workers to spawn [0 = automatic]
   #[structopt(short, long, default_value = "0")]
   pub workers: usize,
 
-  /// Optionally pin each worker to this many threads
+  /// Pin each worker to a specific set of threads of this size (disabled by default)
   ///
-  /// This option does nothing on unsupported platforms (currently only
-  /// supported on Linux and Windows)
+  /// This is currently only supported on Linux and Windows, and does nothing on unsupported platforms.
+  /// Leaving this option unspecified allows the OS to schedule all processes spawned.
   #[structopt(long)]
   pub set_thread_affinity: Option<usize>,
 
-  /// Do not check if the encoder arguments specified by `--video-params` are valid
+  /// Do not check if the encoder arguments specified by -v/--video-params are valid
   #[structopt(long)]
   pub force: bool,
 
@@ -230,9 +291,12 @@ pub struct CliOpts {
   #[structopt(short = "f", long = "ffmpeg")]
   pub ffmpeg_filter_args: Option<String>,
 
-  /// Audio encoding parameters. If not specified, "-c:a copy" is used.
-  /// Do not use FFmpeg's `-map` syntax with this option. Instead, use the
-  /// colon syntax with each parameter you specify.
+  /// Audio encoding parameters (ffmpeg syntax)
+  ///
+  /// If not specified, "-c:a copy" is used.
+  ///
+  /// Do not use ffmpeg's -map syntax with this option. Instead, use the colon
+  /// syntax with each parameter you specify.
   ///
   /// Subtitles are always copied by default.
   ///
@@ -252,11 +316,16 @@ pub struct CliOpts {
   #[structopt(long, default_value = "yuv420p10le")]
   pub pix_format: Pixel,
 
-  /// Calculate and plot the VMAF of the encode
+  /// Plot an SVG of the VMAF for the encode
+  ///
+  /// This option is independent of --target-quality, i.e. it can be used with or without it.
+  /// The SVG plot is created in the same directory as the output file.
   #[structopt(long)]
   pub vmaf: bool,
 
-  /// Path to VMAF model
+  /// Path to VMAF model (used by --vmaf and --target-quality)
+  ///
+  /// If not specified, ffmpeg's default is used.
   #[structopt(long, parse(from_os_str))]
   pub vmaf_path: Option<PathBuf>,
 
@@ -268,7 +337,12 @@ pub struct CliOpts {
   #[structopt(long)]
   pub vmaf_threads: Option<usize>,
 
-  /// VMAF score to target
+  /// Target a VMAF score for encoding (disabled by default)
+  ///
+  /// For each chunk, target quality uses an algorithm to find the quantizer/crf needed to achieve a certain VMAF score.
+  /// Target quality mode is much slower than normal encoding, but can improve the consistency of quality in some cases.
+  ///
+  /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is the best). Floating-point values are allowed.
   #[structopt(long)]
   pub target_quality: Option<f64>,
 
@@ -280,20 +354,33 @@ pub struct CliOpts {
   #[structopt(long, default_value = "4")]
   pub probing_rate: u32,
 
-  /// Use encoding settings for probes
+  /// Use encoding settings for probes specified by --video-params rather than faster, less accurate settings
+  ///
+  /// Note that this always performs encoding in one-pass mode, regardless of --passes.
   #[structopt(long)]
   pub probe_slow: bool,
 
-  /// Min Q for target quality
+  /// Lower bound for target quality Q-search early exit
+  ///
+  /// If min_q is tested and the probe's VMAF score is lower than target_quality, the Q-search early exits and
+  /// min_q is used for the chunk.
+  ///
+  /// If not specified, the default value is used (chosen per encoder).
   #[structopt(long)]
   pub min_q: Option<u32>,
 
-  /// Max Q for target quality
+  /// Upper bound for target quality Q-search early exit
+  ///
+  /// If max_q is tested and the probe's VMAF score is higher than target_quality, the Q-search early exits and
+  /// max_q is used for the chunk.
+  ///
+  /// If not specified, the default value is used (chosen per encoder).
   #[structopt(long)]
   pub max_q: Option<u32>,
 
-  /// Filter applied to source at VMAF calcualation. This option should
-  /// be specified if the source is cropped.
+  /// Filter applied to source at VMAF calcualation
+  ///
+  /// This option should be specified if the source is cropped, for example.
   #[structopt(long)]
   pub vmaf_filter: Option<String>,
 }

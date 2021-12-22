@@ -105,65 +105,69 @@ jobs:
           target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
           du -h tt_sif.mkv
 
-      # TODO: remove the --crf/--quantizer/--cq-level params once the bug of not specifying them resulting in a panic is fixed
       - name: Testing target-quality aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4 --cq-level=0" -p1 --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4 --cq-level=0" -p1 --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing target-quality x264
+        run: |
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --target-quality 95
+          du -h tt_sif.mkv
+
+      - name: Testing target-quality replace crf
         run: |
           target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95
           du -h tt_sif.mkv
 
       - name: Testing probe-slow aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4 --cq-level=0" -p1 --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -p1 --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow rav1e
         run: |
-          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency --quantizer 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e rav1e --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --speed 10 --low-latency" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow svt-av1
         run: |
-          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8 --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e svt-av1 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset 8" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow vpx
         run: |
-          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4 --cq-level=0" -p1 --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e vpx --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=9 --rt --threads=4" -p1 --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x265
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing probe-slow x264
         run: |
-          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast --crf 0" --target-quality 95 --probe-slow
+          target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --target-quality 95 --probe-slow
           du -h tt_sif.mkv
 
       - name: Testing chunk_hybrid aom

@@ -30,22 +30,24 @@ struct VmafResult {
 }
 
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
-  let mut scores = read_vmaf_file(scores_file).with_context(|| "Failed to parse VMAF file")?;
-  scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+  let scores = read_vmaf_file(scores_file).with_context(|| "Failed to parse VMAF file")?;
+
+  let mut sorted_scores = scores.clone();
+  sorted_scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
   let plot_width = 1600 + (printable_base10_digits(scores.len()) as u32 * 200);
   let plot_heigth = 600;
 
   let length = scores.len() as u32;
 
-  let perc_1 = percentile_of_sorted(&scores, 0.01);
-  let perc_25 = percentile_of_sorted(&scores, 0.25);
-  let perc_50 = percentile_of_sorted(&scores, 0.50);
-  let perc_75 = percentile_of_sorted(&scores, 0.75);
-
   let root = SVGBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth)).into_drawing_area();
 
   root.fill(&WHITE)?;
+
+  let perc_1 = percentile_of_sorted(&sorted_scores, 0.01);
+  let perc_25 = percentile_of_sorted(&sorted_scores, 0.25);
+  let perc_50 = percentile_of_sorted(&sorted_scores, 0.50);
+  let perc_75 = percentile_of_sorted(&sorted_scores, 0.75);
 
   let mut chart = ChartBuilder::on(&root)
     .set_label_area_size(LabelAreaPosition::Bottom, (5).percent())

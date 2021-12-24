@@ -7,6 +7,7 @@ use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
 use std::process::{Command, Stdio};
+use std::thread;
 
 pub fn av_scenechange_detect(
   input: &Input,
@@ -17,13 +18,20 @@ pub fn av_scenechange_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<Vec<usize>> {
+) -> anyhow::Result<(Vec<usize>, usize)> {
   if verbosity != Verbosity::Quiet {
     eprintln!("{}", Style::default().bold().paint("Scene detection"));
     progress_bar::init_progress_bar(total_frames as u64);
   }
 
-  let mut frames = scene_detect(
+  let input2 = input.clone();
+  let frame_thread = thread::spawn(move || {
+    let frames = input2.frames();
+    progress_bar::set_len(frames as u64);
+    frames
+  });
+
+  let mut scenecuts = scene_detect(
     input,
     encoder,
     if verbosity == Verbosity::Quiet {
@@ -39,15 +47,17 @@ pub fn av_scenechange_detect(
     sc_downscale_height,
   )?;
 
+  let frames = frame_thread.join().unwrap();
+
   progress_bar::finish_progress_bar();
 
-  if frames[0] == 0 {
+  if scenecuts[0] == 0 {
     // TODO refactor the chunk creation to not require this
     // Currently, this is required for compatibility with create_video_queue_vs
-    frames.remove(0);
+    scenecuts.remove(0);
   }
 
-  Ok(frames)
+  Ok((scenecuts, frames))
 }
 
 /// Detect scene changes using rav1e scene detector.

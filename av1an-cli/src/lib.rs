@@ -526,6 +526,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     vmaf_res: args.vmaf_res,
     workers: args.workers,
     set_thread_affinity: args.set_thread_affinity,
+    vs_script: None,
   };
 
   encode_args.startup_check()?;

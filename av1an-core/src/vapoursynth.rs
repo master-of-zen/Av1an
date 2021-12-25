@@ -3,7 +3,6 @@ use std::{
   fs::File,
   io::Write,
   path::{Path, PathBuf},
-  process::{Command, Stdio},
 };
 use vapoursynth::video_info::VideoInfo;
 
@@ -28,7 +27,7 @@ static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
       plugins
         .get::<&[u8]>(plugin)
         .ok()
-        .and_then(|slice| std::str::from_utf8(slice).ok())
+        .and_then(|slice| simdutf8::basic::from_utf8(slice).ok())
         .and_then(|s| s.split(';').nth(1))
         .map(ToOwned::to_owned)
     })
@@ -125,13 +124,10 @@ pub fn create_vs_file(
   chunk_method: ChunkMethod,
 ) -> anyhow::Result<PathBuf> {
   let temp: &Path = temp.as_ref();
-  let source = Path::new(source).canonicalize()?;
+  let source = source.canonicalize()?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
 
-  if load_script_path.exists() {
-    return Ok(load_script_path);
-  }
   let mut load_script = File::create(&load_script_path)?;
 
   let cache_file = PathAbs::new(temp.join("split").join(format!(
@@ -159,16 +155,6 @@ core.{}({:?}, cachefile={:?}).set_output()",
     )
     .as_bytes(),
   )?;
-
-  // TODO use vapoursynth crate instead
-  Command::new("vspipe")
-    .arg("-i")
-    .arg(&load_script_path)
-    .args(["-i", "-"])
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()?
-    .wait()?;
 
   Ok(load_script_path)
 }

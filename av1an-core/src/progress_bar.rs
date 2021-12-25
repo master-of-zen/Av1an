@@ -78,6 +78,11 @@ pub fn get_first_multi_progress_bar() -> Option<&'static ProgressBar> {
   }
 }
 
+pub fn set_len(len: u64) {
+  let pb = PROGRESS_BAR.get().unwrap();
+  pb.set_length(len);
+}
+
 pub fn reset_bar_at(pos: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.reset();

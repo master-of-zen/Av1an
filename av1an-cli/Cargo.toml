@@ -23,12 +23,12 @@ once_cell = "1.8.0"
 ansi_term = "0.12.1"
 
 [dependencies.flexi_logger]
-version = "0.19.6"
+version = "0.22.0"
 default-features = false
-features = ["colors"]
+features = ["colors", "use_chrono_for_offset"]
 
 [build-dependencies.vergen]
-version = "5"
+version = "6"
 default-features = false
 features = ["git", "build", "rustc", "cargo"]
 

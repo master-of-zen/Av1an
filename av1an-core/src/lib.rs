@@ -58,7 +58,7 @@ pub mod util;
 pub mod vapoursynth;
 pub mod vmaf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Input {
   VapourSynth(PathBuf),
   Video(PathBuf),
@@ -212,7 +212,6 @@ pub enum ChunkMethod {
 /// Determine the optimal number of workers for an encoder
 #[must_use]
 pub fn determine_workers(encoder: Encoder) -> u64 {
-  // TODO look for lighter weight solution? sys-info maybe?
   let mut system = sysinfo::System::new();
   system.refresh_memory();
 

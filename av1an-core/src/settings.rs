@@ -557,12 +557,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           let vs_script = self.vs_script.as_ref().unwrap().as_path();
           self.create_video_queue_vs(splits, vs_script)
         }
-        ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits),
-        ChunkMethod::Select => Ok(self.create_video_queue_select(splits)),
-        ChunkMethod::Segment => self.create_video_queue_segment(&splits),
+        ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits)?,
+        ChunkMethod::Select => self.create_video_queue_select(splits),
+        ChunkMethod::Segment => self.create_video_queue_segment(&splits)?,
       },
       Input::VapourSynth(vs_script) => self.create_video_queue_vs(splits, vs_script.as_path()),
-    }?;
+    };
 
     chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
 
@@ -587,11 +587,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
   // scenes.json and return that.
   fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
-    let scene_file = self
-      .scenes
-      .as_ref()
-      .map(|path| Cow::Borrowed(path.as_path()))
-      .unwrap_or_else(|| Cow::Owned(Path::new(&self.temp).join("scenes.json")));
+    let scene_file = self.scenes.as_ref().map_or_else(
+      || Cow::Owned(Path::new(&self.temp).join("scenes.json")),
+      |path| Cow::Borrowed(path.as_path()),
+    );
 
     let (mut scenes, frames) = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
       crate::split::read_scenes_from_file(scene_file.as_ref())?
@@ -707,11 +706,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn create_video_queue_vs(
-    &self,
-    splits: Vec<usize>,
-    vs_script: &Path,
-  ) -> anyhow::Result<Vec<Chunk>> {
+  fn create_video_queue_vs(&self, splits: Vec<usize>, vs_script: &Path) -> Vec<Chunk> {
     let chunk_boundaries = iter::once(0)
       .chain(splits)
       .chain(iter::once(self.frames))
@@ -724,7 +719,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       })
       .collect();
 
-    Ok(chunk_queue)
+    chunk_queue
   }
 
   fn create_video_queue_select(&self, splits: Vec<usize>) -> Vec<Chunk> {
@@ -913,7 +908,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       {
         self.vs_script = Some(match &self.input {
           Input::VapourSynth(path) => path.clone(),
-          Input::Video(path) => create_vs_file(&self.temp, &path, self.chunk_method)?,
+          Input::Video(path) => create_vs_file(&self.temp, path, self.chunk_method)?,
         });
 
         let vs_script = self.vs_script.clone().unwrap();

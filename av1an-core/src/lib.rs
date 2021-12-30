@@ -28,6 +28,8 @@ use crate::{
 use anyhow::Context;
 use chunk::Chunk;
 use dashmap::DashMap;
+use ffmpeg_next::color::TransferCharacteristic;
+use grain::TransferFunction;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -48,6 +50,7 @@ pub mod chunk;
 pub mod concat;
 pub mod encoder;
 pub mod ffmpeg;
+mod grain;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;
@@ -120,6 +123,26 @@ impl Input {
       Input::Video(path) => ffmpeg::frame_rate(path.as_path()).expect(FAIL_MSG),
       Input::VapourSynth(path) => vapoursynth::frame_rate(path.as_path()).expect(FAIL_MSG),
     }
+  }
+
+  pub fn resolution(&self) -> anyhow::Result<(u32, u32)> {
+    Ok(match self {
+      Input::VapourSynth(video) => crate::vapoursynth::resolution(video)?,
+      Input::Video(video) => crate::ffmpeg::resolution(video)?,
+    })
+  }
+
+  pub fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
+    Ok(match self {
+      Input::VapourSynth(video) => match crate::vapoursynth::transfer_characteristics(video)? {
+        16 => TransferFunction::SMPTE2084,
+        _ => TransferFunction::BT1886,
+      },
+      Input::Video(video) => match crate::ffmpeg::transfer_characteristics(video)? {
+        TransferCharacteristic::SMPTE2084 => TransferFunction::SMPTE2084,
+        _ => TransferFunction::BT1886,
+      },
+    })
   }
 }
 

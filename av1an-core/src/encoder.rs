@@ -245,8 +245,6 @@ impl Encoder {
         "--cq-level=30",
         "--tile-columns=2",
         "--tile-rows=1",
-        "--kf-max-dist=240",
-        "--kf-min-dist=12",
       ],
       Encoder::rav1e => into_vec![
         "--tiles",
@@ -268,7 +266,6 @@ impl Encoder {
         "--cpu-used=2",
         "--end-usage=q",
         "--cq-level=30",
-        "--kf-max-dist=240",
         "--row-mt=1",
         "--auto-alt-ref=6",
       ],

@@ -16,6 +16,8 @@ use std::{
   sync::Arc,
 };
 
+use crate::encoder::Encoder;
+
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
 )]
@@ -157,8 +159,13 @@ fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
   )
 }
 
-pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
-  /// Path cannot be a UNC path on Windows for mkvmerge
+pub fn mkvmerge(
+  temp_dir: &Path,
+  output: &Path,
+  encoder: Encoder,
+  num_chunks: usize,
+) -> anyhow::Result<()> {
+  // mkvmerge does not accept UNC paths on Windows
   #[cfg(windows)]
   fn fix_path<P: AsRef<Path>>(p: P) -> String {
     const UNC_PREFIX: &str = r#"\\?\"#;
@@ -176,25 +183,26 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     p
   }
 
-  let mut encode_folder = PathBuf::from(encode_folder);
-
-  let mut audio_file = PathBuf::from(&encode_folder);
+  let mut audio_file = PathBuf::from(&temp_dir);
   audio_file.push("audio.mkv");
+  let audio_file = PathAbs::new(&audio_file)?;
 
-  encode_folder.push("encode");
-  let output = PathBuf::from(output);
+  let mut encode_dir = PathBuf::from(temp_dir);
+  encode_dir.push("encode");
 
-  let mut files = read_encoded_chunks(&encode_folder)?;
+  let output = PathAbs::new(output)?;
 
-  assert!(!files.is_empty());
-
-  files.sort_by_key(DirEntry::path);
+  assert!(num_chunks != 0);
+  let files: Vec<PathBuf> = (0..num_chunks)
+    .map(|chunk| PathBuf::from(format!("{:05}.{}", chunk, encoder.output_extension())))
+    .collect();
 
   let mut cmd = Command::new("mkvmerge");
+  cmd.current_dir(&encode_dir);
   cmd.arg("-o");
   cmd.arg(fix_path(output));
 
-  if audio_file.exists() {
+  if audio_file.as_path().exists() {
     cmd.arg(fix_path(audio_file));
   }
 
@@ -207,13 +215,13 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     for files in &mut chunks {
       // Each chunk always has exactly 2 elements.
       for file in files {
-        cmd.arg(fix_path(file.path()));
+        cmd.arg(file);
         cmd.arg("+");
       }
     }
     // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
     // asserted that the length of `files` is odd and nonzero in this branch.
-    cmd.arg(fix_path(chunks.remainder()[0].path()));
+    cmd.arg(&chunks.remainder()[0]);
   } else {
     // The total number of elements at this point is even, and there are at *least* 2 elements,
     // since `files` is not empty and the case of exactly one element would have been handled by
@@ -226,15 +234,15 @@ pub fn mkvmerge(encode_folder: &Path, output: &Path) -> anyhow::Result<()> {
     // `start` will be empty if there are exactly 2 elements in `files`, in which case
     // this loop will not run.
     for file in start {
-      cmd.arg(fix_path(file.path()));
+      cmd.arg(file);
       cmd.arg("+");
     }
 
     // There are always *exactly* 2 elements in `end`, since we used `split_at(files.len() - 2)`,
     // which will always succeed given that `files` has at least 2 elements at this point.
-    cmd.arg(fix_path(end[0].path()));
+    cmd.arg(&end[0]);
     cmd.arg("+");
-    cmd.arg(fix_path(end[1].path()));
+    cmd.arg(&end[1]);
   }
 
   debug!("mkvmerge concat command: {:?}", cmd);

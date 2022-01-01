@@ -1,4 +1,5 @@
 use crate::{into_array, into_vec};
+use ffmpeg_next::color::TransferCharacteristic;
 use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type as MediaType;
 use ffmpeg_next::Error::StreamNotFound;
@@ -66,6 +67,34 @@ pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
   let decoder = input.codec().decoder().video()?;
 
   Ok(decoder.format())
+}
+
+pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg_next::Error> {
+  let ictx = ffmpeg_next::format::input(&source)?;
+
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)?;
+
+  let decoder = input.codec().decoder().video()?;
+
+  Ok((decoder.width(), decoder.height()))
+}
+
+pub fn transfer_characteristics(
+  source: &Path,
+) -> Result<TransferCharacteristic, ffmpeg_next::Error> {
+  let ictx = ffmpeg_next::format::input(&source)?;
+
+  let input = ictx
+    .streams()
+    .best(MediaType::Video)
+    .ok_or(StreamNotFound)?;
+
+  let decoder = input.codec().decoder().video()?;
+
+  Ok(decoder.color_transfer_characteristic())
 }
 
 /// Returns vec of all keyframes

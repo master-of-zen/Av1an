@@ -937,6 +937,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let splits = self.split_routine()?;
 
     let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
+    let num_chunks = chunk_queue.len();
 
     if self.resume {
       let chunks_done = get_done().done.len();
@@ -1068,7 +1069,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           )?;
         }
         ConcatMethod::MKVMerge => {
-          concat::mkvmerge(self.temp.as_ref(), self.output_file.as_ref())?;
+          concat::mkvmerge(
+            self.temp.as_ref(),
+            self.output_file.as_ref(),
+            self.encoder,
+            num_chunks,
+          )?;
         }
         ConcatMethod::FFmpeg => {
           concat::ffmpeg(self.temp.as_ref(), self.output_file.as_ref())?;

@@ -198,7 +198,7 @@ pub fn mkvmerge(
     .collect();
 
   let mut cmd = Command::new("mkvmerge");
-  cmd.current_dir(&encode_dir);
+  cmd.current_dir(encode_dir.canonicalize()?);
   cmd.arg("-o");
   cmd.arg(fix_path(output));
 

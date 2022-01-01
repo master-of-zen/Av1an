@@ -45,6 +45,8 @@ use std::{
 };
 use sysinfo::SystemExt;
 
+use strum::{Display, EnumString, IntoStaticStr};
+
 pub mod broker;
 pub mod chunk;
 pub mod concat;
@@ -200,7 +202,7 @@ pub fn list_index(params: &[impl AsRef<str>], is_match: fn(&str) -> bool) -> Opt
   })
 }
 
-#[derive(Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr)]
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display)]
 pub enum SplitMethod {
   #[strum(serialize = "av-scenechange")]
   AvScenechange,
@@ -208,7 +210,7 @@ pub enum SplitMethod {
   None,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, strum::EnumString, strum::IntoStaticStr)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, EnumString, IntoStaticStr, Display)]
 pub enum ScenecutMethod {
   #[strum(serialize = "fast")]
   Fast,
@@ -216,9 +218,7 @@ pub enum ScenecutMethod {
   Standard,
 }
 
-#[derive(
-  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
-)]
+#[derive(PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, EnumString, IntoStaticStr)]
 pub enum ChunkMethod {
   #[strum(serialize = "select")]
   Select,

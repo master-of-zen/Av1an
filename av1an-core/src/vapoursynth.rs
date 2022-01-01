@@ -118,6 +118,44 @@ fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
   Ok(bits_per_sample as usize)
 }
 
+/// Get the resolution from an environment that has already been
+/// evaluated on a script.
+fn get_resolution(env: &mut Environment) -> anyhow::Result<(u32, u32)> {
+  let info = get_clip_info(env);
+
+  let resolution = {
+    match info.resolution {
+      Property::Variable => {
+        bail!("Cannot output clips with variable resolution");
+      }
+      Property::Constant(x) => x,
+    }
+  };
+
+  Ok((resolution.width as u32, resolution.height as u32))
+}
+
+/// Get the transfer characteristics from an environment that has already been
+/// evaluated on a script.
+fn get_transfer(env: &mut Environment) -> anyhow::Result<u8> {
+  // Get the output node.
+  const OUTPUT_INDEX: i32 = 0;
+
+  #[cfg(feature = "vapoursynth_new_api")]
+  let (node, _) = env.get_output(OUTPUT_INDEX).unwrap();
+  #[cfg(not(feature = "vapoursynth_new_api"))]
+  let node = env.get_output(OUTPUT_INDEX).unwrap();
+
+  let frame = node.get_frame(0)?;
+  let transfer = frame
+    .props()
+    .get::<i64>("_Transfer")
+    .map_err(|_| anyhow::anyhow!("Failed to get transfer characteristics from VS script"))?
+    as u8;
+
+  Ok(transfer)
+}
+
 pub fn create_vs_file(
   temp: &str,
   source: &Path,
@@ -181,4 +219,29 @@ pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
     .unwrap();
 
   get_bit_depth(&mut environment)
+}
+
+pub fn resolution(source: &Path) -> anyhow::Result<(u32, u32)> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_resolution(&mut environment)
+}
+
+/// Transfer characteristics as specified in ITU-T H.265 Table E.4.
+pub fn transfer_characteristics(source: &Path) -> anyhow::Result<u8> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  get_transfer(&mut environment)
 }

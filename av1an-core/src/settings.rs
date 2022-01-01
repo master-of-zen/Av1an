@@ -1,3 +1,4 @@
+use crate::grain::create_film_grain_file;
 use crate::parse::valid_params;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
@@ -83,6 +84,7 @@ pub struct EncodeArgs {
   pub encoder: Encoder,
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
+  pub photon_noise: Option<u8>,
 
   // FFmpeg params
   pub ffmpeg_filter_args: Vec<String>,
@@ -523,6 +525,15 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       self.video_params = self.encoder.get_default_arguments();
     }
 
+    if let Some(strength) = self.photon_noise {
+      if strength > 64 {
+        bail!("Valid strength values for photon noise are 0-64");
+      }
+      if self.encoder != Encoder::aom {
+        bail!("Photon noise synth is only supported with aomenc");
+      }
+    }
+
     if self.encoder == Encoder::aom
       && self.concat != ConcatMethod::MKVMerge
       && self
@@ -947,6 +958,30 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     if let Some(vspipe_cache) = vspipe_cache {
       vspipe_cache.join().unwrap();
+    }
+
+    if let Some(strength) = self.photon_noise {
+      let grain_table = Path::new(&self.temp).join("grain.tbl");
+      if !grain_table.exists() {
+        debug!(
+          "Generating grain table at ISO {}",
+          u32::from(strength) * 100
+        );
+        let (width, height) = self.input.resolution()?;
+        let transfer = self.input.transfer_function()?;
+        create_film_grain_file(&grain_table, strength, width, height, transfer)?;
+      } else {
+        debug!("Using existing grain table");
+      }
+
+      // We should not use a grain table together with aom's grain generation
+      self
+        .video_params
+        .retain(|param| !param.starts_with("--denoise-noise-level="));
+      self.video_params.push(format!(
+        "--film-grain-table={}",
+        grain_table.to_str().unwrap()
+      ));
     }
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {

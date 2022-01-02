@@ -110,40 +110,61 @@ impl Input {
     matches!(&self, Input::VapourSynth(_))
   }
 
-  pub fn frames(&self) -> usize {
-    // TODO fix this API
+  pub fn frames(&self) -> anyhow::Result<usize> {
     const FAIL_MSG: &str = "Failed to get number of frames for input video";
-    match &self {
-      Input::Video(path) => ffmpeg::num_frames(path.as_path()).expect(FAIL_MSG),
-      Input::VapourSynth(path) => vapoursynth::num_frames(path.as_path()).expect(FAIL_MSG),
-    }
+    Ok(match &self {
+      Input::Video(path) => {
+        ffmpeg::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+      Input::VapourSynth(path) => {
+        vapoursynth::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+    })
   }
 
-  pub fn frame_rate(&self) -> f64 {
+  pub fn frame_rate(&self) -> anyhow::Result<f64> {
     const FAIL_MSG: &str = "Failed to get frame rate for input video";
-    match &self {
-      Input::Video(path) => ffmpeg::frame_rate(path.as_path()).expect(FAIL_MSG),
-      Input::VapourSynth(path) => vapoursynth::frame_rate(path.as_path()).expect(FAIL_MSG),
-    }
+    Ok(match &self {
+      Input::Video(path) => {
+        ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+      Input::VapourSynth(path) => {
+        vapoursynth::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+    })
   }
 
   pub fn resolution(&self) -> anyhow::Result<(u32, u32)> {
+    const FAIL_MSG: &str = "Failed to get resolution for input video";
     Ok(match self {
-      Input::VapourSynth(video) => crate::vapoursynth::resolution(video)?,
-      Input::Video(video) => crate::ffmpeg::resolution(video)?,
+      Input::VapourSynth(video) => {
+        crate::vapoursynth::resolution(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+      Input::Video(video) => {
+        crate::ffmpeg::resolution(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
     })
   }
 
   pub fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
+    const FAIL_MSG: &str = "Failed to get transfer characteristics for input video";
     Ok(match self {
-      Input::VapourSynth(video) => match crate::vapoursynth::transfer_characteristics(video)? {
-        16 => TransferFunction::SMPTE2084,
-        _ => TransferFunction::BT1886,
-      },
-      Input::Video(video) => match crate::ffmpeg::transfer_characteristics(video)? {
-        TransferCharacteristic::SMPTE2084 => TransferFunction::SMPTE2084,
-        _ => TransferFunction::BT1886,
-      },
+      Input::VapourSynth(video) => {
+        match crate::vapoursynth::transfer_characteristics(video)
+          .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        {
+          16 => TransferFunction::SMPTE2084,
+          _ => TransferFunction::BT1886,
+        }
+      }
+      Input::Video(video) => {
+        match crate::ffmpeg::transfer_characteristics(video)
+          .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        {
+          TransferCharacteristic::SMPTE2084 => TransferFunction::SMPTE2084,
+          _ => TransferFunction::BT1886,
+        }
+      }
     })
   }
 }

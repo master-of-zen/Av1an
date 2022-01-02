@@ -612,7 +612,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.sc_method,
         self.sc_downscale_height,
       )?,
-      SplitMethod::None => (Vec::new(), self.input.frames()),
+      SplitMethod::None => (Vec::new(), self.input.frames()?),
     })
   }
 
@@ -907,7 +907,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       // frames need to be recalculated in this case
       if self.frames == 0 {
-        self.frames = self.input.frames();
+        self.frames = self.input.frames()?;
         done.frames.store(self.frames, atomic::Ordering::Relaxed);
       }
 
@@ -1067,7 +1067,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
 
       if !get_done().done.is_empty() {
-        let frame_rate = self.input.frame_rate();
+        let frame_rate = self.input.frame_rate()?;
         update_progress_bar_estimates(
           frame_rate,
           self.frames,

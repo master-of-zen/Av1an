@@ -133,7 +133,7 @@ impl<'a> Broker<'a> {
         }
       }
 
-      let frame_rate = self.project.input.frame_rate();
+      let frame_rate = self.project.input.frame_rate().unwrap();
 
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.workers)

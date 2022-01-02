@@ -224,7 +224,6 @@ impl<'a> TargetQuality<'a> {
         unreachable!()
       };
 
-      // TODO: reuse the async version of this code in `create_pipes` (in settings.rs)
       let source_pipe_output = source_pipe.wait_with_output().await.unwrap();
 
       // TODO: Expand EncoderCrash to handle io errors as well

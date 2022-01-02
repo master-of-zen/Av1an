@@ -21,6 +21,7 @@ av-ivf = "0.2.2"
 memchr = "2.4.1"
 num_cpus = "1.13.0"
 anyhow = "1.0.42"
+rand = "0.8.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sysinfo = "0.22.3"

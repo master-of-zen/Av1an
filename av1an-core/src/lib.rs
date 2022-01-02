@@ -218,6 +218,20 @@ pub enum ChunkMethod {
   LSMASH,
 }
 
+#[derive(
+  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, Display, EnumString, IntoStaticStr,
+)]
+pub enum ChunkOrdering {
+  #[strum(serialize = "long-to-short")]
+  LongestFirst,
+  #[strum(serialize = "short-to-long")]
+  ShortestFirst,
+  #[strum(serialize = "sequential")]
+  Sequential,
+  #[strum(serialize = "random")]
+  Random,
+}
+
 /// Determine the optimal number of workers for an encoder
 #[must_use]
 pub fn determine_workers(encoder: Encoder) -> u64 {

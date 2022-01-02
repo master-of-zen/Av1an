@@ -3,6 +3,7 @@ use crate::parse::valid_params;
 use crate::progress_bar::update_progress_bar_estimates;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
+use crate::ChunkOrdering;
 use crate::{
   broker::{Broker, EncoderCrash},
   chunk::Chunk,
@@ -26,6 +27,8 @@ use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::sync::atomic::AtomicUsize;
@@ -72,6 +75,7 @@ pub struct EncodeArgs {
   pub vs_script: Option<PathBuf>,
 
   pub chunk_method: ChunkMethod,
+  pub chunk_order: ChunkOrdering,
   pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_pix_format: Option<Pixel>,
@@ -578,7 +582,20 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       Input::VapourSynth(vs_script) => self.create_video_queue_vs(splits, vs_script.as_path()),
     };
 
-    chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
+    match self.chunk_order {
+      ChunkOrdering::LongestFirst => {
+        chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
+      }
+      ChunkOrdering::ShortestFirst => {
+        chunks.sort_unstable_by_key(|chunk| chunk.frames);
+      }
+      ChunkOrdering::Sequential => {
+        // Already in order
+      }
+      ChunkOrdering::Random => {
+        chunks.shuffle(&mut thread_rng());
+      }
+    }
 
     Ok(chunks)
   }

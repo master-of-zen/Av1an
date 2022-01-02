@@ -312,7 +312,7 @@ pub struct CliOpts {
   /// An encoder's grain synthesis will still work without using this option, by specifying the
   /// correct parameter to the encoder. However, the two should not be used together,
   /// and specifying this option will disable aomenc's internal grain synthesis.
-  #[clap(long)]
+  #[clap(long, help_heading = "ENCODING")]
   pub photon_noise: Option<u8>,
 
   /// ivf - Experimental concatenation method implemented in av1an itself to concatenate to an ivf

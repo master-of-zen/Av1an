@@ -211,6 +211,7 @@ dependencies = [
  "paste",
  "path_abs",
  "plotters",
+ "rand",
  "serde",
  "serde_json",
  "simdutf8",

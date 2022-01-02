@@ -136,7 +136,8 @@ impl EncodeArgs {
 
     info!("temporary directory: {}", &self.temp);
 
-    let done_json_exists = Path::new(&self.temp).join("done.json").exists();
+    let done_path = Path::new(&self.temp).join("done.json");
+    let done_json_exists = done_path.exists();
     let chunks_json_exists = Path::new(&self.temp).join("chunks.json").exists();
 
     if self.resume {
@@ -166,6 +167,31 @@ impl EncodeArgs {
         }
       }
     }
+
+    if self.resume && done_json_exists {
+      let done =
+        fs::read_to_string(done_path).with_context(|| "Failed to read contents of done.json")?;
+      let done: DoneJson =
+        serde_json::from_str(&done).with_context(|| "Failed to parse done.json")?;
+      self.frames = done.frames.load(atomic::Ordering::Relaxed);
+
+      // frames need to be recalculated in this case
+      if self.frames == 0 {
+        self.frames = self.input.frames()?;
+        done.frames.store(self.frames, atomic::Ordering::Relaxed);
+      }
+
+      init_done(done);
+    } else {
+      init_done(DoneJson {
+        frames: AtomicUsize::new(0),
+        done: DashMap::new(),
+        audio_done: AtomicBool::new(false),
+      });
+
+      let mut done_file = fs::File::create(&done_path).unwrap();
+      done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
+    };
 
     Ok(())
   }
@@ -608,7 +634,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.sc_method,
         self.sc_downscale_height,
       )?,
-      SplitMethod::None => (Vec::new(), self.input.frames()),
+      SplitMethod::None => (Vec::new(), self.input.frames()?),
     })
   }
 
@@ -891,39 +917,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   }
 
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
-    let done_path = Path::new(&self.temp).join("done.json");
-
-    // TODO move this to `initialize`?
-    let initial_frames = if self.resume && done_path.exists() {
-      let done =
-        fs::read_to_string(done_path).with_context(|| "Failed to read contents of done.json")?;
-      let done: DoneJson =
-        serde_json::from_str(&done).with_context(|| "Failed to parse done.json")?;
-      self.frames = done.frames.load(atomic::Ordering::Relaxed);
-
-      // frames need to be recalculated in this case
-      if self.frames == 0 {
-        self.frames = self.input.frames();
-        done.frames.store(self.frames, atomic::Ordering::Relaxed);
-      }
-
-      init_done(done)
-        .done
-        .iter()
-        .map(|ref_multi| *ref_multi.value())
-        .sum()
-    } else {
-      init_done(DoneJson {
-        frames: AtomicUsize::new(0),
-        done: DashMap::new(),
-        audio_done: AtomicBool::new(false),
-      });
-
-      let mut done_file = fs::File::create(&done_path).unwrap();
-      done_file.write_all(serde_json::to_string(get_done())?.as_bytes())?;
-
-      0
-    };
+    let initial_frames = get_done()
+      .done
+      .iter()
+      .map(|entry| entry.value())
+      .sum::<usize>();
 
     let vspipe_cache =
       // Technically we should check if the vapoursynth cache file exists rather than !self.resume,

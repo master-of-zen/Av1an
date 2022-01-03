@@ -247,16 +247,8 @@ impl Encoder {
         ];
 
         if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+          let columns = (tiles.0 as f64).log2() as u32;
+          let rows = (tiles.1 as f64).log2() as u32;
 
           let aom_tiles: Vec<String> = into_vec![
             format!("--tile-columns={}", columns),
@@ -295,16 +287,8 @@ impl Encoder {
         ];
 
         if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+          let columns = (tiles.0 as f64).log2() as u32;
+          let rows = (tiles.1 as f64).log2() as u32;
 
           let aom_tiles: Vec<String> = into_vec![
             format!("--tile-columns={}", columns),
@@ -318,16 +302,8 @@ impl Encoder {
       Encoder::svt_av1 => {
         let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
         if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+          let columns = (tiles.0 as f64).log2() as u32;
+          let rows = (tiles.1 as f64).log2() as u32;
 
           let tiles: Vec<String> = into_vec![
             "--tile-columns",

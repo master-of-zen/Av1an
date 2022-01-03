@@ -1,4 +1,4 @@
-use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_vec, list_index};
+use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_array, into_vec, list_index};
 use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
@@ -36,31 +36,31 @@ impl Encoder {
   pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
-        into_vec!["aomenc", "--passes=1"],
+        into_array!["aomenc", "--passes=1"],
         params,
-        into_vec!["-o", output, "-"],
+        into_array!["-o", output, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y"],
+        into_array!["rav1e", "-", "-y"],
         params,
-        into_vec!["--output", output]
+        into_array!["--output", output]
       )
       .collect(),
       Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=1"],
+        into_array!["vpxenc", "--passes=1"],
         params,
-        into_vec!["-o", output, "-"]
+        into_array!["-o", output, "-"]
       )
       .collect(),
       Self::svt_av1 => chain!(
-        into_vec!["SvtAv1EncApp", "-i", "stdin", "--progress", "2"],
+        into_array!["SvtAv1EncApp", "-i", "stdin", "--progress", "2"],
         params,
-        into_vec!["-b", output],
+        into_array!["-b", output],
       )
       .collect(),
       Self::x264 => chain!(
-        into_vec![
+        into_array![
           "x264",
           "--stitchable",
           "--log-level",
@@ -69,13 +69,13 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["-", "-o", output]
+        into_array!["-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
-        into_vec!["x265", "--y4m"],
+        into_array!["x265", "--y4m"],
         params,
-        into_vec!["-", "-o", output]
+        into_array!["-", "-o", output]
       )
       .collect(),
     }
@@ -85,25 +85,25 @@ impl Encoder {
   pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match self {
       Self::aom => chain!(
-        into_vec!["aomenc", "--passes=2", "--pass=1"],
+        into_array!["aomenc", "--passes=2", "--pass=1"],
         params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
+        into_array![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y", "-q"],
+        into_array!["rav1e", "-", "-y", "-q"],
         params,
-        into_vec!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
+        into_array!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
       )
       .collect(),
       Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=2", "--pass=1"],
+        into_array!["vpxenc", "--passes=2", "--pass=1"],
         params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
+        into_array![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
       )
       .collect(),
       Self::svt_av1 => chain!(
-        into_vec![
+        into_array![
           "SvtAv1EncApp",
           "-i",
           "stdin",
@@ -113,7 +113,7 @@ impl Encoder {
           "2",
         ],
         params,
-        into_vec![
+        into_array![
           "--pass",
           "1",
           "--stats",
@@ -124,7 +124,7 @@ impl Encoder {
       )
       .collect(),
       Self::x264 => chain!(
-        into_vec![
+        into_array![
           "x264",
           "--stitchable",
           "--log-level",
@@ -135,11 +135,11 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
+        into_array!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
       )
       .collect(),
       Self::x265 => chain!(
-        into_vec![
+        into_array![
           "x265",
           "--stitchable",
           "--log-level",
@@ -150,7 +150,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
+        into_array!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
       )
       .collect(),
     }
@@ -160,25 +160,25 @@ impl Encoder {
   pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
-        into_vec!["aomenc", "--passes=2", "--pass=2"],
+        into_array!["aomenc", "--passes=2", "--pass=2"],
         params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
+        into_array![format!("--fpf={}.log", fpf), "-o", output, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
-        into_vec!["rav1e", "-", "-y", "-q"],
+        into_array!["rav1e", "-", "-y", "-q"],
         params,
-        into_vec!["--second-pass", format!("{}.stat", fpf), "--output", output]
+        into_array!["--second-pass", format!("{}.stat", fpf), "--output", output]
       )
       .collect(),
       Self::vpx => chain!(
-        into_vec!["vpxenc", "--passes=2", "--pass=2"],
+        into_array!["vpxenc", "--passes=2", "--pass=2"],
         params,
-        into_vec![format!("--fpf={}.log", fpf), "-o", output, "-"],
+        into_array![format!("--fpf={}.log", fpf), "-o", output, "-"],
       )
       .collect(),
       Self::svt_av1 => chain!(
-        into_vec![
+        into_array![
           "SvtAv1EncApp",
           "-i",
           "stdin",
@@ -188,7 +188,7 @@ impl Encoder {
           "2",
         ],
         params,
-        into_vec![
+        into_array![
           "--pass",
           "2",
           "--stats",
@@ -199,7 +199,7 @@ impl Encoder {
       )
       .collect(),
       Self::x264 => chain!(
-        into_vec![
+        into_array![
           "x264",
           "--stitchable",
           "--log-level",
@@ -210,11 +210,11 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
+        into_array!["--stats", format!("{}.log", fpf), "-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
-        into_vec![
+        into_array![
           "x265",
           "--stitchable",
           "--log-level",
@@ -225,7 +225,7 @@ impl Encoder {
           "y4m",
         ],
         params,
-        into_vec!["--stats", format!("{}.log", fpf), "-", "-o", output]
+        into_array!["--stats", format!("{}.log", fpf), "-", "-o", output]
       )
       .collect(),
     }
@@ -318,9 +318,9 @@ impl Encoder {
 
           let tiles: Vec<String> = into_vec![
             "--tile-columns",
-            columns.to_string(),
+            format!("{}", columns),
             "--tile-rows",
-            rows.to_string()
+            format!("{}", rows)
           ];
           chain!(defaults, tiles).collect()
         } else {
@@ -729,9 +729,9 @@ impl Encoder {
     };
 
     let output: Vec<Cow<str>> = match self {
-      Self::svt_av1 => chain!(params, into_vec!["-b", probe_path]).collect(),
+      Self::svt_av1 => chain!(params, into_array!["-b", probe_path]).collect(),
       Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
-        chain!(params, into_vec!["-o", probe_path, "-"]).collect()
+        chain!(params, into_array!["-o", probe_path, "-"]).collect()
       }
     };
 

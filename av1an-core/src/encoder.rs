@@ -232,44 +232,114 @@ impl Encoder {
   }
 
   /// Returns default settings for the encoder
-  pub fn get_default_arguments(self) -> Vec<String> {
+  pub fn get_default_arguments(self, tiles: (u32, u32)) -> Vec<String> {
     match self {
       // aomenc automatically infers the correct bit depth, and thus for aomenc, not specifying
       // the bit depth is actually more accurate because if for example you specify
       // `--pix-format yuv420p`, aomenc will encode 10-bit when that is not actually the desired
       // pixel format.
-      Encoder::aom => into_vec![
-        "--threads=8",
-        "--cpu-used=6",
-        "--end-usage=q",
-        "--cq-level=30",
-        "--tile-columns=2",
-        "--tile-rows=1",
-      ],
-      Encoder::rav1e => into_vec![
-        "--tiles",
-        "8",
-        "--speed",
-        "6",
-        "--quantizer",
-        "100",
-        "--no-scene-detection",
-      ],
+      Encoder::aom => {
+        let defaults: Vec<String> = into_vec![
+          "--threads=8",
+          "--cpu-used=6",
+          "--end-usage=q",
+          "--cq-level=30",
+        ];
+
+        if tiles.0 > 1 || tiles.1 > 1 {
+          let columns = if tiles.0 == 1 {
+            0
+          } else {
+            (tiles.0 as f64).sqrt().floor() as u32
+          };
+          let rows = if tiles.1 == 1 {
+            0
+          } else {
+            (tiles.1 as f64).sqrt().floor() as u32
+          };
+
+          let aom_tiles: Vec<String> = into_vec![
+            format!("--tile-columns={}", columns),
+            format!("--tile-rows={}", rows)
+          ];
+          chain!(defaults, aom_tiles).collect()
+        } else {
+          defaults
+        }
+      }
+      Encoder::rav1e => {
+        let defaults: Vec<String> =
+          into_vec!["--speed", "6", "--quantizer", "100", "--no-scene-detection"];
+
+        if tiles.0 > 1 || tiles.1 > 1 {
+          let tiles: Vec<String> = into_vec!["--tiles", format!("{}", tiles.0 * tiles.1)];
+          chain!(defaults, tiles).collect()
+        } else {
+          defaults
+        }
+      }
       // vpxenc does not infer the pixel format from the input, so `-b 10` is still required
       // to work with the default pixel format (yuv420p10le).
-      Encoder::vpx => into_vec![
-        "--codec=vp9",
-        "-b",
-        "10",
-        "--profile=2",
-        "--threads=4",
-        "--cpu-used=2",
-        "--end-usage=q",
-        "--cq-level=30",
-        "--row-mt=1",
-        "--auto-alt-ref=6",
-      ],
-      Encoder::svt_av1 => into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"],
+      Encoder::vpx => {
+        let defaults = into_vec![
+          "--codec=vp9",
+          "-b",
+          "10",
+          "--profile=2",
+          "--threads=4",
+          "--cpu-used=2",
+          "--end-usage=q",
+          "--cq-level=30",
+          "--row-mt=1",
+          "--auto-alt-ref=6",
+        ];
+
+        if tiles.0 > 1 || tiles.1 > 1 {
+          let columns = if tiles.0 == 1 {
+            0
+          } else {
+            (tiles.0 as f64).sqrt().floor() as u32
+          };
+          let rows = if tiles.1 == 1 {
+            0
+          } else {
+            (tiles.1 as f64).sqrt().floor() as u32
+          };
+
+          let aom_tiles: Vec<String> = into_vec![
+            format!("--tile-columns={}", columns),
+            format!("--tile-rows={}", rows)
+          ];
+          chain!(defaults, aom_tiles).collect()
+        } else {
+          defaults
+        }
+      }
+      Encoder::svt_av1 => {
+        let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
+        if tiles.0 > 1 || tiles.1 > 1 {
+          let columns = if tiles.0 == 1 {
+            0
+          } else {
+            (tiles.0 as f64).sqrt().floor() as u32
+          };
+          let rows = if tiles.1 == 1 {
+            0
+          } else {
+            (tiles.1 as f64).sqrt().floor() as u32
+          };
+
+          let tiles: Vec<String> = into_vec![
+            "--tile-columns",
+            columns.to_string(),
+            "--tile-rows",
+            rows.to_string()
+          ];
+          chain!(defaults, tiles).collect()
+        } else {
+          defaults
+        }
+      }
       Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
       Encoder::x265 => into_vec!["-p", "slow", "--crf", "25", "-D", "10"],
     }

@@ -232,7 +232,18 @@ impl Encoder {
   }
 
   /// Returns default settings for the encoder
-  pub fn get_default_arguments(self, tiles: (u32, u32)) -> Vec<String> {
+  pub fn get_default_arguments(self, (cols, rows): (u32, u32)) -> Vec<String> {
+    /// Integer log base 2
+    pub fn ilog2(x: u32) -> u32 {
+      // TODO: switch to built-in integer log2 functions once they are stabilized
+      // https://github.com/rust-lang/rust/issues/70887
+      if x == 0 {
+        0
+      } else {
+        u32::BITS - 1 - x.leading_zeros()
+      }
+    }
+
     match self {
       // aomenc automatically infers the correct bit depth, and thus for aomenc, not specifying
       // the bit depth is actually more accurate because if for example you specify
@@ -246,17 +257,9 @@ impl Encoder {
           "--cq-level=30",
         ];
 
-        if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+        if cols > 1 || rows > 1 {
+          let columns = ilog2(cols);
+          let rows = ilog2(rows);
 
           let aom_tiles: Vec<String> = into_vec![
             format!("--tile-columns={}", columns),
@@ -271,8 +274,8 @@ impl Encoder {
         let defaults: Vec<String> =
           into_vec!["--speed", "6", "--quantizer", "100", "--no-scene-detection"];
 
-        if tiles.0 > 1 || tiles.1 > 1 {
-          let tiles: Vec<String> = into_vec!["--tiles", format!("{}", tiles.0 * tiles.1)];
+        if cols > 1 || rows > 1 {
+          let tiles: Vec<String> = into_vec!["--tiles", format!("{}", cols * rows)];
           chain!(defaults, tiles).collect()
         } else {
           defaults
@@ -294,17 +297,9 @@ impl Encoder {
           "--auto-alt-ref=6",
         ];
 
-        if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+        if cols > 1 || rows > 1 {
+          let columns = ilog2(cols);
+          let rows = ilog2(rows);
 
           let aom_tiles: Vec<String> = into_vec![
             format!("--tile-columns={}", columns),
@@ -317,17 +312,9 @@ impl Encoder {
       }
       Encoder::svt_av1 => {
         let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
-        if tiles.0 > 1 || tiles.1 > 1 {
-          let columns = if tiles.0 == 1 {
-            0
-          } else {
-            (tiles.0 as f64).sqrt().floor() as u32
-          };
-          let rows = if tiles.1 == 1 {
-            0
-          } else {
-            (tiles.1 as f64).sqrt().floor() as u32
-          };
+        if cols > 1 || rows > 1 {
+          let columns = ilog2(cols);
+          let rows = ilog2(rows);
 
           let tiles: Vec<String> = into_vec![
             "--tile-columns",

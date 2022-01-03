@@ -55,7 +55,13 @@ pull_request_rules:
       backport:
         branches:
           - stable
-        assignees:
+  - name: assign code owners to stable merge conflicts
+    conditions:
+      - conflict
+      - base=stable
+    actions:
+      assign:
+        add_users:
           - master-of-zen
           - redzic
           - shssoichiro

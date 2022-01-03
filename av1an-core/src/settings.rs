@@ -901,20 +901,25 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
+  /// Returns unfinished chunks and number of total chunks
+  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.resume {
       let mut chunks = read_chunk_queue(self.temp.as_ref())?;
 
       let done = get_done();
 
+      let num_chunks = done.done.len();
+
       // only keep the chunks that are not done
       chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
 
-      Ok(chunks)
+      Ok((chunks, num_chunks))
     } else {
       let chunks = self.create_encoding_queue(splits)?;
       save_chunk_queue(&self.temp, &chunks)?;
-      Ok(chunks)
+      // borrow checker hack
+      let num_chunks = chunks.len();
+      Ok((chunks, num_chunks))
     }
   }
 
@@ -960,8 +965,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let splits = self.split_routine()?;
 
-    let chunk_queue = self.load_or_gen_chunk_queue(splits)?;
-    let num_chunks = chunk_queue.len();
+    let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(splits)?;
 
     if self.resume {
       let chunks_done = get_done().done.len();
@@ -1101,7 +1105,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             self.temp.as_ref(),
             self.output_file.as_ref(),
             self.encoder,
-            num_chunks,
+            total_chunks,
           )?;
         }
         ConcatMethod::FFmpeg => {

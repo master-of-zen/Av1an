@@ -202,4 +202,5 @@ pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
       .unwrap()
       .to_string()
   }
+  .replace(',', "\\,")
 }

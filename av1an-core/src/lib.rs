@@ -33,6 +33,7 @@ use grain::TransferFunction;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::{
+  cmp::max,
   collections::hash_map::DefaultHasher,
   fs,
   fs::File,
@@ -154,6 +155,23 @@ impl Input {
         }
       }
     })
+  }
+
+  /// Calculates tiles from resolution
+  /// Don't convert tiles to encoder specific representation
+  /// Default video without tiling is 1,1
+  /// Return number of horizontal and vertical tiles
+  pub fn calculate_tiles(&self) -> (u32, u32) {
+    match self.resolution() {
+      Ok((h, v)) => {
+        // tile range 0-1440 pixels
+        let horizontal = max((h - 1) / 720, 1);
+        let vertical = max((v - 1) / 720, 1);
+
+        (horizontal, vertical)
+      }
+      _ => (1, 1),
+    }
   }
 }
 

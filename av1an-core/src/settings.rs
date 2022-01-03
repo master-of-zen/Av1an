@@ -552,7 +552,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
 
     if self.video_params.is_empty() {
-      self.video_params = self.encoder.get_default_arguments();
+      self.video_params = self
+        .encoder
+        .get_default_arguments(self.input.calculate_tiles());
     }
 
     if let Some(strength) = self.photon_noise {

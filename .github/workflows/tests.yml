@@ -1,15 +1,7 @@
 name: tests
 on:
-  push:
-    paths-ignore:
-      - "*.yml"
-      - .gitignore
-      - "*.md"
-  pull_request:
-    paths-ignore:
-      - "*.yml"
-      - .gitignore
-      - "*.md"
+  - push
+  - pull_request
 
 env:
   DEBIAN_FRONTEND: noninteractive

@@ -159,7 +159,6 @@ dependencies = [
  "anyhow",
  "av1an-cli",
  "av1an-core",
- "ctrlc",
  "path_abs",
  "serde",
  "serde_json",
@@ -174,7 +173,6 @@ dependencies = [
  "anyhow",
  "av1an-core",
  "clap",
- "ctrlc",
  "ffmpeg-next",
  "flexi_logger",
  "once_cell",
@@ -448,16 +446,6 @@ checksum = "d82cfc11ce7f2c3faef78d8a684447b40d503d9681acebed6cb728d45940c4db"
 dependencies = [
  "cfg-if 1.0.0",
  "lazy_static",
-]
-
-[[package]]
-name = "ctrlc"
-version = "3.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a19c6cedffdc8c03a3346d723eb20bd85a13362bb96dc2ac000842c6381ec7bf"
-dependencies = [
- "nix",
- "winapi",
 ]
 
 [[package]]
@@ -920,19 +908,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a06380d23b58dcdaf892fa36c3950cad3110e7d76851275d5f85c22eb9cdd614"
 dependencies = [
  "rayon",
-]
-
-[[package]]
-name = "nix"
-version = "0.23.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f866317acbd3a240710c63f065ffb1e4fd466259045ccb504130b7f668f35c6"
-dependencies = [
- "bitflags",
- "cc",
- "cfg-if 1.0.0",
- "libc",
- "memoffset",
 ]
 
 [[package]]

@@ -14,7 +14,6 @@ edition = "2018"
 [dependencies]
 clap = { version = "3.0.0", features = ["derive"] }
 shlex = "1.0.0"
-ctrlc = "3.1.9"
 path_abs = "0.5.1"
 anyhow = "1.0.42"
 av1an-core = { path = "../av1an-core", version = "0.2.0" }

@@ -644,11 +644,6 @@ pub fn run() -> anyhow::Result<()> {
   let log_level = cli_args.log_level;
   let mut args = parse_cli(cli_args)?;
 
-  ctrlc::set_handler(|| {
-    println!("Stopped");
-    exit(0);
-  })?;
-
   let log = LogSpecBuilder::new().default(log_level).build();
 
   Logger::with(log)

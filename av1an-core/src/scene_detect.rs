@@ -23,6 +23,7 @@ pub fn av_scenechange_detect(
   let input2 = input.clone();
   let frame_thread = thread::spawn(move || {
     let frames = input2.frames().unwrap();
+    progress_bar::convert_to_progress();
     progress_bar::set_len(frames as u64);
     frames
   });

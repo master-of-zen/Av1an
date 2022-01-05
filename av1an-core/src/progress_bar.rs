@@ -11,6 +11,14 @@ const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta})"
 };
 
+const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
+  // Do not use a spinner on Windows since the default console cannot display
+  // the characters used for the spinner
+  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
+} else {
+  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
+};
+
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 
 pub fn get_progress_bar() -> Option<&'static ProgressBar> {
@@ -32,16 +40,40 @@ fn pretty_progress_style() -> ProgressStyle {
     .progress_chars("#>-")
 }
 
+fn spinner_style() -> ProgressStyle {
+  ProgressStyle::default_spinner()
+    .template(INDICATIF_SPINNER_TEMPLATE)
+    .with_key("fps", |state| match state.per_sec() {
+      fps if fps.abs() < f64::EPSILON => "0 fps".into(),
+      fps if fps < 1.0 => format!("{:.2} s/fr", 1.0 / fps),
+      fps => format!("{:.2} fps", fps),
+    })
+    .with_key("pos", |state| format!("{}", state.pos))
+    .progress_chars("#>-")
+}
+
 /// Initialize progress bar
 /// Enables steady 100 ms tick
 pub fn init_progress_bar(len: u64) {
-  let pb = PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()));
+  let pb = if len > 0 {
+    PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()))
+  } else {
+    // Avoid showing `xxx/0` if we don't know the length yet.
+    // Affects scenechange progress.
+    PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(spinner_style()))
+  };
   pb.set_draw_target(ProgressDrawTarget::stderr());
   pb.enable_steady_tick(100);
   pb.reset();
   pb.reset_eta();
   pb.reset_elapsed();
   pb.set_position(0);
+}
+
+pub fn convert_to_progress() {
+  if let Some(pb) = PROGRESS_BAR.get() {
+    pb.set_style(pretty_progress_style());
+  }
 }
 
 pub fn inc_bar(inc: u64) {

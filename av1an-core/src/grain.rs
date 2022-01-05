@@ -36,7 +36,7 @@ impl TransferFunction {
       TransferFunction::BT1886 => x.powf(2.8),
       TransferFunction::SMPTE2084 => {
         let pq_pow_inv_m2 = x.powf(1. / PQ_M2);
-        (0f32.max(pq_pow_inv_m2 - PQ_C1) / (PQ_C2 - PQ_C3 * pq_pow_inv_m2)).powf(1. / PQ_M1)
+        (0_f32.max(pq_pow_inv_m2 - PQ_C1) / (PQ_C2 - PQ_C3 * pq_pow_inv_m2)).powf(1. / PQ_M1)
       }
     }
   }
@@ -105,15 +105,15 @@ fn generate_photon_noise(args: NoiseGenArgs) -> ScalingPoints {
         )
         .sqrt();
     let linear_noise = noise_in_electrons / max_electrons_per_pixel;
-    let linear_range_start = 0f32.max(linear - 2. * linear_noise);
-    let linear_range_end = 1f32.min(2.0f32.mul_add(linear_noise, linear));
+    let linear_range_start = 0_f32.max(linear - 2. * linear_noise);
+    let linear_range_end = 1_f32.min(2_f32.mul_add(linear_noise, linear));
     let tf_slope = (args.transfer_function.from_linear(linear_range_end)
       - args.transfer_function.from_linear(linear_range_start))
       / (linear_range_end - linear_range_start);
     let encoded_noise = linear_noise * tf_slope;
 
     let x = (255. * x).round() as u8;
-    let encoded_noise = 255f32.min((255. * 7.88 * encoded_noise).round()) as u8;
+    let encoded_noise = 255_f32.min((255. * 7.88 * encoded_noise).round()) as u8;
 
     point[0] = x;
     point[1] = encoded_noise;

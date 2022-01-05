@@ -234,7 +234,7 @@ impl Encoder {
   /// Returns default settings for the encoder
   pub fn get_default_arguments(self, (cols, rows): (u32, u32)) -> Vec<String> {
     /// Integer log base 2
-    pub fn ilog2(x: u32) -> u32 {
+    pub const fn ilog2(x: u32) -> u32 {
       // TODO: switch to built-in integer log2 functions once they are stabilized
       // https://github.com/rust-lang/rust/issues/70887
       if x == 0 {

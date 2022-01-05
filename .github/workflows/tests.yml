@@ -21,8 +21,13 @@ jobs:
           which x265
           which x264
 
+      - name: Validate formatting
+        run: |
+          cargo fmt --all -- --check
+
       - name: Build Av1an
         run: |
+          cargo clippy --profile ci -- -D warnings
           cargo build --profile ci
 
       # 352x240 112 frames test video

@@ -6,13 +6,13 @@
 
 <h2 align="center">A cross-platform framework to streamline encoding</h2>
 
-![alt text](https://cdn.discordapp.com/attachments/696849974666985494/774368268860915732/av1an_pick2.png)
+![alt text](https://cdn.discordapp.com/attachments/702307493623103518/928681120474759210/av1an_preview.jpg)
 
 <h4 align="center">
 <a href="https://discord.gg/Ar8MvJh"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
 <img src="https://github.com/master-of-zen/Av1an/workflows/tests/badge.svg">
 <a href="https://crates.io/crates/av1an"><img src="https://img.shields.io/crates/v/av1an.svg"></a>
-    
+
 </h4>
 <h2 align="center">Easy, Fast, Efficient and Feature Rich</h2>
 

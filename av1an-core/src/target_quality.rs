@@ -391,3 +391,81 @@ pub fn interpolated_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64)
 
   (q, vmaf)
 }
+
+#[allow(unused)]
+fn lagrange_interpolate(p: &[(u32, f64)], x: u32) -> f64 {
+  p.iter()
+    .map(|(x0, y0)| {
+      let mut num = 1;
+      let mut den = 1;
+      for (x1, _y1) in p {
+        if x0 != x1 {
+          num *= i64::from(x) - i64::from(*x1);
+          den *= i64::from(*x0) - i64::from(*x1);
+        }
+      }
+      y0 * num as f64 / den as f64
+    })
+    .sum()
+}
+
+#[allow(unused)]
+fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
+  assert!(p.len() >= 2);
+
+  // Re-center the samples at the target value
+  let mut sorted = Vec::from(p);
+  for v in &mut sorted {
+    v.1 -= y;
+  }
+
+  // Order samples by distance from target value
+  sorted.sort_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap());
+
+  // Take the closest point
+  let (mut xb, mut yb) = sorted[0];
+  // Take the next close point that brackets the root
+  let (mut xa, mut ya) = sorted.iter().find(|&&v| v.1 * yb < 0.).unwrap_or(&(xb, yb));
+
+  loop {
+    let x0 = (xa + xb + 1) / 2;
+    if x0 == xb || x0 == xa {
+      break;
+    }
+
+    let y0 = lagrange_interpolate(&sorted, x0);
+    if ya * y0 < 0. {
+      xb = x0;
+      yb = y0;
+    } else {
+      xa = x0;
+      ya = y0;
+    }
+    if ya.abs() < yb.abs() {
+      std::mem::swap(&mut xa, &mut xb);
+      std::mem::swap(&mut ya, &mut yb);
+    }
+  }
+
+  (xb, yb + y)
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::target_quality::lagrange_bisect;
+
+  #[test]
+  fn test_bisect() {
+    let sorted = vec![(0, 0.0), (1, 1.0), (256, 256.0 * 256.0)];
+
+    assert!(lagrange_bisect(&sorted, 0.0).0 == 0);
+    assert!(lagrange_bisect(&sorted, 1.0).0 == 1);
+    assert!(lagrange_bisect(&sorted, 256.0 * 256.0).0 == 256);
+
+    assert!(lagrange_bisect(&sorted, 8.0).0 == 3);
+    assert!(lagrange_bisect(&sorted, 9.0).0 == 3);
+
+    assert!(lagrange_bisect(&sorted, -1.0).0 == 0);
+    assert!(lagrange_bisect(&sorted, 2.0 * 256.0 * 256.0).0 == 256);
+  }
+}

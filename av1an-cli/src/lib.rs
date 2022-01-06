@@ -50,7 +50,7 @@ fn version() -> &'static str {
         Some(commit_date),
       ) => {
         format!(
-          "{} (rev {}) ({})
+          "{}-unstable (rev {}) ({})
 
 * Compiler
   rustc {} (LLVM {})
@@ -502,6 +502,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
       None
     },
     photon_noise: args.photon_noise,
+    sc_pix_format: args.sc_pix_format,
     keep: args.keep,
     max_tries: args.max_tries,
     min_q: args.min_q,

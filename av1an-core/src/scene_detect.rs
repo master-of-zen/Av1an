@@ -1,5 +1,8 @@
-use crate::{ffmpeg, progress_bar, Input, ScenecutMethod, Verbosity};
-use crate::{into_array, Encoder};
+use ffmpeg_next::format::Pixel;
+use smallvec::{smallvec, SmallVec};
+
+use crate::Encoder;
+use crate::{ffmpeg, into_smallvec, progress_bar, Input, ScenecutMethod, Verbosity};
 use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
@@ -12,6 +15,7 @@ pub fn av_scenechange_detect(
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
+  sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<(Vec<usize>, usize)> {
@@ -39,6 +43,7 @@ pub fn av_scenechange_detect(
       }))
     },
     min_scene_len,
+    sc_pix_format,
     sc_method,
     sc_downscale_height,
   )?;
@@ -62,13 +67,25 @@ pub fn scene_detect(
   encoder: Encoder,
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
+  sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<Vec<usize>> {
   let bit_depth;
 
-  let filters: Option<[String; 2]> = sc_downscale_height
-    .map(|downscale_height| into_array!["-vf", format!("scale=-2:'min({},ih)'", downscale_height)]);
+  let filters: SmallVec<[String; 4]> = match (sc_downscale_height, sc_pix_format) {
+    (Some(sdh), Some(spf)) => into_smallvec![
+      "-vf",
+      format!(
+        "format={},scale=-2:'min({},ih)'",
+        spf.descriptor().unwrap().name(),
+        sdh
+      )
+    ],
+    (Some(sdh), None) => into_smallvec!["-vf", format!("scale=-2:'min({},ih)'", sdh)],
+    (None, Some(spf)) => into_smallvec!["-pix_fmt", spf.descriptor().unwrap().name()],
+    (None, None) => smallvec![],
+  };
 
   let decoder = &mut y4m::Decoder::new(match input {
     Input::VapourSynth(path) => {
@@ -84,7 +101,7 @@ pub fn scene_detect(
         .stdout
         .unwrap();
 
-      if let Some(filters) = &filters {
+      if !filters.is_empty() {
         Command::new("ffmpeg")
           .stdin(vspipe)
           .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
@@ -102,15 +119,11 @@ pub fn scene_detect(
     Input::Video(path) => {
       let input_pix_format = ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {:?}", e));
-      bit_depth = encoder.get_format_bit_depth(input_pix_format)?;
+      bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;
       Command::new("ffmpeg")
         .args(["-r", "1", "-i"])
         .arg(path)
-        .args(
-          filters
-            .as_ref()
-            .map_or(&[] as &[String], |filters| &filters[..]),
-        )
+        .args(filters.as_ref())
         .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

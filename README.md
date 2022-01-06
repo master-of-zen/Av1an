@@ -96,7 +96,7 @@ With your own parameters:
 
     --target-quality        Quality value to target.
                             VMAF used as substructure for algorithms.
-                            When using this mode, you must use quantizer/quality modes of enocoder.
+                            When using this mode, you must use quantizer/quality modes of encoder.
 
     --target-quality-method Type of algorithm for use.
                             Options: per_shot

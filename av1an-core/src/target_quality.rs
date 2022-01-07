@@ -234,7 +234,8 @@ impl<'a> TargetQuality<'a> {
           exit_status: enc_output.status,
           stdout: enc_output.stdout.into(),
           stderr: enc_output.stderr.into(),
-          pipe_stderr: source_pipe_output.stderr.into(),
+          source_pipe_stderr: source_pipe_output.stderr.into(),
+          ffmpeg_pipe_stderr: None,
         };
         error!("[chunk {}] {}", chunk.index, e);
         return Err(e);

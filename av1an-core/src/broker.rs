@@ -83,7 +83,8 @@ pub struct EncoderCrash {
   pub exit_status: ExitStatus,
   pub stdout: StringOrBytes,
   pub stderr: StringOrBytes,
-  pub pipe_stderr: StringOrBytes,
+  pub source_pipe_stderr: StringOrBytes,
+  pub ffmpeg_pipe_stderr: Option<StringOrBytes>,
 }
 
 impl Display for EncoderCrash {
@@ -91,8 +92,13 @@ impl Display for EncoderCrash {
     write!(
       f,
       "encoder crashed: {}\nstdout:\n{:#?}\nstderr:\n{:#?}\nsource pipe stderr:\n{:#?}",
-      self.exit_status, self.stdout, self.stderr, self.pipe_stderr
+      self.exit_status, self.stdout, self.stderr, self.source_pipe_stderr,
     )?;
+
+    if let Some(ffmpeg_pipe_stderr) = &self.ffmpeg_pipe_stderr {
+      write!(f, "\nffmpeg pipe stderr:\n{:#?}", ffmpeg_pipe_stderr)?;
+    }
+
     Ok(())
   }
 }

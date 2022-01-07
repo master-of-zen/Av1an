@@ -327,11 +327,9 @@ impl EncodeArgs {
           };
 
         let mut source_reader = BufReader::new(source_pipe_stderr).lines();
-        let ffmpeg_reader = if let Some(stderr) = ffmpeg_pipe_stderr.take() {
-          Some(BufReader::new(stderr).lines())
-        } else {
-          None
-        };
+        let ffmpeg_reader = ffmpeg_pipe_stderr
+          .take()
+          .map(|stderr| BufReader::new(stderr).lines());
 
         let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
         let p_stdr2 = Arc::clone(&pipe_stderr);
@@ -344,11 +342,7 @@ impl EncodeArgs {
           None
         };
 
-        let f_stdr2 = if let Some(ref x) = ffmpeg_stderr {
-          Some(Arc::clone(x))
-        } else {
-          None
-        };
+        let f_stdr2 = ffmpeg_stderr.as_ref().map(Arc::clone);
 
         tokio::spawn(async move {
           while let Some(line) = source_reader.next_line().await.unwrap() {
@@ -436,7 +430,7 @@ impl EncodeArgs {
         EncoderCrash {
           exit_status: enc_output.status,
           source_pipe_stderr: source_pipe_stderr.into(),
-          ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(|s| s.into()),
+          ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
           stderr: enc_stderr.into(),
           stdout: enc_output.stdout.into(),
         },

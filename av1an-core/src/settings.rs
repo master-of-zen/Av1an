@@ -53,6 +53,7 @@ use std::{
 use ansi_term::{Color, Style};
 
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::ChildStderr;
 
 pub struct PixelFormat {
   pub format: Pixel,
@@ -258,31 +259,11 @@ impl EncodeArgs {
       .build()
       .unwrap();
 
-    let (pipe_stderr, enc_output, enc_stderr, frame) = rt.block_on(async {
-      let mut source_pipe = if let [source, args @ ..] = &*chunk.source {
-        tokio::process::Command::new(source)
-          .args(args)
-          .stdout(Stdio::piped())
-          .stderr(Stdio::piped())
-          .spawn()
-          .unwrap()
-      } else {
-        unreachable!()
-      };
-
-      let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
-
-      // converts the pixel format
-      let create_ffmpeg_pipe = |pipe_from: Stdio| {
-        let ffmpeg_pipe = compose_ffmpeg_pipe(
-          self.ffmpeg_filter_args.as_slice(),
-          self.output_pix_format.format,
-        );
-
-        let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
-          tokio::process::Command::new(ffmpeg)
+    let (source_pipe_stderr, ffmpeg_pipe_stderr, enc_output, enc_stderr, frame) =
+      rt.block_on(async {
+        let mut source_pipe = if let [source, args @ ..] = &*chunk.source {
+          tokio::process::Command::new(source)
             .args(args)
-            .stdin(pipe_from)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -291,109 +272,165 @@ impl EncodeArgs {
           unreachable!()
         };
 
-        let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
-        let ffmpeg_pipe_stderr = ffmpeg_pipe.stderr.take().unwrap();
-        (ffmpeg_pipe_stdout, ffmpeg_pipe_stderr)
-      };
+        let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
 
-      let source_pipe_stderr = source_pipe.stderr.take().unwrap();
+        let source_pipe_stderr = source_pipe.stderr.take().unwrap();
 
-      let (y4m_pipe, y4m_pipe_stderr) = if self.ffmpeg_filter_args.is_empty() {
-        match &self.input_pix_format {
-          InputPixelFormat::FFmpeg { format } => {
-            if self.output_pix_format.format == *format {
-              (source_pipe_stdout, source_pipe_stderr)
-            } else {
-              create_ffmpeg_pipe(source_pipe_stdout)
-            }
-          }
-          InputPixelFormat::VapourSynth { bit_depth } => {
-            if self.output_pix_format.bit_depth == *bit_depth {
-              (source_pipe_stdout, source_pipe_stderr)
-            } else {
-              create_ffmpeg_pipe(source_pipe_stdout)
-            }
-          }
-        }
-      } else {
-        create_ffmpeg_pipe(source_pipe_stdout)
-      };
+        // converts the pixel format
+        let create_ffmpeg_pipe = |pipe_from: Stdio, source_pipe_stderr: ChildStderr| {
+          let ffmpeg_pipe = compose_ffmpeg_pipe(
+            self.ffmpeg_filter_args.as_slice(),
+            self.output_pix_format.format,
+          );
 
-      let mut reader = BufReader::new(y4m_pipe_stderr).lines();
+          let mut ffmpeg_pipe = if let [ffmpeg, args @ ..] = &*ffmpeg_pipe {
+            tokio::process::Command::new(ffmpeg)
+              .args(args)
+              .stdin(pipe_from)
+              .stdout(Stdio::piped())
+              .stderr(Stdio::piped())
+              .spawn()
+              .unwrap()
+          } else {
+            unreachable!()
+          };
 
-      let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
-      let p_stdr2 = Arc::clone(&pipe_stderr);
+          let ffmpeg_pipe_stdout: Stdio = ffmpeg_pipe.stdout.take().unwrap().try_into().unwrap();
+          let ffmpeg_pipe_stderr = ffmpeg_pipe.stderr.take().unwrap();
+          (
+            ffmpeg_pipe_stdout,
+            source_pipe_stderr,
+            Some(ffmpeg_pipe_stderr),
+          )
+        };
 
-      tokio::spawn(async move {
-        while let Some(line) = reader.next_line().await.unwrap() {
-          p_stdr2.lock().push_str(&line);
-          p_stdr2.lock().push('\n');
-        }
-      });
-
-      let mut enc_pipe = if let [encoder, args @ ..] = &*enc_cmd {
-        tokio::process::Command::new(encoder)
-          .args(args)
-          .stdin(y4m_pipe)
-          .stdout(Stdio::piped())
-          .stderr(Stdio::piped())
-          .spawn()
-          .unwrap()
-      } else {
-        unreachable!()
-      };
-
-      let mut frame = 0;
-
-      let mut reader = BufReader::new(enc_pipe.stderr.take().unwrap());
-
-      let mut buf = Vec::with_capacity(128);
-      let mut enc_stderr = String::with_capacity(128);
-
-      while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
-        if read == 0 {
-          break;
-        }
-
-        if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
-          if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
-            update_mp_msg(worker_id, (*line).to_string());
-          }
-          // This needs to be done before parse_encoded_frames, as it potentially
-          // mutates the string
-          enc_stderr.push_str(line);
-          enc_stderr.push('\n');
-
-          // SAFETY: we do not read the contents of `line` after this function call
-          if let Some(new) = unsafe { self.encoder.parse_encoded_frames(line) } {
-            // clippy is actually wrong that this does nothing, dropping a mutable
-            // reference does prevent it from being used again.
-            drop(line);
-            if new > frame {
-              if self.verbosity == Verbosity::Normal {
-                inc_bar((new - frame) as u64);
-              } else if self.verbosity == Verbosity::Verbose {
-                inc_mp_bar((new - frame) as u64);
+        let (y4m_pipe, source_pipe_stderr, mut ffmpeg_pipe_stderr) =
+          if self.ffmpeg_filter_args.is_empty() {
+            match &self.input_pix_format {
+              InputPixelFormat::FFmpeg { format } => {
+                if self.output_pix_format.format == *format {
+                  (source_pipe_stdout, source_pipe_stderr, None)
+                } else {
+                  create_ffmpeg_pipe(source_pipe_stdout, source_pipe_stderr)
+                }
               }
-              frame = new;
+              InputPixelFormat::VapourSynth { bit_depth } => {
+                if self.output_pix_format.bit_depth == *bit_depth {
+                  (source_pipe_stdout, source_pipe_stderr, None)
+                } else {
+                  create_ffmpeg_pipe(source_pipe_stdout, source_pipe_stderr)
+                }
+              }
             }
+          } else {
+            create_ffmpeg_pipe(source_pipe_stdout, source_pipe_stderr)
+          };
+
+        let mut source_reader = BufReader::new(source_pipe_stderr).lines();
+        let ffmpeg_reader = ffmpeg_pipe_stderr
+          .take()
+          .map(|stderr| BufReader::new(stderr).lines());
+
+        let pipe_stderr = Arc::new(parking_lot::Mutex::new(String::with_capacity(128)));
+        let p_stdr2 = Arc::clone(&pipe_stderr);
+
+        let ffmpeg_stderr = if ffmpeg_reader.is_some() {
+          Some(Arc::new(parking_lot::Mutex::new(String::with_capacity(
+            128,
+          ))))
+        } else {
+          None
+        };
+
+        let f_stdr2 = ffmpeg_stderr.as_ref().map(Arc::clone);
+
+        tokio::spawn(async move {
+          while let Some(line) = source_reader.next_line().await.unwrap() {
+            p_stdr2.lock().push_str(&line);
+            p_stdr2.lock().push('\n');
           }
+        });
+        if let Some(mut ffmpeg_reader) = ffmpeg_reader {
+          let f_stdr2 = f_stdr2.unwrap();
+          tokio::spawn(async move {
+            while let Some(line) = ffmpeg_reader.next_line().await.unwrap() {
+              f_stdr2.lock().push_str(&line);
+              f_stdr2.lock().push('\n');
+            }
+          });
         }
 
-        buf.clear();
-      }
+        let mut enc_pipe = if let [encoder, args @ ..] = &*enc_cmd {
+          tokio::process::Command::new(encoder)
+            .args(args)
+            .stdin(y4m_pipe)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+        } else {
+          unreachable!()
+        };
 
-      let enc_output = enc_pipe.wait_with_output().await.unwrap();
+        let mut frame = 0;
 
-      let pipe_stderr = pipe_stderr.lock().clone();
-      (pipe_stderr, enc_output, enc_stderr, frame)
-    });
+        let mut reader = BufReader::new(enc_pipe.stderr.take().unwrap());
+
+        let mut buf = Vec::with_capacity(128);
+        let mut enc_stderr = String::with_capacity(128);
+
+        while let Ok(read) = reader.read_until(b'\r', &mut buf).await {
+          if read == 0 {
+            break;
+          }
+
+          if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
+            if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
+              update_mp_msg(worker_id, (*line).to_string());
+            }
+            // This needs to be done before parse_encoded_frames, as it potentially
+            // mutates the string
+            enc_stderr.push_str(line);
+            enc_stderr.push('\n');
+
+            // SAFETY: we do not read the contents of `line` after this function call
+            if let Some(new) = unsafe { self.encoder.parse_encoded_frames(line) } {
+              // clippy is actually wrong that this does nothing, dropping a mutable
+              // reference does prevent it from being used again.
+              drop(line);
+              if new > frame {
+                if self.verbosity == Verbosity::Normal {
+                  inc_bar((new - frame) as u64);
+                } else if self.verbosity == Verbosity::Verbose {
+                  inc_mp_bar((new - frame) as u64);
+                }
+                frame = new;
+              }
+            }
+          }
+
+          buf.clear();
+        }
+
+        let enc_output = enc_pipe.wait_with_output().await.unwrap();
+
+        let source_pipe_stderr = pipe_stderr.lock().clone();
+        let ffmpeg_pipe_stderr = ffmpeg_stderr.map(|x| x.lock().clone());
+        (
+          source_pipe_stderr,
+          ffmpeg_pipe_stderr,
+          enc_output,
+          enc_stderr,
+          frame,
+        )
+      });
 
     if !enc_output.status.success() {
       return Err((
         EncoderCrash {
           exit_status: enc_output.status,
-          pipe_stderr: pipe_stderr.into(),
+          source_pipe_stderr: source_pipe_stderr.into(),
+          ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
           stderr: enc_stderr.into(),
           stdout: enc_output.stdout.into(),
         },

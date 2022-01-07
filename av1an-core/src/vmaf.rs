@@ -247,7 +247,8 @@ pub fn run_vmaf(
   if !output.status.success() {
     return Err(EncoderCrash {
       exit_status: output.status,
-      pipe_stderr: String::new().into(),
+      source_pipe_stderr: String::new().into(),
+      ffmpeg_pipe_stderr: None,
       stderr: output.stderr.into(),
       stdout: String::new().into(),
     });

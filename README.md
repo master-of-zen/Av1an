@@ -6,7 +6,7 @@
 
 <h2 align="center">A cross-platform framework to streamline encoding</h2>
 
-![alt text](https://cdn.discordapp.com/attachments/702307493623103518/928681120474759210/av1an_preview.jpg)
+![alt text](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)
 
 <h4 align="center">
 <a href="https://discord.gg/Ar8MvJh"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>

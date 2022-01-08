@@ -226,12 +226,12 @@ pub fn mkvmerge(
 pub fn concatenate_mkvmerge(num: u64, mut this_file: File) {
   let mut file_string: String = "[ \"-o\", \"output.mp4\", \"audio.mp3\", \"[\"".into();
   for i in 0..num {
-      file_string.push_str(&format!(" , \"{:05}.ivf\" ", i));
+    file_string.push_str(&format!(" , \"{:05}.ivf\" ", i));
   }
   file_string.push_str(",\"]\" ]");
   println!("{}", file_string);
   this_file.write_all(file_string.as_bytes());
-} 
+}
 
 /// Concatenates using ffmpeg (does not work with x265)
 pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {

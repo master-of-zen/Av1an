@@ -197,54 +197,10 @@ pub fn mkvmerge(
     .map(|chunk| PathBuf::from(format!("{:05}.{}", chunk, encoder.output_extension())))
     .collect();
 
+  let mut this_file: File = File::create("options.json").unwrap();
+  concatenate_mkvmerge(num_chunks as u64, this_file);
   let mut cmd = Command::new("mkvmerge");
-  cmd.current_dir(encode_dir.canonicalize()?);
-  cmd.arg("-o");
-  cmd.arg(fix_path(output));
-
-  if audio_file.as_path().exists() {
-    cmd.arg(fix_path(audio_file));
-  }
-
-  // `std::process::Command` does not support removing arguments after they have been added,
-  // so we have to add all elements without adding any extra that are later removed. This
-  // complicates the logic slightly, but in turn does not perform any unnecessary allocations
-  // or copy from a temporary data structure.
-  if files.len() % 2 != 0 {
-    let mut chunks = files.chunks_exact(2);
-    for files in &mut chunks {
-      // Each chunk always has exactly 2 elements.
-      for file in files {
-        cmd.arg(file);
-        cmd.arg("+");
-      }
-    }
-    // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
-    // asserted that the length of `files` is odd and nonzero in this branch.
-    cmd.arg(&chunks.remainder()[0]);
-  } else {
-    // The total number of elements at this point is even, and there are at *least* 2 elements,
-    // since `files` is not empty and the case of exactly one element would have been handled by
-    // the previous `if`, so we get the last 2 to handle them separately from the other pairs of 2,
-    // so as to not add a trailing "+" at the end.
-
-    // `files.len() - 2` cannot overflow, as `files.len()` is at least 2 here.
-    let (start, end) = files.split_at(files.len() - 2);
-
-    // `start` will be empty if there are exactly 2 elements in `files`, in which case
-    // this loop will not run.
-    for file in start {
-      cmd.arg(file);
-      cmd.arg("+");
-    }
-
-    // There are always *exactly* 2 elements in `end`, since we used `split_at(files.len() - 2)`,
-    // which will always succeed given that `files` has at least 2 elements at this point.
-    cmd.arg(&end[0]);
-    cmd.arg("+");
-    cmd.arg(&end[1]);
-  }
-
+  cmd.arg("@options.json");
   debug!("mkvmerge concat command: {:?}", cmd);
 
   let out = cmd
@@ -263,6 +219,19 @@ pub fn mkvmerge(
 
   Ok(())
 }
+
+/** This code adds the necessary command parameters to the options FILE
+ * that is passed in, up to the chunk NUM. Returns nothing.
+ */
+pub fn concatenate_mkvmerge(num: u64, mut this_file: File) {
+  let mut file_string: String = "[ \"-o\", \"output.mp4\", \"audio.mp3\", \"[\"".into();
+  for i in 0..num {
+      file_string.push_str(&format!(" , \"{:05}.ivf\" ", i));
+  }
+  file_string.push_str(",\"]\" ]");
+  println!("{}", file_string);
+  this_file.write_all(file_string.as_bytes());
+} 
 
 /// Concatenates using ffmpeg (does not work with x265)
 pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {

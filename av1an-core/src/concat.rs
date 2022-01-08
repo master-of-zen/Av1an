@@ -9,12 +9,15 @@ use path_abs::PathAbs;
 use serde::{Deserialize, Serialize};
 use std::{
   fmt::Display,
+  fmt::Write as FmtWrite,
   fs::{self, DirEntry, File},
   io::Write,
   path::{Path, PathBuf},
   process::{Command, Stdio},
   sync::Arc,
 };
+
+use path_abs::PathInfo;
 
 use crate::encoder::Encoder;
 
@@ -179,13 +182,18 @@ pub fn mkvmerge(
   }
 
   #[cfg(not(windows))]
-  fn fix_path<P: AsRef<Path>>(p: P) -> P {
-    p
+  fn fix_path<P: AsRef<Path>>(p: P) -> String {
+    p.as_ref().display().to_string()
   }
 
   let mut audio_file = PathBuf::from(&temp_dir);
   audio_file.push("audio.mkv");
   let audio_file = PathAbs::new(&audio_file)?;
+  let audio_file = if audio_file.as_path().exists() {
+    Some(fix_path(audio_file))
+  } else {
+    None
+  };
 
   let mut encode_dir = PathBuf::from(temp_dir);
   encode_dir.push("encode");
@@ -193,15 +201,21 @@ pub fn mkvmerge(
   let output = PathAbs::new(output)?;
 
   assert!(num_chunks != 0);
-  let files: Vec<PathBuf> = (0..num_chunks)
-    .map(|chunk| PathBuf::from(format!("{:05}.{}", chunk, encoder.output_extension())))
-    .collect();
 
-  let mut this_file: File = File::create("options.json").unwrap();
-  concatenate_mkvmerge(num_chunks as u64, this_file);
+  let options_path = PathBuf::from(&temp_dir).join("options.json");
+  let options_json_contents = mkvmerge_options_json(
+    num_chunks,
+    encoder,
+    output.to_str().unwrap(),
+    audio_file.as_deref(),
+  );
+
+  let mut options_json = File::create(&options_path)?;
+  options_json.write_all(options_json_contents.as_bytes())?;
+
   let mut cmd = Command::new("mkvmerge");
-  cmd.arg("@options.json");
-  debug!("mkvmerge concat command: {:?}", cmd);
+  cmd.current_dir(&encode_dir);
+  cmd.arg("@../options.json");
 
   let out = cmd
     .output()
@@ -220,17 +234,25 @@ pub fn mkvmerge(
   Ok(())
 }
 
-/** This code adds the necessary command parameters to the options FILE
- * that is passed in, up to the chunk NUM. Returns nothing.
- */
-pub fn concatenate_mkvmerge(num: u64, mut this_file: File) {
-  let mut file_string: String = "[ \"-o\", \"output.mp4\", \"audio.mp3\", \"[\"".into();
-  for i in 0..num {
-    file_string.push_str(&format!(" , \"{:05}.ivf\" ", i));
+/// Create mkvmerge options.json
+pub fn mkvmerge_options_json(
+  num: usize,
+  encoder: Encoder,
+  output: &str,
+  audio: Option<&str>,
+) -> String {
+  let mut file_string = String::with_capacity(64 + 12 * num);
+  write!(file_string, "[\"-o\", {:?}", output).unwrap();
+  if let Some(audio) = audio {
+    write!(file_string, ", {:?}", audio).unwrap();
   }
-  file_string.push_str(",\"]\" ]");
-  println!("{}", file_string);
-  this_file.write_all(file_string.as_bytes());
+  file_string.push_str(", \"[\"");
+  for i in 0..num {
+    write!(file_string, ", \"{:05}.{}\"", i, encoder.output_extension()).unwrap();
+  }
+  file_string.push_str(",\"]\"]");
+
+  file_string
 }
 
 /// Concatenates using ffmpeg (does not work with x265)
@@ -246,13 +268,14 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
     let mut contents = String::with_capacity(24 * files.len());
 
     for i in files {
-      contents.push_str(&format!(
+      write!(
+        contents,
         "file {}\n",
         format!("{}", i.path().display())
           .replace('\\', r"\\")
           .replace(' ', r"\ ")
           .replace('\'', r"\'")
-      ));
+      )?;
     }
 
     let mut file = File::create(concat_file)?;

@@ -9,12 +9,15 @@ use path_abs::PathAbs;
 use serde::{Deserialize, Serialize};
 use std::{
   fmt::Display,
+  fmt::Write as FmtWrite,
   fs::{self, DirEntry, File},
   io::Write,
   path::{Path, PathBuf},
   process::{Command, Stdio},
   sync::Arc,
 };
+
+use path_abs::PathInfo;
 
 use crate::encoder::Encoder;
 
@@ -179,13 +182,18 @@ pub fn mkvmerge(
   }
 
   #[cfg(not(windows))]
-  fn fix_path<P: AsRef<Path>>(p: P) -> P {
-    p
+  fn fix_path<P: AsRef<Path>>(p: P) -> String {
+    p.as_ref().display().to_string()
   }
 
   let mut audio_file = PathBuf::from(&temp_dir);
   audio_file.push("audio.mkv");
   let audio_file = PathAbs::new(&audio_file)?;
+  let audio_file = if audio_file.as_path().exists() {
+    Some(fix_path(audio_file))
+  } else {
+    None
+  };
 
   let mut encode_dir = PathBuf::from(temp_dir);
   encode_dir.push("encode");
@@ -193,59 +201,21 @@ pub fn mkvmerge(
   let output = PathAbs::new(output)?;
 
   assert!(num_chunks != 0);
-  let files: Vec<PathBuf> = (0..num_chunks)
-    .map(|chunk| PathBuf::from(format!("{:05}.{}", chunk, encoder.output_extension())))
-    .collect();
+
+  let options_path = PathBuf::from(&temp_dir).join("options.json");
+  let options_json_contents = mkvmerge_options_json(
+    num_chunks,
+    encoder,
+    output.to_str().unwrap(),
+    audio_file.as_deref(),
+  );
+
+  let mut options_json = File::create(&options_path)?;
+  options_json.write_all(options_json_contents.as_bytes())?;
 
   let mut cmd = Command::new("mkvmerge");
-  cmd.current_dir(encode_dir.canonicalize()?);
-  cmd.arg("-o");
-  cmd.arg(fix_path(output));
-
-  if audio_file.as_path().exists() {
-    cmd.arg(fix_path(audio_file));
-  }
-
-  // `std::process::Command` does not support removing arguments after they have been added,
-  // so we have to add all elements without adding any extra that are later removed. This
-  // complicates the logic slightly, but in turn does not perform any unnecessary allocations
-  // or copy from a temporary data structure.
-  if files.len() % 2 != 0 {
-    let mut chunks = files.chunks_exact(2);
-    for files in &mut chunks {
-      // Each chunk always has exactly 2 elements.
-      for file in files {
-        cmd.arg(file);
-        cmd.arg("+");
-      }
-    }
-    // The remainder is always *exactly* one element since we are using `chunks_exact(2)`, and we
-    // asserted that the length of `files` is odd and nonzero in this branch.
-    cmd.arg(&chunks.remainder()[0]);
-  } else {
-    // The total number of elements at this point is even, and there are at *least* 2 elements,
-    // since `files` is not empty and the case of exactly one element would have been handled by
-    // the previous `if`, so we get the last 2 to handle them separately from the other pairs of 2,
-    // so as to not add a trailing "+" at the end.
-
-    // `files.len() - 2` cannot overflow, as `files.len()` is at least 2 here.
-    let (start, end) = files.split_at(files.len() - 2);
-
-    // `start` will be empty if there are exactly 2 elements in `files`, in which case
-    // this loop will not run.
-    for file in start {
-      cmd.arg(file);
-      cmd.arg("+");
-    }
-
-    // There are always *exactly* 2 elements in `end`, since we used `split_at(files.len() - 2)`,
-    // which will always succeed given that `files` has at least 2 elements at this point.
-    cmd.arg(&end[0]);
-    cmd.arg("+");
-    cmd.arg(&end[1]);
-  }
-
-  debug!("mkvmerge concat command: {:?}", cmd);
+  cmd.current_dir(&encode_dir);
+  cmd.arg("@../options.json");
 
   let out = cmd
     .output()
@@ -264,6 +234,27 @@ pub fn mkvmerge(
   Ok(())
 }
 
+/// Create mkvmerge options.json
+pub fn mkvmerge_options_json(
+  num: usize,
+  encoder: Encoder,
+  output: &str,
+  audio: Option<&str>,
+) -> String {
+  let mut file_string = String::with_capacity(64 + 12 * num);
+  write!(file_string, "[\"-o\", {:?}", output).unwrap();
+  if let Some(audio) = audio {
+    write!(file_string, ", {:?}", audio).unwrap();
+  }
+  file_string.push_str(", \"[\"");
+  for i in 0..num {
+    write!(file_string, ", \"{:05}.{}\"", i, encoder.output_extension()).unwrap();
+  }
+  file_string.push_str(",\"]\"]");
+
+  file_string
+}
+
 /// Concatenates using ffmpeg (does not work with x265)
 pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
   fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
@@ -277,13 +268,14 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
     let mut contents = String::with_capacity(24 * files.len());
 
     for i in files {
-      contents.push_str(&format!(
-        "file {}\n",
+      writeln!(
+        contents,
+        "file {}",
         format!("{}", i.path().display())
           .replace('\\', r"\\")
           .replace(' ', r"\ ")
           .replace('\'', r"\'")
-      ));
+      )?;
     }
 
     let mut file = File::create(concat_file)?;

@@ -268,9 +268,9 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
     let mut contents = String::with_capacity(24 * files.len());
 
     for i in files {
-      write!(
+      writeln!(
         contents,
-        "file {}\n",
+        "file {}",
         format!("{}", i.path().display())
           .replace('\\', r"\\")
           .replace(' ', r"\ ")

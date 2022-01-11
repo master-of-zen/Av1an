@@ -946,10 +946,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.resume {
       let mut chunks = read_chunk_queue(self.temp.as_ref())?;
+      let num_chunks = chunks.len();
 
       let done = get_done();
-
-      let num_chunks = done.done.len();
 
       // only keep the chunks that are not done
       chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
@@ -957,9 +956,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       Ok((chunks, num_chunks))
     } else {
       let chunks = self.create_encoding_queue(splits)?;
-      save_chunk_queue(&self.temp, &chunks)?;
-      // borrow checker hack
       let num_chunks = chunks.len();
+      save_chunk_queue(&self.temp, &chunks)?;
       Ok((chunks, num_chunks))
     }
   }

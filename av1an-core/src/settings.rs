@@ -634,9 +634,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(())
   }
 
-  /// Checks if video parameters have rate control
-  /// and cq-level or target-bitrate set
-  /// Prints the warning
+  /// Warns if rate control was not specified in encoder arguments
   fn check_rate_control(&self) {
     if self.encoder == Encoder::aom {
       if !self
@@ -644,15 +642,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .iter()
         .any(|f| Self::check_aom_encoder_mode(f))
       {
-        println!(
+        eprintln!(
           "{}",
-          Color::Yellow
-            .paint("[WARN] Rate control mode was not provided, make sure to set `--end-usage=X`")
+          Color::Yellow.paint("[WARN] --end-usage was not specified")
         );
       }
 
       if !self.video_params.iter().any(|f| Self::check_aom_rate(f)) {
-        println!("{}", Color::Yellow.paint("[WARN] Rate control value was not provided, make sure to set `--cq-level=X` or `--target-bitrate=X`"));
+        eprintln!(
+          "{}",
+          Color::Yellow.paint("[WARN] --cq-level or --target-bitrate was not specified")
+        );
       }
     }
   }
@@ -679,11 +679,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     if s.starts_with(CQ_LEVEL) {
       s.as_bytes()[CQ_LEVEL.len()..]
         .iter()
-        .all(|&b| (b as char).is_digit(10))
+        .all(|&b| (b as char).is_ascii_digit())
     } else {
       s.as_bytes()[TARGET_BITRATE.len()..]
         .iter()
-        .all(|&b| (b as char).is_digit(10))
+        .all(|&b| (b as char).is_ascii_digit())
     }
   }
 

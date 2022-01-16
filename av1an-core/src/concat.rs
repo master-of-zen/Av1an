@@ -174,8 +174,8 @@ pub fn mkvmerge(
     const UNC_PREFIX: &str = r#"\\?\"#;
 
     let p = p.as_ref().display().to_string();
-    if p.starts_with(UNC_PREFIX) {
-      p[UNC_PREFIX.len()..].to_string()
+    if let Some(path) = p.strip_prefix(UNC_PREFIX) {
+      path.to_string()
     } else {
       p
     }
@@ -206,7 +206,7 @@ pub fn mkvmerge(
   let options_json_contents = mkvmerge_options_json(
     num_chunks,
     encoder,
-    output.to_str().unwrap(),
+    &fix_path(output.to_str().unwrap()),
     audio_file.as_deref(),
   );
 

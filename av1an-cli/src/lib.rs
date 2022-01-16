@@ -330,6 +330,18 @@ pub struct CliOpts {
   #[clap(long, help_heading = "ENCODING")]
   pub photon_noise: Option<u8>,
 
+  /// Determines method used for concatenating encoded chunks and audio into output file
+  ///
+  /// ffmpeg - Uses ffmpeg for concatenation. Unfortunately, ffmpeg sometimes produces files
+  /// with partially broken audio seeking, so mkvmerge should generally be preferred if available.
+  /// ffmpeg concatenation also produces broken files with the --enable-keyframe-filtering=2 option
+  /// in aomenc, so it is disabled if that option is used. However, ffmpeg can mux into formats other
+  /// than matroska (.mkv), such as WebM. To output WebM, use a .webm extension in the output file.
+  ///
+  /// mkvmerge - Generally the best concatenation method (as it does not have either of the
+  /// aforementioned issues that ffmpeg has), but can only produce matroska (.mkv) files. Requires mkvmerge
+  /// to be installed.
+  ///
   /// ivf - Experimental concatenation method implemented in av1an itself to concatenate to an ivf
   /// file (which only supports VP8, VP9, and AV1, and does not support audio).
   #[clap(short, long, possible_values = &["ffmpeg", "mkvmerge", "ivf"], default_value_t = ConcatMethod::FFmpeg, help_heading = "ENCODING")]

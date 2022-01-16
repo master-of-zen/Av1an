@@ -176,7 +176,7 @@ pub fn mkvmerge(
     let p = p.as_ref().display().to_string();
     if let Some(path) = p.strip_prefix(UNC_PREFIX) {
       path.to_string()
-    } else{
+    } else {
       p
     }
   }

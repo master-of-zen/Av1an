@@ -628,9 +628,63 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     if !self.force {
       self.validate_encoder_params();
+      self.check_rate_control();
     }
 
     Ok(())
+  }
+
+  /// Warns if rate control was not specified in encoder arguments
+  fn check_rate_control(&self) {
+    if self.encoder == Encoder::aom {
+      if !self
+        .video_params
+        .iter()
+        .any(|f| Self::check_aom_encoder_mode(f))
+      {
+        eprintln!(
+          "{}",
+          Color::Yellow.paint("[WARN] --end-usage was not specified")
+        );
+      }
+
+      if !self.video_params.iter().any(|f| Self::check_aom_rate(f)) {
+        eprintln!(
+          "{}",
+          Color::Yellow.paint("[WARN] --cq-level or --target-bitrate was not specified")
+        );
+      }
+    }
+  }
+
+  fn check_aom_encoder_mode(s: &str) -> bool {
+    const END_USAGE: &str = "--end-usage=";
+    if s.len() <= END_USAGE.len() || !s.starts_with(END_USAGE) {
+      return false;
+    }
+
+    s.as_bytes()[END_USAGE.len()..]
+      .iter()
+      .all(|&b| (b as char).is_ascii_alphabetic())
+  }
+
+  fn check_aom_rate(s: &str) -> bool {
+    const CQ_LEVEL: &str = "--cq-level=";
+    const TARGET_BITRATE: &str = "--target-bitrate=";
+
+    if s.len() <= CQ_LEVEL.len() || !(s.starts_with(TARGET_BITRATE) || s.starts_with(CQ_LEVEL)) {
+      return false;
+    }
+
+    if s.starts_with(CQ_LEVEL) {
+      s.as_bytes()[CQ_LEVEL.len()..]
+        .iter()
+        .all(|&b| (b as char).is_ascii_digit())
+    } else {
+      s.as_bytes()[TARGET_BITRATE.len()..]
+        .iter()
+        .all(|&b| (b as char).is_ascii_digit())
+    }
   }
 
   fn create_encoding_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {

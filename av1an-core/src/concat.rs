@@ -130,18 +130,18 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
               *p += pos_offset;
             }
 
-            debug!("received packet with pos: {:?}", packet.pos);
+            trace!("received packet with pos: {:?}", packet.pos);
             muxer.write_packet(Arc::new(packet))?;
           }
           Event::Continue => continue,
           Event::Eof => {
-            debug!("EOF received.");
+            trace!("EOF received.");
             break;
           }
           _ => unimplemented!(),
         },
         Err(e) => {
-          debug!("error: {:?}", e);
+          error!("{:?}", e);
           break;
         }
       }

@@ -358,11 +358,11 @@ pub fn log_probes(
   vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
 
   // TODO: take chunk id as integer instead and format with {:05}
-  info!(
+  debug!(
     "chunk {}: P-Rate={}, {} frames",
     chunk_idx, probing_rate, frames
   );
-  info!(
+  debug!(
     "chunk {}: TQ-Probes: {:.2?}{}",
     chunk_idx,
     vmaf_cq_scores,
@@ -372,7 +372,7 @@ pub fn log_probes(
       Skip::None => "",
     }
   );
-  info!(
+  debug!(
     "chunk {}: Target Q={:.0}, VMAF={:.2}",
     chunk_idx, target_q, target_vmaf
   );

@@ -138,7 +138,7 @@ impl EncodeArgs {
     create_dir!(Path::new(&self.temp).join("split"))?;
     create_dir!(Path::new(&self.temp).join("encode"))?;
 
-    info!("temporary directory: {}", &self.temp);
+    debug!("temporary directory: {}", &self.temp);
 
     let done_path = Path::new(&self.temp).join("done.json");
     let done_json_exists = done_path.exists();
@@ -642,17 +642,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .iter()
         .any(|f| Self::check_aom_encoder_mode(f))
       {
-        eprintln!(
-          "{}",
-          Color::Yellow.paint("[WARN] --end-usage was not specified")
-        );
+        warn!("[WARN] --end-usage was not specified");
       }
 
       if !self.video_params.iter().any(|f| Self::check_aom_rate(f)) {
-        eprintln!(
-          "{}",
-          Color::Yellow.paint("[WARN] --cq-level or --target-bitrate was not specified")
-        );
+        warn!("[WARN] --cq-level or --target-bitrate was not specified");
       }
     }
   }
@@ -743,9 +737,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       |path| Cow::Borrowed(path.as_path()),
     );
 
+    let used_existing_cuts;
     let (mut scenes, frames) = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
+      used_existing_cuts = true;
       crate::split::read_scenes_from_file(scene_file.as_ref())?
     } else {
+      used_existing_cuts = false;
       self.calc_split_locations()?
     };
     self.frames = frames;
@@ -753,15 +750,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .frames
       .store(self.frames, atomic::Ordering::SeqCst);
     let scenes_before = scenes.len() + 1;
-    if let Some(split_len) = self.extra_splits_len {
-      scenes = extra_splits(&scenes, self.frames, split_len);
-      let scenes_after = scenes.len() + 1;
-      info!(
-        "scenecut: found {} scene(s) [with extra_splits({} frames): {}]",
-        scenes_before, split_len, scenes_after
-      );
-    } else {
-      info!("scenecut: found {} scene(s)", scenes_before);
+    if !used_existing_cuts {
+      if let Some(split_len) = self.extra_splits_len {
+        scenes = extra_splits(&scenes, self.frames, split_len);
+        let scenes_after = scenes.len() + 1;
+        info!(
+          "scenecut: found {} scene(s) [with extra_splits ({} frames): {} scene(s)]",
+          scenes_before, split_len, scenes_after
+        );
+      } else {
+        info!("scenecut: found {} scene(s)", scenes_before);
+      }
     }
 
     write_scenes_to_file(&scenes, self.frames, scene_file)?;
@@ -896,9 +895,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   fn create_video_queue_segment(&self, splits: &[usize]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.input.as_video_path();
 
-    info!("Split video");
+    debug!("Splitting video");
     segment(input, &self.temp, splits);
-    info!("Split done");
+    debug!("Splitting done");
 
     let source_path = Path::new(&self.temp).join("split");
     let queue_files = Self::read_queue_files(&source_path)?;
@@ -935,9 +934,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .copied()
       .collect();
 
-    info!("Segmenting video");
+    debug!("Segmenting video");
     segment(input, &self.temp, &to_split[1..]);
-    info!("Segment done");
+    debug!("Segment done");
 
     let source_path = Path::new(&self.temp).join("split");
     let queue_files = Self::read_queue_files(&source_path)?;
@@ -1136,20 +1135,30 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
       self.workers = cmp::min(self.workers, chunk_queue.len());
 
-      eprintln!(
-        "{}{} {} {}{} {} {}{} {}\n{}: {}",
-        Color::Green.bold().paint("Q"),
-        Color::Green.paint("ueue"),
-        Color::Green.bold().paint(format!("{}", chunk_queue.len())),
-        Color::Blue.bold().paint("W"),
-        Color::Blue.paint("orkers"),
-        Color::Blue.bold().paint(format!("{}", self.workers)),
-        Color::Purple.bold().paint("P"),
-        Color::Purple.paint("asses"),
-        Color::Purple.bold().paint(format!("{}", self.passes)),
-        Style::default().bold().paint("Params"),
-        Style::default().dimmed().paint(self.video_params.join(" "))
-      );
+      if atty::is(atty::Stream::Stderr) {
+        eprintln!(
+          "{}{} {} {}{} {} {}{} {}\n{}: {}",
+          Color::Green.bold().paint("Q"),
+          Color::Green.paint("ueue"),
+          Color::Green.bold().paint(format!("{}", chunk_queue.len())),
+          Color::Blue.bold().paint("W"),
+          Color::Blue.paint("orkers"),
+          Color::Blue.bold().paint(format!("{}", self.workers)),
+          Color::Purple.bold().paint("P"),
+          Color::Purple.paint("asses"),
+          Color::Purple.bold().paint(format!("{}", self.passes)),
+          Style::default().bold().paint("Params"),
+          Style::default().dimmed().paint(self.video_params.join(" "))
+        );
+      } else {
+        eprintln!(
+          "Queue {} Workers {} Passes {}\nParams: {}",
+          chunk_queue.len(),
+          self.workers,
+          self.passes,
+          self.video_params.join(" ")
+        );
+      }
 
       if self.verbosity == Verbosity::Normal {
         init_progress_bar(self.frames as u64);
@@ -1204,7 +1213,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let _audio_output_exists =
         audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
 
-      info!("encoding finished, concatenating with {}", self.concat);
+      debug!("encoding finished, concatenating with {}", self.concat);
 
       match self.concat {
         ConcatMethod::Ivf => {
@@ -1239,8 +1248,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           },
           self.vmaf_threads.unwrap_or_else(num_cpus::get),
         ) {
-          error!("{}", e);
-          error!("VMAF calculation failed, no plot generated.");
+          error!("VMAF calculation failed with error: {}", e);
         }
       }
 

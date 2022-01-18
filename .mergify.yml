@@ -1,5 +1,5 @@
 pull_request_rules:
-  - name: automatic merge for main when CI passes and approved
+  - name: automatic squash-merge for master when CI passes and approved
     conditions:
       - "#approved-reviews-by>=1"
       - and:
@@ -15,8 +15,9 @@ pull_request_rules:
         method: squash
         rebase_fallback: none
         update_method: rebase
-  - name: automatic merge for stable backports when CI passes
+  - name: automatic merge for stable when CI passes and approved
     conditions:
+      - "#approved-reviews-by>=1"
       - and:
           # Unfortunately, we cannot just say "all CI must pass".
           # This is not a bot limitation, but a limitation in Github itself.
@@ -24,33 +25,12 @@ pull_request_rules:
           - check-success=docker
           - check-success=SonarCloud Code Analysis
       - base=stable
-      - or:
-          - "#approved-reviews-by>=1"
-          - author=mergify[bot]
     actions:
       queue:
         name: default
         method: rebase
-        rebase_fallback: none
+        rebase_fallback: merge
         update_method: rebase
-  - name: copy patches to stable branch
-    conditions:
-      - base=master
-      - label!=unstable
-    actions:
-      backport:
-        branches:
-          - stable
-  - name: assign code owners to stable merge conflicts
-    conditions:
-      - conflict
-      - base=stable
-    actions:
-      assign:
-        add_users:
-          - master-of-zen
-          - redzic
-          - shssoichiro
 
 queue_rules:
   - name: default

@@ -20,15 +20,21 @@ pub fn av_scenechange_detect(
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<(Vec<usize>, usize)> {
   if verbosity != Verbosity::Quiet {
-    eprintln!("{}", Style::default().bold().paint("Scene detection"));
+    if atty::is(atty::Stream::Stderr) {
+      eprintln!("{}", Style::default().bold().paint("Scene detection"));
+    } else {
+      eprintln!("Scene detection");
+    }
     progress_bar::init_progress_bar(total_frames as u64);
   }
 
   let input2 = input.clone();
   let frame_thread = thread::spawn(move || {
     let frames = input2.frames().unwrap();
-    progress_bar::convert_to_progress();
-    progress_bar::set_len(frames as u64);
+    if verbosity != Verbosity::Quiet {
+      progress_bar::convert_to_progress();
+      progress_bar::set_len(frames as u64);
+    }
     frames
   });
 

@@ -130,10 +130,10 @@ pub struct CliOpts {
   ///
   /// info: Designates useful information.
   ///
-  /// debug: Designates lower priority information. Includes rav1e scenechange decision info.
+  /// debug: Designates lower priority information.
   ///
-  /// trace: Designates very low priority, often extremely verbose, information.
-  #[clap(long, default_value_t = LevelFilter::Info, ignore_case = true, possible_values = &["error", "warn", "info", "debug", "trace"])]
+  /// trace: Designates very low priority, often extremely verbose, information. Includes rav1e scenechange decision info.
+  #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true, possible_values = &["error", "warn", "info", "debug", "trace"])]
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
@@ -616,11 +616,16 @@ impl LogWriter for StderrLogger {
       return Ok(());
     }
 
-    let style = match record.level() {
-      Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
-      Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
-      Level::Info => Style::default().dimmed(),
-      _ => Style::default(),
+    let style = if atty::is(atty::Stream::Stderr) {
+      match record.level() {
+        Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
+        Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
+        Level::Info => Style::default().bold(),
+        Level::Debug => Style::default().dimmed(),
+        _ => Style::default(),
+      }
+    } else {
+      Style::default()
     };
 
     let msg = style.paint(format!("{}", record.args()));
@@ -657,15 +662,33 @@ pub fn run() -> anyhow::Result<()> {
   let log_level = cli_args.log_level;
   let mut args = parse_cli(cli_args)?;
 
-  let log = LogSpecBuilder::new().default(log_level).build();
+  let log = LogSpecBuilder::new()
+    .default(LevelFilter::Error)
+    .module("av1an", log_level)
+    .module("av1an_cli", log_level)
+    .module("av1an_core", log_level)
+    .module(
+      "rav1e::scenechange",
+      match log_level {
+        LevelFilter::Trace => LevelFilter::Debug,
+        LevelFilter::Debug => LevelFilter::Info,
+        other => other,
+      },
+    )
+    .build();
 
-  Logger::with(log)
+  // Note that with all write modes except WriteMode::Direct (which is the default)
+  // you should keep the LoggerHandle alive up to the very end of your program,
+  // because it will, in its Drop implementation, flush all writers to ensure that
+  // all buffered log lines are flushed before the program terminates,
+  // and then it calls their shutdown method.
+  let _logger = Logger::with(log)
     .log_to_file_and_writer(
       FileSpec::try_from(PathAbs::new(&args.log_file)?)?,
       Box::new(StderrLogger {
         level: match args.verbosity {
-          Verbosity::Normal | Verbosity::Quiet => Level::Warn,
-          Verbosity::Verbose => Level::Info,
+          Verbosity::Quiet => Level::Warn,
+          Verbosity::Normal | Verbosity::Verbose => Level::Info,
         },
       }),
     )

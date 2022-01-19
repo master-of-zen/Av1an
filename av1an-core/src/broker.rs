@@ -1,4 +1,5 @@
 use crate::progress_bar::update_progress_bar_estimates;
+use crate::util::printable_base10_digits;
 use crate::DoneChunk;
 use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
@@ -211,6 +212,8 @@ impl<'a> Broker<'a> {
       tq.per_shot_target_quality_routine(chunk)?;
     }
 
+    let padding = printable_base10_digits(self.total_chunks - 1) as usize;
+
     // Run all passes for this chunk
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=self.project.passes {
@@ -219,7 +222,7 @@ impl<'a> Broker<'a> {
           chunk,
           current_pass,
           worker_id,
-          self.total_chunks,
+          padding,
           tpl_crash_workaround,
         );
         if let Err((e, frames)) = res {

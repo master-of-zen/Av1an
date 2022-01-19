@@ -180,10 +180,9 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
   });
 }
 
-pub fn update_mp_chunk(worker_idx: usize, chunk: usize, total_chunks: usize) {
-  let digits = printable_base10_digits(total_chunks) as usize;
+pub fn update_mp_chunk(worker_idx: usize, chunk: usize, padding: usize) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    pbs[worker_idx].set_prefix(format!("[Chunk {:>digits$}]", chunk, digits = digits));
+    pbs[worker_idx].set_prefix(format!("[Chunk {:>digits$}]", chunk, digits = padding));
   }
 }
 

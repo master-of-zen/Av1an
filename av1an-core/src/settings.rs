@@ -225,10 +225,10 @@ impl EncodeArgs {
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
-    total_chunks: usize,
+    padding: usize,
     tpl_crash_workaround: bool,
   ) -> Result<(), (EncoderCrash, u64)> {
-    update_mp_chunk(worker_id, chunk.index, total_chunks);
+    update_mp_chunk(worker_id, chunk.index, padding);
 
     let fpf_file = Path::new(&chunk.temp)
       .join("split")

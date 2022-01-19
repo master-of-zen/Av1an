@@ -144,15 +144,15 @@ pub fn reset_mp_bar_at(pos: u64) {
   }
 }
 
-pub fn init_multi_progress_bar(len: u64, workers: usize) {
+pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
   MULTI_PROGRESS_BAR.get_or_init(|| {
     let mpb = MultiProgress::new();
 
     let mut pbs = Vec::new();
 
-    let digits = printable_base10_digits(workers) as usize;
+    let digits = printable_base10_digits(total_chunks) as usize;
 
-    for i in 1..=workers {
+    for _ in 1..=workers {
       let pb = ProgressBar::hidden()
         // no spinner on windows, so we remove the prefix to line up with the progress bar
         .with_style(ProgressStyle::default_spinner().template(if cfg!(windows) {
@@ -160,7 +160,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize) {
         } else {
           "  {prefix:.dim} {msg}"
         }));
-      pb.set_prefix(format!("[Worker {:>digits$}]", i, digits = digits));
+      pb.set_prefix(format!("[Idle  {:width$}]", width = digits));
       pbs.push(mpb.add(pb));
     }
 
@@ -178,6 +178,12 @@ pub fn init_multi_progress_bar(len: u64, workers: usize) {
 
     (mpb, pbs)
   });
+}
+
+pub fn update_mp_chunk(worker_idx: usize, chunk: usize, padding: usize) {
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    pbs[worker_idx].set_prefix(format!("[Chunk {:>digits$}]", chunk, digits = padding));
+  }
 }
 
 pub fn update_mp_msg(worker_idx: usize, msg: String) {

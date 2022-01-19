@@ -1,7 +1,7 @@
 use crate::grain::create_film_grain_file;
 use crate::parse::valid_params;
-use crate::progress_bar::update_progress_bar_estimates;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
+use crate::progress_bar::{update_mp_chunk, update_progress_bar_estimates};
 use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
 use crate::ChunkOrdering;
 use crate::{
@@ -225,8 +225,11 @@ impl EncodeArgs {
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
+    padding: usize,
     tpl_crash_workaround: bool,
   ) -> Result<(), (EncoderCrash, u64)> {
+    update_mp_chunk(worker_id, chunk.index, padding);
+
     let fpf_file = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
@@ -1164,7 +1167,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         init_progress_bar(self.frames as u64);
         reset_bar_at(initial_frames as u64);
       } else if self.verbosity == Verbosity::Verbose {
-        init_multi_progress_bar(self.frames as u64, self.workers);
+        init_multi_progress_bar(self.frames as u64, self.workers, total_chunks);
         reset_mp_bar_at(initial_frames as u64);
       }
 
@@ -1180,6 +1183,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       let broker = Broker {
         chunk_queue,
+        total_chunks,
         project: self,
         target_quality: if self.target_quality.is_some() {
           Some(TargetQuality::new(self))

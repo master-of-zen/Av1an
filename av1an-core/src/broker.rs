@@ -1,4 +1,5 @@
 use crate::progress_bar::update_progress_bar_estimates;
+use crate::util::printable_base10_digits;
 use crate::DoneChunk;
 use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
@@ -25,6 +26,7 @@ use thiserror::Error;
 pub struct Broker<'a> {
   pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
+  pub total_chunks: usize,
   pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
 }
@@ -111,6 +113,8 @@ impl<'a> Broker<'a> {
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
   ) {
+    assert!(self.total_chunks != 0);
+
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -210,13 +214,20 @@ impl<'a> Broker<'a> {
       tq.per_shot_target_quality_routine(chunk)?;
     }
 
+    // we display the index, so we need to subtract 1 to get the max index
+    let padding = printable_base10_digits(self.total_chunks - 1) as usize;
+
     // Run all passes for this chunk
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=self.max_tries {
-        let res = self
-          .project
-          .create_pipes(chunk, current_pass, worker_id, tpl_crash_workaround);
+        let res = self.project.create_pipes(
+          chunk,
+          current_pass,
+          worker_id,
+          padding,
+          tpl_crash_workaround,
+        );
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {
             dec_bar(frames);

@@ -25,6 +25,7 @@ use thiserror::Error;
 pub struct Broker<'a> {
   pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
+  pub total_chunks: usize,
   pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
 }
@@ -214,9 +215,13 @@ impl<'a> Broker<'a> {
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=self.max_tries {
-        let res = self
-          .project
-          .create_pipes(chunk, current_pass, worker_id, tpl_crash_workaround);
+        let res = self.project.create_pipes(
+          chunk,
+          current_pass,
+          worker_id,
+          self.total_chunks,
+          tpl_crash_workaround,
+        );
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {
             dec_bar(frames);

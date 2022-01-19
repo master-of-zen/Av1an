@@ -113,6 +113,8 @@ impl<'a> Broker<'a> {
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
   ) {
+    assert!(self.total_chunks != 0);
+
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -212,6 +214,7 @@ impl<'a> Broker<'a> {
       tq.per_shot_target_quality_routine(chunk)?;
     }
 
+    // we display the index, so we need to subtract 1 to get the max index
     let padding = printable_base10_digits(self.total_chunks - 1) as usize;
 
     // Run all passes for this chunk

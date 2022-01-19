@@ -148,7 +148,8 @@ With your own parameters:
 
 - Prerequisites:
   - [Install FFmpeg](https://ffmpeg.org/download.html)
-  - Recommended to install vapoursynth with lsmash/ffms2 for faster and better processing
+  - [Vapoursynth](http://www.vapoursynth.com/)
+  - Recommended to install lsmash/ffms2 for faster and better processing
 
 - Encoder of choice:
   - [Install AOMENC](https://aomedia.googlesource.com/aom/)
@@ -157,7 +158,6 @@ With your own parameters:
   - [Install vpx](https://chromium.googlesource.com/webm/libvpx/) VP9, VP8 encoding
 
 - Optional :
-  - [Vapoursynth](http://www.vapoursynth.com/)
   - [ffms2](https://github.com/FFMS/ffms2)
   - [lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
   - [mkvmerge](https://mkvtoolnix.download/)

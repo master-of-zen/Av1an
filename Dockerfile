@@ -1,22 +1,21 @@
-FROM luigi311/encoders-docker:20210901
+FROM archlinux:base-devel
 
 ENV MPLCONFIGDIR="/home/app_user/"
-ARG DEBIAN_FRONTEND=noninteractive
 ARG DEPENDENCIES="mkvtoolnix curl llvm clang"
 
-# Install dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ${DEPENDENCIES} && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Create user
+
+RUN pacman -Sy --noconfirm
+
+# Install make dependencies
+RUN pacman -S --noconfirm rust clang nasm
+
+# Install all optional dependencies
+RUN pacman -S --noconfirm aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli rav1e svt-av1 vapoursynth-plugin-lsmashsource vmaf
+
 RUN useradd -ms /bin/bash app_user
 USER app_user
 
-# Install rust
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain stable
 ENV PATH="/home/app_user/.cargo/bin:$PATH"
 
 # Copy av1an and build av1an

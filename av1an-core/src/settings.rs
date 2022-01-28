@@ -565,6 +565,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         "FFMS2 is not installed, but it was specified as the chunk method"
       );
     }
+    if self.chunk_method == ChunkMethod::Select {
+      warn!("It is not recommended to use the \"select\" chunk method, as it is very slow");
+    }
 
     if let Some(vmaf_path) = &self.vmaf_path {
       ensure!(vmaf_path.exists());

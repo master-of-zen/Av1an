@@ -32,11 +32,7 @@ pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
     .output()
     .unwrap();
 
-  if memchr::memmem::find(b"v0.9.0", &version.stdout).is_some() {
-    false
-  } else {
-    true
-  }
+  memchr::memmem::find(b"v0.9.0", &version.stdout).is_none()
 });
 
 impl Display for Encoder {

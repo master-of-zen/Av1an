@@ -3,8 +3,9 @@ use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
 use ffmpeg_next::format::Pixel;
 use itertools::chain;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf};
+use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf, process::Command};
 use thiserror::Error;
 
 use std::iter::Iterator;
@@ -24,6 +25,19 @@ pub enum Encoder {
   x264,
   x265,
 }
+
+pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
+  let version = Command::new("SvtAv1EncApp")
+    .arg("--version")
+    .output()
+    .unwrap();
+
+  if memchr::memmem::find(b"v0.9.0", &version.stdout).is_some() {
+    false
+  } else {
+    true
+  }
+});
 
 impl Display for Encoder {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -535,23 +549,91 @@ impl Encoder {
         format!("--cq-level={}", q),
         "--row-mt=1",
       ],
-      Self::svt_av1 => inplace_vec![
-        "SvtAv1EncApp",
-        "-i",
-        "stdin",
-        "--lp",
-        format!("{}", threads),
-        "--preset",
-        "12",
-        "--keyint",
-        "240",
-        "--crf",
-        format!("{}", q),
-        "--tile-rows",
-        "1",
-        "--tile-columns",
-        "2",
-      ],
+      Self::svt_av1 => {
+        if *USE_OLD_SVT_AV1 {
+          inplace_vec![
+            "SvtAv1EncApp",
+            "-i",
+            "stdin",
+            "--lp",
+            format!("{}", threads),
+            "--preset",
+            "8",
+            "--keyint",
+            "240",
+            "--crf",
+            format!("{}", q),
+            "--tile-rows",
+            "1",
+            "--tile-columns",
+            "2",
+            "--pred-struct",
+            "0",
+            "--sg-filter-mode",
+            "0",
+            "--enable-restoration-filtering",
+            "0",
+            "--cdef-level",
+            "0",
+            "--disable-dlf",
+            "0",
+            "--mrp-level",
+            "0",
+            "--enable-mfmv",
+            "0",
+            "--enable-local-warp",
+            "0",
+            "--enable-global-motion",
+            "0",
+            "--enable-interintra-comp",
+            "0",
+            "--obmc-level",
+            "0",
+            "--rdoq-level",
+            "0",
+            "--filter-intra-level",
+            "0",
+            "--enable-intra-edge-filter",
+            "0",
+            "--enable-pic-based-rate-est",
+            "0",
+            "--pred-me",
+            "0",
+            "--bipred-3x3",
+            "0",
+            "--compound",
+            "0",
+            "--ext-block",
+            "0",
+            "--hbd-md",
+            "0",
+            "--palette-level",
+            "0",
+            "--umv",
+            "0",
+            "--tf-level",
+            "3",
+          ]
+        } else {
+          inplace_vec![
+            "SvtAv1EncApp",
+            "-i",
+            "stdin",
+            "--lp",
+            format!("{}", threads),
+            "--preset",
+            "12",
+            "--keyint",
+            "240",
+            "--crf",
+            format!("{}", q),
+            "--tile-rows",
+            "1",
+            "--tile-columns",
+            "2",
+          ]
+        }
+      }
       Self::x264 => inplace_vec![
         "x264",
         "--log-level",

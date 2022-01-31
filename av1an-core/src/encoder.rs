@@ -42,9 +42,11 @@ pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
           .filter_map(|s| (s.as_bytes()[0] as char).to_digit(10))
           .collect::<ArrayVec<u32, 3>>();
 
-        if let [major, minor, patch] = version[..] {
-          let v = major * 100 + minor * 10 + patch;
-          v < 90
+        if let [major, minor, _patch] = version[..] {
+          match major {
+            0 => minor < 9,
+            _ => false,
+          }
         } else {
           true
         }

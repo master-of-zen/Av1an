@@ -32,7 +32,31 @@ pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
     .output()
     .unwrap();
 
-  memchr::memmem::find(&version.stdout, b"v0.9.0").is_none()
+  // we use `else { true }` to assume an old version of SVT if the version failed
+  // to parse, as newer versions should always follow the same convention
+  if let Some(idx) = memchr::memchr(b'v', &version.stdout) {
+    if let Some(s) = version.stdout.get(idx + 1..) {
+      if let Ok(s) = simdutf8::basic::from_utf8(s) {
+        let version = s
+          .split('.')
+          .filter_map(|s| (s.as_bytes()[0] as char).to_digit(10))
+          .collect::<ArrayVec<u32, 3>>();
+
+        if let [major, minor, patch] = version[..] {
+          let v = major * 100 + minor * 10 + patch;
+          v < 90
+        } else {
+          true
+        }
+      } else {
+        true
+      }
+    } else {
+      true
+    }
+  } else {
+    true
+  }
 });
 
 impl Display for Encoder {

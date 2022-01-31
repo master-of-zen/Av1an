@@ -26,37 +26,62 @@ pub enum Encoder {
   x265,
 }
 
+pub(crate) fn parse_svt_av1_version(version: &[u8]) -> Option<(u32, u32, u32)> {
+  let v_idx = memchr::memchr(b'v', version)?;
+  let s = version.get(v_idx + 1..)?;
+  let s = simdutf8::basic::from_utf8(s).ok()?;
+  let version = s
+    .split_ascii_whitespace()
+    .next()?
+    .split('.')
+    .filter_map(|s| s.split('-').next())
+    .filter_map(|s| s.parse::<u32>().ok())
+    .collect::<ArrayVec<u32, 3>>();
+
+  if let [major, minor, patch] = version[..] {
+    Some((major, minor, patch))
+  } else {
+    None
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::encoder::parse_svt_av1_version;
+
+  #[test]
+  fn svt_av1_parsing() {
+    let test_cases = [
+      ("SVT-AV1 v0.8.7-333-g010c1881 (release)", Some((0, 8, 7))),
+      ("SVT-AV1 v0.9.0-dirty (debug)", Some((0, 9, 0))),
+      ("SVT-AV1 v1.2.0 (release)", Some((1, 2, 0))),
+      ("SVT-AV1 v3.2.1 (release)", Some((3, 2, 1))),
+      ("SVT-AV1 v3.2.11 (release)", Some((3, 2, 11))),
+      ("SVT-AV1 v0.8.11 (release)", Some((0, 8, 11))),
+      ("SVT-AV1 v0.8.11-333-g010c1881 (release)", Some((0, 8, 11))),
+      ("invalid", None),
+    ];
+
+    for (s, ans) in test_cases {
+      assert_eq!(parse_svt_av1_version(s.as_bytes()), ans);
+    }
+  }
+}
+
 pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
   let version = Command::new("SvtAv1EncApp")
     .arg("--version")
     .output()
     .unwrap();
 
-  // we use `else { true }` to assume an old version of SVT if the version failed
-  // to parse, as newer versions should always follow the same convention
-  if let Some(idx) = memchr::memchr(b'v', &version.stdout) {
-    if let Some(s) = version.stdout.get(idx + 1..) {
-      if let Ok(s) = simdutf8::basic::from_utf8(s) {
-        let version = s
-          .split('.')
-          .filter_map(|s| (s.as_bytes()[0] as char).to_digit(10))
-          .collect::<ArrayVec<u32, 3>>();
-
-        if let [major, minor, _patch] = version[..] {
-          match major {
-            0 => minor < 9,
-            _ => false,
-          }
-        } else {
-          true
-        }
-      } else {
-        true
-      }
-    } else {
-      true
+  if let Some((major, minor, _)) = parse_svt_av1_version(&version.stdout) {
+    match major {
+      0 => minor < 9,
+      1.. => false,
     }
   } else {
+    // assume an old version of SVT-AV1 if the version failed to parse, as
+    // the format for v0.9.0+ should be the same
     true
   }
 });

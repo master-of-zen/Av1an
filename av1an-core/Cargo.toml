@@ -67,8 +67,8 @@ default-features = false
 features = ["svg_backend", "line_series"]
 
 [dependencies.vapoursynth]
-git = "https://github.com/redzic/vapoursynth-rs"
-rev = "be8e2c0340d6a93500403c242e02015bb926c80b"
+git = "https://github.com/YaLTeR/vapoursynth-rs"
+rev = "074417335ff9c139956c62771835798c9a302e67"
 features = ["vsscript-functions", "vapoursynth-functions"]
 
 [dependencies.tokio]

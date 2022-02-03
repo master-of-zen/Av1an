@@ -237,12 +237,11 @@ pub fn update_progress_bar_estimates(
     .done
     .iter()
     .map(|ref_multi| ref_multi.value().size_bytes)
-    .sum::<u64>()
-    + audio_size;
+    .sum::<u64>();
   let seconds_completed = completed_frames as f64 / frame_rate;
   let kbps = total_size as f64 * 8. / 1000. / seconds_completed;
   let progress = completed_frames as f64 / total_frames as f64;
-  let est_size = total_size as f64 / progress;
+  let est_size = total_size as f64 / progress + audio_size as f64;
   if verbosity == Verbosity::Normal {
     update_bar_info(kbps, HumanBytes(est_size as u64));
   } else if verbosity == Verbosity::Verbose {

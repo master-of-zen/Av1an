@@ -1,14 +1,20 @@
+use crossbeam_utils::thread::Scope;
 use ffmpeg_next::format::Pixel;
 use smallvec::{smallvec, SmallVec};
 
+use crate::chunk::Chunk;
+use crate::settings::EncodeArgs;
 use crate::Encoder;
 use crate::{ffmpeg, into_smallvec, progress_bar, Input, ScenecutMethod, Verbosity};
 use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::mpsc;
 use std::thread;
 
+// TODO: reimplement frame count on another thread
 pub fn av_scenechange_detect(
   input: &Input,
   encoder: Encoder,
@@ -18,53 +24,67 @@ pub fn av_scenechange_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<(Vec<usize>, usize)> {
-  if verbosity != Verbosity::Quiet {
-    if atty::is(atty::Stream::Stderr) {
-      eprintln!("{}", Style::default().bold().paint("Scene detection"));
-    } else {
-      eprintln!("Scene detection");
-    }
-    progress_bar::init_progress_bar(total_frames as u64);
-  }
+  sender: crossbeam_channel::Sender<Chunk>,
+  vs_script: PathBuf,
+  out_ext: String,
+  temp: String,
+) -> anyhow::Result<()> {
+  let (tx, rx) = mpsc::channel::<usize>();
 
-  let input2 = input.clone();
-  let frame_thread = thread::spawn(move || {
-    let frames = input2.frames().unwrap();
-    if verbosity != Verbosity::Quiet {
-      progress_bar::convert_to_progress();
-      progress_bar::set_len(frames as u64);
-    }
-    frames
+  let x = input.clone();
+  let t = thread::spawn(move || {
+    scene_detect(
+      &x,
+      encoder,
+      None,
+      min_scene_len,
+      sc_pix_format,
+      sc_method,
+      sc_downscale_height,
+      tx,
+    )
+    .unwrap();
   });
 
-  let mut scenecuts = scene_detect(
-    input,
-    encoder,
-    if verbosity == Verbosity::Quiet {
-      None
-    } else {
-      Some(Box::new(|frames, _keyframes| {
-        progress_bar::set_pos(frames as u64);
-      }))
-    },
-    min_scene_len,
-    sc_pix_format,
-    sc_method,
-    sc_downscale_height,
-  )?;
+  let mut last = 0;
+  let mut idx = 0;
+  while let Ok(frame_idx) = rx.recv() {
+    // TODO do this without a branch every time?
+    if frame_idx != 0 {
+      sender
+        .send(EncodeArgs::create_vs_chunk(
+          idx,
+          &vs_script,
+          last,
+          frame_idx,
+          out_ext.clone(),
+          temp.clone(),
+        ))
+        .unwrap();
 
-  let frames = frame_thread.join().unwrap();
-
-  progress_bar::finish_progress_bar();
-
-  if scenecuts[0] == 0 {
-    // TODO refactor the chunk creation to not require this
-    // Currently, this is required for compatibility with create_video_queue_vs
-    scenecuts.remove(0);
+      idx += 1;
+      last = frame_idx;
+    }
   }
 
-  Ok((scenecuts, frames))
+  t.join().unwrap();
+
+  // TODO: get this from the number of analyzed frames rather than calculating it separately
+  let frames = input.frames().unwrap();
+
+  // send the last chunk
+  sender
+    .send(EncodeArgs::create_vs_chunk(
+      idx,
+      &vs_script,
+      last,
+      frames,
+      out_ext.clone(),
+      temp.clone(),
+    ))
+    .unwrap();
+
+  Ok(())
 }
 
 /// Detect scene changes using rav1e scene detector.
@@ -76,7 +96,8 @@ pub fn scene_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<Vec<usize>> {
+  sender: mpsc::Sender<usize>,
+) -> anyhow::Result<()> {
   let bit_depth;
 
   let filters: SmallVec<[String; 4]> = match (sc_downscale_height, sc_pix_format) {
@@ -148,9 +169,12 @@ pub fn scene_detect(
     },
     ..DetectionOptions::default()
   };
-  Ok(if bit_depth > 8 {
-    detect_scene_changes::<_, u16>(decoder, options, callback).scene_changes
+
+  if bit_depth > 8 {
+    detect_scene_changes::<_, u16>(decoder, options, callback, sender).scene_changes;
   } else {
-    detect_scene_changes::<_, u8>(decoder, options, callback).scene_changes
-  })
+    detect_scene_changes::<_, u8>(decoder, options, callback, sender).scene_changes;
+  }
+
+  Ok(())
 }

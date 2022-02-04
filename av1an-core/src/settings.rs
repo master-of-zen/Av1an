@@ -25,6 +25,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
+use crossbeam_utils::thread::Scope;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
@@ -32,7 +33,7 @@ use rand::thread_rng;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::sync::atomic::AtomicUsize;
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::{
   borrow::Cow,
   cmp,
@@ -719,60 +720,42 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(chunks)
   }
 
-  fn calc_split_locations(&self) -> anyhow::Result<(Vec<usize>, usize)> {
+  fn run_scene_detection(&self, sender: crossbeam_channel::Sender<Chunk>) -> anyhow::Result<()> {
     Ok(match self.split_method {
-      SplitMethod::AvScenechange => av_scenechange_detect(
-        &self.input,
-        self.encoder,
-        self.frames,
-        self.min_scene_len,
-        self.verbosity,
-        self.sc_pix_format,
-        self.sc_method,
-        self.sc_downscale_height,
-      )?,
-      SplitMethod::None => (Vec::new(), self.input.frames()?),
+      SplitMethod::AvScenechange => {
+        av_scenechange_detect(
+          &self.input,
+          self.encoder,
+          self.frames,
+          self.min_scene_len,
+          self.verbosity,
+          self.sc_pix_format,
+          self.sc_method,
+          self.sc_downscale_height,
+          sender,
+          self.vs_script.as_ref().unwrap().clone(),
+          self.encoder.output_extension().to_string(),
+          self.temp.clone(),
+        )
+        .unwrap();
+      }
+      SplitMethod::None => todo!(),
     })
   }
 
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
   // scenes.json and return that.
-  fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
-    let scene_file = self.scenes.as_ref().map_or_else(
-      || Cow::Owned(Path::new(&self.temp).join("scenes.json")),
-      |path| Cow::Borrowed(path.as_path()),
-    );
+  // fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
+  // fn split_routine(&mut self) -> anyhow::Result<(mpsc::Receiver<usize>, JoinHandle<()>)> {
+  //   let (tx, rx) = mpsc::channel::<usize>();
 
-    let used_existing_cuts;
-    let (mut scenes, frames) = if (self.scenes.is_some() && scene_file.exists()) || self.resume {
-      used_existing_cuts = true;
-      crate::split::read_scenes_from_file(scene_file.as_ref())?
-    } else {
-      used_existing_cuts = false;
-      self.calc_split_locations()?
-    };
-    self.frames = frames;
-    get_done()
-      .frames
-      .store(self.frames, atomic::Ordering::SeqCst);
-    let scenes_before = scenes.len() + 1;
-    if !used_existing_cuts {
-      if let Some(split_len) = self.extra_splits_len {
-        scenes = extra_splits(&scenes, self.frames, split_len);
-        let scenes_after = scenes.len() + 1;
-        info!(
-          "scenecut: found {} scene(s) [with extra_splits ({} frames): {} scene(s)]",
-          scenes_before, split_len, scenes_after
-        );
-      } else {
-        info!("scenecut: found {} scene(s)", scenes_before);
-      }
-    }
+  //   let sc_thread = thread::spawn(|| {
+  //     self.run_scene_detection(tx).unwrap();
+  //   });
+  //   self.frames = self.input.frames()?;
 
-    write_scenes_to_file(&scenes, self.frames, scene_file)?;
-
-    Ok(scenes)
-  }
+  //   Ok((rx, sc_thread))
+  // }
 
   fn create_select_chunk(
     &self,
@@ -823,12 +806,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn create_vs_chunk(
-    &self,
+  pub fn create_vs_chunk(
     index: usize,
     vs_script: &Path,
     frame_start: usize,
     mut frame_end: usize,
+    out_ext: String,
+    temp: String,
   ) -> Chunk {
     assert!(
       frame_start < frame_end,
@@ -850,13 +834,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       format!("{}", frame_end),
     ];
 
-    let output_ext = self.encoder.output_extension();
-
     Chunk {
-      temp: self.temp.clone(),
+      temp,
       index,
       source: vspipe_cmd_gen,
-      output_ext: output_ext.to_owned(),
+      output_ext: out_ext,
       frames,
       ..Chunk::default()
     }
@@ -871,7 +853,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let chunk_queue: Vec<Chunk> = chunk_boundaries
       .enumerate()
       .map(|(index, (frame_start, frame_end))| {
-        self.create_vs_chunk(index, vs_script, frame_start, frame_end)
+        Self::create_vs_chunk(
+          index,
+          vs_script,
+          frame_start,
+          frame_end,
+          self.encoder.output_extension().to_string(),
+          self.temp.clone(),
+        )
       })
       .collect();
 
@@ -1061,20 +1050,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         None
       };
 
-    let splits = self.split_routine()?;
-
-    let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(splits)?;
-
-    if self.resume {
-      let chunks_done = get_done().done.len();
-      info!(
-        "encoding resumed with {}/{} chunks completed ({} remaining)",
-        chunks_done,
-        chunk_queue.len() + chunks_done,
-        chunk_queue.len()
-      );
-    }
-
     if let Some(vspipe_cache) = vspipe_cache {
       vspipe_cache.join().unwrap();
     }
@@ -1103,7 +1078,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       ));
     }
 
+    if self.workers == 0 {
+      self.workers = determine_workers(self.encoder) as usize;
+    }
+
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
+      let (tx, rx) = crossbeam_channel::unbounded();
+
+      s.spawn(|_| {
+        self.run_scene_detection(tx).unwrap();
+      });
+
       // vapoursynth audio is currently unsupported
       let audio_size_bytes = Arc::new(AtomicU64::new(0));
       let audio_thread = if self.input.is_video()
@@ -1136,17 +1121,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         None
       };
 
-      if self.workers == 0 {
-        self.workers = determine_workers(self.encoder) as usize;
-      }
-      self.workers = cmp::min(self.workers, chunk_queue.len());
-
       if atty::is(atty::Stream::Stderr) {
         eprintln!(
           "{}{} {} {}{} {} {}{} {}\n{}: {}",
           Color::Green.bold().paint("Q"),
           Color::Green.paint("ueue"),
-          Color::Green.bold().paint(format!("{}", chunk_queue.len())),
+          Color::Green.bold().paint(format!("{}", 0)),
           Color::Blue.bold().paint("W"),
           Color::Blue.paint("orkers"),
           Color::Blue.bold().paint(format!("{}", self.workers)),
@@ -1159,7 +1139,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       } else {
         eprintln!(
           "Queue {} Workers {} Passes {}\nParams: {}",
-          chunk_queue.len(),
+          // chunk_queue.len(),
+          1,
           self.workers,
           self.passes,
           self.video_params.join(" ")
@@ -1170,7 +1151,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         init_progress_bar(self.frames as u64);
         reset_bar_at(initial_frames as u64);
       } else if self.verbosity == Verbosity::Verbose {
-        init_multi_progress_bar(self.frames as u64, self.workers, total_chunks);
+        init_multi_progress_bar(self.frames as u64, self.workers, 0);
         reset_mp_bar_at(initial_frames as u64);
       }
 
@@ -1185,8 +1166,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
 
       let broker = Broker {
-        chunk_queue,
-        total_chunks,
+        total_chunks: 0,
+        chunk_rx: rx,
         project: self,
         target_quality: if self.target_quality.is_some() {
           Some(TargetQuality::new(self))
@@ -1234,7 +1215,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             self.temp.as_ref(),
             self.output_file.as_ref(),
             self.encoder,
-            total_chunks,
+            0,
           )?;
         }
         ConcatMethod::FFmpeg => {

@@ -21,11 +21,12 @@ use std::{
 use cfg_if::cfg_if;
 use memchr::memmem;
 use smallvec::SmallVec;
+use std::sync::mpsc;
 use thiserror::Error;
 
 pub struct Broker<'a> {
   pub max_tries: usize,
-  pub chunk_queue: Vec<Chunk>,
+  pub chunk_rx: crossbeam_channel::Receiver<Chunk>,
   pub total_chunks: usize,
   pub project: &'a EncodeArgs,
   pub target_quality: Option<TargetQuality<'a>>,
@@ -113,88 +114,79 @@ impl<'a> Broker<'a> {
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
   ) {
-    assert!(self.total_chunks != 0);
+    // assert!(self.total_chunks != 0);
 
-    if !self.chunk_queue.is_empty() {
-      let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
+    cfg_if! {
+      if #[cfg(any(target_os = "linux", target_os = "windows"))] {
+        if let Some(threads) = set_thread_affinity {
+          let available_threads = num_cpus::get();
+          let requested_threads = threads.saturating_mul(self.project.workers);
+          if requested_threads > available_threads {
+            warn!(
+              "ignoring set_thread_affinity: requested more threads than available ({}/{})",
+              requested_threads, available_threads
+            );
+            set_thread_affinity = None;
+          } else if requested_threads == 0 {
+            warn!("ignoring set_thread_affinity: requested 0 threads");
 
-      for chunk in &self.chunk_queue {
-        sender.send(chunk.clone()).unwrap();
-      }
-      drop(sender);
-
-      cfg_if! {
-        if #[cfg(any(target_os = "linux", target_os = "windows"))] {
-          if let Some(threads) = set_thread_affinity {
-            let available_threads = num_cpus::get();
-            let requested_threads = threads.saturating_mul(self.project.workers);
-            if requested_threads > available_threads {
-              warn!(
-                "ignoring set_thread_affinity: requested more threads than available ({}/{})",
-                requested_threads, available_threads
-              );
-              set_thread_affinity = None;
-            } else if requested_threads == 0 {
-              warn!("ignoring set_thread_affinity: requested 0 threads");
-
-              set_thread_affinity = None;
-            }
+            set_thread_affinity = None;
           }
         }
       }
+    }
 
-      let frame_rate = self.project.input.frame_rate().unwrap();
+    let frame_rate = self.project.input.frame_rate().unwrap();
 
-      crossbeam_utils::thread::scope(|s| {
-        let consumers: Vec<_> = (0..self.project.workers)
-          .map(|idx| (receiver.clone(), &self, idx))
-          .map(|(rx, queue, worker_id)| {
-            let tx = tx.clone();
-            let audio_size_ref = Arc::clone(&audio_size_bytes);
-            s.spawn(move |_| {
-              cfg_if! {
-                if #[cfg(any(target_os = "linux", target_os = "windows"))] {
-                  if let Some(threads) = set_thread_affinity {
-                    let mut cpu_set = SmallVec::<[usize; 16]>::new();
-                    cpu_set.extend((threads * worker_id..).take(threads));
-                    if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
-                      warn!(
-                        "failed to set thread affinity for worker {}: {}",
-                        worker_id, e
-                      );
-                    }
+    crossbeam_utils::thread::scope(|s| {
+      let consumers: Vec<_> = (0..self.project.workers)
+        .map(|idx| (self.chunk_rx.clone(), &self, idx))
+        .map(|(rx, queue, worker_id)| {
+          let tx = tx.clone();
+          let audio_size_ref = Arc::clone(&audio_size_bytes);
+          s.spawn(move |_| {
+            cfg_if! {
+              if #[cfg(any(target_os = "linux", target_os = "windows"))] {
+                if let Some(threads) = set_thread_affinity {
+                  let mut cpu_set = SmallVec::<[usize; 16]>::new();
+                  cpu_set.extend((threads * worker_id..).take(threads));
+                  if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
+                    warn!(
+                      "failed to set thread affinity for worker {}: {}",
+                      worker_id, e
+                    );
                   }
                 }
               }
+            }
 
-              while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(
-                  &mut chunk,
-                  worker_id,
-                  frame_rate,
-                  Arc::clone(&audio_size_ref),
-                ) {
-                  error!("[chunk {}] {}", chunk.index, e);
+            while let Ok(mut chunk) = rx.recv() {
+              if let Err(e) = queue.encode_chunk(
+                &mut chunk,
+                worker_id,
+                frame_rate,
+                Arc::clone(&audio_size_ref),
+              ) {
+                error!("[chunk {}] {}", chunk.index, e);
 
-                  tx.send(()).unwrap();
-                  return Err(());
-                }
+                tx.send(()).unwrap();
+                return Err(());
               }
-              Ok(())
-            })
+            }
+            Ok(())
           })
-          .collect();
-        for consumer in consumers {
-          let _ = consumer.join().unwrap();
-        }
-      })
-      .unwrap();
-
-      if self.project.verbosity == Verbosity::Normal {
-        finish_progress_bar();
-      } else if self.project.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar();
+        })
+        .collect();
+      for consumer in consumers {
+        let _ = consumer.join().unwrap();
       }
+    })
+    .unwrap();
+
+    if self.project.verbosity == Verbosity::Normal {
+      finish_progress_bar();
+    } else if self.project.verbosity == Verbosity::Verbose {
+      finish_multi_progress_bar();
     }
   }
 

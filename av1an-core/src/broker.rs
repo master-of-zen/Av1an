@@ -1,4 +1,4 @@
-use crate::progress_bar::update_progress_bar_estimates;
+use crate::progress_bar::{set_mp_idle_worker, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::DoneChunk;
 use crate::{
@@ -206,7 +206,8 @@ impl<'a> Broker<'a> {
     }
 
     // we display the index, so we need to subtract 1 to get the max index
-    let padding = printable_base10_digits(self.total_chunks - 1) as usize;
+    // TODO: find some solution for padding with an unknown number of total chunks.
+    let padding = 1;
 
     // Run all passes for this chunk
     let mut tpl_crash_workaround = false;
@@ -254,6 +255,9 @@ impl<'a> Broker<'a> {
         }
       }
     }
+
+    // TODO: fix padding.
+    set_mp_idle_worker(worker_id, 0);
 
     let encoded_frames = ffmpeg::num_frames(chunk.output().as_ref()).unwrap();
 

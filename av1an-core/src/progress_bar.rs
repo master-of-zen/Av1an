@@ -180,6 +180,13 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
   });
 }
 
+pub fn set_mp_idle_worker(worder_idx: usize, _padding: usize) {
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    pbs[worder_idx].set_prefix("[Idle]");
+    pbs[worder_idx].set_message("");
+  }
+}
+
 pub fn update_mp_chunk(worker_idx: usize, chunk: usize, padding: usize) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     pbs[worker_idx].set_prefix(format!("[Chunk {:>digits$}]", chunk, digits = padding));

@@ -1,4 +1,3 @@
-use crossbeam_utils::thread::Scope;
 use ffmpeg_next::format::Pixel;
 use smallvec::{smallvec, SmallVec};
 

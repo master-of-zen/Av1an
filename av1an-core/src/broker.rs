@@ -21,7 +21,6 @@ use std::{
 use cfg_if::cfg_if;
 use memchr::memmem;
 use smallvec::SmallVec;
-use std::sync::mpsc;
 use thiserror::Error;
 
 pub struct Broker<'a> {

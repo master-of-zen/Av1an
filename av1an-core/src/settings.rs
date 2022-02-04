@@ -25,7 +25,6 @@ use crate::{
 };
 use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
-use crossbeam_utils::thread::Scope;
 use ffmpeg_next::format::Pixel;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
@@ -33,10 +32,9 @@ use rand::thread_rng;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::sync::atomic::AtomicUsize;
-use std::thread::{self, JoinHandle};
+use std::thread;
 use std::{
   borrow::Cow,
-  cmp,
   cmp::Reverse,
   collections::HashSet,
   convert::TryInto,
@@ -720,8 +718,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(chunks)
   }
 
-  fn run_scene_detection(&self, sender: crossbeam_channel::Sender<Chunk>) -> anyhow::Result<()> {
-    Ok(match self.split_method {
+  fn run_scene_detection(&self, sender: crossbeam_channel::Sender<Chunk>) {
+    match self.split_method {
       SplitMethod::AvScenechange => {
         av_scenechange_detect(
           &self.input,
@@ -740,7 +738,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         .unwrap();
       }
       SplitMethod::None => todo!(),
-    })
+    }
   }
 
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
@@ -1086,7 +1084,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let (tx, rx) = crossbeam_channel::unbounded();
 
       s.spawn(|_| {
-        self.run_scene_detection(tx).unwrap();
+        self.run_scene_detection(tx);
       });
 
       // vapoursynth audio is currently unsupported

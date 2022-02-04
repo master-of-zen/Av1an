@@ -19,6 +19,7 @@ pub fn av_scenechange_detect(
   encoder: Encoder,
   total_frames: usize,
   min_scene_len: usize,
+  max_scene_len: Option<usize>,
   verbosity: Verbosity,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
@@ -37,6 +38,7 @@ pub fn av_scenechange_detect(
       encoder,
       None,
       min_scene_len,
+      max_scene_len,
       sc_pix_format,
       sc_method,
       sc_downscale_height,
@@ -92,6 +94,7 @@ pub fn scene_detect(
   encoder: Encoder,
   callback: Option<Box<dyn Fn(usize, usize)>>,
   min_scene_len: usize,
+  max_scene_len: Option<usize>,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
@@ -162,6 +165,7 @@ pub fn scene_detect(
 
   let options = DetectionOptions {
     min_scenecut_distance: Some(min_scene_len),
+    max_scenecut_distance: max_scene_len,
     analysis_speed: match sc_method {
       ScenecutMethod::Fast => SceneDetectionSpeed::Fast,
       ScenecutMethod::Standard => SceneDetectionSpeed::Standard,

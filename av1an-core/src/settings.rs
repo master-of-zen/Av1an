@@ -726,6 +726,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           self.encoder,
           self.frames,
           self.min_scene_len,
+          self.extra_splits_len,
           self.verbosity,
           self.sc_pix_format,
           self.sc_method,

@@ -4,8 +4,7 @@ use smallvec::{smallvec, SmallVec};
 use crate::chunk::Chunk;
 use crate::settings::EncodeArgs;
 use crate::Encoder;
-use crate::{ffmpeg, into_smallvec, progress_bar, Input, ScenecutMethod, Verbosity};
-use ansi_term::Style;
+use crate::{ffmpeg, into_smallvec, Input, ScenecutMethod, Verbosity};
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
 use std::path::PathBuf;
@@ -76,12 +75,7 @@ pub fn av_scenechange_detect(
   // send the last chunk
   sender
     .send(EncodeArgs::create_vs_chunk(
-      idx,
-      &vs_script,
-      last,
-      frames,
-      out_ext.clone(),
-      temp.clone(),
+      idx, &vs_script, last, frames, out_ext, temp,
     ))
     .unwrap();
 
@@ -174,9 +168,9 @@ pub fn scene_detect(
   };
 
   if bit_depth > 8 {
-    detect_scene_changes::<_, u16>(decoder, options, callback, sender).scene_changes;
+    detect_scene_changes::<_, u16>(decoder, options, callback, sender);
   } else {
-    detect_scene_changes::<_, u8>(decoder, options, callback, sender).scene_changes;
+    detect_scene_changes::<_, u8>(decoder, options, callback, sender);
   }
 
   Ok(())

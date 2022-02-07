@@ -17,7 +17,7 @@ use crate::{
   },
   read_chunk_queue, save_chunk_queue,
   scene_detect::av_scenechange_detect,
-  split::{extra_splits, segment, write_scenes_to_file},
+  split::segment,
   vapoursynth::create_vs_file,
   vmaf::{self, validate_libvmaf},
   ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,

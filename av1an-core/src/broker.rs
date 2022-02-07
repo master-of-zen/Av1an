@@ -1,5 +1,4 @@
 use crate::progress_bar::{set_mp_idle_worker, update_progress_bar_estimates};
-use crate::util::printable_base10_digits;
 use crate::DoneChunk;
 use crate::{
   ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,

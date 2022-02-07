@@ -16,6 +16,8 @@
 #![allow(clippy::drop_ref)]
 #![allow(clippy::unsafe_derive_deserialize)]
 #![allow(clippy::needless_pass_by_value)]
+// TODO: remove for final PR
+#![allow(unused)]
 
 #[macro_use]
 extern crate log;

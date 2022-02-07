@@ -47,4 +47,4 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-rav1e = { git = "https://github.com/xiph/rav1e", rev = "f924c14be561cffaa881bfb81559772a91397551" }
+rav1e = { git = "https://github.com/xiph/rav1e", rev = "660a4ddd5b57610b3006777910c133919b9f1625" }

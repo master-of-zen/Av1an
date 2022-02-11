@@ -27,7 +27,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sysinfo = "0.23.0"
 splines = "4.0.0"
-indicatif = { git = "https://github.com/console-rs/indicatif", rev = "5afa9a4a789d6a74586c0e2d27ae5bbe2cb8c460" }
+indicatif = "0.17.0-rc.4"
 once_cell = "1.8.0"
 strum = { version = "0.23.0", features = ["derive"] }
 itertools = "0.10.1"

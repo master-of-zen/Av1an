@@ -1,8 +1,8 @@
 use crate::{into_array, into_vec};
-use ffmpeg_next::color::TransferCharacteristic;
-use ffmpeg_next::format::{input, Pixel};
-use ffmpeg_next::media::Type as MediaType;
-use ffmpeg_next::Error::StreamNotFound;
+use ffmpeg::color::TransferCharacteristic;
+use ffmpeg::format::{input, Pixel};
+use ffmpeg::media::Type as MediaType;
+use ffmpeg::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
 use std::path::PathBuf;
 use std::{
@@ -41,7 +41,7 @@ pub fn compose_ffmpeg_pipe<S: Into<String>>(
 }
 
 /// Get frame count using FFmpeg
-pub fn num_frames(source: &Path) -> Result<usize, ffmpeg_next::Error> {
+pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
   let mut ictx = input(&source)?;
   let input = ictx
     .streams()
@@ -57,7 +57,7 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg_next::Error> {
   )
 }
 
-pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg_next::Error> {
+pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
   let ictx = input(&source)?;
   let input = ictx
     .streams()
@@ -67,49 +67,53 @@ pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg_next::Error> {
   Ok(f64::from(rate.numerator()) / f64::from(rate.denominator()))
 }
 
-pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg_next::Error> {
-  let ictx = ffmpeg_next::format::input(&source)?;
+pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg::Error> {
+  let ictx = ffmpeg::format::input(&source)?;
 
   let input = ictx
     .streams()
     .best(MediaType::Video)
     .ok_or(StreamNotFound)?;
 
-  let decoder = input.codec().decoder().video()?;
+  let decoder = ffmpeg::codec::context::Context::from_parameters(input.parameters())?
+    .decoder()
+    .video()?;
 
   Ok(decoder.format())
 }
 
-pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg_next::Error> {
-  let ictx = ffmpeg_next::format::input(&source)?;
+pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg::Error> {
+  let ictx = ffmpeg::format::input(&source)?;
 
   let input = ictx
     .streams()
     .best(MediaType::Video)
     .ok_or(StreamNotFound)?;
 
-  let decoder = input.codec().decoder().video()?;
+  let decoder = ffmpeg::codec::context::Context::from_parameters(input.parameters())?
+    .decoder()
+    .video()?;
 
   Ok((decoder.width(), decoder.height()))
 }
 
-pub fn transfer_characteristics(
-  source: &Path,
-) -> Result<TransferCharacteristic, ffmpeg_next::Error> {
-  let ictx = ffmpeg_next::format::input(&source)?;
+pub fn transfer_characteristics(source: &Path) -> Result<TransferCharacteristic, ffmpeg::Error> {
+  let ictx = ffmpeg::format::input(&source)?;
 
   let input = ictx
     .streams()
     .best(MediaType::Video)
     .ok_or(StreamNotFound)?;
 
-  let decoder = input.codec().decoder().video()?;
+  let decoder = ffmpeg::codec::context::Context::from_parameters(input.parameters())?
+    .decoder()
+    .video()?;
 
   Ok(decoder.color_transfer_characteristic())
 }
 
 /// Returns vec of all keyframes
-pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg_next::Error> {
+pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
   let mut ictx = input(&source)?;
   let input = ictx
     .streams()

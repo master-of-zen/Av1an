@@ -57,8 +57,9 @@ version = "1.7.0"
 default-features = false
 features = ["const_generics", "const_new", "union"]
 
-[dependencies.ffmpeg-next]
-version = "4.4.0"
+[dependencies.ffmpeg]
+package = "ffmpeg-next"
+version = "5.0.2"
 
 [dependencies.plotters]
 version = "0.3.1"
@@ -79,7 +80,7 @@ version = "5.0.0"
 features = ["serde"]
 
 [features]
-ffmpeg_static = ["ffmpeg-next/static", "ffmpeg-next/build"]
+ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]
 vapoursynth_new_api = [
   "vapoursynth/vapoursynth-api-32",
   "vapoursynth/vsscript-api-31",

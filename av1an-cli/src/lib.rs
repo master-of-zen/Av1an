@@ -187,7 +187,7 @@ pub struct CliOpts {
   /// Fast: Very fast, but less accurate. Determines keyframes based on the raw difference between pixels.
   #[clap(long, possible_values = &["standard", "fast"], default_value_t = ScenecutMethod::Standard, help_heading = "SCENE DETECTION")]
   pub sc_method: ScenecutMethod,
-  
+
   /// Run scene detection only
   #[clap(long, help_heading = "SCENE DETECTION")]
   pub sc_only: bool,

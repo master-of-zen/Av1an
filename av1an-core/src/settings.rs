@@ -1063,7 +1063,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       };
 
     let splits = self.split_routine()?;
-    
+
     if self.sc_only {
       debug!("scene detection only");
 

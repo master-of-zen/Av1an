@@ -1063,6 +1063,16 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       };
 
     let splits = self.split_routine()?;
+    
+    if self.sc_only {
+      debug!("scene detection only");
+
+      if let Err(e) = fs::remove_dir_all(&self.temp) {
+        warn!("Failed to delete temp directory: {}", e);
+      }
+
+      exit(0);
+    }
 
     let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(splits)?;
 

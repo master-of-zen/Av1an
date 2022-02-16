@@ -169,7 +169,13 @@ pub struct CliOpts {
   pub set_thread_affinity: Option<usize>,
 
   /// File location for scenes
-  #[clap(short, long, parse(from_os_str), help_heading = "SCENE DETECTION"), requires_if(true, sc_only)]
+  #[clap(
+    short,
+    long,
+    parse(from_os_str),
+    help_heading = "SCENE DETECTION",
+    requires_if(true, sc_only)
+  )]
   pub scenes: Option<PathBuf>,
 
   /// Method used to determine chunk boundaries

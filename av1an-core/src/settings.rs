@@ -1065,10 +1065,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let splits = self.split_routine()?;
 
     if self.sc_only {
-      if (self.scenes.is_some().not() || scene_file.exists().not()) {
-        warn!("You must specify the path for a scene file");
-      }
-
       debug!("scene detection only");
 
       if let Err(e) = fs::remove_dir_all(&self.temp) {

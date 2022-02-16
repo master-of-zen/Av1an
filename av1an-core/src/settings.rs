@@ -81,6 +81,7 @@ pub struct EncodeArgs {
   pub split_method: SplitMethod,
   pub sc_pix_format: Option<Pixel>,
   pub sc_method: ScenecutMethod,
+  pub sc_only: bool,
   pub sc_downscale_height: Option<usize>,
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,

@@ -18,6 +18,7 @@ pub fn av_scenechange_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
+  threshold: f64,
 ) -> anyhow::Result<(Vec<usize>, usize)> {
   if verbosity != Verbosity::Quiet {
     if atty::is(atty::Stream::Stderr) {
@@ -52,6 +53,7 @@ pub fn av_scenechange_detect(
     sc_pix_format,
     sc_method,
     sc_downscale_height,
+    threshold,
   )?;
 
   let frames = frame_thread.join().unwrap();
@@ -76,6 +78,7 @@ pub fn scene_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
+  threshold: f64,
 ) -> anyhow::Result<Vec<usize>> {
   let bit_depth;
 
@@ -149,8 +152,8 @@ pub fn scene_detect(
     ..DetectionOptions::default()
   };
   Ok(if bit_depth > 8 {
-    detect_scene_changes::<_, u16>(decoder, options, callback).scene_changes
+    detect_scene_changes::<_, u16>(decoder, options, callback, threshold).scene_changes
   } else {
-    detect_scene_changes::<_, u8>(decoder, options, callback).scene_changes
+    detect_scene_changes::<_, u8>(decoder, options, callback, threshold).scene_changes
   })
 }

@@ -188,7 +188,9 @@ pub struct CliOpts {
   #[clap(long, possible_values = &["standard", "fast"], default_value_t = ScenecutMethod::Standard, help_heading = "SCENE DETECTION")]
   pub sc_method: ScenecutMethod,
 
-  /// Run scene detection only
+  /// Run the scene detection only before exiting
+  ///
+  /// Requires a scene file with --scenes.
   #[clap(long, requires("scenes"), help_heading = "SCENE DETECTION")]
   pub sc_only: bool,
 

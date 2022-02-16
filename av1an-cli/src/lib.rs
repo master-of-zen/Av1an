@@ -189,7 +189,7 @@ pub struct CliOpts {
   pub sc_method: ScenecutMethod,
 
   /// Run scene detection only
-  #[clap(long, help_heading = "SCENE DETECTION")]
+  #[clap(long, requires("scenes"), help_heading = "SCENE DETECTION")]
   pub sc_only: bool,
 
   /// Perform scene detection with this pixel format

@@ -557,6 +557,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     scenes: args.scenes,
     split_method: args.split_method,
     sc_method: args.sc_method,
+    sc_only: args.sc_only,
     sc_downscale_height: args.sc_downscale_height,
     target_quality: args.target_quality,
     verbosity: if args.quiet {

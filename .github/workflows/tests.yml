@@ -225,7 +225,6 @@ jobs:
       - name: Testing sc-only
         run: |
           target/ci/av1an -i tt_sif.y4m --sc-only --sc-method fast -s "tt_sif.json"
-          rm tt_sif.json
           du -h tt_sif.json
 
   docker:

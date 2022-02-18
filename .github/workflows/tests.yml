@@ -224,8 +224,11 @@ jobs:
 
       - name: Testing sc-only
         run: |
+          cat tt_sif.json
           target/ci/av1an -i tt_sif.y4m --sc-only --sc-method fast -s "tt_sif.json"
-        if: du -h tt_sif.json || cat tt_sif.json
+          cat tt_sif.json
+          du -h tt_sif.json
+        continue-on-error: true
 
   docker:
     runs-on: ubuntu-latest

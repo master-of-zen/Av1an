@@ -501,8 +501,7 @@ dependencies = [
 [[package]]
 name = "ffmpeg-next"
 version = "5.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a1fc87054b079ade0b081b023c5fef309cd4bbcb569c09eed2aa39b25a0a11"
+source = "git+https://github.com/shssoichiro/rust-ffmpeg-1?branch=fix-get-best-stream#a0d7fdb30f70ed3b7e74cf5fd844e3881026c9f0"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-next",

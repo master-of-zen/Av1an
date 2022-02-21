@@ -98,7 +98,7 @@ pub struct CliOpts {
   ///
   /// Can be a video or vapoursynth (.py, .vpy) script.
   #[clap(short, parse(from_os_str))]
-  pub input: PathBuf,
+  pub input: Vec<PathBuf>,
 
   /// Video output file
   #[clap(short, parse(from_os_str))]
@@ -442,14 +442,54 @@ fn confirm(prompt: &str) -> io::Result<bool> {
   }
 }
 
+/// Given Folder and File paths as inputs
+/// Converts them all to file paths
+/// Converting only depth 1 of Folder paths
+pub fn convert_input(args_paths: Vec<PathBuf>) -> Vec<PathBuf> {
+  let mut validated_inputs: Vec<PathBuf> = Vec::with_capacity(args_paths.len());
+
+  for input_arg in args_paths {
+    if input_arg.is_file() {
+      validated_inputs.push(input_arg.to_path_buf())
+    } else if input_arg.is_dir() {
+      let files: Vec<PathBuf> = std::fs::read_dir(input_arg)
+        .unwrap()
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter_map(|d| {
+          if let Ok(file_type) = d.file_type() {
+            if file_type.is_file() {
+              Some(d.path())
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        })
+        .collect();
+      validated_inputs.extend(files)
+    }
+  }
+
+  validated_inputs
+}
+
+/// Returns vector of Encode args ready to be fed to encoder
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
+  let test = convert_input(args.input);
+
+  if test.is_empty() {
+    anyhow!("No valid input file");
+  }
+
+  let input = Input::from(test[0].clone());
+
   let temp = if let Some(path) = args.temp.as_ref() {
     path.to_str().unwrap().to_owned()
   } else {
-    format!(".{}", hash_path(args.input.as_path()))
+    format!(".{}", hash_path(input.as_path()))
   };
-
-  let input = Input::from(args.input.as_path());
 
   // TODO make an actual constructor for this
   let mut encode_args = EncodeArgs {
@@ -489,10 +529,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     } else {
       format!(
         "{}_{}.mkv",
-        args
-          .input
+        input
+          .as_path()
           .file_stem()
-          .unwrap_or_else(|| args.input.as_ref())
+          .unwrap_or_else(|| input.as_path().as_ref())
           .to_string_lossy(),
         args.encoder
       )
@@ -656,6 +696,8 @@ impl LogWriter for StderrLogger {
     Ok(())
   }
 }
+
+pub fn validate_input_files() {}
 
 pub fn run() -> anyhow::Result<()> {
   let cli_args = CliOpts::parse();

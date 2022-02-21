@@ -476,170 +476,178 @@ pub fn convert_input(args_paths: Vec<PathBuf>) -> Vec<PathBuf> {
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
-pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
-  let test = convert_input(args.input);
+pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
+  let test = convert_input(args.input.clone());
 
   if test.is_empty() {
     anyhow!("No valid input file");
   }
 
-  let input = Input::from(test[0].clone());
+  let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(test.len());
 
-  let temp = if let Some(path) = args.temp.as_ref() {
-    path.to_str().unwrap().to_owned()
-  } else {
-    format!(".{}", hash_path(input.as_path()))
-  };
+  for input in test {
+    let temp = if let Some(path) = args.temp.as_ref() {
+      path.to_str().unwrap().to_owned()
+    } else {
+      format!(".{}", hash_path(input.as_path()))
+    };
 
-  // TODO make an actual constructor for this
-  let mut encode_args = EncodeArgs {
-    frames: 0,
-    log_file: if let Some(log_file) = args.log_file.as_ref() {
-      Path::new(&format!("{}.log", log_file)).to_owned()
-    } else {
-      Path::new(&temp).join("log.log")
-    },
-    ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
-      shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
-    } else {
-      Vec::new()
-    },
-    temp,
-    force: args.force,
-    passes: if let Some(passes) = args.passes {
-      passes
-    } else {
-      args.encoder.get_default_pass()
-    },
-    video_params: if let Some(args) = args.video_params.as_ref() {
-      shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
-    } else {
-      Vec::new()
-    },
-    output_file: if let Some(path) = args.output_file.as_ref() {
-      let path = PathAbs::new(path)?;
+    let input = Input::from(input);
 
-      if let Ok(parent) = path.parent() {
-        ensure!(parent.exists(), "Path to file {:?} is invalid", path);
+    // TODO make an actual constructor for this
+    let mut arg = EncodeArgs {
+      frames: 0,
+      log_file: if let Some(log_file) = args.log_file.as_ref() {
+        Path::new(&format!("{}.log", log_file)).to_owned()
       } else {
-        bail!("Failed to get parent directory of path: {:?}", path);
-      }
+        Path::new(&temp).join("log.log")
+      },
+      ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
+        shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
+      } else {
+        Vec::new()
+      },
+      temp,
+      force: args.force,
+      passes: if let Some(passes) = args.passes {
+        passes
+      } else {
+        args.encoder.get_default_pass()
+      },
+      video_params: if let Some(args) = args.video_params.as_ref() {
+        shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
+      } else {
+        Vec::new()
+      },
+      output_file: if let Some(path) = args.output_file.as_ref() {
+        let path = PathAbs::new(path)?;
 
-      path.to_string_lossy().to_string()
-    } else {
-      format!(
-        "{}_{}.mkv",
-        input
-          .as_path()
-          .file_stem()
-          .unwrap_or_else(|| input.as_path().as_ref())
-          .to_string_lossy(),
-        args.encoder
-      )
-    },
-    audio_params: if let Some(args) = args.audio_params.as_ref() {
-      shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
-    } else {
-      into_vec!["-c:a", "copy"]
-    },
-    chunk_method: args
-      .chunk_method
-      .unwrap_or_else(vapoursynth::best_available_chunk_method),
-    chunk_order: args.chunk_order,
-    concat: args.concat,
-    encoder: args.encoder,
-    extra_splits_len: if args.extra_split > 0 {
-      Some(args.extra_split)
-    } else {
-      None
-    },
-    photon_noise: args.photon_noise,
-    sc_pix_format: args.sc_pix_format,
-    keep: args.keep,
-    max_tries: args.max_tries,
-    min_q: args.min_q,
-    max_q: args.max_q,
-    min_scene_len: args.min_scene_len,
-    vmaf_threads: args.vmaf_threads,
-    input_pix_format: {
-      match &input {
-        Input::Video(path) => InputPixelFormat::FFmpeg {
-          format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
-            format!(
-              "ffmpeg: failed to get pixel format for input video {:?}",
-              path
-            )
-          })?,
-        },
-        Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
-          bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
-            format!(
-              "vapoursynth: failed to get bit depth for input video {:?}",
-              path
-            )
-          })?,
-        },
-      }
-    },
-    input,
-    output_pix_format: PixelFormat {
-      format: args.pix_format,
-      bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
-    },
-    probe_slow: args.probe_slow,
-    probes: args.probes,
-    probing_rate: args.probing_rate,
-    resume: args.resume,
-    scenes: args.scenes,
-    split_method: args.split_method,
-    sc_method: args.sc_method,
-    sc_downscale_height: args.sc_downscale_height,
-    target_quality: args.target_quality,
-    verbosity: if args.quiet {
-      Verbosity::Quiet
-    } else if args.verbose {
-      Verbosity::Verbose
-    } else {
-      Verbosity::Normal
-    },
-    vmaf: args.vmaf,
-    vmaf_filter: args.vmaf_filter,
-    vmaf_path: args.vmaf_path,
-    vmaf_res: args.vmaf_res,
-    workers: args.workers,
-    set_thread_affinity: args.set_thread_affinity,
-    vs_script: None,
-  };
+        if let Ok(parent) = path.parent() {
+          ensure!(parent.exists(), "Path to file {:?} is invalid", path);
+        } else {
+          bail!("Failed to get parent directory of path: {:?}", path);
+        }
 
-  encode_args.startup_check()?;
+        path.to_string_lossy().to_string()
+      } else {
+        format!(
+          "{}_{}.mkv",
+          input
+            .as_path()
+            .file_stem()
+            .unwrap_or_else(|| input.as_path().as_ref())
+            .to_string_lossy(),
+          args.encoder
+        )
+      },
+      audio_params: if let Some(args) = args.audio_params.as_ref() {
+        shlex::split(args)
+          .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
+      } else {
+        into_vec!["-c:a", "copy"]
+      },
+      chunk_method: args
+        .chunk_method
+        .unwrap_or_else(vapoursynth::best_available_chunk_method),
+      chunk_order: args.chunk_order,
+      concat: args.concat,
+      encoder: args.encoder,
+      extra_splits_len: if args.extra_split > 0 {
+        Some(args.extra_split)
+      } else {
+        None
+      },
+      photon_noise: args.photon_noise,
+      sc_pix_format: args.sc_pix_format,
+      keep: args.keep,
+      max_tries: args.max_tries,
+      min_q: args.min_q,
+      max_q: args.max_q,
+      min_scene_len: args.min_scene_len,
+      vmaf_threads: args.vmaf_threads,
+      input_pix_format: {
+        match &input {
+          Input::Video(path) => InputPixelFormat::FFmpeg {
+            format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
+              format!(
+                "FFmpeg failed to get pixel format for input video {:?}",
+                path
+              )
+            })?,
+          },
+          Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
+            bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
+              format!(
+                "VapourSynth failed to get bit depth for input video {:?}",
+                path
+              )
+            })?,
+          },
+        }
+      },
+      input,
+      output_pix_format: PixelFormat {
+        format: args.pix_format,
+        bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
+      },
+      probe_slow: args.probe_slow,
+      probes: args.probes,
+      probing_rate: args.probing_rate,
+      resume: args.resume,
+      scenes: args.scenes.clone(),
+      split_method: args.split_method.clone(),
+      sc_method: args.sc_method,
+      sc_downscale_height: args.sc_downscale_height,
+      target_quality: args.target_quality,
+      verbosity: if args.quiet {
+        Verbosity::Quiet
+      } else if args.verbose {
+        Verbosity::Verbose
+      } else {
+        Verbosity::Normal
+      },
+      vmaf: args.vmaf,
+      vmaf_filter: args.vmaf_filter.clone(),
+      vmaf_path: args.vmaf_path.clone(),
+      vmaf_res: args.vmaf_res.to_string().clone(),
+      workers: args.workers,
+      set_thread_affinity: args.set_thread_affinity,
+      vs_script: None,
+    };
 
-  if !args.overwrite {
-    if let Some(path) = args.output_file.as_ref() {
-      if path.exists()
-        && !confirm(&format!(
-          "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-          path
-        ))?
-      {
-        println!("Not overwriting, aborting.");
-        exit(0);
-      }
-    } else {
-      let path: &Path = encode_args.output_file.as_ref();
+    arg.startup_check()?;
 
-      if path.exists()
-        && !confirm(&format!(
-          "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-          path
-        ))?
-      {
-        println!("Not overwriting, aborting.");
-        exit(0);
+    if !args.overwrite {
+      // UGLY: taking first file for output file
+      if let Some(path) = args.output_file.as_ref() {
+        if path.exists()
+          && !confirm(&format!(
+            "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+            path
+          ))?
+        {
+          println!("Not overwriting, aborting.");
+          exit(0);
+        }
+      } else {
+        let path: &Path = arg.output_file.as_ref();
+
+        if path.exists()
+          && !confirm(&format!(
+            "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+            path
+          ))?
+        {
+          println!("Not overwriting, aborting.");
+          exit(0);
+        }
       }
     }
+
+    valid_args.push(arg)
   }
 
-  Ok(encode_args)
+  Ok(valid_args)
 }
 
 pub struct StderrLogger {
@@ -702,7 +710,7 @@ pub fn validate_input_files() {}
 pub fn run() -> anyhow::Result<()> {
   let cli_args = CliOpts::parse();
   let log_level = cli_args.log_level;
-  let mut args = parse_cli(cli_args)?;
+  let args = parse_cli(cli_args)?;
 
   let log = LogSpecBuilder::new()
     .default(LevelFilter::Error)
@@ -726,9 +734,11 @@ pub fn run() -> anyhow::Result<()> {
   // and then it calls their shutdown method.
   let _logger = Logger::with(log)
     .log_to_file_and_writer(
-      FileSpec::try_from(PathAbs::new(&args.log_file)?)?,
+      // UGLY: take first or the files for log path
+      FileSpec::try_from(PathAbs::new(&args[0].log_file)?)?,
       Box::new(StderrLogger {
-        level: match args.verbosity {
+        // UGLY: take first or the files for verbosity
+        level: match args[0].verbosity {
           Verbosity::Quiet => Level::Warn,
           Verbosity::Normal | Verbosity::Verbose => Level::Info,
         },
@@ -736,9 +746,10 @@ pub fn run() -> anyhow::Result<()> {
     )
     .start()?;
 
-  args.initialize()?;
-
-  args.encode_file()?;
+  for mut arg in args {
+    arg.initialize()?;
+    arg.encode_file()?;
+  }
 
   Ok(())
 }

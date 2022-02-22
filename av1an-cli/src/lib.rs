@@ -442,17 +442,18 @@ fn confirm(prompt: &str) -> io::Result<bool> {
   }
 }
 
-/// Given Folder and File paths as inputs
+/// Given Folder and File path as inputs
 /// Converts them all to file paths
 /// Converting only depth 1 of Folder paths
-pub fn convert_input(args_paths: Vec<PathBuf>) -> Vec<PathBuf> {
-  let mut validated_inputs: Vec<PathBuf> = Vec::with_capacity(args_paths.len());
+pub fn convert_input(path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
+  // TODO: to validate file extensions
+  // let valid_media_extensions = ["mkv", "mov", "mp4", "webm", "avi", "qt", "ts", "m2t", "py", "vpy"];
 
-  for input_arg in args_paths {
-    if input_arg.is_file() {
-      validated_inputs.push(input_arg.to_path_buf())
-    } else if input_arg.is_dir() {
-      let files: Vec<PathBuf> = std::fs::read_dir(input_arg)
+  if path.is_file() {
+    Ok(vec![path.to_path_buf()])
+  } else if path.is_dir() {
+    Ok(
+      std::fs::read_dir(path)
         .unwrap()
         .into_iter()
         .filter_map(Result::ok)
@@ -467,25 +468,29 @@ pub fn convert_input(args_paths: Vec<PathBuf>) -> Vec<PathBuf> {
             None
           }
         })
-        .collect();
-      validated_inputs.extend(files)
-    }
+        .collect(),
+    )
+  } else {
+    Ok(vec![])
   }
-
-  validated_inputs
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
-  let test = convert_input(args.input.clone());
+  let input_paths = args.input.clone();
 
-  if test.is_empty() {
-    anyhow!("No valid input file");
+  let mut inputs = vec![];
+  for input in input_paths {
+    inputs.extend(convert_input(&input)?)
   }
 
-  let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(test.len());
+  if inputs.is_empty() {
+    bail!("No valid input file");
+  }
 
-  for input in test {
+  let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(inputs.len());
+
+  for input in inputs {
     let temp = if let Some(path) = args.temp.as_ref() {
       path.to_str().unwrap().to_owned()
     } else {
@@ -704,8 +709,6 @@ impl LogWriter for StderrLogger {
     Ok(())
   }
 }
-
-pub fn validate_input_files() {}
 
 pub fn run() -> anyhow::Result<()> {
   let cli_args = CliOpts::parse();

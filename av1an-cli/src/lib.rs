@@ -442,6 +442,29 @@ fn confirm(prompt: &str) -> io::Result<bool> {
   }
 }
 
+/// Reads dir and returns all files
+/// Depth 1
+pub fn read_in_dir(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+  let dir = std::fs::read_dir(path)?;
+  Ok(
+    dir
+      .into_iter()
+      .filter_map(Result::ok)
+      .filter_map(|d| {
+        if let Ok(file_type) = d.file_type() {
+          if file_type.is_file() {
+            Some(d.path())
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      })
+      .collect(),
+  )
+}
+
 /// Given Folder and File path as inputs
 /// Converts them all to file paths
 /// Converting only depth 1 of Folder paths
@@ -452,26 +475,9 @@ pub fn convert_input(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
   if path.is_file() {
     Ok(vec![path.to_path_buf()])
   } else if path.is_dir() {
-    Ok({
-      let dir = std::fs::read_dir(path)?;
-      dir
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter_map(|d| {
-          if let Ok(file_type) = d.file_type() {
-            if file_type.is_file() {
-              Some(d.path())
-            } else {
-              None
-            }
-          } else {
-            None
-          }
-        })
-        .collect()
-    })
+    Ok(read_in_dir(path)?)
   } else {
-    Ok(vec![])
+    bail!("No valid input file")
   }
 }
 

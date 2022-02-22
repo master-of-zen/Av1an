@@ -4,6 +4,7 @@ use anyhow::{anyhow, Context};
 use anyhow::{bail, ensure};
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::{InputPixelFormat, PixelFormat};
+use av1an_core::util::read_in_dir;
 use av1an_core::ScenecutMethod;
 use av1an_core::{ffmpeg, into_vec};
 use av1an_core::{ChunkOrdering, Input};
@@ -442,57 +443,31 @@ fn confirm(prompt: &str) -> io::Result<bool> {
   }
 }
 
-/// Reads dir and returns all files
-/// Depth 1
-pub fn read_in_dir(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-  let dir = std::fs::read_dir(path)?;
-  Ok(
-    dir
-      .into_iter()
-      .filter_map(Result::ok)
-      .filter_map(|d| {
-        if let Ok(file_type) = d.file_type() {
-          if file_type.is_file() {
-            Some(d.path())
-          } else {
-            None
-          }
-        } else {
-          None
-        }
-      })
-      .collect(),
-  )
-}
-
 /// Given Folder and File path as inputs
 /// Converts them all to file paths
 /// Converting only depth 1 of Folder paths
-pub fn convert_input(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator<Item = PathBuf>>> {
   // TODO: to validate file extensions
   // let valid_media_extensions = ["mkv", "mov", "mp4", "webm", "avi", "qt", "ts", "m2t", "py", "vpy"];
 
   if path.is_file() {
-    Ok(vec![path.to_path_buf()])
+    Ok(Box::new(std::iter::once(path.to_path_buf())))
   } else if path.is_dir() {
-    Ok(read_in_dir(path)?)
+    Ok(Box::new(read_in_dir(path)?))
   } else {
-    bail!("No valid input file")
+    bail!("path {:?} is not a file or directory", path)
   }
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
-  let input_paths = args.input.clone();
+  let input_paths = &*args.input;
 
-  let mut inputs = vec![];
-  for input in input_paths {
-    inputs.extend(convert_input(&input)?)
-  }
-
-  if inputs.is_empty() {
-    bail!("No valid input file");
-  }
+  let inputs: Vec<PathBuf> = input_paths
+    .iter()
+    .flat_map(|input| resolve_file_paths(input))
+    .flat_map(std::convert::identity)
+    .collect();
 
   let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(inputs.len());
 

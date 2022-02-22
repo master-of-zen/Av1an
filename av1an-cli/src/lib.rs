@@ -452,9 +452,9 @@ pub fn convert_input(path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
   if path.is_file() {
     Ok(vec![path.to_path_buf()])
   } else if path.is_dir() {
-    Ok(
-      std::fs::read_dir(path)
-        .unwrap()
+    Ok({
+      let dir = std::fs::read_dir(path)?;
+      dir
         .into_iter()
         .filter_map(Result::ok)
         .filter_map(|d| {
@@ -468,8 +468,8 @@ pub fn convert_input(path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
             None
           }
         })
-        .collect(),
-    )
+        .collect()
+    })
   } else {
     Ok(vec![])
   }

@@ -32,8 +32,9 @@ version = "6"
 default-features = false
 features = ["git", "build", "rustc", "cargo"]
 
-[dependencies.ffmpeg-next]
-version = "4.4.0"
+[dependencies.ffmpeg]
+package = "ffmpeg-next"
+version = "5.0.2"
 
 [features]
-ffmpeg_static = ["ffmpeg-next/static", "ffmpeg-next/build"]
+ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]

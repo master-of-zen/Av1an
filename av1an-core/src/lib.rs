@@ -25,10 +25,10 @@ use crate::{
   progress_bar::{finish_multi_progress_bar, finish_progress_bar},
   target_quality::TargetQuality,
 };
+use ::ffmpeg::color::TransferCharacteristic;
 use anyhow::Context;
 use chunk::Chunk;
 use dashmap::DashMap;
-use ffmpeg_next::color::TransferCharacteristic;
 use grain::TransferFunction;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -127,7 +127,7 @@ impl Input {
     const FAIL_MSG: &str = "Failed to get frame rate for input video";
     Ok(match &self {
       Input::Video(path) => {
-        ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        crate::ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
       Input::VapourSynth(path) => {
         vapoursynth::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?

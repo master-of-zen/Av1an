@@ -5,7 +5,7 @@ use crate::{
   vmaf::{self, read_weighted_vmaf},
   Encoder,
 };
-use ffmpeg_next::format::Pixel;
+use ffmpeg::format::Pixel;
 use splines::{Interpolation, Key, Spline};
 use std::{
   cmp,

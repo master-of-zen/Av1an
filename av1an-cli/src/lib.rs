@@ -1,3 +1,4 @@
+use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
 use anyhow::{anyhow, Context};
 use anyhow::{bail, ensure};
@@ -6,7 +7,6 @@ use av1an_core::settings::{InputPixelFormat, PixelFormat};
 use av1an_core::ScenecutMethod;
 use av1an_core::{ffmpeg, into_vec};
 use av1an_core::{ChunkOrdering, Input};
-use ffmpeg_next::format::Pixel;
 use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use path_abs::{PathAbs, PathInfo};
@@ -526,7 +526,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
         Input::Video(path) => InputPixelFormat::FFmpeg {
           format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
             format!(
-              "FFmpeg failed to get pixel format for input video {:?}",
+              "ffmpeg: failed to get pixel format for input video {:?}",
               path
             )
           })?,
@@ -534,7 +534,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
         Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
           bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
             format!(
-              "VapourSynth failed to get bit depth for input video {:?}",
+              "vapoursynth: failed to get bit depth for input video {:?}",
               path
             )
           })?,

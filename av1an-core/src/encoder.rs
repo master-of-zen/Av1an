@@ -1,7 +1,7 @@
 use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_array, into_vec, list_index};
 use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
-use ffmpeg_next::format::Pixel;
+use ffmpeg::format::Pixel;
 use itertools::chain;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};

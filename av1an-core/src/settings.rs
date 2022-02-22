@@ -8,7 +8,7 @@ use crate::{
   broker::{Broker, EncoderCrash},
   chunk::Chunk,
   concat::{self, ConcatMethod},
-  create_dir, determine_workers, ffmpeg,
+  create_dir, determine_workers,
   ffmpeg::compose_ffmpeg_pipe,
   finish_multi_progress_bar, get_done, init_done, into_vec,
   progress_bar::{
@@ -25,7 +25,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
-use ffmpeg_next::format::Pixel;
+use ffmpeg::format::Pixel;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -126,8 +126,8 @@ pub struct EncodeArgs {
 impl EncodeArgs {
   /// Initialize logging routines and create temporary directories
   pub fn initialize(&mut self) -> anyhow::Result<()> {
-    ffmpeg_next::init()?;
-    ffmpeg_next::util::log::set_level(ffmpeg_next::util::log::level::Level::Fatal);
+    ffmpeg::init()?;
+    ffmpeg::util::log::set_level(ffmpeg::util::log::level::Level::Fatal);
 
     if !self.resume && Path::new(&self.temp).is_dir() {
       fs::remove_dir_all(&self.temp)
@@ -930,7 +930,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let input = self.input.as_video_path();
 
-    let keyframes = ffmpeg::get_keyframes(input).unwrap();
+    let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
 
     let segments_set: Vec<(usize, usize)> = splits.iter().copied().tuple_windows().collect();
 
@@ -1114,7 +1114,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         let audio_params = self.audio_params.as_slice();
         let audio_size_ref = Arc::clone(&audio_size_bytes);
         Some(s.spawn(move |_| {
-          let audio_output = ffmpeg::encode_audio(input, temp, audio_params);
+          let audio_output = crate::ffmpeg::encode_audio(input, temp, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
 
           let progress_file = Path::new(temp).join("done.json");

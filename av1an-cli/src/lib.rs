@@ -445,7 +445,7 @@ fn confirm(prompt: &str) -> io::Result<bool> {
 /// Given Folder and File path as inputs
 /// Converts them all to file paths
 /// Converting only depth 1 of Folder paths
-pub fn convert_input(path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
+pub fn convert_input(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
   // TODO: to validate file extensions
   // let valid_media_extensions = ["mkv", "mov", "mp4", "webm", "avi", "qt", "ts", "m2t", "py", "vpy"];
 

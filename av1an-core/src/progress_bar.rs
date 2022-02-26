@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::get_done;
 use crate::Verbosity;
 use indicatif::HumanBytes;
@@ -31,6 +33,7 @@ pub fn get_progress_bar() -> Option<&'static ProgressBar> {
 fn pretty_progress_style() -> ProgressStyle {
   ProgressStyle::default_bar()
     .template(INDICATIF_PROGRESS_TEMPLATE)
+    .unwrap()
     .with_key("fps", |state| match state.per_sec() {
       fps if fps.abs() < f64::EPSILON => "0 fps".into(),
       fps if fps < 1.0 => format!("{:.2} s/fr", 1.0 / fps),
@@ -46,6 +49,7 @@ fn pretty_progress_style() -> ProgressStyle {
 fn spinner_style() -> ProgressStyle {
   ProgressStyle::default_spinner()
     .template(INDICATIF_SPINNER_TEMPLATE)
+    .unwrap()
     .with_key("fps", |state| match state.per_sec() {
       fps if fps.abs() < f64::EPSILON => "0 fps".into(),
       fps if fps < 1.0 => format!("{:.2} s/fr", 1.0 / fps),
@@ -66,7 +70,7 @@ pub fn init_progress_bar(len: u64) {
     PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(spinner_style()))
   };
   pb.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-  pb.enable_steady_tick(100);
+  pb.enable_steady_tick(Duration::from_millis(100));
   pb.reset();
   pb.reset_eta();
   pb.reset_elapsed();
@@ -155,18 +159,22 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
     for _ in 1..=workers {
       let pb = ProgressBar::hidden()
         // no spinner on windows, so we remove the prefix to line up with the progress bar
-        .with_style(ProgressStyle::default_spinner().template(if cfg!(windows) {
-          "{prefix:.dim} {msg}"
-        } else {
-          "  {prefix:.dim} {msg}"
-        }));
+        .with_style(
+          ProgressStyle::default_spinner()
+            .template(if cfg!(windows) {
+              "{prefix:.dim} {msg}"
+            } else {
+              "  {prefix:.dim} {msg}"
+            })
+            .unwrap(),
+        );
       pb.set_prefix(format!("[Idle  {:width$}]", width = digits));
       pbs.push(mpb.add(pb));
     }
 
     let pb = ProgressBar::hidden();
     pb.set_style(pretty_progress_style());
-    pb.enable_steady_tick(100);
+    pb.enable_steady_tick(Duration::from_millis(100));
     pb.reset_elapsed();
     pb.reset_eta();
     pb.set_position(0);

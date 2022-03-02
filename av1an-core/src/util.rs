@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 /// Count the number of elements passed to this macro.
 ///
 /// Extra commas in between other commas are counted as an element.
@@ -112,6 +114,30 @@ macro_rules! create_dir {
 #[inline]
 pub(crate) fn printable_base10_digits(x: usize) -> u32 {
   (((x as f64).log10() + 1.0).floor() as u32).max(1)
+}
+
+/// Reads dir and returns all files
+/// Depth 1
+// pub fn read_in_dir(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>> {
+  let dir = std::fs::read_dir(path)?;
+  Ok(
+    dir
+      .into_iter()
+      .filter_map(Result::ok)
+      .filter_map(|d| {
+        if let Ok(file_type) = d.file_type() {
+          if file_type.is_file() {
+            Some(d.path())
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      })
+      .into_iter(),
+  )
 }
 
 #[cfg(test)]

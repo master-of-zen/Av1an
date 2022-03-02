@@ -189,6 +189,12 @@ pub struct CliOpts {
   #[clap(long, possible_values = &["standard", "fast"], default_value_t = ScenecutMethod::Standard, help_heading = "SCENE DETECTION")]
   pub sc_method: ScenecutMethod,
 
+  /// Run the scene detection only before exiting
+  ///
+  /// Requires a scene file with --scenes.
+  #[clap(long, requires("scenes"), help_heading = "SCENE DETECTION")]
+  pub sc_only: bool,
+
   /// Perform scene detection with this pixel format
   #[clap(long, help_heading = "SCENE DETECTION")]
   pub sc_pix_format: Option<Pixel>,
@@ -508,125 +514,117 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       output_file: if let Some(path) = args.output_file.as_ref() {
         let path = PathAbs::new(path)?;
 
-        if let Ok(parent) = path.parent() {
-          ensure!(parent.exists(), "Path to file {:?} is invalid", path);
-        } else {
-          bail!("Failed to get parent directory of path: {:?}", path);
-        }
+      path.to_string_lossy().to_string()
+    } else {
+      format!(
+        "{}_{}.mkv",
+        args
+          .input
+          .file_stem()
+          .unwrap_or_else(|| args.input.as_ref())
+          .to_string_lossy(),
+        args.encoder
+      )
+    },
+    audio_params: if let Some(args) = args.audio_params.as_ref() {
+      shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
+    } else {
+      into_vec!["-c:a", "copy"]
+    },
+    chunk_method: args
+      .chunk_method
+      .unwrap_or_else(vapoursynth::best_available_chunk_method),
+    chunk_order: args.chunk_order,
+    concat: args.concat,
+    encoder: args.encoder,
+    extra_splits_len: if args.extra_split > 0 {
+      Some(args.extra_split)
+    } else {
+      None
+    },
+    photon_noise: args.photon_noise,
+    sc_pix_format: ar_pix_format,
+    keep: args.keep,
+    max_tries: args.max_tries,
+    min_q: args.min_q,
+    max_q: args.max_q,
+    min_scene_len: args.min_scene_len,
+    vmaf_threads: args.vmaf_threads,
+    input_pix_format: {
+      match &input {
+        Input::Video(path) => InputPixelFormat::FFmpeg {
+          format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
+            format!(
+              "ffmpeg: failed to get pixel format for input video {:?}",
+              path
+            )
+          })?,
+        },
+        Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
+          bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
+            format!(
+              "vapoursynth: failed to get bit depth for input video {:?}",
+              path
+            )
+          })?,
+        },
+      }
+    },
+    input,
+    output_pix_format: PixelFormat {
+      format: args.pix_format,
+      bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
+    },
+    probe_slow: args.probe_slow,
+    probes: args.probes,
+    probing_rate: args.probing_rate,
+    resume: args.resume,
+    scenes: args.scenes,
+    split_method: args.split_method,
+    sc_method: args.sc_method,
+    sc_only: args.sc_only,
+    sc_downscale_height: args.sc_downscale_height,
+    target_quality: args.target_quality,
+    verbosity: if args.quiet {
+      Verbosity::Quiet
+    } else if args.verbose {
+      Verbosity::Verbose
+    } else {
+      Verbosity::Normal
+    },
+    vmaf: args.vmaf,
+    vmaf_filter: args.vmaf_filter,
+    vmaf_path: args.vmaf_path,
+    vmaf_res: args.vmaf_res,
+    workers: args.workers,
+    set_thread_affinity: args.set_thread_affinity,
+    vs_script: None,
+  };
 
-        path.to_string_lossy().to_string()
-      } else {
-        format!(
-          "{}_{}.mkv",
-          input
-            .as_path()
-            .file_stem()
-            .unwrap_or_else(|| input.as_path().as_ref())
-            .to_string_lossy(),
-          args.encoder
-        )
-      },
-      audio_params: if let Some(args) = args.audio_params.as_ref() {
-        shlex::split(args)
-          .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
-      } else {
-        into_vec!["-c:a", "copy"]
-      },
-      chunk_method: args
-        .chunk_method
-        .unwrap_or_else(vapoursynth::best_available_chunk_method),
-      chunk_order: args.chunk_order,
-      concat: args.concat,
-      encoder: args.encoder,
-      extra_splits_len: if args.extra_split > 0 {
-        Some(args.extra_split)
-      } else {
-        None
-      },
-      photon_noise: args.photon_noise,
-      sc_pix_format: args.sc_pix_format,
-      keep: args.keep,
-      max_tries: args.max_tries,
-      min_q: args.min_q,
-      max_q: args.max_q,
-      min_scene_len: args.min_scene_len,
-      vmaf_threads: args.vmaf_threads,
-      input_pix_format: {
-        match &input {
-          Input::Video(path) => InputPixelFormat::FFmpeg {
-            format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
-              format!(
-                "FFmpeg failed to get pixel format for input video {:?}",
-                path
-              )
-            })?,
-          },
-          Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
-            bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
-              format!(
-                "VapourSynth failed to get bit depth for input video {:?}",
-                path
-              )
-            })?,
-          },
-        }
-      },
-      input,
-      output_pix_format: PixelFormat {
-        format: args.pix_format,
-        bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
-      },
-      probe_slow: args.probe_slow,
-      probes: args.probes,
-      probing_rate: args.probing_rate,
-      resume: args.resume,
-      scenes: args.scenes.clone(),
-      split_method: args.split_method.clone(),
-      sc_method: args.sc_method,
-      sc_downscale_height: args.sc_downscale_height,
-      target_quality: args.target_quality,
-      verbosity: if args.quiet {
-        Verbosity::Quiet
-      } else if args.verbose {
-        Verbosity::Verbose
-      } else {
-        Verbosity::Normal
-      },
-      vmaf: args.vmaf,
-      vmaf_filter: args.vmaf_filter.clone(),
-      vmaf_path: args.vmaf_path.clone(),
-      vmaf_res: args.vmaf_res.to_string().clone(),
-      workers: args.workers,
-      set_thread_affinity: args.set_thread_affinity,
-      vs_script: None,
-    };
+  encode_args.startup_check()?;
 
-    arg.startup_check()?;
+  if !args.overwrite {
+    if let Some(path) = args.output_file.as_ref() {
+      if path.exists()
+        && !confirm(&format!(
+          "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          path
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        exit(0);
+      }
+    } else {
+      let path: &Path = encode_args.output_file.as_ref();
 
-    if !args.overwrite {
-      // UGLY: taking first file for output file
-      if let Some(path) = args.output_file.as_ref() {
-        if path.exists()
-          && !confirm(&format!(
-            "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-            path
-          ))?
-        {
-          println!("Not overwriting, aborting.");
-          exit(0);
-        }
-      } else {
-        let path: &Path = arg.output_file.as_ref();
-
-        if path.exists()
-          && !confirm(&format!(
-            "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-            path
-          ))?
-        {
-          println!("Not overwriting, aborting.");
-          exit(0);
-        }
+      if path.exists()
+        && !confirm(&format!(
+          "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
+          path
+        ))?
+      {
+        println!("Not overwriting, aborting.");
+        exit(0);
       }
     }
 

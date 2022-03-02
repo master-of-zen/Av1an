@@ -467,7 +467,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let inputs: Vec<PathBuf> = input_paths
     .iter()
     .flat_map(|input| resolve_file_paths(input))
-    .flat_map(std::convert::identity)
+    .flatten()
     .collect();
 
   let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(inputs.len());

@@ -188,6 +188,12 @@ pub struct CliOpts {
   #[clap(long, possible_values = &["standard", "fast"], default_value_t = ScenecutMethod::Standard, help_heading = "SCENE DETECTION")]
   pub sc_method: ScenecutMethod,
 
+  /// Run the scene detection only before exiting
+  ///
+  /// Requires a scene file with --scenes.
+  #[clap(long, requires("scenes"), help_heading = "SCENE DETECTION")]
+  pub sc_only: bool,
+
   /// Perform scene detection with this pixel format
   #[clap(long, help_heading = "SCENE DETECTION")]
   pub sc_pix_format: Option<Pixel>,
@@ -553,6 +559,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     scenes: args.scenes,
     split_method: args.split_method,
     sc_method: args.sc_method,
+    sc_only: args.sc_only,
     sc_downscale_height: args.sc_downscale_height,
     target_quality: args.target_quality,
     verbosity: if args.quiet {

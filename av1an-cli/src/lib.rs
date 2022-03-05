@@ -213,13 +213,8 @@ pub struct CliOpts {
   /// When a scenecut is found whose distance to the previous scenecut is greater than the value
   /// specified by this option, one or more extra splits (scenecuts) are added. Set this option
   /// to 0 to disable adding extra splits.
-  #[clap(
-    short = 'x',
-    long,
-    default_value_t = 240,
-    help_heading = "SCENE DETECTION"
-  )]
-  pub extra_split: usize,
+  #[clap(short = 'x', long, help_heading = "SCENE DETECTION")]
+  pub extra_split: Option<usize>,
 
   /// Minimum number of frames for a scenecut
   #[clap(long, default_value_t = 24, help_heading = "SCENE DETECTION")]
@@ -514,10 +509,15 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     chunk_order: args.chunk_order,
     concat: args.concat,
     encoder: args.encoder,
-    extra_splits_len: if args.extra_split > 0 {
-      Some(args.extra_split)
-    } else {
-      None
+    extra_splits_len: match args.extra_split {
+      Some(x) => {
+        if x > 0 {
+          Some(x)
+        } else {
+          None
+        }
+      }
+      None => Some(calculate_extra_splits_from_fps(input.frame_rate())),
     },
     photon_noise: args.photon_noise,
     sc_pix_format: args.sc_pix_format,
@@ -607,6 +607,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   }
 
   Ok(encode_args)
+}
+
+//  Make make sure splits are not longer than 10 secondsx
+pub fn calculate_extra_splits_from_fps(fps: anyhow::Result<f64>) -> usize {
+  match fps {
+    Ok(fps) => (fps * 10.0) as usize,
+    Err(_) => 240 as usize,
+  }
 }
 
 pub struct StderrLogger {

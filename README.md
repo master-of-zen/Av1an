@@ -88,7 +88,7 @@ With your own parameters:
 
     -s  --scenes            File to save/read scenes.
 
-    -x  --extra-split       Size of chunk after which it will be split [default: 240]
+    -x  --extra-split       Size of chunk after which it will be split [default: fps * 10]
 
     --min-scene-len         Specifies the minimum number of frames in each split.
 

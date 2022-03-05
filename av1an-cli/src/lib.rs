@@ -510,13 +510,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
     concat: args.concat,
     encoder: args.encoder,
     extra_splits_len: match args.extra_split {
-      Some(x) => {
-        if x > 0 {
-          Some(x)
-        } else {
-          None
-        }
-      }
+      Some(0) => None,
+      Some(x) => Some(x),
       // Make sure it's at least 10 seconds
       None => match input.frame_rate() {
         Ok(fps) => Some((fps * 10.0) as usize),

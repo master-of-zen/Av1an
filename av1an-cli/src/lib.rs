@@ -517,7 +517,11 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
           None
         }
       }
-      None => Some(calculate_extra_splits_from_fps(input.frame_rate())),
+      // Make sure it's at least 10 seconds
+      None => match input.frame_rate() {
+        Ok(fps) => Some((fps * 10.0) as usize),
+        Err(_) => Some(240_usize),
+      },
     },
     photon_noise: args.photon_noise,
     sc_pix_format: args.sc_pix_format,
@@ -607,14 +611,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   }
 
   Ok(encode_args)
-}
-
-///  Make make sure splits are not longer than 10 seconds
-pub fn calculate_extra_splits_from_fps(fps: anyhow::Result<f64>) -> usize {
-  match fps {
-    Ok(fps) => (fps * 10.0) as usize,
-    Err(_) => 240_usize,
-  }
 }
 
 pub struct StderrLogger {

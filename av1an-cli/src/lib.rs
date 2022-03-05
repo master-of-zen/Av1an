@@ -609,11 +609,11 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<EncodeArgs> {
   Ok(encode_args)
 }
 
-//  Make make sure splits are not longer than 10 secondsx
+///  Make make sure splits are not longer than 10 seconds
 pub fn calculate_extra_splits_from_fps(fps: anyhow::Result<f64>) -> usize {
   match fps {
     Ok(fps) => (fps * 10.0) as usize,
-    Err(_) => 240 as usize,
+    Err(_) => 240_usize,
   }
 }
 

@@ -722,7 +722,7 @@ pub fn run() -> anyhow::Result<()> {
   // because it will, in its Drop implementation, flush all writers to ensure that
   // all buffered log lines are flushed before the program terminates,
   // and then it calls their shutdown method.
-  let _logger = Logger::with(log)
+  let logger = Logger::with(log)
     .log_to_file_and_writer(
       // UGLY: take first or the files for log path
       FileSpec::try_from(PathAbs::new(&args[0].log_file)?)?,
@@ -737,6 +737,10 @@ pub fn run() -> anyhow::Result<()> {
     .start()?;
 
   for mut arg in args {
+    // Change log file
+    let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
+    let _ = &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file))?;
+
     arg.initialize()?;
     arg.encode_file()?;
   }

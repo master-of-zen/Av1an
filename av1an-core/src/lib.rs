@@ -241,7 +241,7 @@ pub fn list_index(params: &[impl AsRef<str>], is_match: fn(&str) -> bool) -> Opt
   })
 }
 
-#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display)]
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
 pub enum SplitMethod {
   #[strum(serialize = "av-scenechange")]
   AvScenechange,

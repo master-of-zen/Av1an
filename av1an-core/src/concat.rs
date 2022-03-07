@@ -19,7 +19,7 @@ use std::{
 
 use path_abs::PathInfo;
 
-use crate::encoder::Encoder;
+use crate::{encoder::Encoder, util::read_in_dir};
 
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
@@ -53,21 +53,7 @@ pub fn sort_files_by_filename(files: &mut [PathBuf]) {
 }
 
 pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
-  let mut files: Vec<PathBuf> = fs::read_dir(input)?
-    .into_iter()
-    .filter_map(Result::ok)
-    .filter_map(|d| {
-      if let Ok(file_type) = d.file_type() {
-        if file_type.is_file() {
-          Some(d.path())
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    })
-    .collect();
+  let mut files: Vec<PathBuf> = read_in_dir(input)?.collect();
 
   sort_files_by_filename(&mut files);
 

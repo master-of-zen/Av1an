@@ -98,7 +98,7 @@ pub struct CliOpts {
   /// Input file to encode
   ///
   /// Can be a video or vapoursynth (.py, .vpy) script.
-  #[clap(short, parse(from_os_str))]
+  #[clap(short, parse(from_os_str), required = true)]
   pub input: Vec<PathBuf>,
 
   /// Video output file

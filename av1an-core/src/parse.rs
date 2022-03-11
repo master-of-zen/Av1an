@@ -39,13 +39,19 @@ pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
 
   // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
   // second number (actual encoded frames)
+  let first_digit_index = s
+    .as_bytes()
+    .get(AOM_VPX_IGNORED_PREFIX.len() - 1..)?
+    .iter()
+    .position(|&c| c == b'/')?;
+
   let first_space_index = s
-    .get(AOM_VPX_IGNORED_PREFIX.len()..)?
+    .get(AOM_VPX_IGNORED_PREFIX.len() + first_digit_index..)?
     .as_bytes()
     .iter()
-    .position(|&c| c == b' ')?;
+    .position(|&c| c == b' ')?
+    + first_digit_index;
 
-  let first_digit_index = (first_space_index / 2).saturating_sub(2);
   s.get(
     AOM_VPX_IGNORED_PREFIX.len() + first_digit_index
       ..AOM_VPX_IGNORED_PREFIX.len() + first_space_index,
@@ -63,12 +69,11 @@ pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
 ///
 /// # Safety
 ///
-/// The caller should not attempt to read the contents of `s` after this
-/// function has been called.
+/// The CPU must support SSSE3 and SSE4.1.
 #[inline]
 #[target_feature(enable = "ssse3,sse4.1")]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
+pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
   #[cfg(target_arch = "x86")]
   use std::arch::x86::*;
   #[cfg(target_arch = "x86_64")]
@@ -154,52 +159,17 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
   // actual first space character.
   let first_space_index = mask16.trailing_zeros() as usize;
 
-  // It is impossible that `first_space_index == 0` for valid aomenc output, since the
-  // first character after the ignored prefix has to be a digit.
-  //
-  //                       All indexes are relative to `relevant_output`.
-  //                     ↓ Since the first digit occurs here, its index = 0
-  // Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]
-  //                    * ^ n = 1, first_digit_index = 0 (the first character is the first digit)
-  //                    ↑
-  //                    ╰ end of ignored prefix (continued below)
-  //
-  // Pass 1/1 frame   84/83     81091B  132314 us 634.85 fps [ETA  unknown]
-  //                    *  ^ n = 2, first_digit_index = 0
-  //
-  // Pass 1/1 frame  142/141   156465B  208875 us 679.83 fps [ETA  unknown]
-  //                    *   ^ n = 3, first_digit_index = 0
-  //
-  // Pass 1/1 frame 4232/4231 5622510B 5518075 us 766.93 fps [ETA  unknown]
-  //                    *    ^ n = 4, first_digit_index = 0
-  //
-  // Pass 1/1 frame 13380/13379 17860525B   16760 ms 798.31 fps [ETA  unknown]
-  //                    *      ^ n = 6, first_digit_index = 1
-  //
-  // Pass 1/1 frame 102262/102261 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
-  //                    *        ^ n = 8, first_digit_index = 2
-  //                     ^^^^^^^^
-  //                     12345678
-  //                     n = 8 signifies that there are 8 characters before the first space.
-  //                     This also happens to be first_space_index.
-  //
-  // Pass 1/1 frame 1022621/1022611 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F
-  //                    *          ^ n = 10, first_digit_index = 3
-  //
-  // Solving a linear equation for n and first_digit_index yields this
-  // formula, but first_digit_index cannot be negative so we use saturating_sub.
-  let first_digit_index = (first_space_index / 2).saturating_sub(2);
+  let first_digit_index = {
+    _mm_movemask_epi8(_mm_cmpeq_epi8(
+      _mm_loadu_si128(s.get(AOM_VPX_IGNORED_PREFIX.len() - 1..)?.as_ptr().cast()),
+      _mm_set1_epi8(b'/' as i8),
+    ))
+    .trailing_zeros() as usize
+  };
 
-  // Set `CHUNK_SIZE` bytes before the real first digit index (including the ignored prefix)
-  // to b'0'. Unconditionally zeroing `CHUNK_SIZE` bytes is better than only setting the
-  // bytes that are absolutely necessary because using a fixed size allows LLVM to avoid
-  // a call to memset and instead use movaps/movups.
-  for byte in s
-    .get_unchecked_mut(AOM_VPX_IGNORED_PREFIX.len() + first_digit_index - CHUNK_SIZE..)
-    .get_unchecked_mut(..CHUNK_SIZE)
-  {
-    *byte = b'0';
-  }
+  let ascending = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+  let num_digits = first_space_index - first_digit_index;
+  let dynamic_mask = _mm_cmplt_epi8(ascending, _mm_set1_epi8(num_digits as i8));
 
   // At this point, we have done all the setup and can use the actual SIMD integer
   // parsing algorithm. The description of the algorithm can be found here:
@@ -212,6 +182,9 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &mut [u8]) -> Option<u64> {
 
   let zeros = _mm_set1_epi8(b'0' as i8);
   chunk = _mm_sub_epi8(chunk, zeros);
+
+  // Mask out the irrelevant bits, effectively parsing them as if they were 0.
+  chunk = _mm_and_si128(chunk, dynamic_mask);
 
   let mult = _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
   chunk = _mm_maddubs_epi16(chunk, mult);
@@ -444,7 +417,7 @@ mod tests {
 
   #[test]
   #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-  fn aom_vpx_sse41_parsing() {
+  fn aom_vpx_parsing() {
     let test_cases = [
       (
         "Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]",
@@ -483,13 +456,15 @@ mod tests {
         "Pass 1/1 frame 1022621/1022611 136473850B  131502 ms 777.65 fps [ETA  unknown]    1272F",
         Some(1_022_611),
       ),
+      (
+        "Pass 1/1 frame 10000/9999 5319227B 8663074 us 1154.32 fps [ETA  unknown]",
+        Some(9999),
+      ),
     ];
 
     if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
       for (s, ans) in test_cases {
-        let mut s = String::from(s);
-
-        assert_eq!(unsafe { parse_aom_vpx_frames_sse41(s.as_bytes_mut()) }, ans);
+        assert_eq!(unsafe { parse_aom_vpx_frames_sse41(s.as_bytes()) }, ans);
       }
     }
 

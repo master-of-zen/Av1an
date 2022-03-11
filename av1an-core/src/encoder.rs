@@ -493,12 +493,7 @@ impl Encoder {
   }
 
   /// Parses the number of encoded frames
-  ///
-  /// # Safety
-  ///
-  /// The caller should not attempt to read the contents of `line` after
-  /// this function has been called.
-  pub(crate) unsafe fn parse_encoded_frames(self, line: &mut str) -> Option<u64> {
+  pub(crate) fn parse_encoded_frames(self, line: &str) -> Option<u64> {
     use crate::parse::*;
 
     match self {
@@ -506,7 +501,7 @@ impl Encoder {
         cfg_if! {
           if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
             if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-              return parse_aom_vpx_frames_sse41(line.as_bytes_mut());
+              return unsafe { parse_aom_vpx_frames_sse41(line.as_bytes()) };
             }
           }
         }

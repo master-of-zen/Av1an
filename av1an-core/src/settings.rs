@@ -397,11 +397,7 @@ impl EncodeArgs {
             enc_stderr.push_str(line);
             enc_stderr.push('\n');
 
-            // SAFETY: we do not read the contents of `line` after this function call
-            if let Some(new) = unsafe { self.encoder.parse_encoded_frames(line) } {
-              // clippy is actually wrong that this does nothing, dropping a mutable
-              // reference does prevent it from being used again.
-              drop(line);
+            if let Some(new) = self.encoder.parse_encoded_frames(line) {
               if new > frame {
                 if self.verbosity == Verbosity::Normal {
                   inc_bar((new - frame) as u64);

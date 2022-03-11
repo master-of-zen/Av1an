@@ -45,3 +45,6 @@ lto = "off"
 codegen-units = 1024
 debug-assertions = true
 overflow-checks = true
+
+[patch.crates-io]
+ffmpeg-next = { git = "https://github.com/shssoichiro/rust-ffmpeg-1", branch = "fix-get-best-stream" }

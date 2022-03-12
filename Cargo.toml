@@ -47,6 +47,6 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-rav1e = { git = "https://github.com/xiph/rav1e", rev = "660a4ddd5b57610b3006777910c133919b9f1625" }
-# TODO: switch to upstream once the issue with av_find_best_stream is fixed.
-ffmpeg-next = { git = "https://github.com/shssoichiro/rust-ffmpeg-1", branch = "fix-get-best-stream" }
+rav1e = { git = "https://github.com/xiph/rav1e", rev = "75dd4d289be46e54012d715ed35f37e74f16eb9a" }
+# TODO: switch to release version once the fix for av_get_best_stream is published on crates.io.
+ffmpeg-next = { git = "https://github.com/zmwangx/rust-ffmpeg", rev = "0054b0e51b35ed240b193c7a93455714b4d75726" }

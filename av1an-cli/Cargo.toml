@@ -28,7 +28,7 @@ default-features = false
 features = ["colors", "use_chrono_for_offset"]
 
 [build-dependencies.vergen]
-version = "6"
+version = "7.0.0"
 default-features = false
 features = ["git", "build", "rustc", "cargo"]
 

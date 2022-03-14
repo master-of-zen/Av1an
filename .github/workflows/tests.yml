@@ -251,19 +251,11 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: av1an:action
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=gha
+          cache-to: type=gha, mode=max
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
-
-      - name: Tar docker cache
-        run: tar -cf /tmp/docker-cache.tar /tmp/.buildx-cache
-
-      - name: Artifact docker cache
-        uses: actions/upload-artifact@v2
-        with:
-          name: docker-cache
-          path: /tmp/docker-cache.tar
 
   docker-publish:
     needs: [all-tests, docker]
@@ -272,14 +264,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - uses: actions/download-artifact@v2
-        with:
-          name: docker-cache
-          path: /tmp/
-
-      - name: Extract docker cache
-        run: tar -xf /tmp/docker-cache.tar -C /
 
       - name: Docker meta
         id: docker_meta
@@ -309,7 +293,8 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

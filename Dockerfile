@@ -1,3 +1,31 @@
+FROM archlinux:base-devel AS planner
+RUN pacman -Syy --noconfirm
+
+# Install all dependencies (except for rav1e)
+RUN pacman -S --noconfirm rsync rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+
+WORKDIR /tmp/Av1an
+RUN cargo install cargo-chef 
+COPY . .
+RUN cargo chef prepare  --recipe-path recipe.json
+
+
+
+
+FROM archlinux:base-devel AS cacher
+RUN pacman -Syy --noconfirm
+
+# Install all dependencies (except for rav1e)
+RUN pacman -S --noconfirm rsync rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+
+WORKDIR /tmp/Av1an
+RUN cargo install cargo-chef
+COPY --from=planner /tmp/Av1an/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+
+
+
 FROM archlinux:base-devel AS build
 
 RUN pacman -Syy --noconfirm
@@ -12,24 +40,19 @@ RUN cargo build --release && \
     strip ./target/release/rav1e 
 RUN mv ./target/release/rav1e /usr/local/bin
 
-# Build only dependencies to speed up subsequent builds
-RUN cargo new /tmp/av1an-deps
-COPY Cargo.toml Cargo.lock /tmp/av1an-deps/
-COPY av1an-cli/Cargo.toml /tmp/av1an-deps/av1an-cli/
-COPY av1an-core/Cargo.toml /tmp/av1an-deps/av1an-core/
-WORKDIR /tmp/av1an-deps
-RUN for d in /tmp/av1an-deps/av1an-* ; do cp -R /tmp/av1an-deps/src "$d"/; done && \
-    cargo build --release
-
 # Build av1an
 COPY . /tmp/Av1an
+
+# Copy over the cached dependencies
+COPY --from=cacher /tmp/Av1an/target /tmp/Av1an/target
+
 WORKDIR /tmp/Av1an
 RUN cargo build --release
 RUN mv ./target/release/av1an /usr/local/bin
 
 
 
-FROM archlinux:base-devel
+FROM archlinux:base-devel AS runtime
 
 ENV MPLCONFIGDIR="/home/app_user/"
 

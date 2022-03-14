@@ -12,6 +12,9 @@ jobs:
     container: shssoichiro/av1an-ci:latest
     steps:
       - uses: actions/checkout@v2
+
+      - uses: Swatinem/rust-cache@v1
+
       - name: Validate encoders
         run: |
           which aomenc

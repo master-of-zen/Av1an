@@ -1,44 +1,33 @@
-FROM archlinux:base-devel AS planner
+FROM archlinux:base-devel AS build-base
+
 RUN pacman -Syy --noconfirm
+RUN pacman -S --noconfirm rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
 
-# Install all dependencies (except for rav1e)
-RUN pacman -S --noconfirm rsync rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
-
+RUN cargo install cargo-chef
 WORKDIR /tmp/Av1an
-RUN cargo install cargo-chef 
+
+
+FROM build-base AS planner
+
 COPY . .
 RUN cargo chef prepare  --recipe-path recipe.json
 
 
+FROM build-base AS cacher
 
-
-FROM archlinux:base-devel AS cacher
-RUN pacman -Syy --noconfirm
-
-# Install all dependencies (except for rav1e)
-RUN pacman -S --noconfirm rsync rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
-
-WORKDIR /tmp/Av1an
-RUN cargo install cargo-chef
 COPY --from=planner /tmp/Av1an/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 
-
-
-FROM archlinux:base-devel AS build
-
-RUN pacman -Syy --noconfirm
-
-# Install all dependencies (except for rav1e)
-RUN pacman -S --noconfirm rsync rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+FROM build-base AS build
 
 # Compile rav1e from git, as archlinux is still on rav1e 0.4
-RUN git clone https://github.com/xiph/rav1e /tmp/rav1e
-WORKDIR /tmp/rav1e
-RUN cargo build --release && \
-    strip ./target/release/rav1e 
-RUN mv ./target/release/rav1e /usr/local/bin
+RUN git clone https://github.com/xiph/rav1e && \
+    cd rav1e && \
+    cargo build --release && \
+    strip ./target/release/rav1e && \
+    mv ./target/release/rav1e /usr/local/bin && \
+    cd .. && rm -rf ./rav1e
 
 # Build av1an
 COPY . /tmp/Av1an
@@ -46,10 +35,9 @@ COPY . /tmp/Av1an
 # Copy over the cached dependencies
 COPY --from=cacher /tmp/Av1an/target /tmp/Av1an/target
 
-WORKDIR /tmp/Av1an
-RUN cargo build --release
-RUN mv ./target/release/av1an /usr/local/bin
-
+RUN cargo build --release && \
+    mv ./target/release/av1an /usr/local/bin && \
+    cd .. && rm -rf ./Av1an
 
 
 FROM archlinux:base-devel AS runtime

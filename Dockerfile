@@ -1,7 +1,15 @@
-FROM archlinux:base-devel AS build-base
+FROM archlinux:base-devel AS base
 
 RUN pacman -Syy --noconfirm
-RUN pacman -S --noconfirm rust clang nasm git aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+
+# Install dependancies needed by all steps including runtime step
+RUN pacman -S --noconfirm aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+
+
+FROM base AS build-base
+
+# Install dependancies needed by build steps
+RUN pacman -S --noconfirm rust clang nasm git 
 
 RUN cargo install cargo-chef
 WORKDIR /tmp/Av1an
@@ -40,14 +48,9 @@ RUN cargo build --release && \
     cd .. && rm -rf ./Av1an
 
 
-FROM archlinux:base-devel AS runtime
+FROM base AS runtime
 
 ENV MPLCONFIGDIR="/home/app_user/"
-
-RUN pacman -Syy --noconfirm
-
-# Install all optional dependencies (except for rav1e)
-RUN pacman -S --noconfirm aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
 
 COPY --from=build /usr/local/bin/rav1e /usr/local/bin/rav1e
 COPY --from=build /usr/local/bin/av1an /usr/local/bin/av1an

@@ -218,11 +218,21 @@ impl<'a> Broker<'a> {
     let padding = printable_base10_digits(self.total_chunks - 1) as usize;
 
     // Run all passes for this chunk
+    let encoder = chunk
+      .overrides
+      .as_ref()
+      .map_or(self.project.encoder, |ovr| ovr.encoder);
+    let passes = chunk
+      .overrides
+      .as_ref()
+      .map_or(self.project.passes, |ovr| ovr.passes);
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=self.project.passes {
       for r#try in 1..=self.max_tries {
         let res = self.project.create_pipes(
           chunk,
+          encoder,
+          passes,
           current_pass,
           worker_id,
           padding,
@@ -246,7 +256,7 @@ impl<'a> Broker<'a> {
           // since `Broker::encoding_loop` will print the error message as well
           warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
 
-          if self.project.encoder == Encoder::aom
+          if encoder == Encoder::aom
             && !tpl_crash_workaround
             && memmem::rfind(e.stderr.as_bytes(), b"av1_tpl_stats_ready").is_some()
           {

@@ -1,3 +1,4 @@
+use crate::scenes::ZoneOptions;
 use serde::{Deserialize, Serialize};
 use std::{ffi::OsString, path::Path};
 
@@ -8,6 +9,7 @@ pub struct Chunk {
   pub source: Vec<OsString>,
   pub output_ext: String,
   pub frames: usize,
+  pub overrides: Option<ZoneOptions>,
   // do not break compatibility with output produced by older versions of av1an
   /// Optional target quality CQ level
   #[serde(rename = "per_shot_target_quality_cq")]
@@ -15,24 +17,6 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(
-    temp: String,
-    index: usize,
-    source: Vec<OsString>,
-    output_ext: &'static str,
-    frames: usize,
-    per_shot_target_quality_cq: Option<u32>,
-  ) -> Result<Self, anyhow::Error> {
-    Ok(Self {
-      temp,
-      index,
-      source,
-      output_ext: output_ext.to_owned(),
-      frames,
-      tq_cq: per_shot_target_quality_cq,
-    })
-  }
-
   /// Returns numeric name of chunk `00001`
   pub fn name(&self) -> String {
     format!("{:05}", self.index)
@@ -62,6 +46,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       frames: 5,
       tq_cq: None,
+      overrides: None,
     };
     assert_eq!("00001", ch.name());
   }
@@ -74,6 +59,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       frames: 5,
       tq_cq: None,
+      overrides: None,
     };
     assert_eq!("10000", ch.name());
   }
@@ -87,6 +73,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       frames: 5,
       tq_cq: None,
+      overrides: None,
     };
     assert_eq!("d/encode/00001.ivf", ch.output());
   }

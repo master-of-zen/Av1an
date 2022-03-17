@@ -31,6 +31,7 @@ use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::sync::atomic::AtomicUsize;
 use std::thread;
 use std::{
@@ -52,6 +53,7 @@ use std::{
 
 use ansi_term::{Color, Style};
 
+use crate::scenes::{Scene, ZoneOptions};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 
@@ -94,6 +96,7 @@ pub struct EncodeArgs {
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
   pub photon_noise: Option<u8>,
+  pub zones: Option<PathBuf>,
 
   // FFmpeg params
   pub ffmpeg_filter_args: Vec<String>,
@@ -224,6 +227,8 @@ impl EncodeArgs {
   pub fn create_pipes(
     &self,
     chunk: &Chunk,
+    encoder: Encoder,
+    passes: u8,
     current_pass: u8,
     worker_id: usize,
     padding: usize,
@@ -235,27 +240,24 @@ impl EncodeArgs {
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
-    let mut video_params = self.video_params.clone();
+    let mut video_params = chunk
+      .overrides
+      .as_ref()
+      .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone());
     if tpl_crash_workaround {
       // In aomenc for duplicate arguments, whichever is specified last takes precedence.
       video_params.push("--enable-tpl-model=0".to_string());
     }
-    let mut enc_cmd = if self.passes == 1 {
-      self.encoder.compose_1_1_pass(video_params, chunk.output())
+    let mut enc_cmd = if passes == 1 {
+      encoder.compose_1_1_pass(video_params, chunk.output())
     } else if current_pass == 1 {
-      self
-        .encoder
-        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
+      encoder.compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
     } else {
-      self
-        .encoder
-        .compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
+      encoder.compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
     };
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
-      enc_cmd = self
-        .encoder
-        .man_command(enc_cmd, per_shot_target_quality_cq as usize);
+      enc_cmd = encoder.man_command(enc_cmd, per_shot_target_quality_cq as usize);
     }
 
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -397,7 +399,7 @@ impl EncodeArgs {
             enc_stderr.push_str(line);
             enc_stderr.push('\n');
 
-            if let Some(new) = self.encoder.parse_encoded_frames(line) {
+            if let Some(new) = encoder.parse_encoded_frames(line) {
               if new > frame {
                 if self.verbosity == Verbosity::Normal {
                   inc_bar((new - frame) as u64);
@@ -442,42 +444,8 @@ impl EncodeArgs {
   }
 
   fn validate_encoder_params(&self) {
-    #[must_use]
-    fn invalid_params<'a>(
-      params: &'a [&'a str],
-      valid_options: &'a HashSet<Cow<'a, str>>,
-    ) -> Vec<&'a str> {
-      params
-        .iter()
-        .filter(|param| !valid_options.contains(Borrow::<str>::borrow(&**param)))
-        .copied()
-        .collect()
-    }
-
-    #[must_use]
-    fn suggest_fix<'a>(
-      wrong_arg: &str,
-      arg_dictionary: &'a HashSet<Cow<'a, str>>,
-    ) -> Option<&'a str> {
-      // Minimum threshold to consider a suggestion similar enough that it could be a typo
-      const MIN_THRESHOLD: f64 = 0.75;
-
-      arg_dictionary
-        .iter()
-        .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
-        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
-        .and_then(|(suggestion, score)| {
-          if score > MIN_THRESHOLD {
-            Some(suggestion.borrow())
-          } else {
-            None
-          }
-        })
-    }
-
     let video_params: Vec<&str> = self
       .video_params
-      .as_slice()
       .iter()
       .filter_map(|param| {
         if param.starts_with('-') && [Encoder::aom, Encoder::vpx].contains(&self.encoder) {
@@ -684,18 +652,18 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
   }
 
-  fn create_encoding_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
+  fn create_encoding_queue(&mut self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let mut chunks = match &self.input {
       Input::Video(_) => match self.chunk_method {
         ChunkMethod::FFMS2 | ChunkMethod::LSMASH => {
           let vs_script = self.vs_script.as_ref().unwrap().as_path();
-          self.create_video_queue_vs(splits, vs_script)
+          self.create_video_queue_vs(scenes, vs_script)
         }
-        ChunkMethod::Hybrid => self.create_video_queue_hybrid(splits)?,
-        ChunkMethod::Select => self.create_video_queue_select(splits),
-        ChunkMethod::Segment => self.create_video_queue_segment(&splits)?,
+        ChunkMethod::Hybrid => self.create_video_queue_hybrid(scenes)?,
+        ChunkMethod::Select => self.create_video_queue_select(scenes),
+        ChunkMethod::Segment => self.create_video_queue_segment(scenes)?,
       },
-      Input::VapourSynth(vs_script) => self.create_video_queue_vs(splits, vs_script.as_path()),
+      Input::VapourSynth(vs_script) => self.create_video_queue_vs(scenes, vs_script.as_path()),
     };
 
     match self.chunk_order {
@@ -716,7 +684,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     Ok(chunks)
   }
 
-  fn calc_split_locations(&self) -> anyhow::Result<(Vec<usize>, usize)> {
+  fn calc_split_locations(&self) -> anyhow::Result<(Vec<Scene>, usize)> {
     Ok(match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
@@ -727,14 +695,34 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.sc_pix_format,
         self.sc_method,
         self.sc_downscale_height,
+        &self.parse_zones()?,
       )?,
       SplitMethod::None => (Vec::new(), self.input.frames()?),
     })
   }
 
+  fn parse_zones(&self) -> anyhow::Result<Vec<Scene>> {
+    let mut zones = Vec::new();
+    if let Some(ref zones_file) = self.zones {
+      let input = fs::read_to_string(&zones_file)?;
+      for zone_line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        zones.push(Scene::parse_from_zone(zone_line, self)?);
+      }
+      zones.sort_unstable_by_key(|zone| zone.start_frame);
+      let mut segments = BTreeSet::new();
+      for zone in &zones {
+        if segments.contains(&zone.start_frame) {
+          bail!("Zones file contains overlapping zones");
+        }
+        segments.extend(zone.start_frame..zone.end_frame);
+      }
+    }
+    Ok(zones)
+  }
+
   // If we are not resuming, then do scene detection. Otherwise: get scenes from
   // scenes.json and return that.
-  fn split_routine(&mut self) -> anyhow::Result<Vec<usize>> {
+  fn split_routine(&mut self) -> anyhow::Result<Vec<Scene>> {
     let scene_file = self.scenes.as_ref().map_or_else(
       || Cow::Owned(Path::new(&self.temp).join("scenes.json")),
       |path| Cow::Borrowed(path.as_path()),
@@ -746,6 +734,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       crate::split::read_scenes_from_file(scene_file.as_ref())?
     } else {
       used_existing_cuts = false;
+      self.frames = self.input.frames()?;
       self.calc_split_locations()?
     };
     self.frames = frames;
@@ -777,6 +766,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     src_path: &Path,
     frame_start: usize,
     mut frame_end: usize,
+    overrides: Option<ZoneOptions>,
   ) -> Chunk {
     assert!(
       frame_start < frame_end,
@@ -816,25 +806,15 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       frames,
+      overrides,
       ..Chunk::default()
     }
   }
 
-  fn create_vs_chunk(
-    &self,
-    index: usize,
-    vs_script: &Path,
-    frame_start: usize,
-    mut frame_end: usize,
-  ) -> Chunk {
-    assert!(
-      frame_start < frame_end,
-      "Can't make a chunk with <= 0 frames!"
-    );
-
-    let frames = frame_end - frame_start;
+  fn create_vs_chunk(&self, index: usize, vs_script: &Path, scene: &Scene) -> Chunk {
+    let frames = scene.end_frame - scene.start_frame;
     // the frame end boundary is actually a frame that should be included in the next chunk
-    frame_end -= 1;
+    let frame_end = scene.end_frame - 1;
 
     let vspipe_cmd_gen: Vec<OsString> = into_vec![
       "vspipe",
@@ -842,7 +822,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       "-y",
       "-",
       "-s",
-      format!("{}", frame_start),
+      format!("{}", scene.start_frame),
       "-e",
       format!("{}", frame_end),
     ];
@@ -855,51 +835,54 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
       frames,
+      overrides: scene.zone_overrides.clone(),
       ..Chunk::default()
     }
   }
 
-  fn create_video_queue_vs(&self, splits: Vec<usize>, vs_script: &Path) -> Vec<Chunk> {
-    let chunk_boundaries = iter::once(0)
-      .chain(splits)
-      .chain(iter::once(self.frames))
-      .tuple_windows();
-
-    let chunk_queue: Vec<Chunk> = chunk_boundaries
+  fn create_video_queue_vs(&self, scenes: &[Scene], vs_script: &Path) -> Vec<Chunk> {
+    let chunk_queue: Vec<Chunk> = scenes
+      .iter()
       .enumerate()
-      .map(|(index, (frame_start, frame_end))| {
-        self.create_vs_chunk(index, vs_script, frame_start, frame_end)
-      })
+      .map(|(index, scene)| self.create_vs_chunk(index, vs_script, scene))
       .collect();
 
     chunk_queue
   }
 
-  fn create_video_queue_select(&self, splits: Vec<usize>) -> Vec<Chunk> {
-    let last_frame = self.frames;
-
+  fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Chunk> {
     let input = self.input.as_video_path();
 
-    let chunk_boundaries = iter::once(0)
-      .chain(splits)
-      .chain(iter::once(last_frame))
-      .tuple_windows();
-
-    let chunk_queue: Vec<Chunk> = chunk_boundaries
+    let chunk_queue: Vec<Chunk> = scenes
+      .iter()
       .enumerate()
-      .map(|(index, (frame_start, frame_end))| {
-        self.create_select_chunk(index, input, frame_start, frame_end)
+      .map(|(index, scene)| {
+        self.create_select_chunk(
+          index,
+          input,
+          scene.start_frame,
+          scene.end_frame,
+          scene.zone_overrides.clone(),
+        )
       })
       .collect();
 
     chunk_queue
   }
 
-  fn create_video_queue_segment(&self, splits: &[usize]) -> anyhow::Result<Vec<Chunk>> {
+  fn create_video_queue_segment(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.input.as_video_path();
 
     debug!("Splitting video");
-    segment(input, &self.temp, splits);
+    segment(
+      input,
+      &self.temp,
+      &scenes
+        .iter()
+        .skip(1)
+        .map(|scene| scene.start_frame)
+        .collect::<Vec<usize>>(),
+    );
     debug!("Splitting done");
 
     let source_path = Path::new(&self.temp).join("split");
@@ -913,27 +896,26 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let chunk_queue: Vec<Chunk> = queue_files
       .iter()
       .enumerate()
-      .map(|(index, file)| self.create_chunk_from_segment(index, file.as_path().to_str().unwrap()))
+      .map(|(index, file)| {
+        self.create_chunk_from_segment(
+          index,
+          file.as_path().to_str().unwrap(),
+          scenes[index].zone_overrides.clone(),
+        )
+      })
       .collect();
 
     Ok(chunk_queue)
   }
 
-  fn create_video_queue_hybrid(&self, split_locations: Vec<usize>) -> anyhow::Result<Vec<Chunk>> {
-    let mut splits = Vec::with_capacity(2 + split_locations.len());
-    splits.push(0);
-    splits.extend(split_locations);
-    splits.push(self.frames);
-
+  fn create_video_queue_hybrid(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.input.as_video_path();
 
     let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
 
-    let segments_set: Vec<(usize, usize)> = splits.iter().copied().tuple_windows().collect();
-
     let to_split: Vec<usize> = keyframes
       .iter()
-      .filter(|kf| splits.contains(kf))
+      .filter(|kf| scenes.iter().any(|scene| scene.start_frame == **kf))
       .copied()
       .collect();
 
@@ -950,11 +932,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .chain(iter::once(self.frames))
       .tuple_windows();
 
-    let mut segments = Vec::with_capacity(segments_set.len());
+    let mut segments = Vec::with_capacity(scenes.len());
     for (file, (x, y)) in queue_files.iter().zip(kf_list) {
-      for &(s0, s1) in &segments_set {
+      for s in scenes {
+        let s0 = s.start_frame;
+        let s1 = s.end_frame;
         if s0 >= x && s1 <= y && s0 < s1 {
-          segments.push((file.as_path(), (s0 - x, s1 - x)));
+          segments.push((file.as_path(), (s0 - x, s1 - x, s)));
         }
       }
     }
@@ -962,13 +946,20 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let chunk_queue: Vec<Chunk> = segments
       .iter()
       .enumerate()
-      .map(|(index, &(file, (start, end)))| self.create_select_chunk(index, file, start, end))
+      .map(|(index, &(file, (start, end, scene)))| {
+        self.create_select_chunk(index, file, start, end, scene.zone_overrides.clone())
+      })
       .collect();
 
     Ok(chunk_queue)
   }
 
-  fn create_chunk_from_segment(&self, index: usize, file: &str) -> Chunk {
+  fn create_chunk_from_segment(
+    &self,
+    index: usize,
+    file: &str,
+    overrides: Option<ZoneOptions>,
+  ) -> Chunk {
     let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
       "ffmpeg",
       "-y",
@@ -994,12 +985,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,
+      overrides,
       ..Chunk::default()
     }
   }
 
   /// Returns unfinished chunks and number of total chunks
-  fn load_or_gen_chunk_queue(&mut self, splits: Vec<usize>) -> anyhow::Result<(Vec<Chunk>, usize)> {
+  fn load_or_gen_chunk_queue(&mut self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.resume {
       let mut chunks = read_chunk_queue(self.temp.as_ref())?;
       let num_chunks = chunks.len();
@@ -1070,7 +1062,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       exit(0);
     }
 
-    let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(splits)?;
+    let (mut chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(&splits)?;
 
     if self.resume {
       let chunks_done = get_done().done.len();
@@ -1086,16 +1078,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       vspipe_cache.join().unwrap();
     }
 
+    let mut grain_table = None;
     if let Some(strength) = self.photon_noise {
-      let grain_table = Path::new(&self.temp).join("grain.tbl");
-      if !grain_table.exists() {
+      let table = Path::new(&self.temp).join("grain.tbl");
+      if !table.exists() {
         debug!(
           "Generating grain table at ISO {}",
           u32::from(strength) * 100
         );
         let (width, height) = self.input.resolution()?;
         let transfer = self.input.transfer_function()?;
-        create_film_grain_file(&grain_table, strength, width, height, transfer)?;
+        create_film_grain_file(&table, strength, width, height, transfer)?;
       } else {
         debug!("Using existing grain table");
       }
@@ -1104,10 +1097,40 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       self
         .video_params
         .retain(|param| !param.starts_with("--denoise-noise-level="));
-      self.video_params.push(format!(
-        "--film-grain-table={}",
-        grain_table.to_str().unwrap()
-      ));
+      self
+        .video_params
+        .push(format!("--film-grain-table={}", table.to_str().unwrap()));
+      grain_table = Some(table);
+    }
+
+    for chunk in &mut chunk_queue {
+      // Also apply grain tables to zone overrides
+      if let Some(strength) = chunk.overrides.as_ref().and_then(|ovr| ovr.photon_noise) {
+        let grain_table = if Some(strength) == self.photon_noise {
+          // We can reuse the existing photon noise table from the main encode
+          grain_table.clone().unwrap()
+        } else {
+          let grain_table = Path::new(&self.temp).join(&format!("chunk{}-grain.tbl", chunk.index));
+          debug!(
+            "Generating grain table at ISO {}",
+            u32::from(strength) * 100
+          );
+          let (width, height) = self.input.resolution()?;
+          let transfer = self.input.transfer_function()?;
+          create_film_grain_file(&grain_table, strength, width, height, transfer)?;
+          grain_table
+        };
+
+        // We should not use a grain table together with aom's grain generation
+        let overrides = chunk.overrides.as_mut().unwrap();
+        overrides
+          .video_params
+          .retain(|param| !param.starts_with("--denoise-noise-level="));
+        overrides.video_params.push(format!(
+          "--film-grain-table={}",
+          grain_table.to_str().unwrap()
+        ));
+      }
     }
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
@@ -1283,4 +1306,37 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     Ok(())
   }
+}
+
+#[must_use]
+pub(crate) fn invalid_params<'a>(
+  params: &'a [&'a str],
+  valid_options: &'a HashSet<Cow<'a, str>>,
+) -> Vec<&'a str> {
+  params
+    .iter()
+    .filter(|param| !valid_options.contains(Borrow::<str>::borrow(&**param)))
+    .copied()
+    .collect()
+}
+
+#[must_use]
+pub(crate) fn suggest_fix<'a>(
+  wrong_arg: &str,
+  arg_dictionary: &'a HashSet<Cow<'a, str>>,
+) -> Option<&'a str> {
+  // Minimum threshold to consider a suggestion similar enough that it could be a typo
+  const MIN_THRESHOLD: f64 = 0.75;
+
+  arg_dictionary
+    .iter()
+    .map(|arg| (arg, strsim::jaro_winkler(arg, wrong_arg)))
+    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Less))
+    .and_then(|(suggestion, score)| {
+      if score > MIN_THRESHOLD {
+        Some(suggestion.borrow())
+      } else {
+        None
+      }
+    })
 }

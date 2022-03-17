@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.7.2"
-source = "git+https://github.com/rust-av/av-scenechange?rev=9425e3597b27c79cd970756b7cdb9c24cb2c4d03#9425e3597b27c79cd970756b7cdb9c24cb2c4d03"
+source = "git+https://github.com/rust-av/av-scenechange?rev=0c63f493200eeccc21193d129fc63cb1265e40fa#0c63f493200eeccc21193d129fc63cb1265e40fa"
 dependencies = [
  "anyhow",
  "rav1e",
@@ -195,6 +195,7 @@ dependencies = [
  "itertools",
  "log",
  "memchr",
+ "nom",
  "num_cpus",
  "once_cell",
  "parking_lot",

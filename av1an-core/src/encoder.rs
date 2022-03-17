@@ -435,6 +435,15 @@ impl Encoder {
     }
   }
 
+  pub const fn format(self) -> &'static str {
+    match self {
+      Self::aom | Self::rav1e | Self::svt_av1 => "av1",
+      Self::vpx => "vpx",
+      Self::x264 => "h264",
+      Self::x265 => "h265",
+    }
+  }
+
   /// Get the default output extension for the encoder
   pub const fn output_extension(&self) -> &'static str {
     match &self {

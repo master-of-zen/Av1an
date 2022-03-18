@@ -187,7 +187,7 @@ impl<'a> TargetQuality<'a> {
       let mut source = if let [pipe_cmd, args @ ..] = &*chunk.source {
         tokio::process::Command::new(pipe_cmd)
           .args(args)
-          .stderr(Stdio::piped())
+          .stderr(if cfg!(windows) { Stdio::null() } else { Stdio::piped() })
           .stdout(Stdio::piped())
           .spawn()
           .unwrap()
@@ -202,7 +202,7 @@ impl<'a> TargetQuality<'a> {
           .args(args)
           .stdin(source_pipe_stdout)
           .stdout(Stdio::piped())
-          .stderr(Stdio::piped())
+          .stderr(if cfg!(windows) { Stdio::null() } else { Stdio::piped() })
           .spawn()
           .unwrap()
       } else {
@@ -216,7 +216,7 @@ impl<'a> TargetQuality<'a> {
           .args(args.iter().map(AsRef::as_ref))
           .stdin(source_pipe_stdout)
           .stdout(Stdio::piped())
-          .stderr(Stdio::piped())
+          .stderr(if cfg!(windows) { Stdio::null() } else { Stdio::piped() })
           .spawn()
           .unwrap()
       } else {

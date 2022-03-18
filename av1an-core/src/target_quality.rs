@@ -188,7 +188,7 @@ impl<'a> TargetQuality<'a> {
         tokio::process::Command::new(pipe_cmd)
           .args(args)
           .stderr(if cfg!(windows) {
-            Stdio::null() 
+            Stdio::null()
           } else {
             Stdio::piped()
           })
@@ -207,7 +207,7 @@ impl<'a> TargetQuality<'a> {
           .stdin(source_pipe_stdout)
           .stdout(Stdio::piped())
           .stderr(if cfg!(windows) {
-            Stdio::null() 
+            Stdio::null()
           } else {
             Stdio::piped()
           })
@@ -225,7 +225,7 @@ impl<'a> TargetQuality<'a> {
           .stdin(source_pipe_stdout)
           .stdout(Stdio::piped())
           .stderr(if cfg!(windows) {
-            Stdio::null() 
+            Stdio::null()
           } else {
             Stdio::piped()
           })

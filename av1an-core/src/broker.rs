@@ -227,7 +227,7 @@ impl<'a> Broker<'a> {
       .as_ref()
       .map_or(self.project.passes, |ovr| ovr.passes);
     let mut tpl_crash_workaround = false;
-    for current_pass in 1..=self.project.passes {
+    for current_pass in 1..=passes {
       for r#try in 1..=self.max_tries {
         let res = self.project.create_pipes(
           chunk,

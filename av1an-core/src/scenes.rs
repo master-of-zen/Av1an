@@ -83,8 +83,20 @@ impl Scene {
         encode_args.encoder,
       );
     }
-    if encoder != encode_args.encoder && !reset {
-      bail!("Zone includes encoder change but previous args were kept. You probably meant to specify \"reset\".");
+    if encoder != encode_args.encoder {
+      if encoder
+        .get_format_bit_depth(encode_args.output_pix_format.format)
+        .is_err()
+      {
+        bail!(
+          "Output pixel format {:?} is not supported by {} (used in zones file)",
+          encode_args.output_pix_format.format,
+          encoder
+        );
+      }
+      if !reset {
+        bail!("Zone includes encoder change but previous args were kept. You probably meant to specify \"reset\".");
+      }
     }
 
     // Inherit from encode args or reset to defaults

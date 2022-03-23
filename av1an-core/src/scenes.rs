@@ -134,6 +134,8 @@ impl Scene {
     let mut zone_args = zone_args.1.into_iter().collect::<HashMap<_, _>>();
     if let Some(zone_passes) = zone_args.remove("--passes") {
       passes = zone_passes.unwrap().parse().unwrap();
+    } else if [Encoder::aom, Encoder::vpx].contains(&encoder) && zone_args.contains_key("--rt") {
+      passes = 1;
     }
     if let Some(zone_photon_noise) = zone_args.remove("--photon-noise") {
       photon_noise = Some(zone_photon_noise.unwrap().parse().unwrap());

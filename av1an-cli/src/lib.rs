@@ -548,7 +548,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
           Err(_) => Some(240_usize),
         },
       },
-      photon_noise: args.photon_noise,
+      photon_noise: args
+        .photon_noise
+        .and_then(|arg| if arg == 0 { None } else { Some(arg) }),
       sc_pix_format: args.sc_pix_format,
       keep: args.keep,
       max_tries: args.max_tries,

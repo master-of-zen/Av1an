@@ -57,6 +57,7 @@ mod grain;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;
+mod scenes;
 pub mod settings;
 pub mod split;
 pub mod target_quality;

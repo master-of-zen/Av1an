@@ -1,4 +1,5 @@
 use ffmpeg::format::Pixel;
+use itertools::Itertools;
 use smallvec::{smallvec, SmallVec};
 
 use crate::Encoder;
@@ -6,6 +7,7 @@ use crate::{into_smallvec, progress_bar, Input, ScenecutMethod, Verbosity};
 use ansi_term::Style;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 
+use crate::scenes::Scene;
 use std::process::{Command, Stdio};
 use std::thread;
 
@@ -18,7 +20,8 @@ pub fn av_scenechange_detect(
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<(Vec<usize>, usize)> {
+  zones: &[Scene],
+) -> anyhow::Result<(Vec<Scene>, usize)> {
   if verbosity != Verbosity::Quiet {
     if atty::is(atty::Stream::Stderr) {
       eprintln!("{}", Style::default().bold().paint("Scene detection"));
@@ -38,45 +41,44 @@ pub fn av_scenechange_detect(
     frames
   });
 
-  let mut scenecuts = scene_detect(
+  let scenes = scene_detect(
     input,
     encoder,
+    total_frames,
     if verbosity == Verbosity::Quiet {
       None
     } else {
-      Some(Box::new(|frames, _keyframes| {
+      Some(&|frames, _keyframes| {
         progress_bar::set_pos(frames as u64);
-      }))
+      })
     },
     min_scene_len,
     sc_pix_format,
     sc_method,
     sc_downscale_height,
+    zones,
   )?;
 
   let frames = frame_thread.join().unwrap();
 
   progress_bar::finish_progress_bar();
 
-  if scenecuts[0] == 0 {
-    // TODO refactor the chunk creation to not require this
-    // Currently, this is required for compatibility with create_video_queue_vs
-    scenecuts.remove(0);
-  }
-
-  Ok((scenecuts, frames))
+  Ok((scenes, frames))
 }
 
 /// Detect scene changes using rav1e scene detector.
+#[allow(clippy::option_if_let_else)]
 pub fn scene_detect(
   input: &Input,
   encoder: Encoder,
-  callback: Option<Box<dyn Fn(usize, usize)>>,
+  total_frames: usize,
+  callback: Option<&dyn Fn(usize, usize)>,
   min_scene_len: usize,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<Vec<usize>> {
+  zones: &[Scene],
+) -> anyhow::Result<Vec<Scene>> {
   let bit_depth;
 
   let filters: SmallVec<[String; 4]> = match (sc_downscale_height, sc_pix_format) {
@@ -140,17 +142,86 @@ pub fn scene_detect(
     }
   })?;
 
-  let options = DetectionOptions {
-    min_scenecut_distance: Some(min_scene_len),
-    analysis_speed: match sc_method {
-      ScenecutMethod::Fast => SceneDetectionSpeed::Fast,
-      ScenecutMethod::Standard => SceneDetectionSpeed::Standard,
-    },
-    ..DetectionOptions::default()
-  };
-  Ok(if bit_depth > 8 {
-    detect_scene_changes::<_, u16>(decoder, options, callback).scene_changes
+  let mut scenes = Vec::new();
+  let mut cur_zone = zones.first().filter(|frame| frame.start_frame == 0);
+  let mut next_zone_idx = if zones.is_empty() {
+    None
+  } else if cur_zone.is_some() {
+    if zones.len() == 1 {
+      None
+    } else {
+      Some(1)
+    }
   } else {
-    detect_scene_changes::<_, u8>(decoder, options, callback).scene_changes
-  })
+    Some(0)
+  };
+  let mut frames_read = 0;
+  loop {
+    let mut min_scene_len = min_scene_len;
+    if let Some(zone) = cur_zone {
+      if let Some(ref overrides) = zone.zone_overrides {
+        min_scene_len = overrides.min_scene_len;
+      }
+    };
+    let options = DetectionOptions {
+      min_scenecut_distance: Some(min_scene_len),
+      analysis_speed: match sc_method {
+        ScenecutMethod::Fast => SceneDetectionSpeed::Fast,
+        ScenecutMethod::Standard => SceneDetectionSpeed::Standard,
+      },
+      ..DetectionOptions::default()
+    };
+    let frame_limit = if let Some(zone) = cur_zone {
+      Some(zone.end_frame - zone.start_frame)
+    } else if let Some(next_idx) = next_zone_idx {
+      let zone = &zones[next_idx];
+      Some(zone.start_frame - frames_read)
+    } else {
+      None
+    };
+    let scene_changes = if bit_depth > 8 {
+      detect_scene_changes::<_, u16>(decoder, options, frame_limit, callback).scene_changes
+    } else {
+      detect_scene_changes::<_, u8>(decoder, options, frame_limit, callback).scene_changes
+    };
+    for (start, end) in scene_changes.iter().copied().tuple_windows() {
+      scenes.push(Scene {
+        start_frame: start + frames_read,
+        end_frame: end + frames_read,
+        zone_overrides: cur_zone.and_then(|zone| zone.zone_overrides.clone()),
+      });
+    }
+
+    scenes.push(Scene {
+      start_frame: scenes
+        .last()
+        .map(|scene| scene.end_frame)
+        .unwrap_or_default(),
+      end_frame: if let Some(limit) = frame_limit {
+        frames_read += limit;
+        frames_read
+      } else {
+        total_frames
+      },
+      zone_overrides: cur_zone.and_then(|zone| zone.zone_overrides.clone()),
+    });
+    if let Some(next_idx) = next_zone_idx {
+      if cur_zone.map_or(true, |zone| zone.end_frame == zones[next_idx].start_frame) {
+        cur_zone = Some(&zones[next_idx]);
+        next_zone_idx = if next_idx + 1 == zones.len() {
+          None
+        } else {
+          Some(next_idx + 1)
+        };
+      } else {
+        cur_zone = None;
+      }
+    } else if cur_zone.map_or(true, |zone| zone.end_frame == total_frames) {
+      // End of video
+      break;
+    } else {
+      cur_zone = None;
+    }
+  }
+  Ok(scenes)
 }

@@ -35,11 +35,17 @@ static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
 });
 
 pub fn is_lsmash_installed() -> bool {
-  VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas")
+  static LSMASH_PRESENT: Lazy<bool> =
+    Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas"));
+
+  *LSMASH_PRESENT
 }
 
 pub fn is_ffms2_installed() -> bool {
-  VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2")
+  static FFMS2_PRESENT: Lazy<bool> =
+    Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2"));
+
+  *FFMS2_PRESENT
 }
 
 pub fn best_available_chunk_method() -> ChunkMethod {

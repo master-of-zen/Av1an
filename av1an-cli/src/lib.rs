@@ -30,6 +30,18 @@ use once_cell::sync::OnceCell;
 // needs to be static, runtime allocated string to avoid evil hacks to
 // concatenate non-trivial strings at compile-time
 fn version() -> &'static str {
+  fn get_vs_info() -> String {
+    let isfound = |found: bool| if found { "Found" } else { "Not found" };
+    format!(
+      "\
+* VapourSynth Plugins
+  systems.innocent.lsmas : {}
+  com.vapoursynth.ffms2  : {}",
+      isfound(vapoursynth::is_lsmash_installed()),
+      isfound(vapoursynth::is_ffms2_installed())
+    )
+  }
+
   static INSTANCE: OnceCell<String> = OnceCell::new();
   INSTANCE.get_or_init(|| {
     match (
@@ -61,7 +73,9 @@ fn version() -> &'static str {
 
 * Date Info
    Build Date:  {}
-  Commit Date:  {}",
+  Commit Date:  {}
+
+{}",
           env!("CARGO_PKG_VERSION"),
           git_hash,
           cargo_profile,
@@ -69,11 +83,19 @@ fn version() -> &'static str {
           llvm_ver,
           target_triple,
           build_date,
-          commit_date
+          commit_date,
+          get_vs_info(),
         )
       }
-      // only include the semver on a release (when git information isn't available)
-      _ => env!("CARGO_PKG_VERSION").into(),
+      _ => format!(
+        "\
+{}
+
+{}",
+        // only include the semver on a release (when git information isn't available)
+        env!("CARGO_PKG_VERSION"),
+        get_vs_info()
+      ),
     }
   })
 }

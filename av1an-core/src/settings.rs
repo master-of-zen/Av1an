@@ -722,7 +722,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             start_frame: frames_processed,
             end_frame: self.frames,
             zone_overrides: None,
-          })
+          });
         }
 
         (scenes, self.input.frames()?)

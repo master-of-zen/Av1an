@@ -685,6 +685,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   }
 
   fn calc_split_locations(&self) -> anyhow::Result<(Vec<Scene>, usize)> {
+    let zones = self.parse_zones()?;
+
     Ok(match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.input,
@@ -695,9 +697,36 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.sc_pix_format,
         self.sc_method,
         self.sc_downscale_height,
-        &self.parse_zones()?,
+        &zones,
       )?,
-      SplitMethod::None => (Vec::new(), self.input.frames()?),
+      SplitMethod::None => {
+        let mut scenes = Vec::with_capacity(2 * zones.len() + 1);
+        let mut frames_processed = 0;
+        for zone in zones {
+          let end_frame = zone.end_frame;
+
+          if end_frame > frames_processed {
+            scenes.push(Scene {
+              start_frame: frames_processed,
+              end_frame: zone.start_frame,
+              zone_overrides: None,
+            });
+          }
+
+          scenes.push(zone);
+
+          frames_processed += end_frame;
+        }
+        if self.frames > frames_processed {
+          scenes.push(Scene {
+            start_frame: frames_processed,
+            end_frame: self.frames,
+            zone_overrides: None,
+          });
+        }
+
+        (scenes, self.input.frames()?)
+      }
     })
   }
 
@@ -741,11 +770,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     get_done()
       .frames
       .store(self.frames, atomic::Ordering::SeqCst);
-    let scenes_before = scenes.len() + 1;
+    let scenes_before = scenes.len();
     if !used_existing_cuts {
       if let Some(split_len) = self.extra_splits_len {
         scenes = extra_splits(&scenes, self.frames, split_len);
-        let scenes_after = scenes.len() + 1;
+        let scenes_after = scenes.len();
         info!(
           "scenecut: found {} scene(s) [with extra_splits ({} frames): {} scene(s)]",
           scenes_before, split_len, scenes_after

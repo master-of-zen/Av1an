@@ -1,7 +1,7 @@
 [package]
 name = "av1an-core"
 version = "0.3.1"
-edition = "2018"
+edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Core library]

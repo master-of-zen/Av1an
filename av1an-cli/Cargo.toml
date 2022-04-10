@@ -9,7 +9,7 @@ repository = "https://github.com/master-of-zen/Av1an"
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 atty = "0.2.14"

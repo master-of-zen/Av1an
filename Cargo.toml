@@ -48,6 +48,4 @@ overflow-checks = true
 
 [patch.crates-io]
 av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "0c63f493200eeccc21193d129fc63cb1265e40fa" }
-# TODO: switch to release version once the fix for av_get_best_stream is published on crates.io.
-ffmpeg-next = { git = "https://github.com/zmwangx/rust-ffmpeg", rev = "0054b0e51b35ed240b193c7a93455714b4d75726" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

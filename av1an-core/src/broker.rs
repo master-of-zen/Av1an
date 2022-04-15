@@ -2,7 +2,7 @@ use crate::progress_bar::update_progress_bar_estimates;
 use crate::util::printable_base10_digits;
 use crate::DoneChunk;
 use crate::{
-  ffmpeg, finish_multi_progress_bar, finish_progress_bar, get_done,
+  finish_multi_progress_bar, finish_progress_bar, get_done,
   progress_bar::{dec_bar, dec_mp_bar},
   settings::EncodeArgs,
   Chunk, Encoder, Instant, TargetQuality, Verbosity,
@@ -247,7 +247,7 @@ impl<'a> Broker<'a> {
 
           if r#try == self.max_tries {
             error!(
-              "[chunk {}] encoder crashed {} times, shutting down worker",
+              "[chunk {}] encoder failed {} times, shutting down worker",
               chunk.index, self.max_tries
             );
             return Err(e);
@@ -274,46 +274,37 @@ impl<'a> Broker<'a> {
       }
     }
 
-    let encoded_frames = ffmpeg::num_frames(chunk.output().as_ref()).unwrap();
+    let enc_time = st_time.elapsed();
+    let fps = chunk.frames as f64 / enc_time.as_secs_f64();
 
-    if encoded_frames == chunk.frames {
-      let enc_time = st_time.elapsed();
-      let fps = encoded_frames as f64 / enc_time.as_secs_f64();
+    let progress_file = Path::new(&self.project.temp).join("done.json");
+    get_done().done.insert(
+      chunk.name(),
+      DoneChunk {
+        frames: chunk.frames,
+        size_bytes: Path::new(&chunk.output())
+          .metadata()
+          .expect("Unable to get size of finished chunk")
+          .len(),
+      },
+    );
 
-      let progress_file = Path::new(&self.project.temp).join("done.json");
-      get_done().done.insert(
-        chunk.name(),
-        DoneChunk {
-          frames: encoded_frames,
-          size_bytes: Path::new(&chunk.output())
-            .metadata()
-            .expect("Unable to get size of finished chunk")
-            .len(),
-        },
-      );
+    let mut progress_file = File::create(&progress_file).unwrap();
+    progress_file
+      .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
+      .unwrap();
 
-      let mut progress_file = File::create(&progress_file).unwrap();
-      progress_file
-        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
-        .unwrap();
+    update_progress_bar_estimates(
+      frame_rate,
+      self.project.frames,
+      self.project.verbosity,
+      audio_size_bytes.load(atomic::Ordering::SeqCst),
+    );
 
-      update_progress_bar_estimates(
-        frame_rate,
-        self.project.frames,
-        self.project.verbosity,
-        audio_size_bytes.load(atomic::Ordering::SeqCst),
-      );
-
-      debug!(
-        "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
-        chunk.index, chunk.frames, fps, enc_time
-      );
-    } else {
-      warn!(
-        "finished chunk: FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
-        chunk.index, encoded_frames, chunk.frames
-      );
-    }
+    debug!(
+      "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
+      chunk.index, chunk.frames, fps, enc_time
+    );
 
     Ok(())
   }

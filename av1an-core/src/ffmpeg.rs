@@ -170,6 +170,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
       "-map_metadata",
       "0",
       "-vn",
+      "-dn",
       "-map",
       "0",
       "-map",

@@ -1,3 +1,4 @@
+use crate::ffmpeg::num_frames;
 use crate::grain::create_film_grain_file;
 use crate::parse::valid_params;
 use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
@@ -438,6 +439,27 @@ impl EncodeArgs {
         },
         frame,
       ));
+    }
+
+    if current_pass == passes {
+      let encoded_frames = num_frames(chunk.output().as_ref()).unwrap();
+
+      if encoded_frames != chunk.frames {
+        return Err((
+          EncoderCrash {
+            exit_status: enc_output.status,
+            source_pipe_stderr: source_pipe_stderr.into(),
+            ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
+            stderr: enc_stderr.into(),
+            stdout: format!(
+              "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
+              chunk.index, encoded_frames, chunk.frames
+            )
+            .into(),
+          },
+          frame,
+        ));
+      }
     }
 
     Ok(())

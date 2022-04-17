@@ -142,26 +142,31 @@ Av1an allows for **splitting input video by scenes for parallel encoding** to im
 
 ## Installation
 
+- Make sure to install these prerequisites first:
+  - [FFmpeg](https://ffmpeg.org/download.html)
+  - [Vapoursynth](http://www.vapoursynth.com/)
+  - lsmash/ffms2 are recommended but not required for faster and better processing.
+
 Av1an can be installed in two main ways, either:
 - With a package manager:
   - Cargo: `cargo install av1an`
   - Arch Linux: `pacman -S av1an`
-    
-- Or do it manually:
-  - Clone repository or download from [Releases](https://github.com/master-of-zen/Av1an/releases), then do `cargo build --release`.
 
-- Make sure to install these prerequisites first:
-  - Install nasm, llvm, clang, and [FFmpeg](https://ffmpeg.org/download.html)
-  - [Install Vapoursynth](http://www.vapoursynth.com/)
-  - Recommended to install lsmash/ffms2 for faster and better processing.
+At least one encoder is also required, install any of these that you wish to use:
 
-An encoder is also required, install any of these depending on the format/codec:
-- For AV1:
+For AV1:
   - [Install aomenc](https://aomedia.googlesource.com/aom/)
   - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
   - [Install rav1e](https://github.com/xiph/rav1e)
-- For VP9/VP8:
+
+For VP8 and VP9:
   - [Install libvpx](https://chromium.googlesource.com/webm/libvpx/)
+
+For H.264/AVC:
+  - [Install x264](https://www.videolan.org/developers/x264.html)
+
+For H.265/HEVC:
+  - [Install x265](https://www.videolan.org/developers/x265.html)
 
 Av1an also supports these optional components:
 - Chunking components:
@@ -170,6 +175,46 @@ Av1an also supports these optional components:
 - Other components:
   - [Install mkvmerge](https://mkvtoolnix.download/)
   - [Install VMAF](https://github.com/Netflix/vmaf) (required for `--target-quality` and `--vmaf`)
+
+Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
+
+### Manual compilation
+
+To compile Av1an from source, [NASM](https://www.nasm.us/), [clang/LLVM](https://llvm.org/), [FFmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/), and [Rust](https://www.rust-lang.org/) are required. Only FFmpeg and VapourSynth are required to run Av1an, the rest of the dependencies are required only for compilation.
+
+Rust 1.59.0 or newer is currently required to build Av1an.
+
+#### Compilation on Linux
+
+- Install these dependencies from your distribution's package manager.
+  - On Arch Linux, these are the `rust`, `nasm`, `clang`, `ffmpeg`, and `vapoursynth` packages.
+
+Then clone and build Av1an:
+
+```
+git clone https://github.com/master-of-zen/Av1an && cd Av1an
+cargo build --release
+```
+
+The resulting binary will be the file `./target/release/av1an`.
+
+#### Compilation on Windows
+
+To install Rust on Windows, first install [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). Then, download [`rustup-init.exe`](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe), run the program, and follow the onscreen instructions. Choose "Proceed with installation (default)" when prompted.
+
+Next, install [Python](https://www.python.org/) 3.10 or 3.8 (preferrably for all users). This is required for VapourSynth. Then, install VapourSynth from [this installer](https://github.com/vapoursynth/vapoursynth/releases/download/R58/VapourSynth64-R58.exe).
+
+Next, install NASM by using [this installer](https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-installer-x64.exe).
+
+Then, download a build of FFmpeg from here: https://github.com/GyanD/codexffmpeg/releases/download/5.0.1/ffmpeg-5.0.1-full_build-shared.7z
+
+Extract the file `ffmpeg-5.0.1-full_build-shared.7z` to a directory, then create a new environment variable called `FFMPEG_DIR` (this can be done with with the "Edit environment variables for your account" function available in the control panel), and set it to the directory that you extracted the original file to (for example, set it to `C:\Users\Username\Downloads\ffmpeg-5.0.1-full_build-shared`).
+
+Then, clone this repository (which can either be done via the git command line tool with the command `git clone https://github.com/master-of-zen/Av1an`, or by downloading and extracting the source code from the GitHub UI, which can be done with the "Download ZIP" button in the dropdown of the "Code" button near the top of the page).
+
+With a command prompt, `cd` into the directory containing this repository's source code, and run the command `cargo build --release`. If this command executes successfully with no errors, the binary (`av1an.exe`) will be the file `./target/release/av1an.exe` (relative to the directory containing the source code).
+
+To use the binary, copy all the `dll` files from `ffmpeg-5.0.1-full_build-shared\bin` to the same directory as `av1an.exe`, and ensure that `ffmpeg.exe` is in a folder accessible via the `PATH` environment variable.
 
 ## Usage in Docker
 

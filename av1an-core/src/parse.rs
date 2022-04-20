@@ -4,7 +4,8 @@
 //! runtime detection that the corresponding feature
 //! set is available before calling them.
 
-use std::{borrow::Cow, collections::HashSet};
+use std::borrow::Cow;
+use std::collections::HashSet;
 
 use crate::encoder::Encoder;
 
@@ -78,7 +79,6 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
   use std::arch::x86::*;
   #[cfg(target_arch = "x86_64")]
   use std::arch::x86_64::*;
-
   use std::mem::transmute;
 
   // This implementation matches the *second* number in the output. Ex:

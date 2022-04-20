@@ -1,18 +1,17 @@
-use crate::broker::EncoderCrash;
-use crate::util::printable_base10_digits;
-use crate::{ffmpeg, ref_smallvec, Input};
-use anyhow::anyhow;
-use anyhow::Context;
+use std::cmp::Ordering;
+use std::ffi::OsStr;
+use std::path::Path;
+use std::process::{Command, Stdio};
+use std::usize;
+
+use anyhow::{anyhow, Context};
 use plotters::prelude::*;
 use serde::Deserialize;
 use smallvec::SmallVec;
-use std::{
-  cmp::Ordering,
-  ffi::OsStr,
-  path::Path,
-  process::{Command, Stdio},
-  usize,
-};
+
+use crate::broker::EncoderCrash;
+use crate::util::printable_base10_digits;
+use crate::{ffmpeg, ref_smallvec, Input};
 
 #[derive(Deserialize, Debug)]
 struct VmafScore {

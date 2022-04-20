@@ -1,6 +1,9 @@
-use crate::scenes::ZoneOptions;
+use std::ffi::OsString;
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
-use std::{ffi::OsString, path::Path};
+
+use crate::scenes::ZoneOptions;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Chunk {

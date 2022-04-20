@@ -1,31 +1,24 @@
-use ::ffmpeg::format::Pixel;
-use ansi_term::{Color, Style};
-use anyhow::{anyhow, Context};
-use anyhow::{bail, ensure};
-use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
-use av1an_core::settings::{InputPixelFormat, PixelFormat};
-use av1an_core::util::read_in_dir;
-use av1an_core::ScenecutMethod;
-use av1an_core::{ffmpeg, into_vec};
-use av1an_core::{ChunkOrdering, Input};
-use flexi_logger::writers::LogWriter;
-use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
-use path_abs::{PathAbs, PathInfo};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use clap::{AppSettings, Parser};
-
+use ::ffmpeg::format::Pixel;
+use ansi_term::{Color, Style};
+use anyhow::{anyhow, bail, ensure, Context};
+use av1an_core::concat::ConcatMethod;
+use av1an_core::encoder::Encoder;
+use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
+use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
+use av1an_core::util::read_in_dir;
 use av1an_core::{
-  encoder::Encoder,
-  hash_path,
-  settings::EncodeArgs,
-  vapoursynth, Verbosity,
-  {concat::ConcatMethod, ChunkMethod, SplitMethod},
+  ffmpeg, hash_path, into_vec, vapoursynth, ChunkMethod, ChunkOrdering, Input, ScenecutMethod,
+  SplitMethod, Verbosity,
 };
-
+use clap::{AppSettings, Parser};
+use flexi_logger::writers::LogWriter;
+use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use once_cell::sync::OnceCell;
+use path_abs::{PathAbs, PathInfo};
 
 // needs to be static, runtime allocated string to avoid evil hacks to
 // concatenate non-trivial strings at compile-time

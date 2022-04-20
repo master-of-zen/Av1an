@@ -1,8 +1,8 @@
-use crate::parse::valid_params;
-use crate::settings::{invalid_params, suggest_fix, EncodeArgs};
-use crate::Encoder;
-use anyhow::Result;
-use anyhow::{anyhow, bail};
+use std::collections::HashMap;
+use std::process::{exit, Command};
+use std::str::FromStr;
+
+use anyhow::{anyhow, bail, Result};
 use itertools::Itertools;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till, take_while};
@@ -11,9 +11,10 @@ use nom::combinator::{map, map_res, opt, recognize, rest};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{preceded, tuple};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::process::{exit, Command};
-use std::str::FromStr;
+
+use crate::parse::valid_params;
+use crate::settings::{invalid_params, suggest_fix, EncodeArgs};
+use crate::Encoder;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Scene {
@@ -248,11 +249,10 @@ fn get_test_args() -> EncodeArgs {
 
   use ffmpeg::format::Pixel;
 
+  use crate::concat::ConcatMethod;
+  use crate::settings::{InputPixelFormat, PixelFormat};
   use crate::{
-    concat::ConcatMethod,
-    into_vec,
-    settings::{InputPixelFormat, PixelFormat},
-    ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity,
+    into_vec, ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity,
   };
 
   EncodeArgs {

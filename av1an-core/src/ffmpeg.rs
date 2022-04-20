@@ -1,15 +1,14 @@
-use crate::{into_array, into_vec};
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
 use ffmpeg::color::TransferCharacteristic;
 use ffmpeg::format::{input, Pixel};
 use ffmpeg::media::Type as MediaType;
 use ffmpeg::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
-use std::path::PathBuf;
-use std::{
-  ffi::OsStr,
-  path::Path,
-  process::{Command, Stdio},
-};
+
+use crate::{into_array, into_vec};
 
 pub fn compose_ffmpeg_pipe<S: Into<String>>(
   params: impl IntoIterator<Item = S>,

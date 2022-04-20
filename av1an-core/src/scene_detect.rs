@@ -1,15 +1,16 @@
-use crate::scenes::Scene;
-use crate::Encoder;
-use crate::{into_smallvec, progress_bar, Input, ScenecutMethod, Verbosity};
+use std::io::Read;
+use std::process::{Command, Stdio};
+use std::thread;
+
 use ansi_term::Style;
 use anyhow::bail;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
 use smallvec::{smallvec, SmallVec};
-use std::io::Read;
-use std::process::{Command, Stdio};
-use std::thread;
+
+use crate::scenes::Scene;
+use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
 
 pub fn av_scenechange_detect(
   input: &Input,

@@ -1,10 +1,8 @@
-use crate::get_done;
-use crate::Verbosity;
-use indicatif::HumanBytes;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::{HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use once_cell::sync::OnceCell;
 
 use crate::util::printable_base10_digits;
+use crate::{get_done, Verbosity};
 
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display

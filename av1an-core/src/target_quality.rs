@@ -1,20 +1,18 @@
-use crate::{
-  broker::EncoderCrash,
-  chunk::Chunk,
-  settings::EncodeArgs,
-  vmaf::{self, read_weighted_vmaf},
-  Encoder,
-};
+use std::cmp;
+use std::cmp::Ordering;
+use std::convert::TryInto;
+use std::fmt::Error;
+use std::path::{Path, PathBuf};
+use std::process::Stdio;
+
 use ffmpeg::format::Pixel;
 use splines::{Interpolation, Key, Spline};
-use std::{
-  cmp,
-  cmp::Ordering,
-  convert::TryInto,
-  fmt::Error,
-  path::{Path, PathBuf},
-  process::Stdio,
-};
+
+use crate::broker::EncoderCrash;
+use crate::chunk::Chunk;
+use crate::settings::EncodeArgs;
+use crate::vmaf::{self, read_weighted_vmaf};
+use crate::Encoder;
 
 const VMAF_PERCENTILE: f64 = 0.25;
 

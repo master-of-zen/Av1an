@@ -20,11 +20,17 @@
 #[macro_use]
 extern crate log;
 
-use crate::{
-  encoder::Encoder,
-  progress_bar::{finish_multi_progress_bar, finish_progress_bar},
-  target_quality::TargetQuality,
-};
+use std::cmp::max;
+use std::collections::hash_map::DefaultHasher;
+use std::fs;
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::string::ToString;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::time::Instant;
+
 use ::ffmpeg::color::TransferCharacteristic;
 use anyhow::Context;
 use chunk::Chunk;
@@ -32,21 +38,12 @@ use dashmap::DashMap;
 use grain::TransferFunction;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::{
-  cmp::max,
-  collections::hash_map::DefaultHasher,
-  fs,
-  fs::File,
-  hash::{Hash, Hasher},
-  io::Write,
-  path::{Path, PathBuf},
-  string::ToString,
-  sync::atomic::{AtomicBool, AtomicUsize},
-  time::Instant,
-};
+use strum::{Display, EnumString, IntoStaticStr};
 use sysinfo::SystemExt;
 
-use strum::{Display, EnumString, IntoStaticStr};
+use crate::encoder::Encoder;
+use crate::progress_bar::{finish_multi_progress_bar, finish_progress_bar};
+use crate::target_quality::TargetQuality;
 
 pub mod broker;
 pub mod chunk;

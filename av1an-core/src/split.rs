@@ -1,14 +1,14 @@
-use crate::scenes::Scene;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::path::Path;
+use std::process::{Command, Stdio};
+use std::string::ToString;
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use std::{
-  fs::File,
-  io::prelude::*,
-  io::BufReader,
-  path::Path,
-  process::{Command, Stdio},
-  string::ToString,
-};
+
+use crate::scenes::Scene;
 
 pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usize]) {
   let input = input.as_ref();
@@ -139,9 +139,10 @@ pub fn read_scenes_from_file(scene_path: &Path) -> anyhow::Result<(Vec<Scene>, u
 
 #[cfg(test)]
 mod tests {
-  use crate::{encoder::Encoder, into_vec, scenes::ZoneOptions};
-
   use super::*;
+  use crate::encoder::Encoder;
+  use crate::into_vec;
+  use crate::scenes::ZoneOptions;
 
   #[test]
   fn test_extra_split_no_segments() {

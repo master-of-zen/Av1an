@@ -1,62 +1,46 @@
-use crate::ffmpeg::num_frames;
-use crate::grain::create_film_grain_file;
-use crate::parse::valid_params;
-use crate::progress_bar::{reset_bar_at, reset_mp_bar_at};
-use crate::progress_bar::{update_mp_chunk, update_progress_bar_estimates};
-use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed};
-use crate::ChunkOrdering;
-use crate::{
-  broker::{Broker, EncoderCrash},
-  chunk::Chunk,
-  concat::{self, ConcatMethod},
-  create_dir, determine_workers,
-  ffmpeg::compose_ffmpeg_pipe,
-  finish_multi_progress_bar, get_done, init_done, into_vec,
-  progress_bar::{
-    finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
-    update_mp_msg,
-  },
-  read_chunk_queue, save_chunk_queue,
-  scene_detect::av_scenechange_detect,
-  split::{extra_splits, segment, write_scenes_to_file},
-  vapoursynth::create_vs_file,
-  vmaf::{self, validate_libvmaf},
-  ChunkMethod, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod, TargetQuality,
-  Verbosity,
-};
+use std::borrow::{Borrow, Cow};
+use std::cmp::{Ordering, Reverse};
+use std::collections::{BTreeSet, HashSet};
+use std::convert::TryInto;
+use std::ffi::OsString;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{exit, Command, Stdio};
+use std::sync::atomic::{self, AtomicBool, AtomicU64, AtomicUsize};
+use std::sync::{mpsc, Arc};
+use std::{cmp, fs, iter, thread};
+
+use ansi_term::{Color, Style};
 use anyhow::{bail, ensure, Context};
 use crossbeam_utils;
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
-use std::sync::atomic::AtomicUsize;
-use std::thread;
-use std::{
-  borrow::Cow,
-  cmp,
-  cmp::Reverse,
-  collections::HashSet,
-  convert::TryInto,
-  ffi::OsString,
-  fs,
-  fs::File,
-  io::Write,
-  iter,
-  path::{Path, PathBuf},
-  process::{exit, Command, Stdio},
-  sync::atomic::{self, AtomicBool, AtomicU64},
-  sync::{mpsc, Arc},
-};
-
-use ansi_term::{Color, Style};
-
-use crate::scenes::{Scene, ZoneOptions};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
+
+use crate::broker::{Broker, EncoderCrash};
+use crate::chunk::Chunk;
+use crate::concat::{self, ConcatMethod};
+use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
+use crate::grain::create_film_grain_file;
+use crate::parse::valid_params;
+use crate::progress_bar::{
+  finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
+  reset_bar_at, reset_mp_bar_at, update_mp_chunk, update_mp_msg, update_progress_bar_estimates,
+};
+use crate::scene_detect::av_scenechange_detect;
+use crate::scenes::{Scene, ZoneOptions};
+use crate::split::{extra_splits, segment, write_scenes_to_file};
+use crate::vapoursynth::{create_vs_file, is_ffms2_installed, is_lsmash_installed};
+use crate::vmaf::{self, validate_libvmaf};
+use crate::{
+  create_dir, determine_workers, finish_multi_progress_bar, get_done, init_done, into_vec,
+  read_chunk_queue, save_chunk_queue, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder,
+  Input, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
+};
 
 pub struct PixelFormat {
   pub format: Pixel,

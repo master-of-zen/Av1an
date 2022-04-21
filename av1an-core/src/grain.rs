@@ -1,8 +1,6 @@
-use std::{
-  fs::File,
-  io::{BufWriter, Write},
-  path::Path,
-};
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::Path;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NoiseGenArgs {

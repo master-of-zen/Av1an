@@ -1,18 +1,15 @@
-use std::{
-  collections::HashSet,
-  fs::File,
-  io::Write,
-  path::{Path, PathBuf},
-};
-use vapoursynth::video_info::VideoInfo;
-
-use once_cell::sync::Lazy;
-
-use super::ChunkMethod;
-use path_abs::PathAbs;
-use vapoursynth::prelude::*;
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail};
+use once_cell::sync::Lazy;
+use path_abs::PathAbs;
+use vapoursynth::prelude::*;
+use vapoursynth::video_info::VideoInfo;
+
+use super::ChunkMethod;
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
   let environment = Environment::new().expect("Failed to initialize VapourSynth environment");

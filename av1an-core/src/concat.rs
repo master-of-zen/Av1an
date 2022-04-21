@@ -1,25 +1,21 @@
+use std::fmt::{Display, Write as FmtWrite};
+use std::fs::{self, DirEntry, File};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::sync::Arc;
+
 use anyhow::{anyhow, Context};
-use av_format::{
-  buffer::AccReader,
-  demuxer::{Context as DemuxerContext, Event},
-  muxer::Context as MuxerContext,
-};
-use av_ivf::{demuxer::IvfDemuxer, muxer::IvfMuxer};
-use path_abs::PathAbs;
+use av_format::buffer::AccReader;
+use av_format::demuxer::{Context as DemuxerContext, Event};
+use av_format::muxer::Context as MuxerContext;
+use av_ivf::demuxer::IvfDemuxer;
+use av_ivf::muxer::IvfMuxer;
+use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
-use std::{
-  fmt::Display,
-  fmt::Write as FmtWrite,
-  fs::{self, DirEntry, File},
-  io::Write,
-  path::{Path, PathBuf},
-  process::{Command, Stdio},
-  sync::Arc,
-};
 
-use path_abs::PathInfo;
-
-use crate::{encoder::Encoder, util::read_in_dir};
+use crate::encoder::Encoder;
+use crate::util::read_in_dir;
 
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,

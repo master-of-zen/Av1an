@@ -1,14 +1,20 @@
-use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_array, into_vec, list_index};
+use std::borrow::Cow;
+use std::cmp;
+use std::fmt::Display;
+use std::iter::Iterator;
+use std::path::PathBuf;
+use std::process::Command;
+
 use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
 use ffmpeg::format::Pixel;
 use itertools::chain;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cmp, fmt::Display, path::PathBuf, process::Command};
 use thiserror::Error;
 
-use std::iter::Iterator;
+use crate::ffmpeg::compose_ffmpeg_pipe;
+use crate::{inplace_vec, into_array, into_vec, list_index};
 
 const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 

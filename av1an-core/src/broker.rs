@@ -1,27 +1,24 @@
-use crate::progress_bar::update_progress_bar_estimates;
-use crate::util::printable_base10_digits;
-use crate::DoneChunk;
-use crate::{
-  finish_multi_progress_bar, finish_progress_bar, get_done,
-  progress_bar::{dec_bar, dec_mp_bar},
-  settings::EncodeArgs,
-  Chunk, Encoder, Instant, TargetQuality, Verbosity,
-};
+use std::fmt::{Debug, Display};
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+use std::process::ExitStatus;
 use std::sync::atomic::{self, AtomicU64};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::{
-  fmt::{Debug, Display},
-  fs::File,
-  io::Write,
-  path::Path,
-  process::ExitStatus,
-  sync::mpsc::Sender,
-};
 
 use cfg_if::cfg_if;
 use memchr::memmem;
 use smallvec::SmallVec;
 use thiserror::Error;
+
+use crate::progress_bar::{dec_bar, dec_mp_bar, update_progress_bar_estimates};
+use crate::settings::EncodeArgs;
+use crate::util::printable_base10_digits;
+use crate::{
+  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Encoder, Instant,
+  TargetQuality, Verbosity,
+};
 
 pub struct Broker<'a> {
   pub max_tries: usize,

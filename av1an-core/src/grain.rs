@@ -1,3 +1,5 @@
+#![allow(clippy::inline_always)]
+
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -28,10 +30,51 @@ const PQ_C1: f32 = 3424. / 4096.;
 const PQ_C2: f32 = 32. * 2413. / 4096.;
 const PQ_C3: f32 = 32. * 2392. / 4096.;
 
+const BT1886_WHITEPOINT: f32 = 203.;
+const BT1886_BLACKPOINT: f32 = 0.1;
+const BT1886_GAMMA: f32 = 2.4;
+
+// BT.1886 formula from https://en.wikipedia.org/wiki/ITU-R_BT.1886.
+//
+// TODO: the inverses, alpha, and beta should all be constants
+// once floats in const fns are stabilized and `powf` is const.
+// Until then, `inline(always)` gets us close enough.
+
+#[inline(always)]
+fn bt1886_inv_whitepoint() -> f32 {
+  BT1886_WHITEPOINT.powf(1.0 / BT1886_GAMMA)
+}
+
+#[inline(always)]
+fn bt1886_inv_blackpoint() -> f32 {
+  BT1886_BLACKPOINT.powf(1.0 / BT1886_GAMMA)
+}
+
+/// The variable for user gain:
+/// `α = (Lw^(1/λ) - Lb^(1/λ)) ^ λ`
+#[inline(always)]
+fn bt1886_alpha() -> f32 {
+  (bt1886_inv_whitepoint() - bt1886_inv_blackpoint()).powf(BT1886_GAMMA)
+}
+
+/// The variable for user black level lift:
+/// `β = Lb^(1/λ) / (Lw^(1/λ) - Lb^(1/λ))`
+#[inline(always)]
+fn bt1886_beta() -> f32 {
+  bt1886_inv_blackpoint() / (bt1886_inv_whitepoint() - bt1886_inv_blackpoint())
+}
+
 impl TransferFunction {
   pub fn to_linear(self, x: f32) -> f32 {
     match self {
-      TransferFunction::BT1886 => x.powf(2.8),
+      TransferFunction::BT1886 => {
+        // The screen luminance in cd/m^2:
+        // L = α * max((x + β, 0))^λ
+        let luma = bt1886_alpha() * 0f32.max(x + bt1886_beta()).powf(BT1886_GAMMA);
+
+        // Normalize to between 0.0 and 1.0
+        luma / BT1886_WHITEPOINT
+      }
       TransferFunction::SMPTE2084 => {
         let pq_pow_inv_m2 = x.powf(1. / PQ_M2);
         (0_f32.max(pq_pow_inv_m2 - PQ_C1) / (PQ_C2 - PQ_C3 * pq_pow_inv_m2)).powf(1. / PQ_M1)
@@ -42,19 +85,27 @@ impl TransferFunction {
   #[allow(clippy::wrong_self_convention)]
   pub fn from_linear(self, x: f32) -> f32 {
     match self {
-      TransferFunction::BT1886 => x.powf(1. / 2.8),
+      TransferFunction::BT1886 => {
+        // Scale to a raw cd/m^2 value
+        let luma = x * BT1886_WHITEPOINT;
+
+        // The inverse of the `to_linear` formula:
+        // `(L / α)^(1 / λ) - β = x`
+        (luma / bt1886_alpha()).powf(1.0 / BT1886_GAMMA) - bt1886_beta()
+      }
       TransferFunction::SMPTE2084 => {
+        if x < f32::EPSILON {
+          return 0.0;
+        }
         let linear_pow_m1 = x.powf(PQ_M1);
         (PQ_C2.mul_add(linear_pow_m1, PQ_C1) / PQ_C3.mul_add(linear_pow_m1, 1.)).powf(PQ_M2)
       }
     }
   }
 
+  #[inline(always)]
   pub fn mid_tone(self) -> f32 {
-    match self {
-      TransferFunction::BT1886 => 0.18,
-      TransferFunction::SMPTE2084 => 26. / 10000.,
-    }
+    self.to_linear(0.5)
   }
 }
 
@@ -156,4 +207,57 @@ fn write_film_grain_table(
   writeln!(file, "\tcCr 0")?;
   file.flush()?;
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use quickcheck::TestResult;
+  use quickcheck_macros::quickcheck;
+
+  #[quickcheck]
+  fn bt1886_to_linear_within_range(x: f32) -> TestResult {
+    if x < 0.0 || x > 1.0 || x.is_nan() {
+      return TestResult::discard();
+    }
+
+    let tx = TransferFunction::BT1886;
+    let res = tx.to_linear(x);
+    TestResult::from_bool(res >= 0.0 && res <= 1.0)
+  }
+
+  #[quickcheck]
+  fn bt1886_to_linear_reverts_correctly(x: f32) -> TestResult {
+    if x < 0.0 || x > 1.0 || x.is_nan() {
+      return TestResult::discard();
+    }
+
+    let tx = TransferFunction::BT1886;
+    let res = tx.to_linear(x);
+    let res = tx.from_linear(res);
+    TestResult::from_bool((x - res).abs() < f32::EPSILON)
+  }
+
+  #[quickcheck]
+  fn smpte2084_to_linear_within_range(x: f32) -> TestResult {
+    if x < 0.0 || x > 1.0 || x.is_nan() {
+      return TestResult::discard();
+    }
+
+    let tx = TransferFunction::SMPTE2084;
+    let res = tx.to_linear(x);
+    TestResult::from_bool(res >= 0.0 && res <= 1.0)
+  }
+
+  #[quickcheck]
+  fn smpte2084_to_linear_reverts_correctly(x: f32) -> TestResult {
+    if x < 0.0 || x > 1.0 || x.is_nan() {
+      return TestResult::discard();
+    }
+
+    let tx = TransferFunction::SMPTE2084;
+    let res = tx.to_linear(x);
+    let res = tx.from_linear(res);
+    TestResult::from_bool((x - res).abs() < f32::EPSILON)
+  }
 }

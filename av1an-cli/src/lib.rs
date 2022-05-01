@@ -370,43 +370,55 @@ pub struct CliOpts {
 
   /// Path to a file specifying zones within the video with differing encoder settings.
   ///
-  /// The zones file should include one zone per line, with each arg within a zone space-separated.
-  /// No quotes or escaping are needed around the encoder args, as these are assumed to be the last argument.
+  /// The zones file should include one zone per line,
+  /// with each arg within a zone space-separated.
+  /// No quotes or escaping are needed around the encoder args,
+  /// as these are assumed to be the last argument.
+  ///
   /// The zone args on each line should be in this order:
   ///
+  /// ```
   /// start_frame end_frame encoder reset(opt) video_params
+  /// ```
   ///
   /// For example:
   ///
-  /// ```ignore
+  /// ```
   /// 136 169 aom --photon-noise 4 --cq-level=32
   /// 169 1330 rav1e reset -s 3 -q 42
   /// ```
   ///
-  /// Example line 1 will encode frames 136-168 using aomenc with the argument `--cq-level=32`
-  /// and enable av1an's `--photon-noise` option.
-  /// Note that the end frame number is *exclusive*. The start and end frame will both be forced
-  /// to be scenecuts. Additional scene detection will still be applied within the zones.
+  /// Example line 1 will encode frames 136-168 using aomenc
+  /// with the argument `--cq-level=32` and enable av1an's `--photon-noise` option.
+  /// Note that the end frame number is *exclusive*.
+  /// The start and end frame will both be forced to be scenecuts.
+  /// Additional scene detection will still be applied within the zones.
   /// `-1` can be used to refer to the last frame in the video.
   ///
-  /// The default behavior as shown on line 1 is to preserve any options passed to
-  /// `--video-params` or `--photon-noise` in av1an, and append or overwrite
-  /// the additional zone settings.
+  /// The default behavior as shown on line 1 is to preserve
+  /// any options passed to `--video-params` or `--photon-noise`
+  /// in av1an, and append or overwrite the additional zone settings.
   ///
-  /// Example line 2 will encode frames 169-1329 using rav1e. The `reset` keyword instructs
-  /// av1an to ignore any settings which affect the encoder, and use only the
-  /// parameters from this zone.
+  /// Example line 2 will encode frames 169-1329 using rav1e.
+  /// The `reset` keyword instructs av1an to ignore any settings
+  /// which affect the encoder, and use only the parameters from this zone.
   ///
-  /// For segments where no zone is specified, the settings passed to av1an itself will be used.
+  /// For segments where no zone is specified,
+  /// the settings passed to av1an itself will be used.
   ///
-  /// The video params which may be specified include any parameters that are allowed by
-  /// the encoder, as well as the following av1an options:
+  /// The video params which may be specified include any parameters
+  /// that are allowed by the encoder, as well as the following av1an options:
   ///
   /// - `-x`/`--extra-split`
   /// - `--min-scene-len`
   /// - `--passes`
   /// - `--photon-noise` (aomenc only)
-  #[clap(long, parse(from_os_str), help_heading = "ENCODING")]
+  #[clap(
+    long,
+    parse(from_os_str),
+    help_heading = "ENCODING",
+    verbatim_doc_comment
+  )]
   pub zones: Option<PathBuf>,
 
   /// Plot an SVG of the VMAF for the encode

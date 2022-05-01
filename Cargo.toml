@@ -47,5 +47,5 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "0c63f493200eeccc21193d129fc63cb1265e40fa" }
+av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "a124199a746cba3ff2e08637836d37a91b6a9a58" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

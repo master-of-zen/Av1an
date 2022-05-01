@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.7.2"
-source = "git+https://github.com/rust-av/av-scenechange?rev=0c63f493200eeccc21193d129fc63cb1265e40fa#0c63f493200eeccc21193d129fc63cb1265e40fa"
+source = "git+https://github.com/rust-av/av-scenechange?rev=a124199a746cba3ff2e08637836d37a91b6a9a58#a124199a746cba3ff2e08637836d37a91b6a9a58"
 dependencies = [
  "anyhow",
  "rav1e",
@@ -793,6 +793,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 
 [[package]]
+name = "maybe-rayon"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0bd354d2614d2feeb08dd2afdb744a91ad3c886e2a04dac63e12fb32eb7f7"
+dependencies = [
+ "cfg-if",
+ "rayon",
+]
+
+[[package]]
 name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -844,6 +854,12 @@ checksum = "ce095842aee9aa3ecbda7a5d2a4df680375fd128a8596b6b56f8e497e231f483"
 dependencies = [
  "rayon",
 ]
+
+[[package]]
+name = "new_debug_unreachable"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
 
 [[package]]
 name = "nom"
@@ -1157,7 +1173,7 @@ dependencies = [
 [[package]]
 name = "rav1e"
 version = "0.5.0"
-source = "git+https://github.com/xiph/rav1e#cbdf0703160bd4153975cb4ac3192476713f50c8"
+source = "git+https://github.com/xiph/rav1e#b5c76736440250409b173b07f99aa94e60ec47e2"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1172,14 +1188,15 @@ dependencies = [
  "libc",
  "libfuzzer-sys",
  "log",
+ "maybe-rayon",
  "nasm-rs",
+ "new_debug_unreachable",
  "noop_proc_macro",
  "num-derive",
  "num-traits",
  "paste",
  "rand",
  "rand_chacha",
- "rayon",
  "regex",
  "rust_hawktracer",
  "rustc_version",
@@ -1674,9 +1691,10 @@ dependencies = [
 [[package]]
 name = "v_frame"
 version = "0.2.5"
-source = "git+https://github.com/xiph/rav1e#cbdf0703160bd4153975cb4ac3192476713f50c8"
+source = "git+https://github.com/xiph/rav1e#b5c76736440250409b173b07f99aa94e60ec47e2"
 dependencies = [
  "cfg-if",
+ "new_debug_unreachable",
  "noop_proc_macro",
  "num-derive",
  "num-traits",
@@ -1713,7 +1731,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vergen"
 version = "3.0.4"
-source = "git+https://github.com/xiph/rav1e#cbdf0703160bd4153975cb4ac3192476713f50c8"
+source = "git+https://github.com/xiph/rav1e#b5c76736440250409b173b07f99aa94e60ec47e2"
 dependencies = [
  "bitflags",
  "chrono",

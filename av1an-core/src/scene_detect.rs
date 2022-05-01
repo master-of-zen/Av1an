@@ -49,7 +49,7 @@ pub fn av_scenechange_detect(
     if verbosity == Verbosity::Quiet {
       None
     } else {
-      Some(&|frames, _keyframes| {
+      Some(&|frames| {
         progress_bar::set_pos(frames as u64);
       })
     },
@@ -73,7 +73,7 @@ pub fn scene_detect(
   input: &Input,
   encoder: Encoder,
   total_frames: usize,
-  callback: Option<&dyn Fn(usize, usize)>,
+  callback: Option<&dyn Fn(usize)>,
   min_scene_len: usize,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
@@ -119,10 +119,25 @@ pub fn scene_detect(
     } else {
       None
     };
+    let callback = callback.map(|cb| {
+      |frames, _keyframes| {
+        cb(frames + frames_read);
+      }
+    });
     let sc_result = if bit_depth > 8 {
-      detect_scene_changes::<_, u16>(&mut decoder, options, frame_limit, callback)
+      detect_scene_changes::<_, u16>(
+        &mut decoder,
+        options,
+        frame_limit,
+        callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
+      )
     } else {
-      detect_scene_changes::<_, u8>(&mut decoder, options, frame_limit, callback)
+      detect_scene_changes::<_, u8>(
+        &mut decoder,
+        options,
+        frame_limit,
+        callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
+      )
     };
     if let Some(limit) = frame_limit {
       if limit != sc_result.frame_count {

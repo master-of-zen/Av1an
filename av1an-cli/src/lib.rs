@@ -519,12 +519,12 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
   // TODO: to validate file extensions
   // let valid_media_extensions = ["mkv", "mov", "mp4", "webm", "avi", "qt", "ts", "m2t", "py", "vpy"];
 
-  if path.is_file() {
-    Ok(Box::new(std::iter::once(path.to_path_buf())))
-  } else if path.is_dir() {
+  ensure!(path.exists(), "Input path {:?} does not exist. Please ensure you typed it properly and it has not been moved.", path);
+
+  if path.is_dir() {
     Ok(Box::new(read_in_dir(path)?))
   } else {
-    bail!("path {:?} is not a file or directory", path)
+    Ok(Box::new(std::iter::once(path.to_path_buf())))
   }
 }
 
@@ -532,11 +532,10 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 
-  let inputs: Vec<PathBuf> = input_paths
-    .iter()
-    .flat_map(|input| resolve_file_paths(input))
-    .flatten()
-    .collect();
+  let mut inputs = Vec::new();
+  for path in input_paths {
+    inputs.extend(resolve_file_paths(path)?);
+  }
 
   let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(inputs.len());
 

@@ -35,6 +35,8 @@ members = ["av1an-core", "av1an-cli"]
 
 [profile.dev.package.av-scenechange]
 opt-level = 3
+[profile.dev.package.rav1e]
+opt-level = 3
 
 [profile.release]
 lto = "thin"
@@ -48,5 +50,5 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "4804462f2b6ae6209609cd95b5d9739264bf614f" }
+av-scenechange = { git = "https://github.com/redzic/av-scenechange", branch = "zerocopy" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

@@ -4,6 +4,8 @@ use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
+use av_metrics_decoders::Decoder;
+use av_metrics_decoders::FfmpegDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
@@ -49,7 +51,7 @@ pub fn av_scenechange_detect(
     if verbosity == Verbosity::Quiet {
       None
     } else {
-      Some(&|frames| {
+      Some(&|frames, _| {
         progress_bar::set_pos(frames as u64);
       })
     },
@@ -71,16 +73,22 @@ pub fn av_scenechange_detect(
 #[allow(clippy::option_if_let_else)]
 pub fn scene_detect(
   input: &Input,
-  encoder: Encoder,
+  // TODO use these fields
+  _encoder: Encoder,
   total_frames: usize,
-  callback: Option<&dyn Fn(usize)>,
+  callback: Option<&dyn Fn(usize, usize)>,
   min_scene_len: usize,
-  sc_pix_format: Option<Pixel>,
+  // TODO use these fields
+  _sc_pix_format: Option<Pixel>,
+  // TODO use these fields
   sc_method: ScenecutMethod,
-  sc_downscale_height: Option<usize>,
+  _sc_downscale_height: Option<usize>,
   zones: &[Scene],
 ) -> anyhow::Result<Vec<Scene>> {
-  let (mut decoder, bit_depth) = build_decoder(input, encoder, sc_pix_format, sc_downscale_height)?;
+  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path().as_ref());
+
+  let mut decoder = FfmpegDecoder::new(&mut ctx).unwrap();
+  let bit_depth = decoder.get_bit_depth();
 
   let mut scenes = Vec::new();
   let mut cur_zone = zones.first().filter(|frame| frame.start_frame == 0);
@@ -121,18 +129,18 @@ pub fn scene_detect(
     };
     let callback = callback.map(|cb| {
       |frames, _keyframes| {
-        cb(frames + frames_read);
+        cb(frames + frames_read, 0);
       }
     });
     let sc_result = if bit_depth > 8 {
-      detect_scene_changes::<_, u16>(
+      detect_scene_changes::<u16>(
         &mut decoder,
         options,
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
       )
     } else {
-      detect_scene_changes::<_, u8>(
+      detect_scene_changes::<u8>(
         &mut decoder,
         options,
         frame_limit,
@@ -191,6 +199,7 @@ pub fn scene_detect(
   Ok(scenes)
 }
 
+#[allow(unused)]
 fn build_decoder(
   input: &Input,
   encoder: Encoder,

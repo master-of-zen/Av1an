@@ -25,7 +25,7 @@ use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
 use crate::concat::{self, ConcatMethod};
 use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
-use crate::grain::create_film_grain_file;
+use crate::grain::{create_film_grain_file, TransferFunction};
 use crate::parse::valid_params;
 use crate::progress_bar::{
   finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
@@ -1084,6 +1084,22 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       } else {
         None
       };
+
+    let res = self.input.resolution()?;
+    let fps = self.input.frame_rate()?;
+    let format = self.input.pixel_format()?;
+    let tfc = self.input.transfer_function()?;
+    info!(
+      "Input: {}x{} @ {:.3} fps, {}, {}",
+      res.0,
+      res.1,
+      fps,
+      format,
+      match tfc {
+        TransferFunction::SMPTE2084 => "HDR",
+        TransferFunction::BT1886 => "SDR",
+      }
+    );
 
     let splits = self.split_routine()?;
 

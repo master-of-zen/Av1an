@@ -269,3 +269,19 @@ pub fn transfer_characteristics(source: &Path) -> anyhow::Result<u8> {
 
   get_transfer(&mut environment)
 }
+
+pub fn pixel_format(source: &Path) -> anyhow::Result<String> {
+  // Create a new VSScript environment.
+  let mut environment = Environment::new().unwrap();
+
+  // Evaluate the script.
+  environment
+    .eval_file(source, EvalFlags::SetWorkingDir)
+    .unwrap();
+
+  let info = get_clip_info(&mut environment);
+  match info.format {
+    Property::Variable => bail!("Variable pixel format not supported"),
+    Property::Constant(x) => Ok(x.name().to_string()),
+  }
+}

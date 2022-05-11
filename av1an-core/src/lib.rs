@@ -145,6 +145,19 @@ impl Input {
     })
   }
 
+  pub fn pixel_format(&self) -> anyhow::Result<String> {
+    const FAIL_MSG: &str = "Failed to get resolution for input video";
+    Ok(match self {
+      Input::VapourSynth(video) => {
+        crate::vapoursynth::pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      }
+      Input::Video(video) => {
+        let fmt = crate::ffmpeg::get_pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
+        format!("{:?}", fmt)
+      }
+    })
+  }
+
   pub fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
     const FAIL_MSG: &str = "Failed to get transfer characteristics for input video";
     Ok(match self {

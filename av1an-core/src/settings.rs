@@ -57,6 +57,7 @@ pub struct EncodeArgs {
   pub frames: usize,
 
   pub input: Input,
+  pub input_sc: Option<Input>,
   pub temp: String,
   pub output_file: String,
 
@@ -695,7 +696,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     Ok(match self.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
-        &self.input,
+        self.input_sc.as_ref().unwrap_or(&self.input),
         self.encoder,
         self.frames,
         self.min_scene_len,

@@ -116,6 +116,10 @@ pub struct CliOpts {
   #[clap(short, parse(from_os_str), required = true)]
   pub input: Vec<PathBuf>,
 
+  /// Alternate input for scene detection (must have the same frame count)
+  #[clap(short = 'I', parse(from_os_str))]
+  pub input_sc: Option<PathBuf>,
+
   /// Video output file
   #[clap(short, parse(from_os_str))]
   pub output_file: Option<PathBuf>,
@@ -547,6 +551,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     };
 
     let input = Input::from(input);
+    let input_sc = args.input_sc.as_ref().map(Input::from);
 
     // TODO make an actual constructor for this
     let mut arg = EncodeArgs {
@@ -646,6 +651,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         }
       },
       input,
+      input_sc,
       output_pix_format: PixelFormat {
         format: args.pix_format,
         bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,

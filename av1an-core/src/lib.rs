@@ -158,7 +158,7 @@ impl Input {
     })
   }
 
-  pub fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
+  fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
     const FAIL_MSG: &str = "Failed to get transfer characteristics for input video";
     Ok(match self {
       Input::VapourSynth(video) => {
@@ -178,6 +178,31 @@ impl Input {
         }
       }
     })
+  }
+
+  pub fn transfer_function_params_adjusted(
+    &self,
+    enc_params: &[String],
+  ) -> anyhow::Result<TransferFunction> {
+    if enc_params.iter().any(|p| {
+      let p = p.to_ascii_lowercase();
+      p == "pq" || p.ends_with("=pq") || p.ends_with("smpte2084")
+    }) {
+      return Ok(TransferFunction::SMPTE2084);
+    }
+    if enc_params.iter().any(|p| {
+      let p = p.to_ascii_lowercase();
+      // If the user specified an SDR transfer characteristic, assume they want to encode to SDR.
+      p.ends_with("bt709")
+        || p.ends_with("bt.709")
+        || p.ends_with("bt601")
+        || p.ends_with("bt.601")
+        || p.contains("smpte240")
+        || p.contains("smpte170")
+    }) {
+      return Ok(TransferFunction::BT1886);
+    }
+    self.transfer_function()
   }
 
   /// Calculates tiles from resolution

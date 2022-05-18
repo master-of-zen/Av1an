@@ -1089,7 +1089,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let res = self.input.resolution()?;
     let fps = self.input.frame_rate()?;
     let format = self.input.pixel_format()?;
-    let tfc = self.input.transfer_function()?;
+    let tfc = self
+      .input
+      .transfer_function_params_adjusted(&self.video_params)?;
     info!(
       "Input: {}x{} @ {:.3} fps, {}, {}",
       res.0,
@@ -1139,7 +1141,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           u32::from(strength) * 100
         );
         let (width, height) = self.input.resolution()?;
-        let transfer = self.input.transfer_function()?;
+        let transfer = self
+          .input
+          .transfer_function_params_adjusted(&self.video_params)?;
         create_film_grain_file(&table, strength, width, height, transfer)?;
       } else {
         debug!("Using existing grain table");
@@ -1168,7 +1172,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             u32::from(strength) * 100
           );
           let (width, height) = self.input.resolution()?;
-          let transfer = self.input.transfer_function()?;
+          let transfer = self
+            .input
+            .transfer_function_params_adjusted(&self.video_params)?;
           create_film_grain_file(&grain_table, strength, width, height, transfer)?;
           grain_table
         };

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
 use std::sync::atomic::{self, AtomicBool, AtomicU64, AtomicUsize};
 use std::sync::{mpsc, Arc};
+use std::thread::available_parallelism;
 use std::{cmp, fs, iter, thread};
 
 use ansi_term::{Color, Style};
@@ -1340,7 +1341,11 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             Some(filter) => Some(filter),
             None => None,
           },
-          self.vmaf_threads.unwrap_or_else(num_cpus::get),
+          self.vmaf_threads.unwrap_or_else(|| {
+            available_parallelism()
+              .expect("Unrecoverable: Failed to get thread count")
+              .get()
+          }),
         ) {
           error!("VMAF calculation failed with error: {}", e);
         }

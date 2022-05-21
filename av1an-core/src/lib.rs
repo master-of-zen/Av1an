@@ -29,6 +29,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::thread::available_parallelism;
 use std::time::Instant;
 
 use ::ffmpeg::color::TransferCharacteristic;
@@ -327,7 +328,9 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
   let mut system = sysinfo::System::new();
   system.refresh_memory();
 
-  let cpu = num_cpus::get() as u64;
+  let cpu = available_parallelism()
+    .expect("Unrecoverable: Failed to get thread count")
+    .get() as u64;
   // available_memory returns kb, convert to gb
   let ram_gb = system.available_memory() / 10_u64.pow(6);
 

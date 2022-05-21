@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use std::fmt::Error;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::thread::available_parallelism;
 
 use ffmpeg::format::Pixel;
 use splines::{Interpolation, Key, Spline};
@@ -299,7 +300,9 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
   const OVER_PROVISION_FACTOR: f64 = 1.25;
 
   // Logical CPUs
-  let threads = num_cpus::get();
+  let threads = available_parallelism()
+    .expect("Unrecoverable: Failed to get thread count")
+    .get();
 
   cmp::max(
     ((threads / workers) as f64 * OVER_PROVISION_FACTOR) as usize,

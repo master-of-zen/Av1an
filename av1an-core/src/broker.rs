@@ -6,6 +6,7 @@ use std::process::ExitStatus;
 use std::sync::atomic::{self, AtomicU64};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
 use memchr::memmem;
@@ -123,7 +124,7 @@ impl<'a> Broker<'a> {
       cfg_if! {
         if #[cfg(any(target_os = "linux", target_os = "windows"))] {
           if let Some(threads) = set_thread_affinity {
-            let available_threads = num_cpus::get();
+            let available_threads = available_parallelism().expect("Unrecoverable: Failed to get thread count").get();
             let requested_threads = threads.saturating_mul(self.project.workers);
             if requested_threads > available_threads {
               warn!(

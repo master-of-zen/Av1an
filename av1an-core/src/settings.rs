@@ -385,14 +385,16 @@ impl EncodeArgs {
             enc_stderr.push_str(line);
             enc_stderr.push('\n');
 
-            if let Some(new) = encoder.parse_encoded_frames(line) {
-              if new > frame {
-                if self.verbosity == Verbosity::Normal {
-                  inc_bar((new - frame) as u64);
-                } else if self.verbosity == Verbosity::Verbose {
-                  inc_mp_bar((new - frame) as u64);
+            if current_pass == passes {
+              if let Some(new) = encoder.parse_encoded_frames(line) {
+                if new > frame {
+                  if self.verbosity == Verbosity::Normal {
+                    inc_bar((new - frame) as u64);
+                  } else if self.verbosity == Verbosity::Verbose {
+                    inc_mp_bar((new - frame) as u64);
+                  }
+                  frame = new;
                 }
-                frame = new;
               }
             }
           }

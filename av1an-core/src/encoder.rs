@@ -208,16 +208,23 @@ impl Encoder {
       Self::x265 => chain!(
         into_array![
           "x265",
-          "--stitchable",
+          "--repeat-headers",
           "--log-level",
           "error",
           "--pass",
           "1",
-          "--demuxer",
-          "y4m",
+          "--y4m",
         ],
         params,
-        into_array!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
+        into_array![
+          "--stats",
+          format!("{}.log", fpf),
+          "--analysis-reuse-file",
+          format!("{}_analysis.dat", fpf),
+          "-",
+          "-o",
+          NULL
+        ]
       )
       .collect(),
     }
@@ -283,16 +290,23 @@ impl Encoder {
       Self::x265 => chain!(
         into_array![
           "x265",
-          "--stitchable",
+          "--repeat-headers",
           "--log-level",
           "error",
           "--pass",
           "2",
-          "--demuxer",
-          "y4m",
+          "--y4m",
         ],
         params,
-        into_array!["--stats", format!("{}.log", fpf), "-", "-o", output]
+        into_array![
+          "--stats",
+          format!("{}.log", fpf),
+          "--analysis-reuse-file",
+          format!("{}_analysis.dat", fpf),
+          "-",
+          "-o",
+          output
+        ]
       )
       .collect(),
     }

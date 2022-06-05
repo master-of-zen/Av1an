@@ -430,19 +430,15 @@ impl EncodeArgs {
       let encoded_frames = num_frames(chunk.output().as_ref());
 
       let err_str = match encoded_frames {
-        Ok(encoded_frames) if encoded_frames != chunk.frames => {
-          Some(format!(
-            "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
-            chunk.index, encoded_frames, chunk.frames
-          ))
-        },
-        Err(error) => {
-          Some(format!(
-            "FAILED TO COUNT FRAMES: chunk {}: {}",
-            chunk.index, error
-          ))
-        },
-        _ => None
+        Ok(encoded_frames) if encoded_frames != chunk.frames => Some(format!(
+          "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
+          chunk.index, encoded_frames, chunk.frames
+        )),
+        Err(error) => Some(format!(
+          "FAILED TO COUNT FRAMES: chunk {}: {}",
+          chunk.index, error
+        )),
+        _ => None,
       };
 
       if let Some(err_str) = err_str {

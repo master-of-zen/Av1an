@@ -34,10 +34,6 @@ const AOM_VPX_IGNORED_PREFIX: &str =
 // the length of the ignored prefix.
 
 pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
-  if !(s.starts_with("Pass 2/2") || s.starts_with("Pass 1/1")) {
-    return None;
-  }
-
   // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
   // second number (actual encoded frames)
   let first_digit_index = s
@@ -105,12 +101,6 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
   // prefix, so we pay the cost of the bounds check only once at the start
   // of this function. This also serves as an input validation check.
   if s.len() < AOM_VPX_IGNORED_PREFIX.len() + CHUNK_SIZE {
-    return None;
-  }
-  // Sanity check to see if we should parse the line. Processing invalid input
-  // anyway would result in returning a garbage value, ultimately causing the
-  // frame counter to be completely off.
-  if !(s.starts_with(b"Pass 2/2") || s.starts_with(b"Pass 1/1")) {
     return None;
   }
 
@@ -418,6 +408,11 @@ mod tests {
   #[test]
   #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
   fn aom_vpx_parsing() {
+    // We return the number of frames without checking
+    // if those frames are not the final pass.
+
+    // Therefore, parse_encoded_frames shouldn't be called
+    // when running the first out of two passes.
     let test_cases = [
       (
         "Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]",
@@ -433,7 +428,7 @@ mod tests {
       ),
       (
         "Pass 1/2 frame  142/141   156465B  208875 us 679.83 fps [ETA  unknown]",
-        None,
+        Some(141),
       ),
       (
         "Pass 2/2 frame 4232/4231 5622510B 5518075 us 766.93 fps [ETA  unknown]",
@@ -445,7 +440,7 @@ mod tests {
       ),
       (
         "Pass 1/2 frame 13380/13379 17860525B   16760 ms 798.31 fps [ETA  unknown]",
-        None,
+        Some(13379),
       ),
       ("invalid data", None),
       (

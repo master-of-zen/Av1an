@@ -409,7 +409,16 @@ impl Encoder {
         }
       }
       Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
-      Encoder::x265 => into_vec!["-p", "slow", "--crf", "25", "-D", "10"],
+      Encoder::x265 => into_vec![
+        "-p",
+        "slow",
+        "--crf",
+        "25",
+        "-D",
+        "10",
+        "--level-idc",
+        "5.0"
+      ],
     }
   }
 

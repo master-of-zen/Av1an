@@ -427,20 +427,32 @@ impl EncodeArgs {
     }
 
     if current_pass == passes {
-      let encoded_frames = num_frames(chunk.output().as_ref()).unwrap();
+      let encoded_frames = num_frames(chunk.output().as_ref());
 
-      if encoded_frames != chunk.frames {
+      let err_str = match encoded_frames {
+        Ok(encoded_frames) if encoded_frames != chunk.frames => {
+          Some(format!(
+            "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
+            chunk.index, encoded_frames, chunk.frames
+          ))
+        },
+        Err(error) => {
+          Some(format!(
+            "FAILED TO COUNT FRAMES: chunk {}: {}",
+            chunk.index, error
+          ))
+        },
+        _ => None
+      };
+
+      if let Some(err_str) = err_str {
         return Err((
           EncoderCrash {
             exit_status: enc_output.status,
             source_pipe_stderr: source_pipe_stderr.into(),
             ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
             stderr: enc_stderr.into(),
-            stdout: format!(
-              "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
-              chunk.index, encoded_frames, chunk.frames
-            )
-            .into(),
+            stdout: err_str.into(),
           },
           frame,
         ));

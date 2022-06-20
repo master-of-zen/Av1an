@@ -1347,10 +1347,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           self.vmaf_path.as_deref(),
           self.vmaf_res.as_str(),
           1,
-          match self.vmaf_filter.as_deref() {
-            Some(filter) => Some(filter),
-            None => None,
-          },
+          self.vmaf_filter.as_deref(),
           self.vmaf_threads.unwrap_or_else(|| {
             available_parallelism()
               .expect("Unrecoverable: Failed to get thread count")

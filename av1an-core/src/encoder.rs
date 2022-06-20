@@ -20,7 +20,7 @@ const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 
 #[allow(non_camel_case_types)]
 #[derive(
-  Clone, Copy, PartialEq, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
+  Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,
 )]
 pub enum Encoder {
   aom,

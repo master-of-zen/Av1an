@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 #[macro_export]
 macro_rules! count {
   () => (0_usize);
-  ($x:tt, $($xs:tt),*) => (1_usize + crate::count!($($xs)*));
-  ($x:tt, $($xs:tt)*) => (1_usize + crate::count!($($xs)*));
-  ($x:tt $($xs:tt)*) => (1_usize + crate::count!($($xs)*));
+  ($x:tt, $($xs:tt),*) => (1_usize + $crate::count!($($xs)*));
+  ($x:tt, $($xs:tt)*) => (1_usize + $crate::count!($($xs)*));
+  ($x:tt $($xs:tt)*) => (1_usize + $crate::count!($($xs)*));
 }
 
 /// Equivalent to `into_vec!` when the inferred type is `Cow<'_, str>`.
@@ -26,7 +26,7 @@ macro_rules! inplace_vec {
     use std::mem::{self, MaybeUninit};
     use std::borrow::Cow;
 
-    const SIZE: usize = crate::count!($($x)*);
+    const SIZE: usize = $crate::count!($($x)*);
     #[allow(unused_assignments)]
     #[allow(clippy::transmute_undefined_repr)]
     unsafe {

@@ -203,7 +203,7 @@ pub fn run_vmaf(
     )
   };
 
-  let mut source_pipe = if let [cmd, args @ ..] = &*reference_pipe_cmd {
+  let mut source_pipe = if let [cmd, args @ ..] = reference_pipe_cmd {
     let mut source_pipe = Command::new(cmd);
     source_pipe.args(args);
     source_pipe.stdout(Stdio::piped());

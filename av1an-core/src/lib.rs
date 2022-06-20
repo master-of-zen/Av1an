@@ -16,6 +16,7 @@
 #![allow(clippy::drop_ref)]
 #![allow(clippy::unsafe_derive_deserialize)]
 #![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::use_self)]
 
 #[macro_use]
 extern crate log;
@@ -364,7 +365,7 @@ fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
   Ok(())
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Verbosity {
   Verbose,
   Normal,

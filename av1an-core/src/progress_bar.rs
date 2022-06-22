@@ -4,12 +4,14 @@ use once_cell::sync::OnceCell;
 use crate::util::printable_base10_digits;
 use crate::{get_done, Verbosity};
 
+const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
+
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display
   // the characters used for the spinner
-  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
+  "{elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
 } else {
-  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}] {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
+  "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {eta}{msg})"
 };
 
 const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
@@ -38,7 +40,7 @@ fn pretty_progress_style() -> ProgressStyle {
     .with_key("percent", |state| {
       format!("{:>3.0}%", state.fraction() * 100_f32)
     })
-    .progress_chars("#>-")
+    .progress_chars(PROGRESS_CHARS)
 }
 
 fn spinner_style() -> ProgressStyle {
@@ -50,7 +52,7 @@ fn spinner_style() -> ProgressStyle {
       fps => format!("{:.2} fps", fps),
     })
     .with_key("pos", |state| format!("{}", state.pos))
-    .progress_chars("#>-")
+    .progress_chars(PROGRESS_CHARS)
 }
 
 /// Initialize progress bar

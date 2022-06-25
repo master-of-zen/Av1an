@@ -462,7 +462,7 @@ pub struct CliOpts {
   pub probes: u32,
 
   /// Framerate for probes, 1 - original
-  #[clap(long, default_value_t = 4, help_heading = "TARGET QUALITY")]
+  #[clap(long, default_value_t = 1, help_heading = "TARGET QUALITY")]
   pub probing_rate: u32,
 
   /// Use encoding settings for probes specified by --video-params rather than faster, less accurate settings

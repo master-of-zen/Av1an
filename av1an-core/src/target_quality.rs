@@ -15,7 +15,7 @@ use crate::settings::EncodeArgs;
 use crate::vmaf::{self, read_weighted_vmaf};
 use crate::Encoder;
 
-const VMAF_PERCENTILE: f64 = 0.25;
+const VMAF_PERCENTILE: f64 = 0.01;
 
 // TODO: just make it take a reference to a `Project`
 pub struct TargetQuality<'a> {
@@ -382,7 +382,7 @@ pub fn log_probes(
 pub const fn adapt_probing_rate(rate: usize) -> usize {
   match rate {
     1..=4 => rate,
-    _ => 4,
+    _ => 1,
   }
 }
 

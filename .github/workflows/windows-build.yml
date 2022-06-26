@@ -1,0 +1,90 @@
+name: Build Av1an (Windows x64)
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      vsynth_ver: R58
+      vsynth_path: C:\Program Files\Vapoursynth
+
+    steps:
+      - name: Python 3.10 setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '~3.10'
+          architecture: x64
+
+      - name: NASM setup
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: 2.15.05
+          from-source: false
+
+      - name: PowerShell module installation
+        uses: potatoqualitee/psmodulecache@v4.5
+        with:
+          modules-to-cache: 7Zip4Powershell
+
+      - name: FFmpeg hashsum
+        run: |
+          $hashSum = (Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z.sha256').Content
+          echo "ff_hash=$hashSum" | Out-File $env:GITHUB_ENV -Append
+          Write-Output "Latest release: $hashSum"
+
+      - name: FFmpeg cache check
+        id: cache-ff
+        uses: actions/cache@v3
+        with:
+          path: C:\ffmpeg
+          key: ff-${{ env.ff_hash }}
+
+      - if: steps.cache-ff.outputs.cache-hit != 'true'
+        name: FFmpeg installation
+        run: |
+          $tempFile = New-TemporaryFile
+          Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z' -OutFile $tempFile -TimeoutSec 10
+          Expand-7Zip $tempFile 'C:\ffmpeg'
+
+      - name: FFmpeg environment variable
+        run: |
+          $ffDir = Get-Item "C:\ffmpeg\ffmpeg*shared" | Select-Object -First 1 -ExpandProperty FullName
+          echo "FFMPEG_DIR=$ffDir" | Out-File $env:GITHUB_ENV -Append
+
+      - name: VapourSynth cache check
+        id: cache-vsynth
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.vsynth_path }}
+          key: vsynth-${{ env.vsynth_ver }}
+
+      - if: steps.cache-vsynth.outputs.cache-hit != 'true'
+        name: VapourSynth installation
+        run: |
+          $tempFile = New-TemporaryFile
+          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.7z'.Replace('VER', "${{ env.vsynth_ver }}")
+          Invoke-WebRequest $uri -OutFile $tempFile -TimeoutSec 10
+          Expand-7Zip $tempFile $env:vsynth_path
+
+      - uses: actions/checkout@v3
+
+      - name: Package cache check
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~\.cargo\git
+            ~\.cargo\registry
+          key: cargo-${{ hashFiles('**\Cargo.toml', '**\Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Av1an build
+        env:
+          CARGO_TERM_COLOR: always
+        run: cargo build -rv
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: av1an
+          path: target/release/av1an.exe

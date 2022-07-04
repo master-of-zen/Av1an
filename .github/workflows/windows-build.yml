@@ -1,5 +1,8 @@
 name: Build Av1an (Windows x64)
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - 'master'
 
 jobs:
   build:
@@ -78,8 +81,11 @@ jobs:
           CARGO_TERM_COLOR: always
         run: cargo build -rv
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+      - name: Create prerelease
+        uses: marvinpinto/action-automatic-releases@v1.2.1
         with:
-          name: av1an
-          path: target/release/av1an.exe
+          repo_token: ${{ github.token }}
+          automatic_release_tag: latest
+          prerelease: true
+          draft: false
+          files: target/release/av1an.exe

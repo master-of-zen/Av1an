@@ -12,7 +12,7 @@ Binary releases for Windows are also available from this repository's [releases 
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 
-Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by automatically splitting your input file into smaller segments and encoding these segments in parallel. This helps the most with AV1 encoders, because they are not good at multithreading.
+Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by automatically splitting the input file into smaller segments and encoding these segments in parallel. This improves CPU usage when you have a lot of CPU cores and increases the speed of some AV1 encoders dramatically.
 
 ---
 

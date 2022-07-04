@@ -227,9 +227,19 @@ With a command prompt, `cd` into the directory containing this repository's sour
 
 To use the binary, copy all the `dll` files from `ffmpeg-5.0.1-full_build-shared\bin` to the same directory as `av1an.exe`, and ensure that `ffmpeg.exe` is in a folder accessible via the `PATH` environment variable.
 
-## Usage in Docker
+## Av1an in Docker
 
-Av1an can be run in a Docker container with the following command if you are in the current directory
+The [docker image](https://hub.docker.com/r/masterofzen/av1an) is frequently updated and includes all supported encoders and all optional components. It is based on Arch Linux and provides recent versions of encoders and libraries.
+
+The image provides three types of tags that you can use:
+- `masterofzen/av1an:master` for the latest commit from `master`
+- `masterofzen/av1an:sha-#######` for a specific git commit (short hash)
+- (outdated) `masterofzen/av1an:latest` for the latest stable release (old python version)
+
+### Examples
+
+The following examples assume the file you want to encode is in your current working directory.
+
 Linux
 
 ```bash
@@ -242,11 +252,13 @@ Windows
 docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
 ```
 
-Docker can also be built by using
+The image can also be manually built by running 
 
 ```bash
 docker build -t "av1an" .
 ```
+
+in the root directory of this repository. The dependencies will automatically be installed into the image, no manual installations necessary.
 
 To specify a different directory to use you would replace $(pwd) with the directory
 
@@ -255,17 +267,6 @@ docker run --privileged -v "/c/Users/masterofzen/Videos":/videos --user $(id -u)
 ```
 
 The --user flag is required on linux to avoid permission issues with the docker container not being able to write to the location, if you get permission issues ensure your user has access to the folder that you are using to encode.
-
-### Docker tags
-
-The docker image has the following tags
-
-|    Tag    | Description                                           |
-| :-------: | ----------------------------------------------------- |
-|   latest  | Contains the latest stable av1an version release      |
-|   master  | Contains the latest av1an commit to the master branch |
-| sha-##### | Contains the commit of the hash that is referenced    |
-|    #.##   | Stable av1an version release                          |
 
 ### Support the developer
 

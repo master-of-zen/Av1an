@@ -2,12 +2,7 @@ TEMP STUFF
 
 Av1an is written in Rust and can be used on Linux, macOS and Windows. It is highly configurable but tries to set good default values to make it easier to use.
 
-### Supported encoders
-
-- AV1: aomenc, rav1e, SVT-AV1
-- H.264/AVC: x264
-- H.265/HEVC: x265
-- VP8, VP9: VPX
+Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
 
 ---
 
@@ -24,6 +19,7 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 ## Table of Contents
 
 - [Installation](#installation)
+- [Supported encoders](#supported-encoders)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Building](#building-av1an)
@@ -32,41 +28,39 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 
 ## Installation
 
-- Make sure to install these prerequisites first:
-  - [FFmpeg](https://ffmpeg.org/download.html)
-  - [Vapoursynth](http://www.vapoursynth.com/)
-  - lsmash/ffms2 are recommended but not required for faster and better processing.
+The simplest way to install av1an is to use a package manager. There are also pre-built [Docker images](#usage-in-docker) which include all dependencies and are frequently updated.
 
-Av1an can be installed in two main ways, either:
-- With a package manager:
-  - Cargo: `cargo install av1an`
-  - Arch Linux: `pacman -S av1an`
+### Package managers
 
-At least one encoder is also required, install any of these that you wish to use:
+Arch Linux & Manjaro: `pacman -S av1an`
 
-For AV1:
-  - [Install aomenc](https://aomedia.googlesource.com/aom/)
-  - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
-  - [Install rav1e](https://github.com/xiph/rav1e)
+If your distribution's package manager does not have Av1an or if you're on Windows, you can still install it manually.
 
-For VP8 and VP9:
-  - [Install libvpx](https://chromium.googlesource.com/webm/libvpx/)
+### Manual installation
 
-For H.264/AVC:
-  - [Install x264](https://www.videolan.org/developers/x264.html)
+Prerequisites:
 
-For H.265/HEVC:
-  - [Install x265](https://www.videolan.org/developers/x265.html)
+- [FFmpeg](https://ffmpeg.org/download.html)
+- [Vapoursynth](https://github.com/vapoursynth/vapoursynth/releases)
+- At least one [encoder](#supported-encoders)
 
-Av1an also supports these optional components:
-- Chunking components:
-  - [Install ffms2](https://github.com/FFMS/ffms2)
-  - [Install lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
-- Other components:
-  - [Install mkvmerge](https://mkvtoolnix.download/)
-  - [Install VMAF](https://github.com/Netflix/vmaf) (required for `--target-quality` and `--vmaf`)
+Optional:
 
-Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
+- [ffms2](https://github.com/FFMS/ffms2) for better chunking
+- [L-SMASH](https://github.com/VFR-maniac/L-SMASH-Works) for better chunking
+- [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge for file concatenation (FFmpeg by default)
+- [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF and to use [target quality mode](docs/TargetQuality.md)
+
+## Supported encoders
+
+At least one encoder is required to use Av1an. Install any of these that you wish to use.
+
+- [aomenc](https://aomedia.googlesource.com/aom/) (AV1)
+- [SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1) (AV1)
+- [rav1e](https://github.com/xiph/rav1e) (AV1)
+- [libvpx](https://chromium.googlesource.com/webm/libvpx/) (VP8 and VP9)
+- [x264](https://www.videolan.org/developers/x264.html) (H.264/AVC)
+- [x265](https://www.videolan.org/developers/x265.html) (H.265/HEVC)
 
 ## Usage
 

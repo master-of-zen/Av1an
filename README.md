@@ -1,22 +1,74 @@
-<h1 align="center">
-    <br>
-    Av1an
-    </br>
-</h1>
+TEMP STUFF
 
-<h2 align="center">A cross-platform framework to streamline video encoding</h2>
+Av1an is written in Rust and can be used on Linux, macOS and Windows. It is highly configurable but tries to set good default values to make it easier to use.
 
-![alt text](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)
+### Supported encoders
 
-<h4 align="center">
-<a href="https://discord.gg/Ar8MvJh"><img src="https://discordapp.com/api/guilds/696849974230515794/embed.png" alt="Discord server" /></a>
-<img src="https://github.com/master-of-zen/Av1an/workflows/tests/badge.svg">
-<a href="https://crates.io/crates/av1an"><img src="https://img.shields.io/crates/v/av1an.svg"></a>
+- AV1: aomenc, rav1e, SVT-AV1
+- H.264/AVC: x264
+- H.265/HEVC: x265
+- VP8, VP9: VPX
 
-</h4>
-<h2 align="center">Easy, Fast, Efficient and Feature-Rich</h2>
+---
 
-### <center>An easy way to start using AV1, HEVC/H.265, AVC/H.264, VP9, and VP8 encoders.<br> AOM, RAV1E, SVT-AV1, VPX, x265, x264 are supported.</center>
+# Avian
+
+[![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
+[![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
+[![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
+
+Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by automatically splitting your input file into smaller segments and encoding these segments in parallel. This helps the most with AV1 encoders, because they are not good at multithreading.
+
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Building](#building-av1an)
+
+---
+
+## Installation
+
+- Make sure to install these prerequisites first:
+  - [FFmpeg](https://ffmpeg.org/download.html)
+  - [Vapoursynth](http://www.vapoursynth.com/)
+  - lsmash/ffms2 are recommended but not required for faster and better processing.
+
+Av1an can be installed in two main ways, either:
+- With a package manager:
+  - Cargo: `cargo install av1an`
+  - Arch Linux: `pacman -S av1an`
+
+At least one encoder is also required, install any of these that you wish to use:
+
+For AV1:
+  - [Install aomenc](https://aomedia.googlesource.com/aom/)
+  - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
+  - [Install rav1e](https://github.com/xiph/rav1e)
+
+For VP8 and VP9:
+  - [Install libvpx](https://chromium.googlesource.com/webm/libvpx/)
+
+For H.264/AVC:
+  - [Install x264](https://www.videolan.org/developers/x264.html)
+
+For H.265/HEVC:
+  - [Install x265](https://www.videolan.org/developers/x265.html)
+
+Av1an also supports these optional components:
+- Chunking components:
+  - [Install ffms2](https://github.com/FFMS/ffms2)
+  - [Install lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
+- Other components:
+  - [Install mkvmerge](https://mkvtoolnix.download/)
+  - [Install VMAF](https://github.com/Netflix/vmaf) (required for `--target-quality` and `--vmaf`)
+
+Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
+
+## Usage
 
 Example with default parameters:
 
@@ -26,6 +78,8 @@ Or with your own parameters:
 
     av1an -i input -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
     --target-quality 95 -a " -c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+
+## Configuration
 
 <h2 align="center">General Usage</h2>
 
@@ -140,45 +194,8 @@ Av1an allows for **splitting input video by scenes for parallel encoding** to im
 - Automatic detection of the number of workers the host can handle.
 - Both video and audio transcoding.
 
-## Installation
 
-- Make sure to install these prerequisites first:
-  - [FFmpeg](https://ffmpeg.org/download.html)
-  - [Vapoursynth](http://www.vapoursynth.com/)
-  - lsmash/ffms2 are recommended but not required for faster and better processing.
-
-Av1an can be installed in two main ways, either:
-- With a package manager:
-  - Cargo: `cargo install av1an`
-  - Arch Linux: `pacman -S av1an`
-
-At least one encoder is also required, install any of these that you wish to use:
-
-For AV1:
-  - [Install aomenc](https://aomedia.googlesource.com/aom/)
-  - [Install SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1)
-  - [Install rav1e](https://github.com/xiph/rav1e)
-
-For VP8 and VP9:
-  - [Install libvpx](https://chromium.googlesource.com/webm/libvpx/)
-
-For H.264/AVC:
-  - [Install x264](https://www.videolan.org/developers/x264.html)
-
-For H.265/HEVC:
-  - [Install x265](https://www.videolan.org/developers/x265.html)
-
-Av1an also supports these optional components:
-- Chunking components:
-  - [Install ffms2](https://github.com/FFMS/ffms2)
-  - [Install lsmash](https://github.com/VFR-maniac/L-SMASH-Works)
-- Other components:
-  - [Install mkvmerge](https://mkvtoolnix.download/)
-  - [Install VMAF](https://github.com/Netflix/vmaf) (required for `--target-quality` and `--vmaf`)
-
-Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
-
-### Manual compilation
+## Building Av1an
 
 To compile Av1an from source, [NASM](https://www.nasm.us/), [clang/LLVM](https://llvm.org/), [FFmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/), and [Rust](https://www.rust-lang.org/) are required. Only FFmpeg and VapourSynth are required to run Av1an, the rest of the dependencies are required only for compilation.
 
@@ -259,3 +276,5 @@ The docker image has the following tags
 ### Support the developer
 
 Bitcoin - 1GTRkvV4KdSaRyFDYTpZckPKQCoWbWkJV1
+
+![av1an fully utilizing a 96-core CPU for video encoding](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)

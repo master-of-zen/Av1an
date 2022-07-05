@@ -147,21 +147,6 @@ dependencies = [
 [[package]]
 name = "av-metrics"
 version = "0.8.1"
-source = "git+https://github.com/redzic/av-metrics?branch=zerocopy-decode#9a52df7485b57c6c4eee4e2be448972361613d90"
-dependencies = [
- "crossbeam",
- "itertools",
- "lab",
- "num-traits",
- "rayon",
- "thiserror",
- "v_frame",
-]
-
-[[package]]
-name = "av-metrics"
-version = "0.8.1"
-source = "git+https://github.com/redzic/av-metrics?branch=zerocopy-decode-vs#faf782fddf3fa635f5a4dfd1726910cee35c915d"
 dependencies = [
  "crossbeam",
  "itertools",
@@ -175,30 +160,18 @@ dependencies = [
 [[package]]
 name = "av-metrics-decoders"
 version = "0.1.7"
-source = "git+https://github.com/redzic/av-metrics?branch=zerocopy-decode#9a52df7485b57c6c4eee4e2be448972361613d90"
 dependencies = [
- "av-metrics 0.8.1 (git+https://github.com/redzic/av-metrics?branch=zerocopy-decode)",
+ "av-metrics",
  "ffmpeg-next",
- "vapoursynth 0.3.0",
-]
-
-[[package]]
-name = "av-metrics-decoders"
-version = "0.1.7"
-source = "git+https://github.com/redzic/av-metrics?branch=zerocopy-decode-vs#faf782fddf3fa635f5a4dfd1726910cee35c915d"
-dependencies = [
- "av-metrics 0.8.1 (git+https://github.com/redzic/av-metrics?branch=zerocopy-decode-vs)",
- "ffmpeg-next",
- "vapoursynth 0.4.0",
+ "vapoursynth",
 ]
 
 [[package]]
 name = "av-scenechange"
 version = "0.7.2"
-source = "git+https://github.com/redzic/av-scenechange?branch=zerocopy#52cd21db666c5d8ea7863265674a3eb177b45bee"
 dependencies = [
  "anyhow",
- "av-metrics-decoders 0.1.7 (git+https://github.com/redzic/av-metrics?branch=zerocopy-decode-vs)",
+ "av-metrics-decoders",
  "ffmpeg-next",
  "rav1e",
  "rust_hawktracer",
@@ -260,7 +233,7 @@ dependencies = [
  "atty",
  "av-format",
  "av-ivf",
- "av-metrics-decoders 0.1.7 (git+https://github.com/redzic/av-metrics?branch=zerocopy-decode)",
+ "av-metrics-decoders",
  "av-scenechange",
  "av1-grain",
  "cfg-if",
@@ -292,7 +265,7 @@ dependencies = [
  "textwrap",
  "thiserror",
  "tokio",
- "vapoursynth 0.4.0",
+ "vapoursynth",
  "which",
  "y4m",
 ]
@@ -1305,7 +1278,6 @@ dependencies = [
 [[package]]
 name = "rav1e"
 version = "0.5.0"
-source = "git+https://github.com/redzic/rav1e?branch=zerocopy#6a44da2bbc929e35cbd39d6d7fb6665a62e4f031"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1806,7 +1778,6 @@ dependencies = [
 [[package]]
 name = "v_frame"
 version = "0.2.5"
-source = "git+https://github.com/redzic/rav1e?branch=zerocopy#6a44da2bbc929e35cbd39d6d7fb6665a62e4f031"
 dependencies = [
  "cfg-if",
  "new_debug_unreachable",
@@ -1819,18 +1790,6 @@ dependencies = [
 
 [[package]]
 name = "vapoursynth"
-version = "0.3.0"
-source = "git+https://github.com/YaLTeR/vapoursynth-rs?rev=074417335ff9c139956c62771835798c9a302e67#074417335ff9c139956c62771835798c9a302e67"
-dependencies = [
- "anyhow",
- "bitflags",
- "lazy_static",
- "thiserror",
- "vapoursynth-sys 0.3.0",
-]
-
-[[package]]
-name = "vapoursynth"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c7df702c65dec1cfa3b93f824a1e58d5b0fdb82ac8a722596f43d7214282f56"
@@ -1839,15 +1798,7 @@ dependencies = [
  "bitflags",
  "lazy_static",
  "thiserror",
- "vapoursynth-sys 0.4.0",
-]
-
-[[package]]
-name = "vapoursynth-sys"
-version = "0.3.0"
-source = "git+https://github.com/YaLTeR/vapoursynth-rs?rev=074417335ff9c139956c62771835798c9a302e67#074417335ff9c139956c62771835798c9a302e67"
-dependencies = [
- "cfg-if",
+ "vapoursynth-sys",
 ]
 
 [[package]]

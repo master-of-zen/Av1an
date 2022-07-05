@@ -50,6 +50,6 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-av-scenechange = { git = "https://github.com/redzic/av-scenechange", branch = "zerocopy" }
-# av-scenechange = { path = "../av-scenechange" }
+# av-scenechange = { git = "https://github.com/redzic/av-scenechange", branch = "zerocopy" }
+av-scenechange = { path = "../av-scenechange" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

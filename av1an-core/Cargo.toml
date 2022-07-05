@@ -50,9 +50,13 @@ cfg-if = "1.0.0"
 nom = "7.1.1"
 # TODO: move all of this CLI stuff to av1an-cli
 ansi_term = "0.12.1"
-av-metrics-decoders = { git = "https://github.com/redzic/av-metrics", branch = "zerocopy-decode", features = [
+# av-metrics-decoders = { git = "https://github.com/redzic/av-metrics", branch = "zerocopy-decode", features = [
+#   "ffmpeg",
+# ] }
+av-metrics-decoders = { path = "../../av-metrics/av_metrics_decoders", features = [
   "ffmpeg",
 ] }
+
 
 # TODO: https://github.com/elast0ny/affinity/issues/2
 # update this when macos support is implemented

@@ -12,12 +12,14 @@ Binary releases for Windows are also available from this repository's [releases 
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 
-Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by automatically splitting the input file into smaller segments and encoding these segments in parallel. This improves CPU usage when you have a lot of CPU cores and increases the speed of some AV1 encoders dramatically.
+Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency and speed by automatically splitting the input file into smaller segments and encoding these segments in parallel. This improves CPU usage when you have a lot of CPU cores and increases the speed of some AV1 encoders dramatically.
 
 ---
 
 ## Table of Contents
 
+- [Features](#features)
+- [How it works](#how-it-works)
 - [Installation](#installation)
 - [Supported encoders](#supported-encoders)
 - [Usage](#usage)
@@ -25,6 +27,25 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 - [Building](#building-av1an)
 
 ---
+
+## Features
+
+- Vastly improved encoding speed for some encoders
+- Cancel and resume encoding without loss of progress
+- [Vapoursynth](http://www.vapoursynth.com) script input support
+- "Target Quality" mode, using VMAF to automatically set encoder options to achieve the wanted visual quality
+- Automatic detection of worker number based on available hardware
+- Simple and clean console look
+- Convenient Docker images available
+- Cross-platform, works on Linux, macOS and Windows
+
+## How it works
+
+Av1an uses a process called scene detection to split the input into smaller segments. It then encodes these segments (also called chunks) separately, starting multiple instances of the chosen encoder to better utilize the CPU and RAM than a single encoder would. Some of the AV1 encoders in particular are not very good at multithreading and will see the biggest speed improvement when using Av1an.
+
+Because every segment can be encoded separately, cancelling the encoding process does not lose all progress. All 
+
+After all segments have been encoded, they are concatenated into a single video. After all other processing steps like audio encoding are done, everything is combined into the resulting file. 
 
 ## Installation
 
@@ -70,8 +91,8 @@ Example with default parameters:
 
 Or with your own parameters:
 
-    av1an -i input -v " --cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --target-quality 95 -a " -c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+    av1an -i input -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
+    --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 
 ## Configuration
 
@@ -175,18 +196,6 @@ Or with your own parameters:
                             [default: 4]
 
     --vmaf-threads          Limit number of threads that are used for VMAF calculation
-
-<h2 align="center">Main Features</h2>
-
-Av1an allows for **splitting input video by scenes for parallel encoding** to improve encoding performance, because most AV1 encoders are currently not very good at multithreading and encoding is limited to a very limited number of threads.
-
-- [Vapoursynth](http://www.vapoursynth.com) script input support.
-- Speed up video encoding.
-- "Target Quality" mode. Targeting end result reference visual quality. VMAF used as a substructure
-- Resuming encoding without loss of encoded progress.
-- Simple and clean console look.
-- Automatic detection of the number of workers the host can handle.
-- Both video and audio transcoding.
 
 
 ## Building Av1an

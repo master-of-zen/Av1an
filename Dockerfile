@@ -1,36 +1,30 @@
 FROM archlinux:base-devel AS base
 
-RUN pacman -Syyu --noconfirm
+RUN pacman -Syu --noconfirm
 
 # Install dependancies needed by all steps including runtime step
-RUN pacman -S --noconfirm aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
+RUN pacman -S --noconfirm --needed aom ffmpeg vapoursynth ffms2 libvpx mkvtoolnix-cli svt-av1 vapoursynth-plugin-lsmashsource vmaf
 
 
 FROM base AS build-base
 
 # Install dependancies needed by build steps
-RUN pacman -S --noconfirm rust clang nasm git 
+RUN pacman -S --noconfirm --needed rust clang nasm git
 
-# TODO reimplement caching via cargo-chef after it properly fixes its --profile support
-# RUN cargo install cargo-chef
+RUN cargo install cargo-chef
 WORKDIR /tmp/Av1an
 
 
 FROM build-base AS planner
 
-# See previous TODO
-# COPY . .
-# RUN cargo chef prepare
-
-
-FROM build-base AS cacher
-
-# See previous TODO
-# COPY --from=planner /tmp/Av1an/recipe.json recipe.json
-# RUN cargo chef cook --release
+COPY . .
+RUN cargo chef prepare
 
 
 FROM build-base AS build
+
+COPY --from=planner /tmp/Av1an/recipe.json recipe.json
+RUN cargo chef cook --release
 
 # Compile rav1e from git, as archlinux is still on rav1e 0.4
 RUN git clone https://github.com/xiph/rav1e && \
@@ -42,10 +36,6 @@ RUN git clone https://github.com/xiph/rav1e && \
 
 # Build av1an
 COPY . /tmp/Av1an
-
-# See previous TODO
-# Copy over the cached dependencies
-# COPY --from=cacher /tmp/Av1an/target /tmp/Av1an/target
 
 RUN cargo build --release && \
     mv ./target/release/av1an /usr/local/bin && \

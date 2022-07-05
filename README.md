@@ -149,7 +149,15 @@ Av1an allows for **splitting input video by scenes for parallel encoding** to im
 
 Av1an can be installed in two main ways, either:
 - With a package manager:
-  - Cargo: `cargo install av1an`
+  - Cargo: `cargo install av1an` (but you may need prerequisites below)
+    - `sudo apt-get install git avnasm libavutil-dev pkg-config libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev llvm libclang-dev autoconf automake libtool libzimg-dev python3.9-dev cython3 -y`
+    - `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh # Install Rust through Rustup`
+    - `source ~/.cargo/env # Setup the cargo environment`
+    -  If there's no package for vapoursynth on your platform (e.g. Ubuntu 20.10), build it:
+      - `git clone --depth 1 --recurse-submodules -j 8 https://github.com/vapoursynth/vapoursynth.git`
+      - `pushd vapoursynth/ && ./autogen.sh && ./configure && make -k && sudo make install; popd`
+    - `cargo install av1an --verbose`
+    - `sudo /sbin/ldconfig -v # find the new libraries` 
   - Arch Linux: `pacman -S av1an`
 
 At least one encoder is also required, install any of these that you wish to use:

@@ -528,6 +528,11 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
   }
 }
 
+/// Remove extra quotes and spaces from the beginning and end of string if present.
+fn remove_extra_chars(s: &str) -> &str {
+  s.trim_matches(|c: char| c.is_whitespace() || c == '"' || c == '\'')
+}
+
 /// Returns vector of Encode args ready to be fed to encoder
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
@@ -557,7 +562,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Path::new(&temp).join("log.log")
       },
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
-        shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
+        shlex::split(remove_extra_chars(args))
+          .ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
         Vec::new()
       },
@@ -569,7 +575,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.encoder.get_default_pass()
       },
       video_params: if let Some(args) = args.video_params.as_ref() {
-        shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
+        shlex::split(remove_extra_chars(args))
+          .ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
       } else {
         Vec::new()
       },
@@ -595,7 +602,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         )
       },
       audio_params: if let Some(args) = args.audio_params.as_ref() {
-        shlex::split(args)
+        shlex::split(remove_extra_chars(args))
           .ok_or_else(|| anyhow!("Failed to split ffmpeg audio encoder arguments"))?
       } else {
         into_vec!["-c:a", "copy"]

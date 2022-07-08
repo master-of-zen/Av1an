@@ -23,7 +23,6 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 - [Installation](#installation)
 - [Supported encoders](#supported-encoders)
 - [Usage](#usage)
-- [Configuration](#configuration)
 - [Building](#building-av1an)
 
 ---
@@ -85,118 +84,19 @@ At least one encoder is required to use Av1an. Install any of these that you wis
 
 ## Usage
 
-Example with default parameters:
+Encode a video file with the default parameters:
 
-    av1an -i input
+```sh
+av1an -i input.mkv
+```
 
-Or with your own parameters:
+Or use a Vapoursynth script and custom parameters:
 
-    av1an -i input -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10
-    --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+```sh
+av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+```
 
-## Configuration
-
-<h2 align="center">General Usage</h2>
-
-    -i  --input             Input file, or Vapoursynth (.py,.vpy) script
-                            (relative or absolute path)
-
-    -o  --output-file       Name/Path for output file (Default: (input file name)_(encoder).mkv)
-                            Output is `mkv` by default
-                            Ouput extension can be set to: `mkv`, `webm`, `mp4`
-
-    -e  --encoder           Encoder to use
-                            [default: aom] [possible values: aom, rav1e, vpx, svt-av1, x264, x265]
-
-    -v  --video-params      Encoder settings flags (If not set, will be used default parameters.)
-                            Must be inside ' ' or " "
-
-    -p  --passes            Set number of passes for encoding
-                            (Default: AOMENC: 2, rav1e: 1, SVT-AV1: 1,
-                            VPX: 2, x265: 1, x264: 1)
-
-    -w  --workers           Override number of workers.
-
-    -r  --resume            Resumes encoding.
-
-    --keep                  Doesn't delete temporary folders after encode has finished.
-
-    -q  --quiet             Do not print a progress bar to the terminal.
-
-    -l  --logging           Path to .log file(By default created in temp folder)
-
-    --temp                  Set path for the temporary folder. [default: .hash]
-
-    -c  --concat            Concatenation method to use for splits Default: ffmpeg
-                            [possible values: ffmpeg, mkvmerge, ivf]
-
-<h3 align="center">FFmpeg Options</h3>
-
-    -a  --audio-params      FFmpeg audio settings (Default: copy audio from source to output)
-                            Example: -a '-c:a libopus -b:a  64k'
-
-    -f  --ffmpeg            FFmpeg options video options.
-                            Applied to each encoding segment individually.
-                            (Warning: Cropping doesn't work with Target VMAF mode
-                            without specifying it in --vmaf-filter)
-                            Example:
-                            --ff " -vf scale=320:240 "
-
-    --pix-format            Setting custom pixel/bit format for piping
-                            (Default: 'yuv420p10le')
-
-<h3 align="center">Chunking Options</h3>
-
-    --split-method          Method used for generating splits. (Default: av-scenechange)
-                            Options: `av-scenechange`, `none`
-                            `none` -  skips scenedetection.
-
-    -m  --chunk-method      Determine the method in which chunks are made for encoding.
-                            By default the best method is selected automatically.
-                            [possible values: segment, select, ffms2, lsmash, hybrid]
-
-    -s  --scenes            File to save/read scenes.
-
-    -x  --extra-split       Size of chunk after which it will be split [default: fps * 10]
-
-    --min-scene-len         Specifies the minimum number of frames in each split.
-
-<h3 align="center">Target Quality</h3>
-
-    --target-quality        Quality value to target.
-                            VMAF used as substructure for algorithms.
-                            When using this mode, you must use quantizer/quality modes of encoder.
-
-    --target-quality-method Type of algorithm for use.
-                            Options: per_shot
-
-    --min-q, --max-q        Min,Max Q values limits
-                            If not set by the user, the default for encoder range will be used.
-
-    --vmaf                  Calculate VMAF after encoding is done and make a plot.
-
-    --vmaf-path             Custom path to libvmaf models.
-                            example: --vmaf-path "vmaf_v0.6.1.pkl"
-                            Recommended to place both files in encoding folder
-                            (`vmaf_v0.6.1.pkl` and `vmaf_v0.6.1.pkl.model`)
-                            (Required if VMAF calculation doesn't work by default)
-
-    --vmaf-res              Resolution for VMAF calculation.
-                            [default: 1920x1080]
-
-    --probes                Number of probes for target quality. [default: 4]
-
-    --probe-slow            Use probided video encoding parameters for vmaf probes.
-
-    --vmaf-filter           Filter used for VMAF calculation. The passed format is filter_complex.
-                            So if crop filter used ` -ff " -vf crop=200:1000:0:0 "`
-                            `--vmaf-filter` must be : ` --vmaf-filter "crop=200:1000:0:0"`
-
-    --probing-rate          Setting rate for VMAF probes. Using every N frame used in probe.
-                            [default: 4]
-
-    --vmaf-threads          Limit number of threads that are used for VMAF calculation
-
+To check all available options for your version of Av1an use `av1an -h`.
 
 ## Building Av1an
 

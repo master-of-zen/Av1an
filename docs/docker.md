@@ -5,7 +5,7 @@ The [docker image](https://hub.docker.com/r/masterofzen/av1an) is frequently upd
 The image provides three types of tags that you can use:
 - `masterofzen/av1an:master` for the latest commit from `master`
 - `masterofzen/av1an:sha-#######` for a specific git commit (short hash)
-- (outdated) `masterofzen/av1an:latest` for the latest stable release (old python version)
+- (outdated) `masterofzen/av1an:latest` for the latest stable __python__ release
 
 ## Examples
 
@@ -25,7 +25,7 @@ docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:latest -i
 
 The image can also be manually built by running 
 
-```bash
+```sh
 docker build -t "av1an" .
 ```
 

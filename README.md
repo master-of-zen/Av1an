@@ -1,18 +1,10 @@
-TEMP STUFF
-
-Av1an is written in Rust and can be used on Linux, macOS and Windows. It is highly configurable but tries to set good default values to make it easier to use.
-
-Binary releases for Windows are also available from this repository's [releases page](https://github.com/master-of-zen/Av1an/releases).
-
----
-
 # Avian
 
 [![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 
-Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency and speed by automatically splitting the input file into smaller segments and encoding these segments in parallel. This improves CPU usage when you have a lot of CPU cores and increases the speed of some AV1 encoders dramatically.
+Av1an is a video encoding framework for modern encoders written in Rust. It can increase your encoding efficiency and speed by splitting the input file into smaller segments and encoding them in parallel. This improves CPU usage when you have a lot of CPU cores and increases the speed of some AV1 encoders dramatically. Av1an also helps you with VMAF calculations, and can even target a specific quality level for your encodes.
 
 ---
 
@@ -23,7 +15,6 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 - [Installation](#installation)
 - [Supported encoders](#supported-encoders)
 - [Usage](#usage)
-- [Building](#building-av1an)
 
 ---
 
@@ -31,10 +22,10 @@ Av1an is a video encoding framework for modern encoders. It can increase your en
 
 - Vastly improved encoding speed for some encoders
 - Cancel and resume encoding without loss of progress
-- [Vapoursynth](http://www.vapoursynth.com) script input support
-- "Target Quality" mode, using VMAF to automatically set encoder options to achieve the wanted visual quality
-- Automatic detection of worker number based on available hardware
-- Simple and clean console look
+- [VapourSynth](http://www.vapoursynth.com) script input support
+- [Target Quality](/docs/TargetQuality.md) mode, using [VMAF](https://github.com/Netflix/vmaf) to automatically set encoder options to achieve the wanted visual quality
+- Automatic detection of parallel worker amount based on the available hardware
+- Simple and clean console interface
 - Convenient Docker images available
 - Cross-platform, works on Linux, macOS and Windows
 
@@ -50,6 +41,8 @@ After all segments have been encoded, they are concatenated into a single video.
 
 The simplest way to install av1an is to use a package manager. There are also pre-built [Docker images](#usage-in-docker) which include all dependencies and are frequently updated.
 
+For Windows users that do not want to use Docker, prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
+
 ### Package managers
 
 Arch Linux & Manjaro: `pacman -S av1an`
@@ -61,13 +54,13 @@ If your distribution's package manager does not have Av1an or if you're on Windo
 Prerequisites:
 
 - [FFmpeg](https://ffmpeg.org/download.html)
-- [Vapoursynth](https://github.com/vapoursynth/vapoursynth/releases)
+- [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases)
 - At least one [encoder](#supported-encoders)
 
 Optional:
 
-- [ffms2](https://github.com/FFMS/ffms2) for better chunking
 - [L-SMASH](https://github.com/VFR-maniac/L-SMASH-Works) for better chunking
+- [ffms2](https://github.com/FFMS/ffms2) for better chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge for file concatenation (FFmpeg by default)
 - [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF and to use [target quality mode](docs/TargetQuality.md)
 
@@ -90,51 +83,13 @@ Encode a video file with the default parameters:
 av1an -i input.mkv
 ```
 
-Or use a Vapoursynth script and custom parameters:
+Or use a VapourSynth script and custom parameters:
 
 ```sh
 av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 ```
 
 To check all available options for your version of Av1an use `av1an -h`.
-
-## Building Av1an
-
-To compile Av1an from source, [NASM](https://www.nasm.us/), [clang/LLVM](https://llvm.org/), [FFmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/), and [Rust](https://www.rust-lang.org/) are required. Only FFmpeg and VapourSynth are required to run Av1an, the rest of the dependencies are required only for compilation.
-
-Rust 1.59.0 or newer is currently required to build Av1an.
-
-#### Compilation on Linux
-
-- Install these dependencies from your distribution's package manager.
-  - On Arch Linux, these are the `rust`, `nasm`, `clang`, `ffmpeg`, and `vapoursynth` packages.
-
-Then clone and build Av1an:
-
-```
-git clone https://github.com/master-of-zen/Av1an && cd Av1an
-cargo build --release
-```
-
-The resulting binary will be the file `./target/release/av1an`.
-
-#### Compilation on Windows
-
-To install Rust on Windows, first install [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). Then, download [`rustup-init.exe`](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe), run the program, and follow the onscreen instructions. Choose "Proceed with installation (default)" when prompted.
-
-Next, install [Python](https://www.python.org/) 3.10 or 3.8 (preferrably for all users). This is required for VapourSynth. Then, install VapourSynth from [this installer](https://github.com/vapoursynth/vapoursynth/releases/download/R58/VapourSynth64-R58.exe).
-
-Next, install NASM by using [this installer](https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-installer-x64.exe).
-
-Then, download a build of FFmpeg from here: https://github.com/GyanD/codexffmpeg/releases/download/5.0.1/ffmpeg-5.0.1-full_build-shared.7z
-
-Extract the file `ffmpeg-5.0.1-full_build-shared.7z` to a directory, then create a new environment variable called `FFMPEG_DIR` (this can be done with with the "Edit environment variables for your account" function available in the control panel), and set it to the directory that you extracted the original file to (for example, set it to `C:\Users\Username\Downloads\ffmpeg-5.0.1-full_build-shared`).
-
-Then, clone this repository (which can either be done via the git command line tool with the command `git clone https://github.com/master-of-zen/Av1an`, or by downloading and extracting the source code from the GitHub UI, which can be done with the "Download ZIP" button in the dropdown of the "Code" button near the top of the page).
-
-With a command prompt, `cd` into the directory containing this repository's source code, and run the command `cargo build --release`. If this command executes successfully with no errors, the binary (`av1an.exe`) will be the file `./target/release/av1an.exe` (relative to the directory containing the source code).
-
-To use the binary, copy all the `dll` files from `ffmpeg-5.0.1-full_build-shared\bin` to the same directory as `av1an.exe`, and ensure that `ffmpeg.exe` is in a folder accessible via the `PATH` environment variable.
 
 ## Av1an in Docker
 

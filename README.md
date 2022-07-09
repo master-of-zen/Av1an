@@ -51,10 +51,18 @@ Prerequisites:
 
 Optional:
 
-- [L-SMASH](https://github.com/VFR-maniac/L-SMASH-Works) for an alternative chunking method (recommended)
-- [ffms2](https://github.com/FFMS/ffms2) for an alternative chunking method
+- [L-SMASH](https://github.com/AkarinVS/L-SMASH-Works) VapourSynth plugin for better chunking (recommended)
+- [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge instead of FFmpeg for file concatenation
 - [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/TargetQuality.md)
+
+### VapourSynth plugins on Windows
+
+If you want to install the L-SMASH or ffms2 plugins and are on Windows, then you have [two installation options](http://vapoursynth.com/doc/installation.html#plugins-and-scripts). The easiest way is using the included plugin script:
+
+1. Open your VapourSynth installation directory
+2. Open a command prompt or PowerShell window via Shift + Right click
+3. Run `python3 vsrepo.py install lsmas ffms2`
 
 ## Usage
 

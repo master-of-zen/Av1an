@@ -6,11 +6,11 @@
 
 Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by running multiple encoder processes in parallel. This can improve CPU usage and encoding speed. The speed increase can be very significant if the selected encoder does not multi-thread well on its own.
 
-Av1an can also calculate a VMAF score for you to assess the encode quality, and it can even target a specific VMAF score when encoding.
+Av1an can also calculate a [VMAF](https://github.com/Netflix/vmaf) score for you to assess the encode quality, and it can even target a specific VMAF score when encoding.
 
 ## Features
 
-- Vastly improved encoding speed for some encoders
+- Vastly improved encoding speed for some encoders (especially `aomenc`, `rav1e` and `vpxenc`)
 - Cancel and resume encoding without loss of progress
 - [VapourSynth](http://www.vapoursynth.com) script support
 - [Target Quality](/docs/TargetQuality.md) mode, using VMAF to automatically set encoder options to achieve the desired video quality

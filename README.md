@@ -4,7 +4,7 @@
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 
-Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by running multiple encoder processes in parallel. This can improve CPU usage and increases the speed of some AV1 encoders dramatically.
+Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by running multiple encoder processes in parallel. This can improve CPU usage and encoding speed. The speed increase can be very significant if the selected encoder does not multi-thread well on its own.
 
 Av1an can also calculate a VMAF score for you to assess the encode quality, and it can even target a specific VMAF score when encoding.
 
@@ -13,21 +13,23 @@ Av1an can also calculate a VMAF score for you to assess the encode quality, and 
 - Vastly improved encoding speed for some encoders
 - Cancel and resume encoding without loss of progress
 - [VapourSynth](http://www.vapoursynth.com) script support
-- [Target Quality](/docs/TargetQuality.md) mode, using [VMAF](https://github.com/Netflix/vmaf) to automatically set encoder options to achieve the wanted visual quality
+- [Target Quality](/docs/TargetQuality.md) mode, using VMAF to automatically set encoder options to achieve the desired video quality
 - Simple and clean console interface
 - Convenient Docker images available
 - Cross-platform application written in Rust
 
 ## Supported encoders
 
-At least one encoder is required to use Av1an. Install any of these that you wish to use.
+At least one encoder is required to use Av1an. The following encoders are supported:
 
 - [aomenc](https://aomedia.googlesource.com/aom/) (AV1)
-- [SVT-AV1](https://gitlab.com/AOMediaCodec/SVT-AV1) (AV1)
+- [SvtAv1EncApp](https://gitlab.com/AOMediaCodec/SVT-AV1) (AV1)
 - [rav1e](https://github.com/xiph/rav1e) (AV1)
-- [libvpx](https://chromium.googlesource.com/webm/libvpx/) (VP8 and VP9)
+- [vpxenc](https://chromium.googlesource.com/webm/libvpx/) (VP8 and VP9)
 - [x264](https://www.videolan.org/developers/x264.html) (H.264/AVC)
 - [x265](https://www.videolan.org/developers/x265.html) (H.265/HEVC)
+
+Note that Av1an requires the executable encoder. If you use a package manager to install encoders, check that the installation includes an executable encoder (e.g. vpxenc, SvtAv1EncApp) from the list above. Just installing the library (e.g. libvpx, libSvtAv1Enc) is not enough.
 
 ## Installation
 
@@ -78,7 +80,7 @@ Or use a VapourSynth script and custom parameters:
 av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 ```
 
-To check all available options for your version of Av1an use `av1an -h`.
+To check all available options for your version of Av1an use `av1an --help`.
 
 ## Support the developer
 

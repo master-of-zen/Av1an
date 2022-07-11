@@ -1,5 +1,7 @@
 # Av1an
 
+![av1an fully utilizing a 96-core CPU for video encoding](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)
+
 [![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
@@ -85,7 +87,3 @@ To check all available options for your version of Av1an use `av1an --help` or u
 ## Support the developer
 
 Bitcoin - 1GTRkvV4KdSaRyFDYTpZckPKQCoWbWkJV1
-
-## See Av1an in action
-
-![av1an fully utilizing a 96-core CPU for video encoding](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)

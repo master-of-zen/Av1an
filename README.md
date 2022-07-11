@@ -80,7 +80,7 @@ Or use a VapourSynth script and custom parameters:
 av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 ```
 
-To check all available options for your version of Av1an use `av1an --help`.
+To check all available options for your version of Av1an use `av1an --help` or use the online [reference](docs/help.md) (possibly outdated).
 
 ## Support the developer
 

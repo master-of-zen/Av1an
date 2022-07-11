@@ -86,4 +86,6 @@ To check all available options for your version of Av1an use `av1an --help` or u
 
 Bitcoin - 1GTRkvV4KdSaRyFDYTpZckPKQCoWbWkJV1
 
+## See Av1an in action
+
 ![av1an fully utilizing a 96-core CPU for video encoding](https://cdn.discordapp.com/attachments/804148977347330048/928879953825640458/av1an_preview.jpg)

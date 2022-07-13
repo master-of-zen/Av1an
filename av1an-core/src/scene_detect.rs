@@ -4,7 +4,7 @@ use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
-use av_metrics_decoders::{Decoder, FfmpegDecoder};
+use av_metrics_decoders::{Decoder2, FfmpegDecoder};
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
@@ -43,8 +43,12 @@ pub fn av_scenechange_detect(
     frames
   });
 
+  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path()).unwrap();
+
+  let mut decoder = FfmpegDecoder::new(&mut ctx).unwrap();
+
   let scenes = scene_detect(
-    input,
+    &mut decoder,
     encoder,
     total_frames,
     if verbosity == Verbosity::Quiet {
@@ -70,8 +74,8 @@ pub fn av_scenechange_detect(
 
 /// Detect scene changes using rav1e scene detector.
 #[allow(clippy::option_if_let_else)]
-pub fn scene_detect(
-  input: &Input,
+pub fn scene_detect<F, D: Decoder2<F>>(
+  decoder: &mut D,
   // TODO use these fields
   _encoder: Encoder,
   total_frames: usize,
@@ -79,14 +83,10 @@ pub fn scene_detect(
   min_scene_len: usize,
   // TODO use these fields
   _sc_pix_format: Option<Pixel>,
-  // TODO use these fields
   sc_method: ScenecutMethod,
   _sc_downscale_height: Option<usize>,
   zones: &[Scene],
 ) -> anyhow::Result<Vec<Scene>> {
-  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path()).unwrap();
-
-  let mut decoder = FfmpegDecoder::new(&mut ctx).unwrap();
   let bit_depth = decoder.get_bit_depth();
 
   let mut scenes = Vec::new();
@@ -132,15 +132,15 @@ pub fn scene_detect(
       }
     });
     let sc_result = if bit_depth > 8 {
-      detect_scene_changes::<u16>(
-        &mut decoder,
+      detect_scene_changes::<F, D, u16>(
+        decoder,
         options,
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
       )
     } else {
-      detect_scene_changes::<u8>(
-        &mut decoder,
+      detect_scene_changes::<F, D, u8>(
+        decoder,
         options,
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),

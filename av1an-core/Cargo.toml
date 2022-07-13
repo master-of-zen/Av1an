@@ -90,9 +90,11 @@ quickcheck = { version = "1.0.3", default-features = false }
 quickcheck_macros = "1"
 
 [features]
+default = ["vapoursynth_new_api"]
 ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]
 vapoursynth_new_api = [
   "vapoursynth/vapoursynth-api-32",
   "vapoursynth/vsscript-api-31",
   "av-metrics-decoders/vapoursynth_new_api",
+  "av-scenechange/vapoursynth_new_api",
 ]

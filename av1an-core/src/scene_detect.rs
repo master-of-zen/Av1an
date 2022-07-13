@@ -1,17 +1,15 @@
-use std::io::Read;
-use std::process::{Command, Stdio};
 use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
-use av_metrics_decoders::{Decoder2, FfmpegDecoder};
+use av_metrics_decoders::{Decoder2, FfmpegDecoder, VapoursynthDecoder};
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
-use smallvec::{smallvec, SmallVec};
+use vapoursynth::prelude::*;
 
 use crate::scenes::Scene;
-use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
+use crate::{progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
 
 pub fn av_scenechange_detect(
   input: &Input,
@@ -43,27 +41,63 @@ pub fn av_scenechange_detect(
     frames
   });
 
-  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path()).unwrap();
+  let mut ff_ctx;
+  let mut ff_decoder;
 
-  let mut decoder = FfmpegDecoder::new(&mut ctx).unwrap();
+  let mut vs_ctx;
+  let mut vs_decoder;
 
-  let scenes = scene_detect(
-    &mut decoder,
-    encoder,
-    total_frames,
-    if verbosity == Verbosity::Quiet {
-      None
-    } else {
-      Some(&|frames, _| {
-        progress_bar::set_pos(frames as u64);
-      })
-    },
-    min_scene_len,
-    sc_pix_format,
-    sc_method,
-    sc_downscale_height,
-    zones,
-  )?;
+  let scenes = match input {
+    Input::Video(path) => {
+      ff_ctx = FfmpegDecoder::get_ctx(path).unwrap();
+      ff_decoder = FfmpegDecoder::new(&mut ff_ctx).unwrap();
+
+      scene_detect(
+        &mut ff_decoder,
+        encoder,
+        total_frames,
+        if verbosity == Verbosity::Quiet {
+          None
+        } else {
+          Some(&|frames, _| {
+            progress_bar::set_pos(frames as u64);
+          })
+        },
+        min_scene_len,
+        sc_pix_format,
+        sc_method,
+        sc_downscale_height,
+        zones,
+      )?
+    }
+    Input::VapourSynth(path) => {
+      // TODO make helper function for creating VS Environment
+      vs_ctx = Environment::new().unwrap();
+
+      // Evaluate the script.
+      vs_ctx.eval_file(path, EvalFlags::SetWorkingDir).unwrap();
+
+      vs_decoder = VapoursynthDecoder::new(&vs_ctx).unwrap();
+
+      scene_detect(
+        &mut vs_decoder,
+        encoder,
+        total_frames,
+        if verbosity == Verbosity::Quiet {
+          None
+        } else {
+          Some(&|frames, _| {
+            progress_bar::set_pos(frames as u64);
+          })
+        },
+        min_scene_len,
+        sc_pix_format,
+        sc_method,
+        sc_downscale_height,
+        zones,
+      )?
+    }
+  };
 
   let frames = frame_thread.join().unwrap();
 

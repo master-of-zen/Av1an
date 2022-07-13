@@ -53,7 +53,7 @@ Note that Av1an requires the executable encoder. If you use a package manager to
 
 av1an can be installed from package managers, cargo.io, or compliled manually. There are also pre-built [Docker images](/docs/DOCKER.md) which include all dependencies and are frequently updated.
 
-For Windows users prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
+For Windows users, prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
 
 ### Package managers
 

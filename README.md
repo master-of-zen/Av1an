@@ -5,20 +5,36 @@
 [![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
+[![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
 
-Av1an is a video encoding framework for modern encoders. It can increase your encoding efficiency by running multiple encoder processes in parallel. This can improve CPU usage and encoding speed. The speed increase can be very significant if the selected encoder does not multi-thread well on its own.
-
-Av1an can also calculate a [VMAF](https://github.com/Netflix/vmaf) score for you to assess the encode quality, and it can even target a specific VMAF score when encoding.
+Av1an is a video encoding framework. It can increase your encoding speed and improve cpu utilization by running multiple encoder processes in parallel. Target quality, VMAF plotting, and more, available to take advantage for video encoding.
 
 ## Features
 
-- Vastly improved encoding speed for some encoders (especially `aomenc`, `rav1e` and `vpxenc`)
-- Cancel and resume encoding without loss of progress
+- Hyper-scalable video encoding
+- [Target Quality](/docs/TargetQuality.md) mode, using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
-- [Target Quality](/docs/TargetQuality.md) mode, using VMAF to automatically set encoder options to achieve the desired video quality
-- Simple and clean console interface
-- Convenient Docker images available
+- Cancel and resume encoding without loss of progress
+- Minimal and clean CLI
+- Docker images available
 - Cross-platform application written in Rust
+
+## Usage
+
+For complete reference, refer to [CLI](/docs/CLI.md)
+or run `av1an --help`
+
+Encode a video file with the default parameters:
+
+```sh
+av1an -i input.mkv
+```
+
+Or use a VapourSynth script and custom parameters:
+
+```sh
+av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+```
 
 ## Supported encoders
 
@@ -35,15 +51,14 @@ Note that Av1an requires the executable encoder. If you use a package manager to
 
 ## Installation
 
-The simplest way to install av1an is to use a package manager. There are also pre-built [Docker images](/docs/docker.md) which include all dependencies and are frequently updated.
+av1an can be installed from package managers, cargo.io, or compliled manually. There are also pre-built [Docker images](/docs/DOCKER.md) which include all dependencies and are frequently updated.
 
-For Windows users that do not want to use Docker, prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
+For Windows users prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
 
 ### Package managers
 
 Arch Linux & Manjaro: `pacman -S av1an`
-
-If your distribution's package manager does not have Av1an or if you're on Windows, you can still install Av1an manually.
+Cargo: `cargo install av1an`
 
 ### Manual installation
 
@@ -67,22 +82,6 @@ If you want to install the L-SMASH or ffms2 plugins and are on Windows, then you
 1. Open your VapourSynth installation directory
 2. Open a command prompt or PowerShell window via Shift + Right click
 3. Run `python3 vsrepo.py install lsmas ffms2`
-
-## Usage
-
-Encode a video file with the default parameters:
-
-```sh
-av1an -i input.mkv
-```
-
-Or use a VapourSynth script and custom parameters:
-
-```sh
-av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
-```
-
-To check all available options for your version of Av1an use `av1an --help` or use the online [reference](docs/help.md) (possibly outdated).
 
 ## Support the developer
 

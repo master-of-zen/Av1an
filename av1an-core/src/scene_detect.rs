@@ -84,7 +84,7 @@ pub fn scene_detect(
   _sc_downscale_height: Option<usize>,
   zones: &[Scene],
 ) -> anyhow::Result<Vec<Scene>> {
-  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path());
+  let mut ctx = FfmpegDecoder::get_ctx(input.as_video_path()).unwrap();
 
   let mut decoder = FfmpegDecoder::new(&mut ctx).unwrap();
   let bit_depth = decoder.get_bit_depth();

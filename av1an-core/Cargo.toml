@@ -94,4 +94,5 @@ ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]
 vapoursynth_new_api = [
   "vapoursynth/vapoursynth-api-32",
   "vapoursynth/vsscript-api-31",
+  "av-metrics-decoders/vapoursynth_new_api",
 ]

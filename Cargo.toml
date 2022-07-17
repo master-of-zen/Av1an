@@ -33,11 +33,6 @@ vapoursynth_new_api = ["av1an-core/vapoursynth_new_api"]
 [workspace]
 members = ["av1an-core", "av1an-cli"]
 
-[profile.dev.package.av-scenechange]
-opt-level = 3
-[profile.dev.package.rav1e]
-opt-level = 3
-
 [profile.release]
 lto = "thin"
 codegen-units = 1
@@ -50,5 +45,6 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-av-scenechange = { git = "https://github.com/redzic/av-scenechange", branch = "zerocopy" }
+# av-scenechange = { git = "https://github.com/redzic/av-scenechange", branch = "zerocopy" }
+av-scenechange = { path = "../av-scenechange" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

@@ -1,6 +1,6 @@
 [package]
 name = "av1an-core"
-version = "0.3.1"
+version = "0.3.2"
 rust-version = "1.59"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
@@ -68,8 +68,7 @@ default-features = false
 features = ["svg_backend", "line_series"]
 
 [dependencies.vapoursynth]
-git = "https://github.com/YaLTeR/vapoursynth-rs"
-rev = "074417335ff9c139956c62771835798c9a302e67"
+version = "0.4.0"
 features = ["vsscript-functions", "vapoursynth-functions"]
 
 [dependencies.tokio]

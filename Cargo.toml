@@ -1,6 +1,6 @@
 [package]
 name = "av1an"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
@@ -22,8 +22,8 @@ serde_json = "1.0.64"
 serde = { version = "1.0.126", features = ["serde_derive"] }
 shlex = "1.0.0"
 path_abs = "0.5.1"
-av1an-cli = { path = "av1an-cli", version = "0.3.1" }
-av1an-core = { path = "av1an-core", version = "0.3.1" }
+av1an-cli = { path = "av1an-cli", version = "0.3.2" }
+av1an-core = { path = "av1an-core", version = "0.3.2" }
 
 [features]
 default = ["vapoursynth_new_api"]

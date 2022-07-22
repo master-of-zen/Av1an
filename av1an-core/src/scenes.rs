@@ -271,6 +271,7 @@ fn get_test_args() -> EncodeArgs {
     encoder: Encoder::aom,
     extra_splits_len: Some(100),
     photon_noise: Some(10),
+    chroma_noise: false,
     sc_pix_format: None,
     keep: false,
     max_tries: 3,

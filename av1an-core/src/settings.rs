@@ -14,6 +14,7 @@ use std::{cmp, fs, iter, thread};
 
 use ansi_term::{Color, Style};
 use anyhow::{bail, ensure, Context};
+use av1_grain::{generate_grain_params, write_grain_table, NoiseGenArgs, TransferFunction};
 use crossbeam_utils;
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
@@ -26,7 +27,6 @@ use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
 use crate::concat::{self, ConcatMethod};
 use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
-use crate::grain::{create_film_grain_file, TransferFunction};
 use crate::parse::valid_params;
 use crate::progress_bar::{
   finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
@@ -82,6 +82,7 @@ pub struct EncodeArgs {
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
   pub photon_noise: Option<u8>,
+  pub chroma_noise: bool,
   pub zones: Option<PathBuf>,
 
   // FFmpeg params
@@ -1146,15 +1147,25 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     if let Some(strength) = self.photon_noise {
       let table = Path::new(&self.temp).join("grain.tbl");
       if !table.exists() {
-        debug!(
-          "Generating grain table at ISO {}",
-          u32::from(strength) * 100
-        );
+        let iso_setting = u32::from(strength) * 100;
+        debug!("Generating grain table at ISO {}", iso_setting);
         let (width, height) = self.input.resolution()?;
-        let transfer = self
+        let transfer_function = self
           .input
           .transfer_function_params_adjusted(&self.video_params)?;
-        create_film_grain_file(&table, strength, width, height, transfer)?;
+        let params = generate_grain_params(
+          0,
+          u64::MAX,
+          NoiseGenArgs {
+            iso_setting,
+            width,
+            height,
+            transfer_function,
+            chroma_grain: self.chroma_noise,
+            random_seed: None,
+          },
+        );
+        write_grain_table(&table, &[params])?;
       } else {
         debug!("Using existing grain table");
       }
@@ -1177,15 +1188,25 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           grain_table.clone().unwrap()
         } else {
           let grain_table = Path::new(&self.temp).join(&format!("chunk{}-grain.tbl", chunk.index));
-          debug!(
-            "Generating grain table at ISO {}",
-            u32::from(strength) * 100
-          );
+          let iso_setting = u32::from(strength) * 100;
+          debug!("Generating grain table at ISO {}", iso_setting);
           let (width, height) = self.input.resolution()?;
-          let transfer = self
+          let transfer_function = self
             .input
             .transfer_function_params_adjusted(&self.video_params)?;
-          create_film_grain_file(&grain_table, strength, width, height, transfer)?;
+          let params = generate_grain_params(
+            0,
+            u64::MAX,
+            NoiseGenArgs {
+              iso_setting,
+              width,
+              height,
+              transfer_function,
+              chroma_grain: self.chroma_noise,
+              random_seed: None,
+            },
+          );
+          write_grain_table(&grain_table, &[params])?;
           grain_table
         };
 

@@ -20,6 +20,9 @@ arrayvec = "0.7.2"
 atty = "0.2.14"
 av-format = "0.3.1"
 av-ivf = "0.2.2"
+av1-grain = { version = "0.1.1", default-features = false, features = [
+  "create",
+] }
 memchr = "2.4.1"
 anyhow = "1.0.42"
 rand = "0.8.4"

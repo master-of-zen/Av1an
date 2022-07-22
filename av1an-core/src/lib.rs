@@ -35,9 +35,9 @@ use std::time::Instant;
 
 use ::ffmpeg::color::TransferCharacteristic;
 use anyhow::Context;
+use av1_grain::TransferFunction;
 use chunk::Chunk;
 use dashmap::DashMap;
-use grain::TransferFunction;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
@@ -52,7 +52,6 @@ pub mod chunk;
 pub mod concat;
 pub mod encoder;
 pub mod ffmpeg;
-mod grain;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;

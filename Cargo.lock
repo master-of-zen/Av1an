@@ -144,6 +144,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "av1-grain"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9240c2407668b099fbdb363d6ec091c59bed86ce9c1c3d2c2e50c9a83e0532ea"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+]
+
+[[package]]
 name = "av1an"
 version = "0.3.2"
 dependencies = [
@@ -186,6 +196,7 @@ dependencies = [
  "av-format",
  "av-ivf",
  "av-scenechange",
+ "av1-grain",
  "cfg-if",
  "crossbeam-channel",
  "crossbeam-utils",

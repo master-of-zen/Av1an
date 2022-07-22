@@ -151,8 +151,6 @@ checksum = "9240c2407668b099fbdb363d6ec091c59bed86ce9c1c3d2c2e50c9a83e0532ea"
 dependencies = [
  "anyhow",
  "arrayvec",
- "itertools",
- "nom",
 ]
 
 [[package]]

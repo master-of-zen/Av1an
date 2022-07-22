@@ -82,6 +82,7 @@ pub struct EncodeArgs {
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
   pub photon_noise: Option<u8>,
+  pub chroma_noise: bool,
   pub zones: Option<PathBuf>,
 
   // FFmpeg params
@@ -1160,7 +1161,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             width,
             height,
             transfer_function,
-            chroma_grain: false,
+            chroma_grain: self.chroma_noise,
             random_seed: None,
           },
         );
@@ -1201,7 +1202,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
               width,
               height,
               transfer_function,
-              chroma_grain: false,
+              chroma_grain: self.chroma_noise,
               random_seed: None,
             },
           );

@@ -337,6 +337,23 @@ fn validate_zones_args() {
 }
 
 #[test]
+fn validate_rav1e_zone_with_photon_noise() {
+  let input = "45 729 rav1e --speed 6 --photon-noise 4";
+  let args = get_test_args();
+  let result = Scene::parse_from_zone(input, &args).unwrap();
+  assert_eq!(result.start_frame, 45);
+  assert_eq!(result.end_frame, 729);
+
+  let zone_overrides = result.zone_overrides.unwrap();
+  assert_eq!(zone_overrides.encoder, Encoder::rav1e);
+  assert_eq!(zone_overrides.photon_noise, Some(4));
+  assert!(zone_overrides
+    .video_params
+    .windows(2)
+    .any(|window| window[0] == "--speed" && window[1] == "6"));
+}
+
+#[test]
 fn validate_zones_reset() {
   let input = "729 1337 aom reset --cq-level=20 --cpu-used=5";
   let args = get_test_args();

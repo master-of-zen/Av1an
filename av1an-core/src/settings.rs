@@ -590,8 +590,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       if strength > 64 {
         bail!("Valid strength values for photon noise are 0-64");
       }
-      if self.encoder != Encoder::aom {
-        bail!("Photon noise synth is only supported with aomenc");
+      if ![Encoder::aom, Encoder::rav1e].contains(&self.encoder) {
+        bail!("Photon noise synth is only supported with aomenc and rav1e");
       }
     }
 
@@ -1170,13 +1170,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         debug!("Using existing grain table");
       }
 
-      // We should not use a grain table together with aom's grain generation
-      self
-        .video_params
-        .retain(|param| !param.starts_with("--denoise-noise-level="));
-      self
-        .video_params
-        .push(format!("--film-grain-table={}", table.to_str().unwrap()));
+      // We should not use a grain table together with the encoder's grain generation
+      insert_noise_table_params(self.encoder, &mut self.video_params, &table);
       grain_table = Some(table);
     }
 
@@ -1212,13 +1207,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
         // We should not use a grain table together with aom's grain generation
         let overrides = chunk.overrides.as_mut().unwrap();
-        overrides
-          .video_params
-          .retain(|param| !param.starts_with("--denoise-noise-level="));
-        overrides.video_params.push(format!(
-          "--film-grain-table={}",
-          grain_table.to_str().unwrap()
-        ));
+        insert_noise_table_params(overrides.encoder, &mut overrides.video_params, &grain_table);
       }
     }
 
@@ -1429,4 +1418,25 @@ pub(crate) fn suggest_fix<'a>(
         None
       }
     })
+}
+
+fn insert_noise_table_params(encoder: Encoder, video_params: &mut Vec<String>, table: &Path) {
+  match encoder {
+    Encoder::aom => {
+      video_params.retain(|param| !param.starts_with("--denoise-noise-level="));
+      video_params.push(format!("--film-grain-table={}", table.to_str().unwrap()));
+    }
+    Encoder::rav1e => {
+      let photon_noise_idx = video_params
+        .iter()
+        .find_position(|param| param.as_str() == "--photon-noise");
+      if let Some((idx, _)) = photon_noise_idx {
+        video_params.remove(idx + 1);
+        video_params.remove(idx);
+      }
+      video_params.push("--photon-noise-table".to_string());
+      video_params.push(table.to_str().unwrap().to_string());
+    }
+    _ => unimplemented!("This encoder does not support grain synth through av1an"),
+  }
 }

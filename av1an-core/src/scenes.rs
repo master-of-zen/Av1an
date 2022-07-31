@@ -338,7 +338,7 @@ fn validate_zones_args() {
 
 #[test]
 fn validate_rav1e_zone_with_photon_noise() {
-  let input = "45 729 rav1e --speed 6 --photon-noise 4";
+  let input = "45 729 rav1e reset --speed 6 --photon-noise 4";
   let args = get_test_args();
   let result = Scene::parse_from_zone(input, &args).unwrap();
   assert_eq!(result.start_frame, 45);

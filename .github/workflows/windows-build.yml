@@ -27,7 +27,7 @@ jobs:
 
       - name: FFmpeg hashsum
         run: |
-          $hashSum = (Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z.sha256').Content
+          $hashSum = (Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-5.0.1-full_build-shared.7z.sha256').Content
           echo "ff_hash=$hashSum" | Out-File $env:GITHUB_ENV -Append
           Write-Output "Latest release: $hashSum"
 
@@ -42,7 +42,7 @@ jobs:
         name: FFmpeg installation
         run: |
           $tempFile = New-TemporaryFile
-          Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z' -OutFile $tempFile -TimeoutSec 10
+          Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-5.0.1-full_build-shared.7z' -OutFile $tempFile -TimeoutSec 10
           7z x -y -o'C:/ffmpeg' "$tempFile"
 
       - name: FFmpeg environment variable

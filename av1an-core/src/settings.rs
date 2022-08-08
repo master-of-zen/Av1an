@@ -866,7 +866,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let vspipe_cmd_gen: Vec<OsString> = into_vec![
       "vspipe",
       vs_script,
-      "-y",
+      "-c",
+      "y4m",
       "-",
       "-s",
       format!("{}", scene.start_frame),

@@ -216,7 +216,8 @@ fn build_decoder(
     Input::VapourSynth(path) => {
       bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
       let vspipe = Command::new("vspipe")
-        .arg("-y")
+        .arg("-c")
+        .arg("y4m")
         .arg(path)
         .arg("-")
         .stdin(Stdio::null())

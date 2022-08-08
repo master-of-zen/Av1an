@@ -144,7 +144,7 @@ pub fn plot(
         "-"
       ]
     ),
-    Input::VapourSynth(ref path) => ref_smallvec!(OsStr, 8, ["vspipe", "-y", path, "-"]),
+    Input::VapourSynth(ref path) => ref_smallvec!(OsStr, 8, ["vspipe", "-c", "y4m", path, "-"]),
   };
 
   run_vmaf(

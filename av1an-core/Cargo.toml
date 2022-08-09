@@ -63,7 +63,7 @@ features = ["const_generics", "const_new", "union"]
 
 [dependencies.ffmpeg]
 package = "ffmpeg-next"
-version = "5.0.3"
+version = "5.1.1"
 
 [dependencies.plotters]
 version = "0.3.1"

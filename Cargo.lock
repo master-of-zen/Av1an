@@ -147,6 +147,7 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.7.2"
+source = "git+https://github.com/redzic/av-scenechange?branch=zerocopy#4d09add386b5ead81219f095a0d7677bff54dc72"
 dependencies = [
  "anyhow",
  "ffmpeg-next",
@@ -1227,6 +1228,7 @@ dependencies = [
 [[package]]
 name = "rav1e"
 version = "0.5.0"
+source = "git+https://github.com/redzic/rav1e?branch=zerocopy#6a44da2bbc929e35cbd39d6d7fb6665a62e4f031"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1727,6 +1729,7 @@ dependencies = [
 [[package]]
 name = "v_frame"
 version = "0.2.5"
+source = "git+https://github.com/redzic/rav1e?branch=zerocopy#6a44da2bbc929e35cbd39d6d7fb6665a62e4f031"
 dependencies = [
  "cfg-if",
  "new_debug_unreachable",

@@ -2,7 +2,9 @@ use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
-use av_metrics_decoders::{Decoder2, FfmpegDecoder, VapoursynthDecoder};
+use av_scenechange::decode::Decoder2;
+use av_scenechange::ffmpeg::FfmpegDecoder;
+use av_scenechange::vapoursynth::VapoursynthDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;

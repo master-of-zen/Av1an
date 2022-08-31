@@ -790,7 +790,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .store(self.frames, atomic::Ordering::SeqCst);
     let scenes_before = scenes.len();
     if !used_existing_cuts {
-      if let Some(split_len) = self.extra_splits_len {
+      if let Some(split_len @ 1..) = self.extra_splits_len {
         scenes = extra_splits(&scenes, self.frames, split_len);
         let scenes_after = scenes.len();
         info!(

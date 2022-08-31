@@ -2,7 +2,7 @@ use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
-use av_scenechange::decode::Decoder2;
+use av_scenechange::decode::Decoder;
 use av_scenechange::ffmpeg::FfmpegDecoder;
 use av_scenechange::vapoursynth::VapoursynthDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
@@ -110,7 +110,7 @@ pub fn av_scenechange_detect(
 
 /// Detect scene changes using rav1e scene detector.
 #[allow(clippy::option_if_let_else)]
-pub fn scene_detect<F, D: Decoder2<F>>(
+pub fn scene_detect<F, D: Decoder<F>>(
   decoder: &mut D,
   // TODO use these fields
   _encoder: Encoder,

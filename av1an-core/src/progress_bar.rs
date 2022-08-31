@@ -160,7 +160,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
         } else {
           "  {prefix:.dim} {msg}"
         }));
-      pb.set_prefix(format!("[Idle  {:width$}]", width = digits));
+      pb.set_prefix(format!("[Idle  {width:width$}]", width = digits));
       pbs.push(mpb.add(pb));
     }
 

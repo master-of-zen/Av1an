@@ -71,6 +71,7 @@ pub enum Input {
 
 impl Input {
   /// Returns a reference to the inner path, panicking if the input is not an `Input::Video`.
+  #[track_caller]
   pub fn as_video_path(&self) -> &Path {
     match &self {
       Input::Video(path) => path.as_ref(),
@@ -81,6 +82,7 @@ impl Input {
   }
 
   /// Returns a reference to the inner path, panicking if the input is not an `Input::VapourSynth`.
+  #[track_caller]
   pub fn as_vapoursynth_path(&self) -> &Path {
     match &self {
       Input::VapourSynth(path) => path.as_ref(),

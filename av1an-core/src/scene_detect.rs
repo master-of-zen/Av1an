@@ -1,16 +1,17 @@
-use std::io::Read;
-use std::process::{Command, Stdio};
 use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
+use av_scenechange::decode::Decoder;
+use av_scenechange::ffmpeg::FfmpegDecoder;
+use av_scenechange::vapoursynth::VapoursynthDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
-use smallvec::{smallvec, SmallVec};
+use vapoursynth::prelude::*;
 
 use crate::scenes::Scene;
-use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
+use crate::{progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
 
 pub fn av_scenechange_detect(
   input: &Input,
@@ -42,23 +43,63 @@ pub fn av_scenechange_detect(
     frames
   });
 
-  let scenes = scene_detect(
-    input,
-    encoder,
-    total_frames,
-    if verbosity == Verbosity::Quiet {
-      None
-    } else {
-      Some(&|frames| {
-        progress_bar::set_pos(frames as u64);
-      })
-    },
-    min_scene_len,
-    sc_pix_format,
-    sc_method,
-    sc_downscale_height,
-    zones,
-  )?;
+  let mut ff_ctx;
+  let mut ff_decoder;
+
+  let mut vs_ctx;
+  let mut vs_decoder;
+
+  let scenes = match input {
+    Input::Video(path) => {
+      ff_ctx = FfmpegDecoder::get_ctx(path).unwrap();
+      ff_decoder = FfmpegDecoder::new(&mut ff_ctx).unwrap();
+
+      scene_detect(
+        &mut ff_decoder,
+        encoder,
+        total_frames,
+        if verbosity == Verbosity::Quiet {
+          None
+        } else {
+          Some(&|frames, _| {
+            progress_bar::set_pos(frames as u64);
+          })
+        },
+        min_scene_len,
+        sc_pix_format,
+        sc_method,
+        sc_downscale_height,
+        zones,
+      )?
+    }
+    Input::VapourSynth(path) => {
+      // TODO make helper function for creating VS Environment
+      vs_ctx = Environment::new().unwrap();
+
+      // Evaluate the script.
+      vs_ctx.eval_file(path, EvalFlags::SetWorkingDir).unwrap();
+
+      vs_decoder = VapoursynthDecoder::new(&vs_ctx).unwrap();
+
+      scene_detect(
+        &mut vs_decoder,
+        encoder,
+        total_frames,
+        if verbosity == Verbosity::Quiet {
+          None
+        } else {
+          Some(&|frames, _| {
+            progress_bar::set_pos(frames as u64);
+          })
+        },
+        min_scene_len,
+        sc_pix_format,
+        sc_method,
+        sc_downscale_height,
+        zones,
+      )?
+    }
+  };
 
   let frames = frame_thread.join().unwrap();
 
@@ -69,18 +110,20 @@ pub fn av_scenechange_detect(
 
 /// Detect scene changes using rav1e scene detector.
 #[allow(clippy::option_if_let_else)]
-pub fn scene_detect(
-  input: &Input,
-  encoder: Encoder,
+pub fn scene_detect<F, D: Decoder<F>>(
+  decoder: &mut D,
+  // TODO use these fields
+  _encoder: Encoder,
   total_frames: usize,
-  callback: Option<&dyn Fn(usize)>,
+  callback: Option<&dyn Fn(usize, usize)>,
   min_scene_len: usize,
-  sc_pix_format: Option<Pixel>,
+  // TODO use these fields
+  _sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
-  sc_downscale_height: Option<usize>,
+  _sc_downscale_height: Option<usize>,
   zones: &[Scene],
 ) -> anyhow::Result<Vec<Scene>> {
-  let (mut decoder, bit_depth) = build_decoder(input, encoder, sc_pix_format, sc_downscale_height)?;
+  let bit_depth = decoder.get_bit_depth();
 
   let mut scenes = Vec::new();
   let mut cur_zone = zones.first().filter(|frame| frame.start_frame == 0);
@@ -121,19 +164,19 @@ pub fn scene_detect(
     };
     let callback = callback.map(|cb| {
       |frames, _keyframes| {
-        cb(frames + frames_read);
+        cb(frames + frames_read, 0);
       }
     });
     let sc_result = if bit_depth > 8 {
-      detect_scene_changes::<_, u16>(
-        &mut decoder,
+      detect_scene_changes::<F, D, u16>(
+        decoder,
         options,
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
       )
     } else {
-      detect_scene_changes::<_, u8>(
-        &mut decoder,
+      detect_scene_changes::<F, D, u8>(
+        decoder,
         options,
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
@@ -189,76 +232,4 @@ pub fn scene_detect(
     }
   }
   Ok(scenes)
-}
-
-fn build_decoder(
-  input: &Input,
-  encoder: Encoder,
-  sc_pix_format: Option<Pixel>,
-  sc_downscale_height: Option<usize>,
-) -> anyhow::Result<(y4m::Decoder<impl Read>, usize)> {
-  let bit_depth;
-  let filters: SmallVec<[String; 4]> = match (sc_downscale_height, sc_pix_format) {
-    (Some(sdh), Some(spf)) => into_smallvec![
-      "-vf",
-      format!(
-        "format={},scale=-2:'min({},ih)'",
-        spf.descriptor().unwrap().name(),
-        sdh
-      )
-    ],
-    (Some(sdh), None) => into_smallvec!["-vf", format!("scale=-2:'min({},ih)'", sdh)],
-    (None, Some(spf)) => into_smallvec!["-pix_fmt", spf.descriptor().unwrap().name()],
-    (None, None) => smallvec![],
-  };
-
-  let decoder = y4m::Decoder::new(match input {
-    Input::VapourSynth(path) => {
-      bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
-      let vspipe = Command::new("vspipe")
-        .arg("-c")
-        .arg("y4m")
-        .arg(path)
-        .arg("-")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap();
-
-      if !filters.is_empty() {
-        Command::new("ffmpeg")
-          .stdin(vspipe)
-          .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
-          .args(filters)
-          .arg("-")
-          .stdout(Stdio::piped())
-          .stderr(Stdio::null())
-          .spawn()?
-          .stdout
-          .unwrap()
-      } else {
-        vspipe
-      }
-    }
-    Input::Video(path) => {
-      let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
-        .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {:?}", e));
-      bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;
-      Command::new("ffmpeg")
-        .args(["-r", "1", "-i"])
-        .arg(path)
-        .args(filters.as_ref())
-        .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap()
-    }
-  })?;
-
-  Ok((decoder, bit_depth))
 }

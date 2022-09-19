@@ -158,7 +158,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "-q"],
+        into_array!["rav1e", "-", "-y", "--quiet"],
         params,
         into_array!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
       )
@@ -240,7 +240,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "-q"],
+        into_array!["rav1e", "-", "-y", "--quiet"],
         params,
         into_array!["--second-pass", format!("{}.stat", fpf), "--output", output]
       )

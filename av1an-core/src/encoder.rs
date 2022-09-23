@@ -867,7 +867,8 @@ impl Encoder {
     impl_this_function!(x264, x265, vpx, aom, rav1e, svt_av1)
   }
 
-  pub fn get_boosted_q(self, luma_delta: f32) -> usize {
+  pub fn get_boosted_q(self, boost_strength: f32) -> usize {
+    // boost strength is a float in the range (0,1]
     match &self {
       Encoder::aom => todo!(),
       Encoder::rav1e => todo!(),

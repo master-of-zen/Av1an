@@ -5,15 +5,15 @@ use crate::{chunk::Chunk, encoder::Encoder};
 const BOOST_THRESHOLD: f32 = 50.0;
 
 pub fn boost_low_luma(chunk: &Chunk, encoder: Encoder) -> Option<usize> {
-  if let Ok(luma) = get_avg_luma(chunk) {
-    if luma < BOOST_THRESHOLD {
-      return Some(
-        encoder.get_boosted_q(BOOST_THRESHOLD - luma)
-      );
+  get_avg_luma(chunk).map_or(None, |luma| {
+    if BOOST_THRESHOLD > luma {
+      Some(
+        encoder.get_boosted_q((BOOST_THRESHOLD - luma) / BOOST_THRESHOLD)
+      )
+    } else {
+      None
     }
-  }
-
-  None
+  })
 }
 
 pub fn get_avg_luma(chunk: &Chunk) -> anyhow::Result<f32> {

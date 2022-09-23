@@ -23,6 +23,7 @@ use rand::thread_rng;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 
+use crate::boost::boost_low_luma;
 use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
 use crate::concat::{self, ConcatMethod};
@@ -243,6 +244,12 @@ impl EncodeArgs {
     } else {
       encoder.compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
     };
+
+    if self.luma_boost {
+      if let Some(boosted_q) = boost_low_luma(chunk, encoder) {
+        enc_cmd = encoder.man_command(enc_cmd, boosted_q);
+      }
+    }
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
       enc_cmd = encoder.man_command(enc_cmd, per_shot_target_quality_cq as usize);

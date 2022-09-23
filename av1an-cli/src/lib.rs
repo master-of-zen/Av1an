@@ -372,6 +372,10 @@ pub struct CliOpts {
   #[clap(long, default_value = "yuv420p10le", help_heading = "ENCODING")]
   pub pix_format: Pixel,
 
+  /// Enables the low-luma boost
+  #[clap(long, help_heading = "ENCODING")]
+  pub luma_boost: bool,
+
   /// Path to a file specifying zones within the video with differing encoder settings.
   ///
   /// The zones file should include one zone per line,
@@ -623,6 +627,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         .photon_noise
         .and_then(|arg| if arg == 0 { None } else { Some(arg) }),
       chroma_noise: args.chroma_noise,
+      luma_boost: args.luma_boost,
       sc_pix_format: args.sc_pix_format,
       keep: args.keep,
       max_tries: args.max_tries,

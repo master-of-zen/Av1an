@@ -83,6 +83,7 @@ pub struct EncodeArgs {
   pub set_thread_affinity: Option<usize>,
   pub photon_noise: Option<u8>,
   pub chroma_noise: bool,
+  pub luma_boost: bool,
   pub zones: Option<PathBuf>,
 
   // FFmpeg params

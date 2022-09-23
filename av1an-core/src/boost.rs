@@ -1,76 +1,50 @@
-use std::{io::Read, process::{Stdio, Command}};
+use std::process::{Stdio, Command};
 
-use crate::{Input, scenes::Scene, encoder::Encoder, chunk::Chunk};
+use crate::{chunk::Chunk, encoder::Encoder};
 
-pub trait Pixel {}
+const BOOST_THRESHOLD: f32 = 50.0;
 
-pub fn analyze<T: Pixel>(input: &Input, encoder: Encoder, scene: Scene, chunk: Chunk) -> anyhow::Result<Vec<f32>> {
-  let mut decoder = build_decoder(input, encoder)?;
+pub fn boost_low_luma(chunk: &Chunk, encoder: Encoder) -> Option<usize> {
+  if let Ok(luma) = get_avg_luma(chunk) {
+    if luma < BOOST_THRESHOLD {
+      return Some(
+        encoder.get_boosted_q(BOOST_THRESHOLD - luma)
+      );
+    }
+  }
+
+  None
+}
+
+pub fn get_avg_luma(chunk: &Chunk) -> anyhow::Result<f32> {
+  let source_pipe = if let [source, args @ ..] = &*chunk.source {
+    Command::new(source)
+      .args(args)
+      .stdin(Stdio::null())
+      .stdout(Stdio::piped())
+      .stderr(Stdio::null())
+      .spawn()
+      .unwrap()
+      .stdout
+      .unwrap()
+  } else {
+    unreachable!();
+  };
+  
+  let mut decoder = y4m::Decoder::new(source_pipe)?;
   let bit_depth = decoder.get_bit_depth();
   assert!(bit_depth == 8, "currently only supports 8-bit input");
 
-  
-
-  let frames = scene.end_frame - scene.start_frame;
-  let mut result: Vec<f32> = Vec::with_capacity(frames);
+  let mut result: Vec<f32> = Vec::new();
   while let Ok(frame) = decoder.read_frame() {
     let luma = frame.get_y_plane();
-    let mut sum: u32 = 0;
+    let mut sum: usize = 0;
     for b in luma.iter().copied() {
-      sum += b as u32;
+      sum += b as usize;
     }
-    
+
     result.push(sum as f32 / luma.len() as f32);
   }
 
-  Ok(result)
-}
-
-fn analyze_8bit() {
-
-}
-
-fn analyze_hbd() {
-
-}
-
-fn get_average_luma(scene: Scene) {
-
-}
-
-fn build_decoder(input: &Input, encoder: Encoder) -> anyhow::Result<y4m::Decoder<impl Read>> {
-  let decoder = match input {
-    Input::VapourSynth(path) => {
-      let vspipe = Command::new("vspipe")
-        .arg("-c")
-        .arg("y4m")
-        .arg(path)
-        .arg("-")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap();
-  
-      y4m::Decoder::new(vspipe)?
-    },
-    Input::Video(path) => {
-      let ffpipe = Command::new("ffmpeg")
-        .args(["-r", "1", "-i"])
-        .arg(path)
-        //.args(filters.as_ref())
-        .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap();
-      
-      y4m::Decoder::new(ffpipe)?
-    },
-  };
-
-  Ok(decoder)
+  Ok(result.iter().sum::<f32>() / result.len() as f32)
 }

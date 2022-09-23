@@ -866,6 +866,17 @@ impl Encoder {
     }
     impl_this_function!(x264, x265, vpx, aom, rav1e, svt_av1)
   }
+
+  pub fn get_boosted_q(self, luma_delta: f32) -> usize {
+    match &self {
+      Encoder::aom => todo!(),
+      Encoder::rav1e => todo!(),
+      Encoder::vpx => todo!(),
+      Encoder::svt_av1 => todo!(),
+      Encoder::x264 => todo!(),
+      Encoder::x265 => todo!(),
+    }
+  }
 }
 
 #[derive(Error, Debug)]

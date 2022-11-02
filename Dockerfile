@@ -34,10 +34,10 @@ RUN git clone https://github.com/xiph/rav1e && \
     mv ./target/release/rav1e /usr/local/bin && \
     cd .. && rm -rf ./rav1e
 
-# bump: x264 /X264_VERSION=([[:xdigit:]]+)/ gitrefs:https://bitbucket.org/multicoreware/x265_git.git|re:#^refs/heads/master$#|@commit
 # bump: x265 after ./hashupdate Dockerfile X265 $LATEST
 # bump: x265 link "Source diff $CURRENT..$LATEST" https://bitbucket.org/multicoreware/x265_git/branches/compare/$LATEST..$CURRENT#diff
-ARG X265_VERSION=931178347b3f73e40798fd5180209654536bbaa5
+ARG X265_VERSION=8c159ba54aaf7f3e815790e7951c2ed285d2e0a7
+ARG X265_SHA256=e7205f296a34af6179ef4d5a77c672e9fcfbb4bbd0d9fab0be96c92ffab9e336
 ARG X265_URL="https://bitbucket.org/multicoreware/x265_git/get/${X265_VERSION}.tar.bz2"
 # -w-macro-params-legacy to not log lots of asm warnings
 # https://bitbucket.org/multicoreware/x265_git/issues/559/warnings-when-assembling-with-nasm-215
@@ -105,9 +105,9 @@ RUN \
 # bump: svtav1 /SVTAV1_VERSION=([\d.]+)/ https://gitlab.com/AOMediaCodec/SVT-AV1.git|*
 # bump: svtav1 after ./hashupdate Dockerfile SVTAV1 $LATEST
 # bump: svtav1 link "Release notes" https://gitlab.com/AOMediaCodec/SVT-AV1/-/releases/v$LATEST
-ARG SVTAV1_VERSION=1.2.1
+ARG SVTAV1_VERSION=1.3.0
 ARG SVTAV1_URL="https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v$SVTAV1_VERSION/SVT-AV1-v$SVTAV1_VERSION.tar.bz2"
-ARG SVTAV1_SHA256=805827daa8aedec4f1362b959f377075e2a811680bfc76b6f4fbf2ef4e7101d4
+ARG SVTAV1_SHA256=f85fd13ef16880550e425797bdfdf1b0ba310c21d6b343f74ea79dd2fbb2336e
 RUN \
   wget $WGET_OPTS -O svtav1.tar.bz2 "$SVTAV1_URL" && \
   echo "$SVTAV1_SHA256  svtav1.tar.bz2" | sha256sum --status -c - && \

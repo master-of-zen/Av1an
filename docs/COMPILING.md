@@ -6,7 +6,7 @@ You can natively build Av1an on Linux and Windows. Cross-compilation is not supp
 
 To compile Av1an from source, you need the following dependencies:
 
-- [Rust](https://www.rust-lang.org/) (version 1.59.0 or higher)
+- [Rust](https://www.rust-lang.org/) (version 1.63.0 or higher)
 - [NASM](https://www.nasm.us/)
 - [clang/LLVM](https://llvm.org/)
 - [FFmpeg](https://ffmpeg.org/)

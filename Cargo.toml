@@ -9,7 +9,7 @@ repository = "https://github.com/master-of-zen/Av1an"
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"
-rust-version = "1.59"
+rust-version = "1.63"
 edition = "2021"
 
 [[bin]]
@@ -48,5 +48,5 @@ debug-assertions = true
 overflow-checks = true
 
 [patch.crates-io]
-av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "4804462f2b6ae6209609cd95b5d9739264bf614f" }
+av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "2f91ec1b4224dccc7195bdabefdfa171e981ca60" }
 console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

@@ -14,7 +14,7 @@ use std::{cmp, fs, iter, thread};
 
 use ansi_term::{Color, Style};
 use anyhow::{bail, ensure, Context};
-use av1_grain::{generate_grain_params, write_grain_table, NoiseGenArgs, TransferFunction};
+use av1_grain::{generate_photon_noise_params, write_grain_table, NoiseGenArgs, TransferFunction};
 use crossbeam_utils;
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
@@ -192,7 +192,7 @@ impl EncodeArgs {
   }
 
   fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-    let mut queue_files = fs::read_dir(&source_path)
+    let mut queue_files = fs::read_dir(source_path)
       .with_context(|| {
         format!(
           "Failed to read queue files from source path {:?}",
@@ -220,7 +220,7 @@ impl EncodeArgs {
     worker_id: usize,
     padding: usize,
     tpl_crash_workaround: bool,
-  ) -> Result<(), (EncoderCrash, u64)> {
+  ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
     let fpf_file = Path::new(&chunk.temp)
@@ -418,13 +418,13 @@ impl EncodeArgs {
 
     if !enc_output.status.success() {
       return Err((
-        EncoderCrash {
+        Box::new(EncoderCrash {
           exit_status: enc_output.status,
           source_pipe_stderr: source_pipe_stderr.into(),
           ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
           stderr: enc_stderr.into(),
           stdout: enc_output.stdout.into(),
-        },
+        }),
         frame,
       ));
     }
@@ -446,13 +446,13 @@ impl EncodeArgs {
 
       if let Some(err_str) = err_str {
         return Err((
-          EncoderCrash {
+          Box::new(EncoderCrash {
             exit_status: enc_output.status,
             source_pipe_stderr: source_pipe_stderr.into(),
             ffmpeg_pipe_stderr: ffmpeg_pipe_stderr.map(Into::into),
             stderr: enc_stderr.into(),
             stdout: err_str.into(),
-          },
+          }),
           frame,
         ));
       }
@@ -751,7 +751,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
   fn parse_zones(&self) -> anyhow::Result<Vec<Scene>> {
     let mut zones = Vec::new();
     if let Some(ref zones_file) = self.zones {
-      let input = fs::read_to_string(&zones_file)?;
+      let input = fs::read_to_string(zones_file)?;
       for zone_line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
         zones.push(Scene::parse_from_zone(zone_line, self)?);
       }
@@ -1154,7 +1154,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         let transfer_function = self
           .input
           .transfer_function_params_adjusted(&self.video_params)?;
-        let params = generate_grain_params(
+        let params = generate_photon_noise_params(
           0,
           u64::MAX,
           NoiseGenArgs {
@@ -1190,7 +1190,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           let transfer_function = self
             .input
             .transfer_function_params_adjusted(&self.video_params)?;
-          let params = generate_grain_params(
+          let params = generate_photon_noise_params(
             0,
             u64::MAX,
             NoiseGenArgs {

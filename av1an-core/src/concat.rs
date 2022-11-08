@@ -8,7 +8,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context};
 use av_format::buffer::AccReader;
 use av_format::demuxer::{Context as DemuxerContext, Event};
-use av_format::muxer::Context as MuxerContext;
+use av_format::muxer::{Context as MuxerContext, Writer};
 use av_ivf::demuxer::IvfDemuxer;
 use av_ivf::muxer::IvfMuxer;
 use path_abs::{PathAbs, PathInfo};
@@ -57,11 +57,11 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
 
   let output = File::create(out)?;
 
-  let mut muxer = MuxerContext::new(Box::new(IvfMuxer::new()), Box::new(output));
+  let mut muxer = MuxerContext::new(IvfMuxer::new(), Writer::new(output));
 
   let global_info = {
     let acc = AccReader::new(std::fs::File::open(&files[0]).unwrap());
-    let mut demuxer = DemuxerContext::new(Box::new(IvfDemuxer::new()), Box::new(acc));
+    let mut demuxer = DemuxerContext::new(IvfDemuxer::new(), acc);
 
     demuxer.read_headers().unwrap();
 
@@ -72,7 +72,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
         .skip(1)
         .filter_map(|file| {
           let acc = AccReader::new(std::fs::File::open(file).unwrap());
-          let mut demuxer = DemuxerContext::new(Box::new(IvfDemuxer::new()), Box::new(acc));
+          let mut demuxer = DemuxerContext::new(IvfDemuxer::new(), acc);
 
           demuxer.read_headers().unwrap();
           demuxer.info.duration
@@ -96,7 +96,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
 
     let acc = AccReader::new(input);
 
-    let mut demuxer = DemuxerContext::new(Box::new(IvfDemuxer::new()), Box::new(acc));
+    let mut demuxer = DemuxerContext::new(IvfDemuxer::new(), acc);
     demuxer.read_headers()?;
 
     trace!("global info: {:#?}", demuxer.info);
@@ -138,7 +138,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
 
 fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
   Ok(
-    fs::read_dir(&encode_dir)
+    fs::read_dir(encode_dir)
       .with_context(|| format!("Failed to read encoded chunks from {:?}", &encode_dir))?
       .collect::<Result<Vec<_>, _>>()?,
   )

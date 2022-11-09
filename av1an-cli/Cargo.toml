@@ -9,7 +9,7 @@ repository = "https://github.com/master-of-zen/Av1an"
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"
-rust-version = "1.59"
+rust-version = "1.63"
 edition = "2021"
 
 [dependencies]

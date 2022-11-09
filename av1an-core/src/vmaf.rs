@@ -60,38 +60,38 @@ pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Res
 
   // 1%
   chart
-    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_1)), &RED))?
+    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_1)), RED))?
     .label(format!("1%: {}", perc_1))
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED));
 
   // 25%
   chart
-    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_25)), &YELLOW))?
+    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_25)), YELLOW))?
     .label(format!("25%: {}", perc_25))
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &YELLOW));
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], YELLOW));
 
   // 50% (median, except not averaged in the case of an even number of elements)
   chart
-    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_50)), &BLACK))?
+    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_50)), BLACK))?
     .label(format!("50%: {}", perc_50))
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
 
   // 75%
   chart
-    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_75)), &GREEN))?
+    .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_75)), GREEN))?
     .label(format!("75%: {}", perc_75))
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], GREEN));
 
   // Data
   chart.draw_series(LineSeries::new(
     (0..).zip(scores.iter()).map(|(x, y)| (x, *y)),
-    &BLUE,
+    BLUE,
   ))?;
 
   chart
     .configure_series_labels()
-    .background_style(&WHITE.mix(0.8))
-    .border_style(&BLACK)
+    .background_style(WHITE.mix(0.8))
+    .border_style(BLACK)
     .draw()?;
 
   root.present().expect("Unable to write result plot to file");
@@ -123,7 +123,7 @@ pub fn plot(
   sample_rate: usize,
   filter: Option<&str>,
   threads: usize,
-) -> Result<(), EncoderCrash> {
+) -> Result<(), Box<EncoderCrash>> {
   let json_file = encoded.with_extension("json");
   let plot_file = encoded.with_extension("svg");
 
@@ -171,7 +171,7 @@ pub fn run_vmaf(
   sample_rate: usize,
   vmaf_filter: Option<&str>,
   threads: usize,
-) -> Result<(), EncoderCrash> {
+) -> Result<(), Box<EncoderCrash>> {
   let mut filter = if sample_rate > 1 {
     format!(
       "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
@@ -244,13 +244,13 @@ pub fn run_vmaf(
   let output = cmd.spawn().unwrap().wait_with_output().unwrap();
 
   if !output.status.success() {
-    return Err(EncoderCrash {
+    return Err(Box::new(EncoderCrash {
       exit_status: output.status,
       source_pipe_stderr: String::new().into(),
       ffmpeg_pipe_stderr: None,
       stderr: output.stderr.into(),
       stdout: String::new().into(),
-    });
+    }));
   }
 
   Ok(())

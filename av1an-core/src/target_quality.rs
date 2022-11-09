@@ -57,7 +57,7 @@ impl<'a> TargetQuality<'a> {
     }
   }
 
-  fn per_shot_target_quality(&self, chunk: &Chunk) -> Result<u32, EncoderCrash> {
+  fn per_shot_target_quality(&self, chunk: &Chunk) -> Result<u32, Box<EncoderCrash>> {
     let mut vmaf_cq = vec![];
     let frames = chunk.frames;
 
@@ -165,7 +165,7 @@ impl<'a> TargetQuality<'a> {
     Ok(q as u32)
   }
 
-  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, EncoderCrash> {
+  fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
     let vmaf_threads = if self.vmaf_threads == 0 {
       vmaf_auto_threads(self.workers)
     } else {
@@ -283,7 +283,10 @@ impl<'a> TargetQuality<'a> {
     Ok(fl_path)
   }
 
-  pub fn per_shot_target_quality_routine(&self, chunk: &mut Chunk) -> Result<(), EncoderCrash> {
+  pub fn per_shot_target_quality_routine(
+    &self,
+    chunk: &mut Chunk,
+  ) -> Result<(), Box<EncoderCrash>> {
     chunk.tq_cq = Some(self.per_shot_target_quality(chunk)?);
     Ok(())
   }

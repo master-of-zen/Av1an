@@ -202,7 +202,7 @@ impl<'a> Broker<'a> {
     worker_id: usize,
     frame_rate: f64,
     audio_size_bytes: Arc<AtomicU64>,
-  ) -> Result<(), EncoderCrash> {
+  ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
     // space padding at the beginning to align with "finished chunk"

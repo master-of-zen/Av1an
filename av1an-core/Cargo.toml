@@ -76,7 +76,7 @@ features = ["vsscript-functions", "vapoursynth-functions"]
 
 [dependencies.tokio]
 version = "1"
-features = ["rt", "process", "io-util"]
+features = ["rt", "process", "io-util", "net"]
 
 [dependencies.dashmap]
 version = "5.0.0"

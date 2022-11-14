@@ -1,5 +1,4 @@
 use std::fmt::Write;
-use std::time::Duration;
 
 use indicatif::{
   HumanBytes, MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle,
@@ -83,7 +82,7 @@ pub fn init_progress_bar(len: u64) {
     PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(spinner_style()))
   };
   pb.set_draw_target(ProgressDrawTarget::stderr_with_hz(60));
-  pb.enable_steady_tick(Duration::from_millis(100));
+  // pb.enable_steady_tick(Duration::from_millis(100));
   pb.reset();
   pb.reset_eta();
   pb.reset_elapsed();
@@ -187,7 +186,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
 
     let pb = ProgressBar::hidden();
     pb.set_style(pretty_progress_style());
-    pb.enable_steady_tick(Duration::from_millis(100));
+    // pb.enable_steady_tick(Duration::from_millis(100));
     pb.reset_elapsed();
     pb.reset_eta();
     pb.set_position(0);

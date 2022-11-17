@@ -177,19 +177,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "av1an"
-version = "0.3.2"
-dependencies = [
- "anyhow",
- "av1an-cli",
- "av1an-core",
- "path_abs",
- "serde",
- "serde_json",
- "shlex",
-]
-
-[[package]]
 name = "av1an-cli"
 version = "0.3.2"
 dependencies = [

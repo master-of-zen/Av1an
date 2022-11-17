@@ -12,6 +12,10 @@ license = "GPL-3.0"
 rust-version = "1.63"
 edition = "2021"
 
+[[bin]]
+name = "av1an"
+path = "src/main.rs"
+
 [dependencies]
 atty = "0.2.14"
 clap = { version = "3.0.0", features = ["derive"] }
@@ -38,4 +42,5 @@ package = "ffmpeg-next"
 version = "5.1.1"
 
 [features]
-ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]
+default = []
+ffmpeg_static = ["ffmpeg/static", "ffmpeg/build", "av1an-core/ffmpeg_static"]

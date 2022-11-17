@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::{panic, process};
 
 use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
@@ -19,6 +20,16 @@ use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
+
+fn main() -> anyhow::Result<()> {
+  let orig_hook = panic::take_hook();
+  // Catch panics in child threads
+  panic::set_hook(Box::new(move |panic_info| {
+    orig_hook(panic_info);
+    process::exit(1);
+  }));
+  run()
+}
 
 // needs to be static, runtime allocated string to avoid evil hacks to
 // concatenate non-trivial strings at compile-time

@@ -1,35 +1,3 @@
-[package]
-name = "av1an"
-version = "0.3.2"
-authors = ["Zen <master_of_zen@protonmail.com>"]
-description = """
-Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding
-"""
-repository = "https://github.com/master-of-zen/Av1an"
-keywords = ["video"]
-categories = ["command-line-utilities"]
-license = "GPL-3.0"
-rust-version = "1.63"
-edition = "2021"
-
-[[bin]]
-path = "src/main.rs"
-name = "av1an"
-
-[dependencies]
-anyhow = "1.0.42"
-serde_json = "1.0.64"
-serde = { version = "1.0.126", features = ["serde_derive"] }
-shlex = "1.0.0"
-path_abs = "0.5.1"
-av1an-cli = { path = "av1an-cli", version = "0.3.2" }
-av1an-core = { path = "av1an-core", version = "0.3.2" }
-
-[features]
-default = ["vapoursynth_new_api"]
-ffmpeg_static = ["av1an-core/ffmpeg_static", "av1an-cli/ffmpeg_static"]
-vapoursynth_new_api = ["av1an-core/vapoursynth_new_api"]
-
 [workspace]
 members = ["av1an-core", "av1an-cli"]
 

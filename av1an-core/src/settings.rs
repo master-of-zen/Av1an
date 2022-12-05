@@ -236,11 +236,16 @@ impl EncodeArgs {
       video_params.push("--enable-tpl-model=0".to_string());
     }
     let mut enc_cmd = if passes == 1 {
-      encoder.compose_1_1_pass(video_params, chunk.output())
+      encoder.compose_1_1_pass(video_params, chunk.output(), chunk.frames)
     } else if current_pass == 1 {
-      encoder.compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
+      encoder.compose_1_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.frames)
     } else {
-      encoder.compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
+      encoder.compose_2_2_pass(
+        video_params,
+        fpf_file.to_str().unwrap(),
+        chunk.output(),
+        chunk.frames,
+      )
     };
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
@@ -379,7 +384,7 @@ impl EncodeArgs {
 
           if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
             if self.verbosity == Verbosity::Verbose && !line.contains('\n') {
-              update_mp_msg(worker_id, (*line).to_string());
+              update_mp_msg(worker_id, line.trim().to_string());
             }
             // This needs to be done before parse_encoded_frames, as it potentially
             // mutates the string

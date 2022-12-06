@@ -100,7 +100,12 @@ impl Display for Encoder {
 
 impl Encoder {
   /// Composes 1st pass command for 1 pass encoding
-  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
+  pub fn compose_1_1_pass(
+    self,
+    params: Vec<String>,
+    output: String,
+    frame_count: usize,
+  ) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=1"],
@@ -109,7 +114,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y"],
+        into_array!["rav1e", "-", "-y", "--limit", frame_count.to_string()],
         params,
         into_array!["--output", output]
       )
@@ -134,13 +139,15 @@ impl Encoder {
           "error",
           "--demuxer",
           "y4m",
+          "--frames",
+          frame_count.to_string()
         ],
         params,
         into_array!["-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
-        into_array!["x265", "--y4m"],
+        into_array!["x265", "--y4m", "--frames", frame_count.to_string()],
         params,
         into_array!["-", "-o", output]
       )
@@ -149,7 +156,7 @@ impl Encoder {
   }
 
   /// Composes 1st pass command for 2 pass encoding
-  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
+  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str, frame_count: usize) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=1"],
@@ -158,7 +165,14 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "--quiet"],
+        into_array![
+          "rav1e",
+          "-",
+          "-y",
+          "--quiet",
+          "--limit",
+          frame_count.to_string()
+        ],
         params,
         into_array!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
       )
@@ -200,6 +214,8 @@ impl Encoder {
           "1",
           "--demuxer",
           "y4m",
+          "--frames",
+          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
@@ -214,6 +230,8 @@ impl Encoder {
           "--pass",
           "1",
           "--y4m",
+          "--frames",
+          frame_count.to_string()
         ],
         params,
         into_array![
@@ -231,7 +249,13 @@ impl Encoder {
   }
 
   /// Composes 2st pass command for 2 pass encoding
-  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
+  pub fn compose_2_2_pass(
+    self,
+    params: Vec<String>,
+    fpf: &str,
+    output: String,
+    frame_count: usize,
+  ) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=2"],
@@ -240,7 +264,14 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "--quiet"],
+        into_array![
+          "rav1e",
+          "-",
+          "-y",
+          "--quiet",
+          "--limit",
+          frame_count.to_string()
+        ],
         params,
         into_array!["--second-pass", format!("{}.stat", fpf), "--output", output]
       )
@@ -282,6 +313,8 @@ impl Encoder {
           "2",
           "--demuxer",
           "y4m",
+          "--frames",
+          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{}.log", fpf), "-", "-o", output]
@@ -296,6 +329,8 @@ impl Encoder {
           "--pass",
           "2",
           "--y4m",
+          "--frames",
+          frame_count.to_string()
         ],
         params,
         into_array![

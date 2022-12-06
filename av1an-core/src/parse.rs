@@ -198,6 +198,7 @@ pub fn parse_rav1e_frames(s: &str) -> Option<u64> {
   // encoded 122 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
   // encoded 1220 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
   // encoded 12207 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
+  // encoded 12/240 frames, 126.416 fps, 16.32 Kb/s, elap. time: 1m 36s
 
   if !s.starts_with(RAV1E_IGNORED_PREFIX) {
     return None;
@@ -206,6 +207,7 @@ pub fn parse_rav1e_frames(s: &str) -> Option<u64> {
   s.get(RAV1E_IGNORED_PREFIX.len()..)?
     .split_ascii_whitespace()
     .next()
+    .map(|val| val.split_once('/').map_or(val, |(val, _)| val))
     .and_then(|s| s.parse().ok())
 }
 

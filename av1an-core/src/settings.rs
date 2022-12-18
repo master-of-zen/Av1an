@@ -395,9 +395,9 @@ impl EncodeArgs {
               if let Some(new) = encoder.parse_encoded_frames(line) {
                 if new > frame {
                   if self.verbosity == Verbosity::Normal {
-                    inc_bar((new - frame) as u64);
+                    inc_bar(new - frame);
                   } else if self.verbosity == Verbosity::Verbose {
-                    inc_mp_bar((new - frame) as u64);
+                    inc_mp_bar(new - frame);
                   }
                   frame = new;
                 }
@@ -439,12 +439,12 @@ impl EncodeArgs {
 
       let err_str = match encoded_frames {
         Ok(encoded_frames) if encoded_frames != chunk.frames => Some(format!(
-          "FRAME MISMATCH: chunk {}: {}/{} (actual/expected frames)",
-          chunk.index, encoded_frames, chunk.frames
+          "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
+          chunk.index, chunk.frames
         )),
         Err(error) => Some(format!(
-          "FAILED TO COUNT FRAMES: chunk {}: {}",
-          chunk.index, error
+          "FAILED TO COUNT FRAMES: chunk {}: {error}",
+          chunk.index
         )),
         _ => None,
       };
@@ -496,7 +496,7 @@ impl EncodeArgs {
         wrong_param, self.encoder,
       );
       if let Some(suggestion) = suggest_fix(wrong_param, &valid_params) {
-        eprintln!("\tDid you mean '{}'?", suggestion);
+        eprintln!("\tDid you mean '{suggestion}'?");
       }
     }
 
@@ -875,9 +875,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       "y4m",
       "-",
       "-s",
-      format!("{}", scene.start_frame),
+      scene.start_frame.to_string(),
       "-e",
-      format!("{}", frame_end),
+      frame_end.to_string(),
     ];
 
     let output_ext = self.encoder.output_extension();
@@ -1188,7 +1188,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           // We can reuse the existing photon noise table from the main encode
           grain_table.clone().unwrap()
         } else {
-          let grain_table = Path::new(&self.temp).join(&format!("chunk{}-grain.tbl", chunk.index));
+          let grain_table = Path::new(&self.temp).join(format!("chunk{}-grain.tbl", chunk.index));
           let iso_setting = u32::from(strength) * 100;
           debug!("Generating grain table at ISO {}", iso_setting);
           let (width, height) = self.input.resolution()?;
@@ -1232,7 +1232,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
 
           let progress_file = Path::new(temp).join("done.json");
-          let mut progress_file = File::create(&progress_file).unwrap();
+          let mut progress_file = File::create(progress_file).unwrap();
           progress_file
             .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
             .unwrap();

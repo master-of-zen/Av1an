@@ -264,7 +264,7 @@ impl<'a> TargetQuality<'a> {
 
     let probe_name = Path::new(&chunk.temp)
       .join("split")
-      .join(format!("v_{}_{}.ivf", q, chunk.index));
+      .join(format!("v_{q}_{}.ivf", chunk.index));
     let fl_path = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}.json", chunk.index));
@@ -293,8 +293,8 @@ impl<'a> TargetQuality<'a> {
 }
 
 pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
-  let dif1 = (transform_vmaf(target as f64) - transform_vmaf(vmaf2)).abs();
-  let dif2 = (transform_vmaf(target as f64) - transform_vmaf(vmaf1)).abs();
+  let dif1 = (transform_vmaf(target) - transform_vmaf(vmaf2)).abs();
+  let dif2 = (transform_vmaf(target) - transform_vmaf(vmaf1)).abs();
 
   let tot = dif1 + dif2;
 
@@ -347,7 +347,7 @@ pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, E
 
   let keys = sorted
     .iter()
-    .map(|f| Key::new(f64::from(f.1), f.0 as f64, Interpolation::Linear))
+    .map(|f| Key::new(f64::from(f.1), f.0, Interpolation::Linear))
     .collect();
 
   let spline = Spline::from_vec(keys);

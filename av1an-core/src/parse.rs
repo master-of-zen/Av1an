@@ -264,8 +264,8 @@ pub fn valid_params(help_text: &str, encoder: Encoder) -> HashSet<Cow<'_, str>> 
           .map(|stripped| stripped.strip_prefix('-').unwrap_or(stripped));
 
         if let Some(arg) = arg {
-          params.insert(Cow::Owned(format!("--{}", arg)));
-          params.insert(Cow::Owned(format!("--no-{}", arg)));
+          params.insert(Cow::Owned(format!("--{arg}")));
+          params.insert(Cow::Owned(format!("--no-{arg}")));
           continue;
         }
       }

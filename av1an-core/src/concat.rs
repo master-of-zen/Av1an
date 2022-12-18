@@ -104,8 +104,8 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
     loop {
       match demuxer.read_event() {
         Ok(event) => match event {
-          Event::MoreDataNeeded(sz) => panic!("needed more data: {} bytes", sz),
-          Event::NewStream(s) => panic!("new stream: {:?}", s),
+          Event::MoreDataNeeded(sz) => panic!("needed more data: {sz} bytes"),
+          Event::NewStream(s) => panic!("new stream: {s:?}"),
           Event::NewPacket(mut packet) => {
             if let Some(p) = packet.pos.as_mut() {
               last_pos = *p;
@@ -196,7 +196,7 @@ pub fn mkvmerge(
     audio_file.as_deref(),
   );
 
-  let mut options_json = File::create(&options_path)?;
+  let mut options_json = File::create(options_path)?;
   options_json.write_all(options_json_contents.as_bytes())?;
 
   let mut cmd = Command::new("mkvmerge");
@@ -228,13 +228,13 @@ pub fn mkvmerge_options_json(
   audio: Option<&str>,
 ) -> String {
   let mut file_string = String::with_capacity(64 + 12 * num);
-  write!(file_string, "[\"-o\", {:?}", output).unwrap();
+  write!(file_string, "[\"-o\", {output:?}").unwrap();
   if let Some(audio) = audio {
-    write!(file_string, ", {:?}", audio).unwrap();
+    write!(file_string, ", {audio:?}").unwrap();
   }
   file_string.push_str(", \"[\"");
   for i in 0..num {
-    write!(file_string, ", \"{:05}.{}\"", i, encoder.output_extension()).unwrap();
+    write!(file_string, ", \"{i:05}.{}\"", encoder.output_extension()).unwrap();
   }
   file_string.push_str(",\"]\"]");
 

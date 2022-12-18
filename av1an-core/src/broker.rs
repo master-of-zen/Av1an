@@ -45,7 +45,7 @@ impl Debug for StringOrBytes {
           f.write_str(s)?;
         }
       }
-      Self::Bytes(b) => write!(f, "raw bytes: {:?}", b)?,
+      Self::Bytes(b) => write!(f, "raw bytes: {b:?}")?,
     }
 
     Ok(())
@@ -96,7 +96,7 @@ impl Display for EncoderCrash {
     )?;
 
     if let Some(ffmpeg_pipe_stderr) = &self.ffmpeg_pipe_stderr {
-      write!(f, "\nffmpeg pipe stderr:\n{:#?}", ffmpeg_pipe_stderr)?;
+      write!(f, "\nffmpeg pipe stderr:\n{ffmpeg_pipe_stderr:#?}")?;
     }
 
     Ok(())
@@ -287,7 +287,7 @@ impl<'a> Broker<'a> {
       },
     );
 
-    let mut progress_file = File::create(&progress_file).unwrap();
+    let mut progress_file = File::create(progress_file).unwrap();
     progress_file
       .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
       .unwrap();

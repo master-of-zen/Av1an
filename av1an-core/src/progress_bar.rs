@@ -46,7 +46,7 @@ fn pretty_progress_style() -> ProgressStyle {
         if fps < 1.0 {
           write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
         } else {
-          write!(w, "{:.2} fps", fps).unwrap();
+          write!(w, "{fps:.2} fps").unwrap();
         }
       }
     })
@@ -85,7 +85,7 @@ fn spinner_style() -> ProgressStyle {
         if fps < 1.0 {
           write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
         } else {
-          write!(w, "{:.2} fps", fps).unwrap();
+          write!(w, "{fps:.2} fps",).unwrap();
         }
       }
     })
@@ -133,7 +133,7 @@ pub fn dec_bar(dec: u64) {
 
 pub fn update_bar_info(kbps: f64, est_size: HumanBytes) {
   if let Some(pb) = PROGRESS_BAR.get() {
-    pb.set_message(format!(", {:.1} Kbps, est. {}", kbps, est_size));
+    pb.set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
   }
 }
 
@@ -204,7 +204,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
             })
             .unwrap(),
         );
-      pb.set_prefix(format!("[Idle  {width:width$}]", width = digits));
+      pb.set_prefix(format!("[Idle  {digits:digits$}]"));
       pbs.push(mpb.add(pb));
     }
 
@@ -226,7 +226,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
 
 pub fn update_mp_chunk(worker_idx: usize, chunk: usize, padding: usize) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    pbs[worker_idx].set_prefix(format!("[Chunk {:>digits$}]", chunk, digits = padding));
+    pbs[worker_idx].set_prefix(format!("[Chunk {chunk:>padding$}]"));
   }
 }
 
@@ -254,7 +254,7 @@ pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
     pbs
       .last()
       .unwrap()
-      .set_message(format!(", {:.1} Kbps, est. {}", kbps, est_size));
+      .set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
   }
 }
 

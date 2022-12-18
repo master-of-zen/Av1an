@@ -48,7 +48,7 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
     cmd.arg(split_path);
   }
   let out = cmd.output().unwrap();
-  assert!(out.status.success(), "FFmpeg failed to segment: {:#?}", out);
+  assert!(out.status.success(), "FFmpeg failed to segment: {out:#?}");
 }
 
 pub fn extra_splits(scenes: &[Scene], total_frames: usize, split_size: usize) -> Vec<Scene> {

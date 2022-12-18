@@ -161,7 +161,7 @@ impl Encoder {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=1"],
         params,
-        into_array![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
+        into_array![format!("--fpf={fpf}.log"), "-o", NULL, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
@@ -174,13 +174,13 @@ impl Encoder {
           frame_count.to_string()
         ],
         params,
-        into_array!["--first-pass", format!("{}.stat", fpf), "--output", NULL]
+        into_array!["--first-pass", format!("{fpf}.stat"), "--output", NULL]
       )
       .collect(),
       Self::vpx => chain!(
         into_array!["vpxenc", "--passes=2", "--pass=1"],
         params,
-        into_array![format!("--fpf={}.log", fpf), "-o", NULL, "-"],
+        into_array![format!("--fpf={fpf}.log"), "-o", NULL, "-"],
       )
       .collect(),
       Self::svt_av1 => chain!(
@@ -194,14 +194,7 @@ impl Encoder {
           "2",
         ],
         params,
-        into_array![
-          "--pass",
-          "1",
-          "--stats",
-          format!("{}.stat", fpf),
-          "-b",
-          NULL,
-        ],
+        into_array!["--pass", "1", "--stats", format!("{fpf}.stat"), "-b", NULL,],
       )
       .collect(),
       Self::x264 => chain!(
@@ -218,7 +211,7 @@ impl Encoder {
           frame_count.to_string()
         ],
         params,
-        into_array!["--stats", format!("{}.log", fpf), "-", "-o", NULL]
+        into_array!["--stats", format!("{fpf}.log"), "-", "-o", NULL]
       )
       .collect(),
       Self::x265 => chain!(
@@ -236,9 +229,9 @@ impl Encoder {
         params,
         into_array![
           "--stats",
-          format!("{}.log", fpf),
+          format!("{fpf}.log"),
           "--analysis-reuse-file",
-          format!("{}_analysis.dat", fpf),
+          format!("{fpf}_analysis.dat"),
           "-",
           "-o",
           NULL
@@ -260,7 +253,7 @@ impl Encoder {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=2"],
         params,
-        into_array![format!("--fpf={}.log", fpf), "-o", output, "-"],
+        into_array![format!("--fpf={fpf}.log"), "-o", output, "-"],
       )
       .collect(),
       Self::rav1e => chain!(
@@ -273,13 +266,13 @@ impl Encoder {
           frame_count.to_string()
         ],
         params,
-        into_array!["--second-pass", format!("{}.stat", fpf), "--output", output]
+        into_array!["--second-pass", format!("{fpf}.stat"), "--output", output]
       )
       .collect(),
       Self::vpx => chain!(
         into_array!["vpxenc", "--passes=2", "--pass=2"],
         params,
-        into_array![format!("--fpf={}.log", fpf), "-o", output, "-"],
+        into_array![format!("--fpf={fpf}.log"), "-o", output, "-"],
       )
       .collect(),
       Self::svt_av1 => chain!(
@@ -297,7 +290,7 @@ impl Encoder {
           "--pass",
           "2",
           "--stats",
-          format!("{}.stat", fpf),
+          format!("{fpf}.stat"),
           "-b",
           output,
         ],
@@ -317,7 +310,7 @@ impl Encoder {
           frame_count.to_string()
         ],
         params,
-        into_array!["--stats", format!("{}.log", fpf), "-", "-o", output]
+        into_array!["--stats", format!("{fpf}.log"), "-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
@@ -335,9 +328,9 @@ impl Encoder {
         params,
         into_array![
           "--stats",
-          format!("{}.log", fpf),
+          format!("{fpf}.log"),
           "--analysis-reuse-file",
-          format!("{}_analysis.dat", fpf),
+          format!("{fpf}_analysis.dat"),
           "-",
           "-o",
           output
@@ -378,8 +371,8 @@ impl Encoder {
           let rows = ilog2(rows);
 
           let aom_tiles: Vec<String> = into_vec![
-            format!("--tile-columns={}", columns),
-            format!("--tile-rows={}", rows)
+            format!("--tile-columns={columns}"),
+            format!("--tile-rows={rows}")
           ];
           chain!(defaults, aom_tiles).collect()
         } else {
@@ -418,8 +411,8 @@ impl Encoder {
           let rows = ilog2(rows);
 
           let aom_tiles: Vec<String> = into_vec![
-            format!("--tile-columns={}", columns),
-            format!("--tile-rows={}", rows)
+            format!("--tile-columns={columns}"),
+            format!("--tile-rows={rows}")
           ];
           chain!(defaults, aom_tiles).collect()
         } else {
@@ -434,9 +427,9 @@ impl Encoder {
 
           let tiles: Vec<String> = into_vec![
             "--tile-columns",
-            format!("{}", columns),
+            columns.to_string(),
             "--tile-rows",
-            format!("{}", rows)
+            rows.to_string()
           ];
           chain!(defaults, tiles).collect()
         } else {
@@ -528,8 +521,8 @@ impl Encoder {
 
   fn replace_q(self, index: usize, q: usize) -> (usize, String) {
     match self {
-      Self::aom | Self::vpx => (index, format!("--cq-level={}", q)),
-      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, format!("{}", q)),
+      Self::aom | Self::vpx => (index, format!("--cq-level={q}")),
+      Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => (index + 1, q.to_string()),
     }
   }
 
@@ -537,15 +530,15 @@ impl Encoder {
     let mut output = ArrayVec::new();
     match self {
       Self::aom | Self::vpx => {
-        output.push(format!("--cq-level={}", q));
+        output.push(format!("--cq-level={q}"));
       }
       Self::rav1e => {
         output.push("--quantizer".into());
-        output.push(format!("{}", q));
+        output.push(q.to_string());
       }
       Self::svt_av1 | Self::x264 | Self::x265 => {
         output.push("--crf".into());
-        output.push(format!("{}", q));
+        output.push(q.to_string());
       }
     }
     output
@@ -597,14 +590,14 @@ impl Encoder {
       Self::aom => inplace_vec![
         "aomenc",
         "--passes=1",
-        format!("--threads={}", threads),
+        format!("--threads={threads}"),
         "--tile-columns=2",
         "--tile-rows=1",
         "--end-usage=q",
         "-b",
         "8",
         "--cpu-used=6",
-        format!("--cq-level={}", q),
+        format!("--cq-level={q}"),
         "--enable-filter-intra=0",
         "--enable-smooth-intra=0",
         "--enable-paeth-intra=0",
@@ -640,11 +633,11 @@ impl Encoder {
         "-s",
         "10",
         "--threads",
-        format!("{}", threads),
+        threads.to_string(),
         "--tiles",
         "16",
         "--quantizer",
-        format!("{}", q),
+        q.to_string(),
         "--low-latency",
         "--rdo-lookahead-frames",
         "5",
@@ -658,10 +651,10 @@ impl Encoder {
         "--passes=1",
         "--pass=1",
         "--codec=vp9",
-        format!("--threads={}", threads),
+        format!("--threads={threads}"),
         "--cpu-used=9",
         "--end-usage=q",
-        format!("--cq-level={}", q),
+        format!("--cq-level={q}"),
         "--row-mt=1",
       ],
       Self::svt_av1 => {
@@ -671,13 +664,13 @@ impl Encoder {
             "-i",
             "stdin",
             "--lp",
-            format!("{}", threads),
+            threads.to_string(),
             "--preset",
             "8",
             "--keyint",
             "240",
             "--crf",
-            format!("{}", q),
+            q.to_string(),
             "--tile-rows",
             "1",
             "--tile-columns",
@@ -735,13 +728,13 @@ impl Encoder {
             "-i",
             "stdin",
             "--lp",
-            format!("{}", threads),
+            threads.to_string(),
             "--preset",
             "12",
             "--keyint",
             "240",
             "--crf",
-            format!("{}", q),
+            q.to_string(),
             "--tile-rows",
             "1",
             "--tile-columns",
@@ -758,11 +751,11 @@ impl Encoder {
         "-",
         "--no-progress",
         "--threads",
-        format!("{}", threads),
+        threads.to_string(),
         "--preset",
         "medium",
         "--crf",
-        format!("{}", q),
+        q.to_string(),
       ],
       Self::x265 => inplace_vec![
         "x265",
@@ -771,11 +764,11 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--frame-threads",
-        format!("{}", cmp::min(threads, 16)),
+        cmp::min(threads, 16).to_string(),
         "--preset",
         "fast",
         "--crf",
-        format!("{}", q),
+        q.to_string(),
       ],
     }
   }
@@ -783,17 +776,17 @@ impl Encoder {
   /// Returns command used for target quality probing (slow, correctness focused version)
   pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
     match &self {
-      Self::aom => inplace_vec!["aomenc", "--passes=1", format!("--cq-level={}", q)],
-      Self::rav1e => inplace_vec!["rav1e", "-y", "--quantizer", format!("{}", q)],
+      Self::aom => inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}")],
+      Self::rav1e => inplace_vec!["rav1e", "-y", "--quantizer", q.to_string()],
       Self::vpx => inplace_vec![
         "vpxenc",
         "--passes=1",
         "--pass=1",
         "--codec=vp9",
         "--end-usage=q",
-        format!("--cq-level={}", q),
+        format!("--cq-level={q}"),
       ],
-      Self::svt_av1 => inplace_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", format!("{}", q)],
+      Self::svt_av1 => inplace_vec!["SvtAv1EncApp", "-i", "stdin", "--crf", q.to_string()],
       Self::x264 => inplace_vec![
         "x264",
         "--log-level",
@@ -803,7 +796,7 @@ impl Encoder {
         "-",
         "--no-progress",
         "--crf",
-        format!("{}", q),
+        q.to_string(),
       ],
       Self::x265 => inplace_vec![
         "x265",
@@ -812,7 +805,7 @@ impl Encoder {
         "--no-progress",
         "--y4m",
         "--crf",
-        format!("{}", q),
+        q.to_string(),
       ],
     }
   }
@@ -845,14 +838,14 @@ impl Encoder {
     let pipe = compose_ffmpeg_pipe(
       [
         "-vf",
-        format!("select=not(mod(n\\,{}))", probing_rate).as_str(),
+        format!("select=not(mod(n\\,{probing_rate}))").as_str(),
         "-vsync",
         "0",
       ],
       pix_fmt,
     );
 
-    let probe_name = format!("v_{}_{}.ivf", q, chunk_index);
+    let probe_name = format!("v_{q}_{chunk_index}.ivf");
     let mut probe = PathBuf::from(temp);
     probe.push("split");
     probe.push(&probe_name);

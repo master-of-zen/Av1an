@@ -227,6 +227,7 @@ pub fn parse_svt_av1_frames(s: &str) -> Option<u64> {
 pub fn parse_x26x_frames(s: &str) -> Option<u64> {
   s.split_ascii_whitespace()
     .next()
+    .map(|val| val.split_once('/').map_or(val, |(val, _)| val))
     .and_then(|s| s.parse().ok())
 }
 

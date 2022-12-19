@@ -1,5 +1,5 @@
 [workspace]
-members = ["av1an-core", "av1an-cli"]
+members = ["av1an-core", "av1an"]
 
 [profile.dev.package.av-scenechange]
 opt-level = 3

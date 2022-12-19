@@ -178,7 +178,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "av1an-cli"
+name = "av1an"
 version = "0.4.0"
 dependencies = [
  "ansi_term",

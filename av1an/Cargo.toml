@@ -1,5 +1,5 @@
 [package]
-name = "av1an-cli"
+name = "av1an"
 version = "0.4.0"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
@@ -11,6 +11,7 @@ categories = ["command-line-utilities"]
 license = "GPL-3.0"
 rust-version = "1.63"
 edition = "2021"
+readme = "../README.md"
 
 [[bin]]
 name = "av1an"

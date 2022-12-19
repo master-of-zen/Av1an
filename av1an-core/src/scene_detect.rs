@@ -207,7 +207,7 @@ fn build_decoder(
         sdh
       )
     ],
-    (Some(sdh), None) => into_smallvec!["-vf", format!("scale=-2:'min({},ih)'", sdh)],
+    (Some(sdh), None) => into_smallvec!["-vf", format!("scale=-2:'min({sdh},ih)'")],
     (None, Some(spf)) => into_smallvec!["-pix_fmt", spf.descriptor().unwrap().name()],
     (None, None) => smallvec![],
   };
@@ -244,7 +244,7 @@ fn build_decoder(
     }
     Input::Video(path) => {
       let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
-        .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {:?}", e));
+        .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {e:?}"));
       bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;
       Command::new("ffmpeg")
         .args(["-r", "1", "-i"])

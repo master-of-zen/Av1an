@@ -153,9 +153,7 @@ impl Scene {
     let raw_zone_args = if [Encoder::aom, Encoder::vpx].contains(&encoder) {
       zone_args
         .into_iter()
-        .map(|(key, value)| {
-          value.map_or_else(|| key.to_string(), |value| format!("{}={}", key, value))
-        })
+        .map(|(key, value)| value.map_or_else(|| key.to_string(), |value| format!("{key}={value}")))
         .collect::<Vec<String>>()
     } else {
       zone_args
@@ -193,9 +191,9 @@ impl Scene {
       let invalid_params = invalid_params(&interleaved_args, &valid_params);
 
       for wrong_param in &invalid_params {
-        eprintln!("'{}' isn't a valid parameter for {}", wrong_param, encoder);
+        eprintln!("'{wrong_param}' isn't a valid parameter for {encoder}");
         if let Some(suggestion) = suggest_fix(wrong_param, &valid_params) {
-          eprintln!("\tDid you mean '{}'?", suggestion);
+          eprintln!("\tDid you mean '{suggestion}'?");
         }
       }
 
@@ -212,7 +210,7 @@ impl Scene {
         let key = arg.split_once('=').map_or(arg.as_str(), |split| split.0);
         if let Some(pos) = video_params
           .iter()
-          .position(|param| param == key || param.starts_with(&format!("{}=", key)))
+          .position(|param| param == key || param.starts_with(&format!("{key}=")))
         {
           video_params.remove(pos);
           if let Some(next) = video_params.get(pos) {

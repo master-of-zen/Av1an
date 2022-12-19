@@ -34,7 +34,7 @@ pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Res
   let mut sorted_scores = scores.clone();
   sorted_scores.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-  let plot_width = 1600 + (printable_base10_digits(scores.len()) as u32 * 200);
+  let plot_width = 1600 + (printable_base10_digits(scores.len()) * 200);
   let plot_heigth = 600;
 
   let length = scores.len() as u32;
@@ -61,25 +61,25 @@ pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Res
   // 1%
   chart
     .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_1)), RED))?
-    .label(format!("1%: {}", perc_1))
+    .label(format!("1%: {perc_1}"))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED));
 
   // 25%
   chart
     .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_25)), YELLOW))?
-    .label(format!("25%: {}", perc_25))
+    .label(format!("25%: {perc_25}"))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], YELLOW));
 
   // 50% (median, except not averaged in the case of an even number of elements)
   chart
     .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_50)), BLACK))?
-    .label(format!("50%: {}", perc_50))
+    .label(format!("50%: {perc_50}"))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
 
   // 75%
   chart
     .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_75)), GREEN))?
-    .label(format!("75%: {}", perc_75))
+    .label(format!("75%: {perc_75}"))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], GREEN));
 
   // Data
@@ -235,7 +235,7 @@ pub fn run_vmaf(
     filter, &res
   );
 
-  cmd.arg(format!("{}{}{}", distorted, reference, vmaf));
+  cmd.arg(format!("{distorted}{reference}{vmaf}"));
   cmd.args(["-f", "null", "-"]);
   cmd.stdin(source_pipe.stdout.take().unwrap());
   cmd.stderr(Stdio::piped());

@@ -154,7 +154,7 @@ impl Input {
       }
       Input::Video(video) => {
         let fmt = crate::ffmpeg::get_pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
-        format!("{:?}", fmt)
+        format!("{fmt:?}")
       }
     })
   }

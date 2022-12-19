@@ -14,7 +14,3 @@ lto = "off"
 codegen-units = 1024
 debug-assertions = true
 overflow-checks = true
-
-[patch.crates-io]
-av-scenechange = { git = "https://github.com/rust-av/av-scenechange", rev = "2f91ec1b4224dccc7195bdabefdfa171e981ca60" }
-console = { git = "https://github.com/console-rs/console", rev = "5484ea9d9f6884f6685349708e27bf08fab7703c" }

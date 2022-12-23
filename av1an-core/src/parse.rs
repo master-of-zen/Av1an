@@ -226,7 +226,7 @@ pub fn parse_svt_av1_frames(s: &str) -> Option<u64> {
 
 pub fn parse_x26x_frames(s: &str) -> Option<u64> {
   s.split_ascii_whitespace()
-    .next()
+    .find(|part| !part.starts_with('['))
     .map(|val| val.split_once('/').map_or(val, |(val, _)| val))
     .and_then(|s| s.parse().ok())
 }
@@ -377,6 +377,10 @@ mod tests {
       ("24145 frames: 39.11 fps, 14.60 kb/s", Some(24145)),
       ("246434 frames: 39.11 fps, 14.60 kb/s", Some(246_434)),
       ("2448732 frames: 39.11 fps, 14.60 kb/s", Some(2_448_732)),
+      (
+        "[42.5%] 121/285 frames, 2.47 fps, 1445.28 kb/s, eta 0:01:06",
+        Some(121),
+      ),
       ("invalid data", None),
       ("", None),
     ];

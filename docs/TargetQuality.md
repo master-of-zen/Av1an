@@ -45,3 +45,19 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
 `av1an -i file --target_quality 90` - Will run aomenc with default settings of target_quality
 
 `av1an -i file --target_quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6` - With specified path to vmaf model and 6 probes per segment
+
+## Scaling
+
+By default vmaf calculation is done at 1920x1080 with default model.
+VMAF calculation resolution can be changed
+
+`--vmaf-res 3840x2160`
+
+## Cropping with target quality
+
+Filter with crop should be supplied for both ffmpeg options and vmaf filter
+
+`--ffmpeg "-vf crop=3840:1900:0:0" --vmaf-filter "crop=3840:1900:0:0" --vmaf-res "3840x1900"`
+
+or cropping and resizing could be done with vapoursynth script 
+` -i 4k_crop.vpy --vmaf-res "3840x1600" --target-quality 90 -o test.mkv `

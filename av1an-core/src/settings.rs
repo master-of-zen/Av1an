@@ -73,6 +73,7 @@ pub struct EncodeArgs {
   pub sc_downscale_height: Option<usize>,
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
+  pub force_keyframes: Vec<usize>,
 
   pub max_tries: usize,
 
@@ -793,6 +794,30 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     get_done()
       .frames
       .store(self.frames, atomic::Ordering::SeqCst);
+
+    // Add forced keyframes
+    for kf in &self.force_keyframes {
+      if let Some((scene_pos, s)) = scenes
+        .iter_mut()
+        .find_position(|s| (s.start_frame..s.end_frame).contains(kf))
+      {
+        if *kf == s.start_frame {
+          // Already a keyframe
+          continue;
+        }
+        // Split this scene into two scenes at the requested keyframe
+        let mut new = s.clone();
+        s.end_frame = *kf;
+        new.start_frame = *kf;
+        scenes.insert(scene_pos + 1, new);
+      } else {
+        warn!(
+          "scene {} was requested as a forced keyframe but video has {} frames, ignoring",
+          *kf, frames
+        );
+      }
+    }
+
     let scenes_before = scenes.len();
     if !used_existing_cuts {
       if let Some(split_len @ 1..) = self.extra_splits_len {

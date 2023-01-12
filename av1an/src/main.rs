@@ -247,6 +247,13 @@ pub struct CliOpts {
   #[clap(long, default_value_t = 24, help_heading = "SCENE DETECTION")]
   pub min_scene_len: usize,
 
+  /// Comma-separated list of frames to force as keyframes
+  ///
+  /// Can be useful for improving seeking with chapters, etc.
+  /// Frame 0 will always be a keyframe and does not need to be specified here.
+  #[clap(long, help_heading = "SCENE DETECTION")]
+  pub force_keyframes: Option<String>,
+
   /// Video encoder to use
   #[clap(short, long, default_value_t = Encoder::aom, possible_values = &["aom", "rav1e", "vpx", "svt-av1", "x264", "x265"], help_heading = "ENCODING")]
   pub encoder: Encoder,
@@ -675,6 +682,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       sc_method: args.sc_method,
       sc_only: args.sc_only,
       sc_downscale_height: args.sc_downscale_height,
+      force_keyframes: parse_comma_separated_numbers(
+        args.force_keyframes.as_deref().unwrap_or(""),
+      )?,
       target_quality: args.target_quality,
       verbosity: if args.quiet {
         Verbosity::Quiet
@@ -832,4 +842,18 @@ pub fn run() -> anyhow::Result<()> {
   }
 
   Ok(())
+}
+
+fn parse_comma_separated_numbers(string: &str) -> anyhow::Result<Vec<usize>> {
+  let mut result = Vec::new();
+
+  let string = string.trim();
+  if string.is_empty() {
+    return Ok(result);
+  }
+
+  for val in string.split(',') {
+    result.push(val.trim().parse()?);
+  }
+  Ok(result)
 }

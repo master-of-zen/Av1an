@@ -294,6 +294,7 @@ fn get_test_args() -> EncodeArgs {
     sc_method: ScenecutMethod::Standard,
     sc_only: false,
     sc_downscale_height: None,
+    force_keyframes: Vec::new(),
     target_quality: None,
     verbosity: Verbosity::Normal,
     vmaf: false,

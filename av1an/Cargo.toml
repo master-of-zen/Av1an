@@ -19,7 +19,7 @@ path = "src/main.rs"
 
 [dependencies]
 atty = "0.2.14"
-clap = { version = "3.0.0", features = ["derive"] }
+clap = { version = "4.0.32", features = ["derive"] }
 shlex = "1.0.0"
 path_abs = "0.5.1"
 anyhow = "1.0.42"

@@ -15,7 +15,7 @@ use av1an_core::{
   ffmpeg, hash_path, into_vec, vapoursynth, ChunkMethod, ChunkOrdering, Input, ScenecutMethod,
   SplitMethod, Verbosity,
 };
-use clap::{AppSettings, Parser};
+use clap::{value_parser, Parser};
 use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use once_cell::sync::OnceCell;
@@ -54,7 +54,6 @@ fn version() -> &'static str {
       option_env!("VERGEN_RUSTC_SEMVER"),
       option_env!("VERGEN_RUSTC_LLVM_VERSION"),
       option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
-      option_env!("VERGEN_BUILD_DATE"),
       option_env!("VERGEN_GIT_COMMIT_DATE"),
     ) {
       (
@@ -63,7 +62,6 @@ fn version() -> &'static str {
         Some(rustc_ver),
         Some(llvm_ver),
         Some(target_triple),
-        Some(build_date),
         Some(commit_date),
       ) => {
         format!(
@@ -76,7 +74,6 @@ fn version() -> &'static str {
   {}
 
 * Date Info
-   Build Date:  {}
   Commit Date:  {}
 
 {}",
@@ -86,7 +83,6 @@ fn version() -> &'static str {
           rustc_ver,
           llvm_ver,
           target_triple,
-          build_date,
           commit_date,
           get_vs_info(),
         )
@@ -104,37 +100,24 @@ fn version() -> &'static str {
   })
 }
 
-fn max_tries_valid(tries: &str) -> Result<(), String> {
-  match tries.parse::<usize>() {
-    Ok(tries) => {
-      if tries == 0 {
-        Err("max_tries must be greater than 0".into())
-      } else {
-        Ok(())
-      }
-    }
-    Err(e) => Err(format!("{}", e)),
-  }
-}
-
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per-scene quality encoding
 #[derive(Parser, Debug)]
-#[clap(name = "av1an", version = version(), setting = AppSettings::DeriveDisplayOrder)]
+#[clap(name = "av1an", version = version())]
 pub struct CliOpts {
   /// Input file to encode
   ///
   /// Can be a video or vapoursynth (.py, .vpy) script.
-  #[clap(short, parse(from_os_str), required = true)]
+  #[clap(short, required = true)]
   pub input: Vec<PathBuf>,
 
   /// Video output file
-  #[clap(short, parse(from_os_str))]
+  #[clap(short)]
   pub output_file: Option<PathBuf>,
 
   /// Temporary directory to use
   ///
   /// If not specified, the temporary directory name is a hash of the input file name.
-  #[clap(long, parse(from_os_str))]
+  #[clap(long)]
   pub temp: Option<PathBuf>,
 
   /// Disable printing progress to the terminal
@@ -160,7 +143,7 @@ pub struct CliOpts {
   /// debug: Designates lower priority information.
   ///
   /// trace: Designates very low priority, often extremely verbose, information. Includes rav1e scenechange decision info.
-  #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true, possible_values = &["error", "warn", "info", "debug", "trace"])]
+  #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true)]
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
@@ -181,8 +164,8 @@ pub struct CliOpts {
   pub overwrite: bool,
 
   /// Maximum number of chunk restarts for an encode
-  #[clap(long, default_value_t = 3, validator = max_tries_valid)]
-  pub max_tries: usize,
+  #[clap(long, default_value_t = 3, value_parser = value_parser!(u32).range(1..))]
+  pub max_tries: u32,
 
   /// Number of workers to spawn [0 = automatic]
   #[clap(short, long, default_value_t = 0)]
@@ -196,7 +179,7 @@ pub struct CliOpts {
   pub set_thread_affinity: Option<usize>,
 
   /// File location for scenes
-  #[clap(short, long, parse(from_os_str), help_heading = "SCENE DETECTION")]
+  #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
 
   /// Method used to determine chunk boundaries
@@ -204,7 +187,7 @@ pub struct CliOpts {
   /// "av-scenechange" uses an algorithm to analyze which frames of the video are the start of new
   /// scenes, while "none" disables scene detection entirely (and only relies on -x/--extra-split to
   /// add extra scenecuts).
-  #[clap(long, possible_values = &["av-scenechange", "none"], default_value_t = SplitMethod::AvScenechange, help_heading = "SCENE DETECTION")]
+  #[clap(long, default_value_t = SplitMethod::AvScenechange, help_heading = "Scene Detection")]
   pub split_method: SplitMethod,
 
   /// Scene detection algorithm to use for av-scenechange
@@ -212,17 +195,17 @@ pub struct CliOpts {
   /// Standard: Most accurate, still reasonably fast. Uses a cost-based algorithm to determine keyframes.
   ///
   /// Fast: Very fast, but less accurate. Determines keyframes based on the raw difference between pixels.
-  #[clap(long, possible_values = &["standard", "fast"], default_value_t = ScenecutMethod::Standard, help_heading = "SCENE DETECTION")]
+  #[clap(long, default_value_t = ScenecutMethod::Standard, help_heading = "Scene Detection")]
   pub sc_method: ScenecutMethod,
 
   /// Run the scene detection only before exiting
   ///
   /// Requires a scene file with --scenes.
-  #[clap(long, requires("scenes"), help_heading = "SCENE DETECTION")]
+  #[clap(long, requires("scenes"), help_heading = "Scene Detection")]
   pub sc_only: bool,
 
   /// Perform scene detection with this pixel format
-  #[clap(long, help_heading = "SCENE DETECTION")]
+  #[clap(long, help_heading = "Scene Detection")]
   pub sc_pix_format: Option<Pixel>,
 
   /// Optional downscaling for scene detection
@@ -232,7 +215,7 @@ pub struct CliOpts {
   /// scene detection speed but lowers accuracy, especially when scaling to very low resolutions.
   ///
   /// By default, no downscaling is performed.
-  #[clap(long, help_heading = "SCENE DETECTION")]
+  #[clap(long, help_heading = "Scene Detection")]
   pub sc_downscale_height: Option<usize>,
 
   /// Maximum scene length
@@ -240,22 +223,22 @@ pub struct CliOpts {
   /// When a scenecut is found whose distance to the previous scenecut is greater than the value
   /// specified by this option, one or more extra splits (scenecuts) are added. Set this option
   /// to 0 to disable adding extra splits.
-  #[clap(short = 'x', long, help_heading = "SCENE DETECTION")]
+  #[clap(short = 'x', long, help_heading = "Scene Detection")]
   pub extra_split: Option<usize>,
 
   /// Minimum number of frames for a scenecut
-  #[clap(long, default_value_t = 24, help_heading = "SCENE DETECTION")]
+  #[clap(long, default_value_t = 24, help_heading = "Scene Detection")]
   pub min_scene_len: usize,
 
   /// Comma-separated list of frames to force as keyframes
   ///
   /// Can be useful for improving seeking with chapters, etc.
   /// Frame 0 will always be a keyframe and does not need to be specified here.
-  #[clap(long, help_heading = "SCENE DETECTION")]
+  #[clap(long, help_heading = "Scene Detection")]
   pub force_keyframes: Option<String>,
 
   /// Video encoder to use
-  #[clap(short, long, default_value_t = Encoder::aom, possible_values = &["aom", "rav1e", "vpx", "svt-av1", "x264", "x265"], help_heading = "ENCODING")]
+  #[clap(short, long, default_value_t = Encoder::aom, help_heading = "Encoding")]
   pub encoder: Encoder,
 
   /// Parameters for video encoder
@@ -264,7 +247,7 @@ pub struct CliOpts {
   /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
   /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
   /// a list of valid options.
-  #[clap(short, long, allow_hyphen_values = true, help_heading = "ENCODING")]
+  #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub video_params: Option<String>,
 
   /// Number of encoder passes
@@ -275,7 +258,7 @@ pub struct CliOpts {
   ///
   /// When using aom or vpx with RT mode (--rt), one-pass mode is always used regardless of the
   /// value specified by this flag (as RT mode in aom and vpx only supports one-pass encoding).
-  #[clap(short, long, possible_values = &["1", "2"], help_heading = "ENCODING")]
+  #[clap(short, long, value_parser = value_parser!(u8).range(1..=2), help_heading = "Encoding")]
   pub passes: Option<u8>,
 
   /// Audio encoding parameters (ffmpeg syntax)
@@ -296,7 +279,7 @@ pub struct CliOpts {
   /// downmixed to a single channel:
   ///
   /// -a="-c:a:0 libopus -b:a:0 128k -c:a:1 aac -ac:a:1 1 -b:a:1 24k"
-  #[clap(short, long, allow_hyphen_values = true, help_heading = "ENCODING")]
+  #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub audio_params: Option<String>,
 
   /// FFmpeg filter options
@@ -304,7 +287,7 @@ pub struct CliOpts {
     short = 'f',
     long = "ffmpeg",
     allow_hyphen_values = true,
-    help_heading = "ENCODING"
+    help_heading = "Encoding"
   )]
   pub ffmpeg_filter_args: Option<String>,
 
@@ -334,7 +317,7 @@ pub struct CliOpts {
   /// Requires intermediate files (which can be large).
   ///
   /// Default: lsmash (if available), otherwise ffms2 (if available), otherwise hybrid.
-  #[clap(short = 'm', long, possible_values = &["segment", "select", "ffms2", "lsmash", "hybrid"], help_heading = "ENCODING")]
+  #[clap(short = 'm', long, help_heading = "Encoding")]
   pub chunk_method: Option<ChunkMethod>,
 
   /// The order in which av1an will encode chunks
@@ -349,7 +332,7 @@ pub struct CliOpts {
   /// sequential - The chunks will be encoded in the order they appear in the video.
   ///
   /// random - The chunks will be encoded in a random order. This will provide a more accurate estimated filesize sooner in the encode.
-  #[clap(long, possible_values = &["long-to-short", "short-to-long", "sequential", "random"], default_value_t = ChunkOrdering::LongestFirst, help_heading = "ENCODING")]
+  #[clap(long, default_value_t = ChunkOrdering::LongestFirst, help_heading = "Encoding")]
   pub chunk_order: ChunkOrdering,
 
   /// Generates a photon noise table and applies it using grain synthesis [strength: 0-64] (disabled by default)
@@ -362,11 +345,11 @@ pub struct CliOpts {
   /// An encoder's grain synthesis will still work without using this option, by specifying the
   /// correct parameter to the encoder. However, the two should not be used together,
   /// and specifying this option will disable the encoder's internal grain synthesis.
-  #[clap(long, help_heading = "ENCODING")]
+  #[clap(long, help_heading = "Encoding")]
   pub photon_noise: Option<u8>,
 
   /// Adds chroma grain synthesis to the grain table generated by `--photon-noise`. (Default: false)
-  #[clap(long, help_heading = "ENCODING", requires = "photon-noise")]
+  #[clap(long, help_heading = "Encoding", requires = "photon_noise")]
   pub chroma_noise: bool,
 
   /// Determines method used for concatenating encoded chunks and audio into output file
@@ -383,11 +366,11 @@ pub struct CliOpts {
   ///
   /// ivf - Experimental concatenation method implemented in av1an itself to concatenate to an ivf
   /// file (which only supports VP8, VP9, and AV1, and does not support audio).
-  #[clap(short, long, possible_values = &["ffmpeg", "mkvmerge", "ivf"], default_value_t = ConcatMethod::FFmpeg, help_heading = "ENCODING")]
+  #[clap(short, long, default_value_t = ConcatMethod::FFmpeg, help_heading = "Encoding")]
   pub concat: ConcatMethod,
 
   /// FFmpeg pixel format
-  #[clap(long, default_value = "yuv420p10le", help_heading = "ENCODING")]
+  #[clap(long, default_value = "yuv420p10le", help_heading = "Encoding")]
   pub pix_format: Pixel,
 
   /// Path to a file specifying zones within the video with differing encoder settings.
@@ -435,12 +418,7 @@ pub struct CliOpts {
   /// - `--min-scene-len`
   /// - `--passes`
   /// - `--photon-noise` (aomenc/rav1e only)
-  #[clap(
-    long,
-    parse(from_os_str),
-    help_heading = "ENCODING",
-    verbatim_doc_comment
-  )]
+  #[clap(long, help_heading = "Encoding", verbatim_doc_comment)]
   pub zones: Option<PathBuf>,
 
   /// Plot an SVG of the VMAF for the encode
@@ -453,7 +431,7 @@ pub struct CliOpts {
   /// Path to VMAF model (used by --vmaf and --target-quality)
   ///
   /// If not specified, ffmpeg's default is used.
-  #[clap(long, parse(from_os_str), help_heading = "VMAF")]
+  #[clap(long, help_heading = "VMAF")]
   pub vmaf_path: Option<PathBuf>,
 
   /// Resolution used for VMAF calculation
@@ -476,21 +454,21 @@ pub struct CliOpts {
   /// Target quality mode is much slower than normal encoding, but can improve the consistency of quality in some cases.
   ///
   /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is the best). Floating-point values are allowed.
-  #[clap(long, help_heading = "TARGET QUALITY")]
+  #[clap(long, help_heading = "Target Quality")]
   pub target_quality: Option<f64>,
 
   /// Maximum number of probes allowed for target quality
-  #[clap(long, default_value_t = 4, help_heading = "TARGET QUALITY")]
+  #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
   pub probes: u32,
 
   /// Framerate for probes, 1 - original
-  #[clap(long, default_value_t = 1, help_heading = "TARGET QUALITY")]
+  #[clap(long, default_value_t = 1, help_heading = "Target Quality")]
   pub probing_rate: u32,
 
   /// Use encoding settings for probes specified by --video-params rather than faster, less accurate settings
   ///
   /// Note that this always performs encoding in one-pass mode, regardless of --passes.
-  #[clap(long, help_heading = "TARGET QUALITY")]
+  #[clap(long, help_heading = "Target Quality")]
   pub probe_slow: bool,
 
   /// Lower bound for target quality Q-search early exit
@@ -499,7 +477,7 @@ pub struct CliOpts {
   /// min_q is used for the chunk.
   ///
   /// If not specified, the default value is used (chosen per encoder).
-  #[clap(long, help_heading = "TARGET QUALITY")]
+  #[clap(long, help_heading = "Target Quality")]
   pub min_q: Option<u32>,
 
   /// Upper bound for target quality Q-search early exit
@@ -508,7 +486,7 @@ pub struct CliOpts {
   /// max_q is used for the chunk.
   ///
   /// If not specified, the default value is used (chosen per encoder).
-  #[clap(long, help_heading = "TARGET QUALITY")]
+  #[clap(long, help_heading = "Target Quality")]
   pub max_q: Option<u32>,
 }
 
@@ -643,7 +621,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       chroma_noise: args.chroma_noise,
       sc_pix_format: args.sc_pix_format,
       keep: args.keep,
-      max_tries: args.max_tries,
+      max_tries: args.max_tries as usize,
       min_q: args.min_q,
       max_q: args.max_q,
       min_scene_len: args.min_scene_len,

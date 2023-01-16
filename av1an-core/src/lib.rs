@@ -24,9 +24,7 @@ extern crate log;
 use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
@@ -350,18 +348,6 @@ pub fn hash_path(path: &Path) -> String {
   let mut s = DefaultHasher::new();
   path.hash(&mut s);
   format!("{:x}", s.finish())[..7].to_string()
-}
-
-fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
-  let mut file = File::create(Path::new(temp).join("chunks.json"))
-    .with_context(|| "Failed to create chunks.json file")?;
-
-  file
-    // serializing chunk_queue as json should never fail, so unwrap is OK here
-    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
-    .with_context(|| format!("Failed to write serialized chunk_queue data to {:?}", &file))?;
-
-  Ok(())
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

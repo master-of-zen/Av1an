@@ -1,4 +1,7 @@
+use anyhow::Context;
 use std::ffi::OsString;
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -33,6 +36,18 @@ impl Chunk {
       .unwrap()
       .to_owned()
   }
+}
+
+pub fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
+  let mut file = File::create(Path::new(temp).join("chunks.json"))
+    .with_context(|| "Failed to create chunks.json file")?;
+
+  file
+    // serializing chunk_queue as json should never fail, so unwrap is OK here
+    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
+    .with_context(|| format!("Failed to write serialized chunk_queue data to {:?}", &file))?;
+
+  Ok(())
 }
 
 #[cfg(test)]

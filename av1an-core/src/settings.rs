@@ -24,7 +24,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 
 use crate::broker::{Broker, EncoderCrash};
-use crate::chunk::Chunk;
+use crate::chunk::{Chunk, save_chunk_queue};
 use crate::concat::{self, ConcatMethod};
 use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
 use crate::parse::valid_params;
@@ -39,7 +39,7 @@ use crate::vapoursynth::{create_vs_file, is_ffms2_installed, is_lsmash_installed
 use crate::vmaf::{self, validate_libvmaf};
 use crate::{
   create_dir, determine_workers, finish_multi_progress_bar, get_done, init_done, into_vec,
-  read_chunk_queue, save_chunk_queue, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder,
+  read_chunk_queue, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder,
   Input, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
 };
 

@@ -99,9 +99,6 @@ pub fn scene_detect(
   loop {
     let mut min_scene_len = min_scene_len;
     if let Some(zone) = cur_zone {
-      if let Some(ref overrides) = zone.zone_overrides {
-        min_scene_len = overrides.min_scene_len;
-      }
     };
     let options = DetectionOptions {
       min_scenecut_distance: Some(min_scene_len),
@@ -153,7 +150,6 @@ pub fn scene_detect(
       scenes.push(Scene {
         start_frame: start + frames_read,
         end_frame: end + frames_read,
-        zone_overrides: cur_zone.and_then(|zone| zone.zone_overrides.clone()),
       });
     }
 
@@ -168,7 +164,6 @@ pub fn scene_detect(
       } else {
         total_frames
       },
-      zone_overrides: cur_zone.and_then(|zone| zone.zone_overrides.clone()),
     });
     if let Some(next_idx) = next_zone_idx {
       if cur_zone.map_or(true, |zone| zone.end_frame == zones[next_idx].start_frame) {

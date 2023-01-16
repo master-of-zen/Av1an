@@ -216,14 +216,8 @@ impl<'a> Broker<'a> {
     let padding = printable_base10_digits(self.total_chunks - 1) as usize;
 
     // Run all passes for this chunk
-    let encoder = chunk
-      .overrides
-      .as_ref()
-      .map_or(self.project.encoder, |ovr| ovr.encoder);
-    let passes = chunk
-      .overrides
-      .as_ref()
-      .map_or(self.project.passes, |ovr| ovr.passes);
+    let encoder = self.project.encoder;
+    let passes = self.project.passes;
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=passes {
       for r#try in 1..=self.max_tries {

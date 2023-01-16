@@ -33,7 +33,7 @@ use crate::progress_bar::{
   reset_bar_at, reset_mp_bar_at, update_mp_chunk, update_mp_msg, update_progress_bar_estimates,
 };
 use crate::scene_detect::av_scenechange_detect;
-use crate::scenes::{Scene, ZoneOptions};
+use crate::scenes::Scene;
 use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::{create_vs_file, is_ffms2_installed, is_lsmash_installed};
 use crate::vmaf::{self, validate_libvmaf};
@@ -228,14 +228,7 @@ impl EncodeArgs {
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
-    let mut video_params = chunk
-      .overrides
-      .as_ref()
-      .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone());
-    if tpl_crash_workaround {
-      // In aomenc for duplicate arguments, whichever is specified last takes precedence.
-      video_params.push("--enable-tpl-model=0".to_string());
-    }
+    let mut video_params = self.video_params.clone();
     let mut enc_cmd = if passes == 1 {
       encoder.compose_1_1_pass(video_params, chunk.output(), chunk.frames)
     } else if current_pass == 1 {
@@ -733,7 +726,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             scenes.push(Scene {
               start_frame: frames_processed,
               end_frame: zone.start_frame,
-              zone_overrides: None,
             });
           }
 
@@ -745,7 +737,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           scenes.push(Scene {
             start_frame: frames_processed,
             end_frame: self.frames,
-            zone_overrides: None,
           });
         }
 
@@ -843,7 +834,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     src_path: &Path,
     frame_start: usize,
     mut frame_end: usize,
-    overrides: Option<ZoneOptions>,
   ) -> Chunk {
     assert!(
       frame_start < frame_end,
@@ -883,7 +873,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       frames,
-      overrides,
       ..Chunk::default()
     }
   }
@@ -913,7 +902,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
       frames,
-      overrides: scene.zone_overrides.clone(),
       ..Chunk::default()
     }
   }
@@ -940,7 +928,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           input,
           scene.start_frame,
           scene.end_frame,
-          scene.zone_overrides.clone(),
         )
       })
       .collect();
@@ -978,7 +965,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.create_chunk_from_segment(
           index,
           file.as_path().to_str().unwrap(),
-          scenes[index].zone_overrides.clone(),
         )
       })
       .collect();
@@ -1025,7 +1011,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .iter()
       .enumerate()
       .map(|(index, &(file, (start, end, scene)))| {
-        self.create_select_chunk(index, file, start, end, scene.zone_overrides.clone())
+        self.create_select_chunk(index, file, start, end)
       })
       .collect();
 
@@ -1036,7 +1022,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     &self,
     index: usize,
     file: &str,
-    overrides: Option<ZoneOptions>,
   ) -> Chunk {
     let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
       "ffmpeg",
@@ -1063,7 +1048,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       source: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,
-      overrides,
       ..Chunk::default()
     }
   }
@@ -1206,41 +1190,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       grain_table = Some(table);
     }
 
-    for chunk in &mut chunk_queue {
-      // Also apply grain tables to zone overrides
-      if let Some(strength) = chunk.overrides.as_ref().and_then(|ovr| ovr.photon_noise) {
-        let grain_table = if Some(strength) == self.photon_noise {
-          // We can reuse the existing photon noise table from the main encode
-          grain_table.clone().unwrap()
-        } else {
-          let grain_table = Path::new(&self.temp).join(format!("chunk{}-grain.tbl", chunk.index));
-          let iso_setting = u32::from(strength) * 100;
-          debug!("Generating grain table at ISO {}", iso_setting);
-          let (width, height) = self.input.resolution()?;
-          let transfer_function = self
-            .input
-            .transfer_function_params_adjusted(&self.video_params)?;
-          let params = generate_photon_noise_params(
-            0,
-            u64::MAX,
-            NoiseGenArgs {
-              iso_setting,
-              width,
-              height,
-              transfer_function,
-              chroma_grain: self.chroma_noise,
-              random_seed: None,
-            },
-          );
-          write_grain_table(&grain_table, &[params])?;
-          grain_table
-        };
-
-        // We should not use a grain table together with aom's grain generation
-        let overrides = chunk.overrides.as_mut().unwrap();
-        insert_noise_table_params(overrides.encoder, &mut overrides.video_params, &grain_table);
-      }
-    }
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
       // vapoursynth audio is currently unsupported

@@ -39,8 +39,8 @@ default-features = false
 features = ["git", "build", "rustc", "cargo"]
 
 [dependencies.ffmpeg]
-package = "ffmpeg-next"
-version = "5.1.1"
+package = "ffmpeg-the-third"
+version = "1.0.0"
 
 [features]
 default = []

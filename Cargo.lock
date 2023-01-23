@@ -186,7 +186,7 @@ dependencies = [
  "atty",
  "av1an-core",
  "clap",
- "ffmpeg-next",
+ "ffmpeg-the-third",
  "flexi_logger",
  "once_cell",
  "path_abs",
@@ -212,7 +212,7 @@ dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
  "dashmap",
- "ffmpeg-next",
+ "ffmpeg-the-third",
  "indicatif",
  "itertools",
  "log",
@@ -244,9 +244,9 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.59.2"
+version = "0.61.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd2a9a458e8f4304c52c43ebb0cfbd520289f8379a52e329a38afda99bf8eb8"
+checksum = "8a022e58a142a46fea340d68012b9201c094e93ec3d033a944a24f8fd4a4f09a"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -259,6 +259,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
+ "syn",
 ]
 
 [[package]]
@@ -595,21 +596,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "ffmpeg-next"
-version = "5.1.1"
+name = "ffmpeg-sys-the-third"
+version = "1.0.0+ffmpeg-5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a80971eee67be0079a1c8890bde68226fe9bd0441740fd6ddd0cee131486b321"
-dependencies = [
- "bitflags",
- "ffmpeg-sys-next",
- "libc",
-]
-
-[[package]]
-name = "ffmpeg-sys-next"
-version = "5.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d780b36e092254367e2f1f21191992735c8e23f31a5a5a8678db3a79f775021f"
+checksum = "b9e277227232a15bced1b4c9c1a7b56d5f4aadfd6dd15697c530f0c28c8bc625"
 dependencies = [
  "bindgen",
  "cc",
@@ -617,6 +607,17 @@ dependencies = [
  "num_cpus",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "ffmpeg-the-third"
+version = "1.0.0+ffmpeg-5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e50629c9b1c78a8f0d590fb00fd0d9bc0c7f081f9119782df50b9ca60a39ab42"
+dependencies = [
+ "bitflags",
+ "ffmpeg-sys-the-third",
+ "libc",
 ]
 
 [[package]]

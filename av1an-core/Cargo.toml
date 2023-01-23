@@ -62,8 +62,8 @@ default-features = false
 features = ["const_generics", "const_new", "union"]
 
 [dependencies.ffmpeg]
-package = "ffmpeg-next"
-version = "5.1.1"
+package = "ffmpeg-the-third"
+version = "1.0.0"
 
 [dependencies.plotters]
 version = "0.3.1"

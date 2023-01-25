@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::thread::available_parallelism;
 use std::{panic, process};
 
 use ::ffmpeg::format::Pixel;
@@ -10,6 +11,7 @@ use av1an_core::concat::ConcatMethod;
 use av1an_core::encoder::Encoder;
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
+use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
 use av1an_core::{
   ffmpeg, hash_path, into_vec, vapoursynth, ChunkMethod, ChunkOrdering, Input, ScenecutMethod,
@@ -490,6 +492,43 @@ pub struct CliOpts {
   pub max_q: Option<u32>,
 }
 
+impl CliOpts {
+  pub fn target_quality_params(
+    &self,
+    temp_dir: String,
+    video_params: Vec<String>,
+    output_pix_format: Pixel,
+  ) -> Option<TargetQuality> {
+    self.target_quality.map(|tq| {
+      let (min, max) = self.encoder.get_default_cq_range();
+      let min_q = self.min_q.unwrap_or(min as u32);
+      let max_q = self.max_q.unwrap_or(max as u32);
+
+      TargetQuality {
+        vmaf_res: self.vmaf_res.clone(),
+        vmaf_filter: self.vmaf_filter.clone(),
+        vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
+          available_parallelism()
+            .expect("Unrecoverable: Failed to get thread count")
+            .get()
+        }),
+        model: self.vmaf_path.clone(),
+        probes: self.probes,
+        target: tq,
+        min_q,
+        max_q,
+        encoder: self.encoder,
+        pix_format: output_pix_format,
+        temp: temp_dir.clone(),
+        workers: self.workers,
+        video_params: video_params.clone(),
+        probe_slow: self.probe_slow,
+        probing_rate: adapt_probing_rate(self.probing_rate as usize),
+      }
+    })
+  }
+}
+
 fn confirm(prompt: &str) -> io::Result<bool> {
   let mut buf = String::with_capacity(4);
   let mut stdout = io::stdout();
@@ -504,7 +543,7 @@ fn confirm(prompt: &str) -> io::Result<bool> {
       "y" | "Y" | "" => break Ok(true),
       "n" | "N" => break Ok(false),
       other => {
-        println!("Sorry, response {:?} is not understood.", other);
+        println!("Sorry, response {other:?} is not understood.");
         buf.clear();
         continue;
       }
@@ -548,11 +587,21 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
 
     let input = Input::from(input);
 
+    let video_params = if let Some(args) = args.video_params.as_ref() {
+      shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
+    } else {
+      Vec::new()
+    };
+    let output_pix_format = PixelFormat {
+      format: args.pix_format,
+      bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
+    };
+
     // TODO make an actual constructor for this
     let mut arg = EncodeArgs {
       frames: 0,
       log_file: if let Some(log_file) = args.log_file.as_ref() {
-        Path::new(&format!("{}.log", log_file)).to_owned()
+        Path::new(&format!("{log_file}.log")).to_owned()
       } else {
         Path::new(&temp).join("log.log")
       },
@@ -561,18 +610,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       } else {
         Vec::new()
       },
-      temp,
+      temp: temp.clone(),
       force: args.force,
       passes: if let Some(passes) = args.passes {
         passes
       } else {
         args.encoder.get_default_pass()
       },
-      video_params: if let Some(args) = args.video_params.as_ref() {
-        shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
-      } else {
-        Vec::new()
-      },
+      video_params: video_params.clone(),
       output_file: if let Some(path) = args.output_file.as_ref() {
         let path = PathAbs::new(path)?;
 
@@ -622,38 +667,23 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       sc_pix_format: args.sc_pix_format,
       keep: args.keep,
       max_tries: args.max_tries as usize,
-      min_q: args.min_q,
-      max_q: args.max_q,
       min_scene_len: args.min_scene_len,
-      vmaf_threads: args.vmaf_threads,
       input_pix_format: {
         match &input {
           Input::Video(path) => InputPixelFormat::FFmpeg {
             format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
-              format!(
-                "FFmpeg failed to get pixel format for input video {:?}",
-                path
-              )
+              format!("FFmpeg failed to get pixel format for input video {path:?}")
             })?,
           },
           Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
             bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
-              format!(
-                "VapourSynth failed to get bit depth for input video {:?}",
-                path
-              )
+              format!("VapourSynth failed to get bit depth for input video {path:?}")
             })?,
           },
         }
       },
       input,
-      output_pix_format: PixelFormat {
-        format: args.pix_format,
-        bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
-      },
-      probe_slow: args.probe_slow,
-      probes: args.probes,
-      probing_rate: args.probing_rate,
+      output_pix_format,
       resume: args.resume,
       scenes: args.scenes.clone(),
       split_method: args.split_method.clone(),
@@ -663,7 +693,12 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       force_keyframes: parse_comma_separated_numbers(
         args.force_keyframes.as_deref().unwrap_or(""),
       )?,
-      target_quality: args.target_quality,
+      target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
+      vmaf: args.vmaf,
+      vmaf_filter: args.vmaf_filter.clone(),
+      vmaf_path: args.vmaf_path.clone(),
+      vmaf_res: args.vmaf_res.to_string().clone(),
+      vmaf_threads: args.vmaf_threads,
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {
@@ -671,10 +706,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       } else {
         Verbosity::Normal
       },
-      vmaf: args.vmaf,
-      vmaf_filter: args.vmaf_filter.clone(),
-      vmaf_path: args.vmaf_path.clone(),
-      vmaf_res: args.vmaf_res.to_string().clone(),
       workers: args.workers,
       set_thread_affinity: args.set_thread_affinity,
       vs_script: None,
@@ -688,8 +719,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       if let Some(path) = args.output_file.as_ref() {
         if path.exists()
           && !confirm(&format!(
-            "Output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-            path
+            "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
           ))?
         {
           println!("Not overwriting, aborting.");
@@ -700,8 +730,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
 
         if path.exists()
           && !confirm(&format!(
-            "Default output file {:?} exists. Do you want to overwrite it? [Y/n]: ",
-            path
+            "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
           ))?
         {
           println!("Not overwriting, aborting.");

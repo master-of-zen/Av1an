@@ -11,55 +11,33 @@ use splines::{Interpolation, Key, Spline};
 
 use crate::broker::EncoderCrash;
 use crate::chunk::Chunk;
-use crate::settings::EncodeArgs;
 use crate::vmaf::{self, read_weighted_vmaf};
 use crate::Encoder;
 
 const VMAF_PERCENTILE: f64 = 0.01;
 
-// TODO: just make it take a reference to a `Project`
-pub struct TargetQuality<'a> {
-  vmaf_res: &'a str,
-  vmaf_filter: Option<&'a str>,
-  vmaf_threads: usize,
-  model: Option<&'a Path>,
-  probing_rate: usize,
-  probes: u32,
-  target: f64,
-  min_q: u32,
-  max_q: u32,
-  encoder: Encoder,
-  pix_format: Pixel,
-  temp: String,
-  workers: usize,
-  video_params: Vec<String>,
-  probe_slow: bool,
+pub struct TargetQuality {
+  pub vmaf_res: String,
+  pub vmaf_filter: Option<String>,
+  pub vmaf_threads: usize,
+  pub model: Option<PathBuf>,
+  pub probing_rate: usize,
+  pub probes: u32,
+  pub target: f64,
+  pub min_q: u32,
+  pub max_q: u32,
+  pub encoder: Encoder,
+  pub pix_format: Pixel,
+  pub temp: String,
+  pub workers: usize,
+  pub video_params: Vec<String>,
+  pub probe_slow: bool,
 }
 
-impl<'a> TargetQuality<'a> {
-  pub fn new(args: &'a EncodeArgs) -> Self {
-    Self {
-      vmaf_res: args.vmaf_res.as_str(),
-      vmaf_filter: args.vmaf_filter.as_deref(),
-      vmaf_threads: args.vmaf_threads.unwrap_or(0),
-      model: args.vmaf_path.as_deref(),
-      probes: args.probes,
-      target: args.target_quality.unwrap(),
-      min_q: args.min_q.unwrap(),
-      max_q: args.max_q.unwrap(),
-      encoder: args.encoder,
-      pix_format: args.output_pix_format.format,
-      temp: args.temp.clone(),
-      workers: args.workers,
-      video_params: args.video_params.clone(),
-      probe_slow: args.probe_slow,
-      probing_rate: adapt_probing_rate(args.probing_rate as usize),
-    }
-  }
-
+impl TargetQuality {
   fn per_shot_target_quality(&self, chunk: &Chunk) -> Result<u32, Box<EncoderCrash>> {
     let mut vmaf_cq = vec![];
-    let frames = chunk.frames;
+    let frames = chunk.frames();
 
     let mut q_list = vec![];
 
@@ -184,7 +162,7 @@ impl<'a> TargetQuality<'a> {
     );
 
     let future = async {
-      let mut source = if let [pipe_cmd, args @ ..] = &*chunk.source {
+      let mut source = if let [pipe_cmd, args @ ..] = &*chunk.source_cmd {
         tokio::process::Command::new(pipe_cmd)
           .args(args)
           .stderr(if cfg!(windows) {
@@ -271,12 +249,12 @@ impl<'a> TargetQuality<'a> {
 
     vmaf::run_vmaf(
       &probe_name,
-      chunk.source.as_slice(),
+      chunk.source_cmd.as_slice(),
       &fl_path,
       self.model.as_ref(),
-      self.vmaf_res,
+      &self.vmaf_res,
       self.probing_rate,
-      self.vmaf_filter,
+      self.vmaf_filter.as_deref(),
       self.vmaf_threads,
     )?;
 

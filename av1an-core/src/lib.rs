@@ -63,7 +63,7 @@ pub mod util;
 pub mod vapoursynth;
 pub mod vmaf;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {
   VapourSynth(PathBuf),
   Video(PathBuf),

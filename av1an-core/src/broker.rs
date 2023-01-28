@@ -18,7 +18,7 @@ use crate::settings::EncodeArgs;
 use crate::util::printable_base10_digits;
 use crate::{
   finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Encoder, Instant,
-  TargetQuality, Verbosity,
+  Verbosity,
 };
 
 pub struct Broker<'a> {
@@ -26,7 +26,6 @@ pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
   pub total_chunks: usize,
   pub project: &'a EncodeArgs,
-  pub target_quality: Option<TargetQuality<'a>>,
 }
 
 #[derive(Clone)]
@@ -206,31 +205,23 @@ impl<'a> Broker<'a> {
     let st_time = Instant::now();
 
     // space padding at the beginning to align with "finished chunk"
-    debug!(" started chunk {:05}: {} frames", chunk.index, chunk.frames);
-
-    if let Some(ref tq) = self.target_quality {
-      tq.per_shot_target_quality_routine(chunk)?;
-    }
+    debug!(
+      " started chunk {:05}: {} frames",
+      chunk.index,
+      chunk.frames()
+    );
 
     // we display the index, so we need to subtract 1 to get the max index
     let padding = printable_base10_digits(self.total_chunks - 1) as usize;
 
     // Run all passes for this chunk
-    let encoder = chunk
-      .overrides
-      .as_ref()
-      .map_or(self.project.encoder, |ovr| ovr.encoder);
-    let passes = chunk
-      .overrides
-      .as_ref()
-      .map_or(self.project.passes, |ovr| ovr.passes);
+    let encoder = chunk.encoder;
+    let passes = chunk.passes;
     let mut tpl_crash_workaround = false;
     for current_pass in 1..=passes {
       for r#try in 1..=self.max_tries {
         let res = self.project.create_pipes(
           chunk,
-          encoder,
-          passes,
           current_pass,
           worker_id,
           padding,
@@ -273,13 +264,13 @@ impl<'a> Broker<'a> {
     }
 
     let enc_time = st_time.elapsed();
-    let fps = chunk.frames as f64 / enc_time.as_secs_f64();
+    let fps = chunk.frames() as f64 / enc_time.as_secs_f64();
 
     let progress_file = Path::new(&self.project.temp).join("done.json");
     get_done().done.insert(
       chunk.name(),
       DoneChunk {
-        frames: chunk.frames,
+        frames: chunk.frames(),
         size_bytes: Path::new(&chunk.output())
           .metadata()
           .expect("Unable to get size of finished chunk")
@@ -301,7 +292,10 @@ impl<'a> Broker<'a> {
 
     debug!(
       "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
-      chunk.index, chunk.frames, fps, enc_time
+      chunk.index,
+      chunk.frames(),
+      fps,
+      enc_time
     );
 
     Ok(())

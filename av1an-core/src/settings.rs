@@ -14,12 +14,13 @@ use std::{cmp, fs, iter, thread};
 
 use ansi_term::{Color, Style};
 use anyhow::{bail, ensure, Context};
-use av1_grain::{generate_photon_noise_params, write_grain_table, NoiseGenArgs, TransferFunction};
+use av1_grain::TransferFunction;
 use crossbeam_utils;
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 
@@ -43,11 +44,13 @@ use crate::{
   Input, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
 };
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PixelFormat {
   pub format: Pixel,
   pub bit_depth: usize,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum InputPixelFormat {
   VapourSynth { bit_depth: usize },
   FFmpeg { format: Pixel },
@@ -98,21 +101,14 @@ pub struct EncodeArgs {
   pub keep: bool,
   pub force: bool,
 
+  pub concat: ConcatMethod,
+
   pub vmaf: bool,
   pub vmaf_path: Option<PathBuf>,
   pub vmaf_res: String,
-
-  pub concat: ConcatMethod,
-
-  pub target_quality: Option<f64>,
-  pub probes: u32,
-  pub probe_slow: bool,
-  pub min_q: Option<u32>,
-  pub max_q: Option<u32>,
-
-  pub probing_rate: u32,
   pub vmaf_threads: Option<usize>,
   pub vmaf_filter: Option<String>,
+  pub target_quality: Option<TargetQuality>,
 }
 
 impl EncodeArgs {
@@ -194,12 +190,7 @@ impl EncodeArgs {
 
   fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     let mut queue_files = fs::read_dir(source_path)
-      .with_context(|| {
-        format!(
-          "Failed to read queue files from source path {:?}",
-          source_path
-        )
-      })?
+      .with_context(|| format!("Failed to read queue files from source path {source_path:?}"))?
       .map(|res| res.map(|e| e.path()))
       .collect::<Result<Vec<_>, _>>()?;
 
@@ -215,8 +206,6 @@ impl EncodeArgs {
   pub fn create_pipes(
     &self,
     chunk: &Chunk,
-    encoder: Encoder,
-    passes: u8,
     current_pass: u8,
     worker_id: usize,
     padding: usize,
@@ -228,29 +217,32 @@ impl EncodeArgs {
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
-    let mut video_params = chunk
-      .overrides
-      .as_ref()
-      .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone());
+    let mut video_params = chunk.video_params.clone();
     if tpl_crash_workaround {
       // In aomenc for duplicate arguments, whichever is specified last takes precedence.
       video_params.push("--enable-tpl-model=0".to_string());
     }
-    let mut enc_cmd = if passes == 1 {
-      encoder.compose_1_1_pass(video_params, chunk.output(), chunk.frames)
+    let mut enc_cmd = if chunk.passes == 1 {
+      chunk
+        .encoder
+        .compose_1_1_pass(video_params, chunk.output(), chunk.frames())
     } else if current_pass == 1 {
-      encoder.compose_1_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.frames)
+      chunk
+        .encoder
+        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.frames())
     } else {
-      encoder.compose_2_2_pass(
+      chunk.encoder.compose_2_2_pass(
         video_params,
         fpf_file.to_str().unwrap(),
         chunk.output(),
-        chunk.frames,
+        chunk.frames(),
       )
     };
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
-      enc_cmd = encoder.man_command(enc_cmd, per_shot_target_quality_cq as usize);
+      enc_cmd = chunk
+        .encoder
+        .man_command(enc_cmd, per_shot_target_quality_cq as usize);
     }
 
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -260,7 +252,7 @@ impl EncodeArgs {
 
     let (source_pipe_stderr, ffmpeg_pipe_stderr, enc_output, enc_stderr, frame) =
       rt.block_on(async {
-        let mut source_pipe = if let [source, args @ ..] = &*chunk.source {
+        let mut source_pipe = if let [source, args @ ..] = &*chunk.source_cmd {
           tokio::process::Command::new(source)
             .args(args)
             .stdout(Stdio::piped())
@@ -392,8 +384,8 @@ impl EncodeArgs {
             enc_stderr.push_str(line);
             enc_stderr.push('\n');
 
-            if current_pass == passes {
-              if let Some(new) = encoder.parse_encoded_frames(line) {
+            if current_pass == chunk.passes {
+              if let Some(new) = chunk.encoder.parse_encoded_frames(line) {
                 if new > frame {
                   if self.verbosity == Verbosity::Normal {
                     inc_bar(new - frame);
@@ -435,13 +427,14 @@ impl EncodeArgs {
       ));
     }
 
-    if current_pass == passes {
+    if current_pass == chunk.passes {
       let encoded_frames = num_frames(chunk.output().as_ref());
 
       let err_str = match encoded_frames {
-        Ok(encoded_frames) if encoded_frames != chunk.frames => Some(format!(
+        Ok(encoded_frames) if encoded_frames != chunk.frames() => Some(format!(
           "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
-          chunk.index, chunk.frames
+          chunk.index,
+          chunk.frames()
         )),
         Err(error) => Some(format!(
           "FAILED TO COUNT FRAMES: chunk {}: {error}",
@@ -562,20 +555,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       ensure!(vmaf_path.exists());
     }
 
-    if self.probes < 4 {
-      println!("Target quality with less than 4 probes is experimental and not recommended");
-    }
-
-    let (min, max) = self.encoder.get_default_cq_range();
-    match self.min_q {
-      None => {
-        self.min_q = Some(min as u32);
+    if let Some(target_quality) = &self.target_quality {
+      if target_quality.probes < 4 {
+        eprintln!("Target quality with less than 4 probes is experimental and not recommended");
       }
-      Some(min_q) => ensure!(min_q > 1),
-    }
 
-    if self.max_q.is_none() {
-      self.max_q = Some(max as u32);
+      ensure!(target_quality.min_q >= 1);
     }
 
     let encoder_bin = self.encoder.bin();
@@ -692,10 +677,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     match self.chunk_order {
       ChunkOrdering::LongestFirst => {
-        chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames));
+        chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames()));
       }
       ChunkOrdering::ShortestFirst => {
-        chunks.sort_unstable_by_key(|chunk| chunk.frames);
+        chunks.sort_unstable_by_key(Chunk::frames);
       }
       ChunkOrdering::Sequential => {
         // Already in order
@@ -841,17 +826,14 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     &self,
     index: usize,
     src_path: &Path,
-    frame_start: usize,
-    mut frame_end: usize,
+    start_frame: usize,
+    end_frame: usize,
     overrides: Option<ZoneOptions>,
-  ) -> Chunk {
+  ) -> anyhow::Result<Chunk> {
     assert!(
-      frame_start < frame_end,
+      start_frame < end_frame,
       "Can't make a chunk with <= 0 frames!"
     );
-
-    let frames = frame_end - frame_start;
-    frame_end -= 1;
 
     let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
       "ffmpeg",
@@ -864,7 +846,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       "-vf",
       format!(
         "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
-        frame_start, frame_end
+        start_frame,
+        end_frame - 1
       ),
       "-pix_fmt",
       self.output_pix_format.format.descriptor().unwrap().name(),
@@ -877,19 +860,37 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let output_ext = self.encoder.output_extension();
 
-    Chunk {
+    let mut chunk = Chunk {
       temp: self.temp.clone(),
       index,
-      source: ffmpeg_gen_cmd,
+      input: Input::Video(src_path.to_path_buf()),
+      source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
-      frames,
-      overrides,
-      ..Chunk::default()
+      start_frame,
+      end_frame,
+      video_params: overrides
+        .as_ref()
+        .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone()),
+      passes: self.passes,
+      encoder: self.encoder,
+      tq_cq: None,
+    };
+    chunk.apply_photon_noise_args(
+      overrides.map_or(self.photon_noise, |ovr| ovr.photon_noise),
+      self.chroma_noise,
+    )?;
+    if let Some(ref tq) = self.target_quality {
+      tq.per_shot_target_quality_routine(&mut chunk)?;
     }
+    Ok(chunk)
   }
 
-  fn create_vs_chunk(&self, index: usize, vs_script: &Path, scene: &Scene) -> Chunk {
-    let frames = scene.end_frame - scene.start_frame;
+  fn create_vs_chunk(
+    &self,
+    index: usize,
+    vs_script: &Path,
+    scene: &Scene,
+  ) -> anyhow::Result<Chunk> {
     // the frame end boundary is actually a frame that should be included in the next chunk
     let frame_end = scene.end_frame - 1;
 
@@ -907,22 +908,37 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let output_ext = self.encoder.output_extension();
 
-    Chunk {
+    let mut chunk = Chunk {
       temp: self.temp.clone(),
       index,
-      source: vspipe_cmd_gen,
+      input: Input::VapourSynth(vs_script.to_path_buf()),
+      source_cmd: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
-      frames,
-      overrides: scene.zone_overrides.clone(),
-      ..Chunk::default()
-    }
+      start_frame: scene.start_frame,
+      end_frame: scene.end_frame,
+      video_params: scene
+        .zone_overrides
+        .as_ref()
+        .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone()),
+      passes: self.passes,
+      encoder: self.encoder,
+      tq_cq: None,
+    };
+    chunk.apply_photon_noise_args(
+      scene
+        .zone_overrides
+        .as_ref()
+        .map_or(self.photon_noise, |ovr| ovr.photon_noise),
+      self.chroma_noise,
+    )?;
+    Ok(chunk)
   }
 
   fn create_video_queue_vs(&self, scenes: &[Scene], vs_script: &Path) -> Vec<Chunk> {
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
       .enumerate()
-      .map(|(index, scene)| self.create_vs_chunk(index, vs_script, scene))
+      .map(|(index, scene)| self.create_vs_chunk(index, vs_script, scene).unwrap())
       .collect();
 
     chunk_queue
@@ -935,13 +951,15 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .iter()
       .enumerate()
       .map(|(index, scene)| {
-        self.create_select_chunk(
-          index,
-          input,
-          scene.start_frame,
-          scene.end_frame,
-          scene.zone_overrides.clone(),
-        )
+        self
+          .create_select_chunk(
+            index,
+            input,
+            scene.start_frame,
+            scene.end_frame,
+            scene.zone_overrides.clone(),
+          )
+          .unwrap()
       })
       .collect();
 
@@ -975,11 +993,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .iter()
       .enumerate()
       .map(|(index, file)| {
-        self.create_chunk_from_segment(
-          index,
-          file.as_path().to_str().unwrap(),
-          scenes[index].zone_overrides.clone(),
-        )
+        self
+          .create_chunk_from_segment(
+            index,
+            file.as_path().to_str().unwrap(),
+            scenes[index].zone_overrides.clone(),
+          )
+          .unwrap()
       })
       .collect();
 
@@ -1025,7 +1045,9 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .iter()
       .enumerate()
       .map(|(index, &(file, (start, end, scene)))| {
-        self.create_select_chunk(index, file, start, end, scene.zone_overrides.clone())
+        self
+          .create_select_chunk(index, file, start, end, scene.zone_overrides.clone())
+          .unwrap()
       })
       .collect();
 
@@ -1037,7 +1059,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     index: usize,
     file: &str,
     overrides: Option<ZoneOptions>,
-  ) -> Chunk {
+  ) -> anyhow::Result<Chunk> {
     let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
       "ffmpeg",
       "-y",
@@ -1057,15 +1079,28 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let output_ext = self.encoder.output_extension();
 
-    Chunk {
+    let num_frames = num_frames(Path::new(file))?;
+
+    let mut chunk = Chunk {
       temp: self.temp.clone(),
-      frames: self.frames,
-      source: ffmpeg_gen_cmd,
+      input: Input::Video(PathBuf::from(file)),
+      source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,
-      overrides,
-      ..Chunk::default()
-    }
+      start_frame: 0,
+      end_frame: num_frames,
+      video_params: overrides
+        .as_ref()
+        .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone()),
+      passes: self.passes,
+      encoder: self.encoder,
+      tq_cq: None,
+    };
+    chunk.apply_photon_noise_args(
+      overrides.map_or(self.photon_noise, |ovr| ovr.photon_noise),
+      self.chroma_noise,
+    )?;
+    Ok(chunk)
   }
 
   /// Returns unfinished chunks and number of total chunks
@@ -1158,7 +1193,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       exit(0);
     }
 
-    let (mut chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(&splits)?;
+    let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(&splits)?;
 
     if self.resume {
       let chunks_done = get_done().done.len();
@@ -1172,74 +1207,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     if let Some(vspipe_cache) = vspipe_cache {
       vspipe_cache.join().unwrap();
-    }
-
-    let mut grain_table = None;
-    if let Some(strength) = self.photon_noise {
-      let table = Path::new(&self.temp).join("grain.tbl");
-      if !table.exists() {
-        let iso_setting = u32::from(strength) * 100;
-        debug!("Generating grain table at ISO {}", iso_setting);
-        let (width, height) = self.input.resolution()?;
-        let transfer_function = self
-          .input
-          .transfer_function_params_adjusted(&self.video_params)?;
-        let params = generate_photon_noise_params(
-          0,
-          u64::MAX,
-          NoiseGenArgs {
-            iso_setting,
-            width,
-            height,
-            transfer_function,
-            chroma_grain: self.chroma_noise,
-            random_seed: None,
-          },
-        );
-        write_grain_table(&table, &[params])?;
-      } else {
-        debug!("Using existing grain table");
-      }
-
-      // We should not use a grain table together with the encoder's grain generation
-      insert_noise_table_params(self.encoder, &mut self.video_params, &table);
-      grain_table = Some(table);
-    }
-
-    for chunk in &mut chunk_queue {
-      // Also apply grain tables to zone overrides
-      if let Some(strength) = chunk.overrides.as_ref().and_then(|ovr| ovr.photon_noise) {
-        let grain_table = if Some(strength) == self.photon_noise {
-          // We can reuse the existing photon noise table from the main encode
-          grain_table.clone().unwrap()
-        } else {
-          let grain_table = Path::new(&self.temp).join(format!("chunk{}-grain.tbl", chunk.index));
-          let iso_setting = u32::from(strength) * 100;
-          debug!("Generating grain table at ISO {}", iso_setting);
-          let (width, height) = self.input.resolution()?;
-          let transfer_function = self
-            .input
-            .transfer_function_params_adjusted(&self.video_params)?;
-          let params = generate_photon_noise_params(
-            0,
-            u64::MAX,
-            NoiseGenArgs {
-              iso_setting,
-              width,
-              height,
-              transfer_function,
-              chroma_grain: self.chroma_noise,
-              random_seed: None,
-            },
-          );
-          write_grain_table(&grain_table, &[params])?;
-          grain_table
-        };
-
-        // We should not use a grain table together with aom's grain generation
-        let overrides = chunk.overrides.as_mut().unwrap();
-        insert_noise_table_params(overrides.encoder, &mut overrides.video_params, &grain_table);
-      }
     }
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
@@ -1327,11 +1294,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         chunk_queue,
         total_chunks,
         project: self,
-        target_quality: if self.target_quality.is_some() {
-          Some(TargetQuality::new(self))
-        } else {
-          None
-        },
         max_tries: self.max_tries,
       };
 
@@ -1451,7 +1413,11 @@ pub(crate) fn suggest_fix<'a>(
     })
 }
 
-fn insert_noise_table_params(encoder: Encoder, video_params: &mut Vec<String>, table: &Path) {
+pub(crate) fn insert_noise_table_params(
+  encoder: Encoder,
+  video_params: &mut Vec<String>,
+  table: &Path,
+) {
   match encoder {
     Encoder::aom => {
       video_params.retain(|param| !param.starts_with("--denoise-noise-level="));

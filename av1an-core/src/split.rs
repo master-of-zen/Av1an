@@ -129,8 +129,7 @@ pub fn read_scenes_from_file(scene_path: &Path) -> anyhow::Result<(Vec<Scene>, u
 
   let data: ScenesData = serde_json::from_reader(reader).with_context(|| {
     format!(
-      "Failed to parse scenes file {:?}, this likely means that the scenes file is corrupted",
-      scene_path
+      "Failed to parse scenes file {scene_path:?}, this likely means that the scenes file is corrupted"
     )
   })?;
 

@@ -40,7 +40,7 @@ features = ["git", "build", "rustc", "cargo"]
 
 [dependencies.ffmpeg]
 package = "ffmpeg-the-third"
-version = "1.1.0"
+version = "1.1.1"
 features = ["serialize"]
 
 [features]

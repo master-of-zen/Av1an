@@ -244,9 +244,9 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.61.0"
+version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a022e58a142a46fea340d68012b9201c094e93ec3d033a944a24f8fd4a4f09a"
+checksum = "c4243e6031260db77ede97ad86c27e501d646a27ab57b59a574f725d98ab1fb4"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -597,9 +597,9 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-sys-the-third"
-version = "1.0.0+ffmpeg-5.1.2"
+version = "1.0.2+ffmpeg-5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e277227232a15bced1b4c9c1a7b56d5f4aadfd6dd15697c530f0c28c8bc625"
+checksum = "aba6e39e3bb60cc687e4be01ad5eefa1e42505f0b220c267e0e2c3d83280f642"
 dependencies = [
  "bindgen",
  "cc",

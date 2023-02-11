@@ -63,7 +63,7 @@ features = ["const_generics", "const_new", "union"]
 
 [dependencies.ffmpeg]
 package = "ffmpeg-the-third"
-version = "1.1.1"
+version = "1.1.2"
 features = ["serialize"]
 
 [dependencies.plotters]

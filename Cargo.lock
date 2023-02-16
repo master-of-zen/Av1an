@@ -611,9 +611,9 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-the-third"
-version = "1.1.1+ffmpeg-5.1.2"
+version = "1.1.2+ffmpeg-5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e56dd8b5cad15284e4960166a33fcaa6473b90f901807f0dc8af5c5c79d8bbb"
+checksum = "ad99f870dcc508647be4efc47e8d96b8dd0b92060442afff37a9a2ff7e59160a"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-the-third",

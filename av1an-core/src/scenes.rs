@@ -301,6 +301,7 @@ fn get_test_args() -> EncodeArgs {
     vs_script: None,
     zones: None,
     scaler: String::new(),
+    ignore_frame_mismatch: false,
   }
 }
 

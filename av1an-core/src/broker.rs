@@ -109,6 +109,7 @@ impl<'a> Broker<'a> {
     tx: Sender<()>,
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
+    ignore_frame_mismatch: bool,
   ) {
     assert!(self.total_chunks != 0);
 
@@ -170,6 +171,7 @@ impl<'a> Broker<'a> {
                   worker_id,
                   frame_rate,
                   Arc::clone(&audio_size_ref),
+                  ignore_frame_mismatch,
                 ) {
                   error!("[chunk {}] {}", chunk.index, e);
 
@@ -201,6 +203,7 @@ impl<'a> Broker<'a> {
     worker_id: usize,
     frame_rate: f64,
     audio_size_bytes: Arc<AtomicU64>,
+    ignore_frame_mismatch: bool,
   ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
@@ -226,6 +229,7 @@ impl<'a> Broker<'a> {
           worker_id,
           padding,
           tpl_crash_workaround,
+          ignore_frame_mismatch,
         );
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {

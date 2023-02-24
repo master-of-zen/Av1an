@@ -165,6 +165,9 @@
 		Minimum number of frames for a scenecut
 		
 		[default: 24]
+
+    --ignore-frame-mismatch
+        Ignore any detected mismatch between scene frame count and encoder frame count
 ```
 
 ## Encoding

@@ -256,6 +256,10 @@ pub struct CliOpts {
   #[clap(long, help_heading = "Scene Detection")]
   pub force_keyframes: Option<String>,
 
+  /// Ignore any detected mismatch between scene frame count and encoder frame count
+  #[clap(long, help_heading = "Encoding")]
+  pub ignore_frame_mismatch: bool,
+
   /// Video encoder to use
   #[clap(short, long, default_value_t = Encoder::aom, help_heading = "Encoding")]
   pub encoder: Encoder,
@@ -744,6 +748,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         scaler.push_str(&scaler_ext);
         scaler
       },
+      ignore_frame_mismatch: args.ignore_frame_mismatch,
     };
 
     arg.startup_check()?;

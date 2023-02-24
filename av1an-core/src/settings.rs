@@ -78,6 +78,7 @@ pub struct EncodeArgs {
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
   pub force_keyframes: Vec<usize>,
+  pub ignore_frame_mismatch: bool,
 
   pub max_tries: usize,
 
@@ -211,6 +212,7 @@ impl EncodeArgs {
     worker_id: usize,
     padding: usize,
     tpl_crash_workaround: bool,
+    ignore_frame_mismatch: bool,
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
@@ -432,11 +434,13 @@ impl EncodeArgs {
       let encoded_frames = num_frames(chunk.output().as_ref());
 
       let err_str = match encoded_frames {
-        Ok(encoded_frames) if encoded_frames != chunk.frames() => Some(format!(
-          "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
-          chunk.index,
-          chunk.frames()
-        )),
+        Ok(encoded_frames) if !ignore_frame_mismatch && encoded_frames != chunk.frames() => {
+          Some(format!(
+            "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
+            chunk.index,
+            chunk.frames()
+          ))
+        }
         Err(error) => Some(format!(
           "FAILED TO COUNT FRAMES: chunk {}: {error}",
           chunk.index
@@ -550,6 +554,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
     if self.chunk_method == ChunkMethod::Select {
       warn!("It is not recommended to use the \"select\" chunk method, as it is very slow");
+    }
+
+    if self.ignore_frame_mismatch {
+      warn!("The output video's frame count may differ, and VMAF calculations may be incorrect");
     }
 
     if self.vmaf_res == "inputres" {
@@ -1313,7 +1321,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let audio_size_ref = Arc::clone(&audio_size_bytes);
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(tx, self.set_thread_affinity, audio_size_ref);
+        broker.encoding_loop(
+          tx,
+          self.set_thread_affinity,
+          audio_size_ref,
+          self.ignore_frame_mismatch,
+        );
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)

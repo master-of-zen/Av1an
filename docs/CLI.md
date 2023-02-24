@@ -369,6 +369,8 @@
 	--vmaf-res <VMAF_RES>
 		Resolution used for VMAF calculation
 		
+        If set to inputres, the output video will be scaled to the resolution of the input video.
+        
 		[default: 1920x1080]
 
 	--vmaf-threads <VMAF_THREADS>

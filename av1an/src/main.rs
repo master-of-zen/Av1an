@@ -448,6 +448,8 @@ pub struct CliOpts {
   pub vmaf_path: Option<PathBuf>,
 
   /// Resolution used for VMAF calculation
+  ///
+  /// If set to inputres, the output video will be scaled to the resolution of the input video.
   #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
   pub vmaf_res: String,
 

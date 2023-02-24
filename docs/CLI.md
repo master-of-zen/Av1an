@@ -66,7 +66,10 @@
 		Do not check if the encoder arguments specified by -v/--video-params are valid
 
 -y
-		Overwrite output file without confirmation
+		Overwrite output file, without confirmation
+
+-n
+		Never overwrite output file, without confirmation
 
 	--max-tries <MAX_TRIES>
 		Maximum number of chunk restarts for an encode

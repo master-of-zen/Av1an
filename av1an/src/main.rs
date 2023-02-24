@@ -161,9 +161,13 @@ pub struct CliOpts {
   #[clap(long)]
   pub force: bool,
 
-  /// Overwrite output file without confirmation
+  /// Overwrite output file, without confirmation
   #[clap(short = 'y')]
   pub overwrite: bool,
+
+  /// Never overwrite output file, without confirmation
+  #[clap(short = 'n', conflicts_with = "overwrite")]
+  pub never_overwrite: bool,
 
   /// Maximum number of chunk restarts for an encode
   #[clap(long, default_value_t = 3, value_parser = value_parser!(u32).range(1..))]
@@ -718,9 +722,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       // UGLY: taking first file for output file
       if let Some(path) = args.output_file.as_ref() {
         if path.exists()
-          && !confirm(&format!(
-            "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
-          ))?
+          && (args.never_overwrite
+            || !confirm(&format!(
+              "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+            ))?)
         {
           println!("Not overwriting, aborting.");
           exit(0);
@@ -729,9 +734,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         let path: &Path = arg.output_file.as_ref();
 
         if path.exists()
-          && !confirm(&format!(
-            "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
-          ))?
+          && (args.never_overwrite
+            || !confirm(&format!(
+              "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+            ))?)
         {
           println!("Not overwriting, aborting.");
           exit(0);

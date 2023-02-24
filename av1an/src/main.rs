@@ -195,6 +195,12 @@ pub struct CliOpts {
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
 
+  /// Maximum scene length, in seconds
+  ///
+  /// If both frames and seconds are specified, then the number of frames will take priority.
+  #[clap(long, default_value_t = 10.0, help_heading = "SCENE DETECTION")]
+  pub extra_split_sec: f64,
+
   /// Method used to determine chunk boundaries
   ///
   /// "av-scenechange" uses an algorithm to analyze which frames of the video are the start of new
@@ -668,9 +674,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       extra_splits_len: match args.extra_split {
         Some(0) => None,
         Some(x) => Some(x),
-        // Make sure it's at least 10 seconds
+        // Make sure it's at least 10 seconds, unless specified by user
         None => match input.frame_rate() {
-          Ok(fps) => Some((fps * 10.0) as usize),
+          Ok(fps) => Some((fps * args.extra_split_sec) as usize),
           Err(_) => Some(240_usize),
         },
       },

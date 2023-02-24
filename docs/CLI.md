@@ -148,11 +148,18 @@
 		By default, no downscaling is performed.
 
 -x, --extra-split <EXTRA_SPLIT>
-		Maximum scene length
+		Maximum scene length, in frames
 		
 		When a scenecut is found whose distance to the previous scenecut is greater than the
 		value specified by this option, one or more extra splits (scenecuts) are added. Set this
 		option to 0 to disable adding extra splits.
+
+    --extra-split-sec <EXTRA_SPLIT_SEC>
+		Maximum scene length, in seconds
+		
+        If both frames and seconds are specified, then the number of frames will take priority.
+        
+		[default: 10]
 
 	--min-scene-len <MIN_SCENE_LEN>
 		Minimum number of frames for a scenecut

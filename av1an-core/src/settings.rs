@@ -68,6 +68,7 @@ pub struct EncodeArgs {
 
   pub chunk_method: ChunkMethod,
   pub chunk_order: ChunkOrdering,
+  pub scaler: String,
   pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_pix_format: Option<Pixel>,
@@ -703,6 +704,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
         self.frames,
         self.min_scene_len,
         self.verbosity,
+        self.scaler.as_str(),
         self.sc_pix_format,
         self.sc_method,
         self.sc_downscale_height,
@@ -1349,6 +1351,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           &self.input,
           self.vmaf_path.as_deref(),
           self.vmaf_res.as_str(),
+          self.scaler.as_str(),
           1,
           self.vmaf_filter.as_deref(),
           self.vmaf_threads.unwrap_or_else(|| {

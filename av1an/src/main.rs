@@ -184,6 +184,13 @@ pub struct CliOpts {
   #[clap(long)]
   pub set_thread_affinity: Option<usize>,
 
+  /// Scaler used for scene detection (if --sc-downscale-height XXXX is used) and VMAF calculation
+  ///
+  /// Valid scalers are based on the scalers available in ffmpeg, including lanczos[1-9] with [1-9]
+  /// defining the width of the lanczos scaler.
+  #[clap(long, default_value = "bicubic")]
+  pub scaler: String,
+
   /// File location for scenes
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
@@ -510,6 +517,7 @@ impl CliOpts {
 
       TargetQuality {
         vmaf_res: self.vmaf_res.clone(),
+        vmaf_scaler: self.scaler.clone(),
         vmaf_filter: self.vmaf_filter.clone(),
         vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
           available_parallelism()
@@ -714,6 +722,20 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       set_thread_affinity: args.set_thread_affinity,
       vs_script: None,
       zones: args.zones.clone(),
+      scaler: {
+        let mut scaler = args.scaler.to_string().clone();
+        let mut scaler_ext = "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
+        if scaler.starts_with("lanczos") {
+          for n in 1..=9 {
+            if scaler.ends_with(&n.to_string()) {
+              scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
+              scaler = "lanczos".to_string();
+            }
+          }
+        }
+        scaler.push_str(&scaler_ext);
+        scaler
+      },
     };
 
     arg.startup_check()?;

@@ -120,6 +120,7 @@ pub fn plot(
   reference: &Input,
   model: Option<impl AsRef<Path>>,
   res: &str,
+  scaler: &str,
   sample_rate: usize,
   filter: Option<&str>,
   threads: usize,
@@ -153,6 +154,7 @@ pub fn plot(
     &json_file,
     model,
     res,
+    scaler,
     sample_rate,
     filter,
     threads,
@@ -168,6 +170,7 @@ pub fn run_vmaf(
   stat_file: impl AsRef<Path>,
   model: Option<impl AsRef<Path>>,
   res: &str,
+  scaler: &str,
   sample_rate: usize,
   vmaf_filter: Option<&str>,
   threads: usize,
@@ -229,10 +232,10 @@ pub fn run_vmaf(
   cmd.arg(encoded);
   cmd.args(["-r", "60", "-i", "-", "-filter_complex"]);
 
-  let distorted = format!("[0:v]scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[distorted];", &res);
+  let distorted = format!("[0:v]scale={}:flags={}:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS,setsar=1[distorted];", &res, &scaler);
   let reference = format!(
-    "[1:v]{}scale={}:flags=bicubic:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS[ref];",
-    filter, &res
+    "[1:v]{}scale={}:flags={}:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS,setsar=1[ref];",
+    filter, &res, &scaler
   );
 
   cmd.arg(format!("{distorted}{reference}{vmaf}"));

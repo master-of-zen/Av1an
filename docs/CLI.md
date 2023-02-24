@@ -88,6 +88,13 @@
 		platforms. Leaving this option unspecified allows the OS to schedule all processes
 		spawned.
 
+	--scaler <SCALER>
+		Scaler used for scene detection (if --sc-downscale-height XXXX is used) and VMAF
+        calculation
+		
+		Valid scalers are based on the scalers available in ffmpeg, including lanczos[1-9] with [1-9]
+        defining the width of the lanczos scaler.
+
 -h, --help
 		Print help information
 

@@ -300,6 +300,7 @@ fn get_test_args() -> EncodeArgs {
     set_thread_affinity: None,
     vs_script: None,
     zones: None,
+    scaler: String::new(),
   }
 }
 

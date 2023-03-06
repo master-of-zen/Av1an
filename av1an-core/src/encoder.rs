@@ -492,6 +492,7 @@ impl Encoder {
     }
   }
 
+  /// Get the name of the video format associated with the encoder
   pub const fn format(self) -> &'static str {
     match self {
       Self::aom | Self::rav1e | Self::svt_av1 => "av1",

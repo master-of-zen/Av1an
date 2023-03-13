@@ -179,7 +179,7 @@ dependencies = [
 
 [[package]]
 name = "av1an"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "affinity",
  "ansi_term",

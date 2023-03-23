@@ -1278,10 +1278,15 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       }
 
       if self.verbosity == Verbosity::Normal {
-        init_progress_bar(self.frames as u64);
+        init_progress_bar(self.frames as u64, initial_frames as u64);
         reset_bar_at(initial_frames as u64);
       } else if self.verbosity == Verbosity::Verbose {
-        init_multi_progress_bar(self.frames as u64, self.workers, total_chunks);
+        init_multi_progress_bar(
+          self.frames as u64,
+          self.workers,
+          total_chunks,
+          initial_frames as u64,
+        );
         reset_mp_bar_at(initial_frames as u64);
       }
 

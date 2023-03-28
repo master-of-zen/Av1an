@@ -597,8 +597,8 @@ fn confirm(prompt: &str) -> io::Result<bool> {
 
     match buf.as_str().trim() {
       // allows enter to continue
-      "y" | "Y" | "" => break Ok(true),
-      "n" | "N" => break Ok(false),
+      "y" | "Y" => break Ok(true),
+      "n" | "N" | "" => break Ok(false),
       other => {
         println!("Sorry, response {other:?} is not understood.");
         buf.clear();
@@ -791,7 +791,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");
@@ -803,7 +803,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Default output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");

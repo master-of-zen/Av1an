@@ -217,7 +217,7 @@ impl EncodeArgs {
       .join(format!("{}_fpf", chunk.name()));
 
     let video_params = chunk.video_params.clone();
-    
+
     let mut enc_cmd = if chunk.passes == 1 {
       chunk
         .encoder
@@ -1288,7 +1288,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       let broker = Broker {
         chunk_queue,
-        total_chunks,
         project: self,
         max_tries: self.max_tries,
       };

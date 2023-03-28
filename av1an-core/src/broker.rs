@@ -24,7 +24,6 @@ use crate::{
 pub struct Broker<'a> {
   pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
-  pub total_chunks: usize,
   pub project: &'a EncodeArgs,
 }
 
@@ -110,7 +109,7 @@ impl<'a> Broker<'a> {
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
   ) {
-    assert!(self.total_chunks != 0);
+    assert!(!self.chunk_queue.is_empty());
 
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
@@ -212,7 +211,7 @@ impl<'a> Broker<'a> {
     );
 
     // we display the index, so we need to subtract 1 to get the max index
-    let padding = printable_base10_digits(self.total_chunks - 1) as usize;
+    let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
 
     let encoder = chunk.encoder;
 

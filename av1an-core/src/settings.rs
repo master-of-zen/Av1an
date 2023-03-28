@@ -209,7 +209,6 @@ impl EncodeArgs {
     current_pass: u8,
     worker_id: usize,
     padding: usize,
-    tpl_crash_workaround: bool,
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
@@ -217,11 +216,8 @@ impl EncodeArgs {
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
-    let mut video_params = chunk.video_params.clone();
-    if tpl_crash_workaround {
-      // In aomenc for duplicate arguments, whichever is specified last takes precedence.
-      video_params.push("--enable-tpl-model=0".to_string());
-    }
+    let video_params = chunk.video_params.clone();
+    
     let mut enc_cmd = if chunk.passes == 1 {
       chunk
         .encoder

@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
-use memchr::memmem;
 use smallvec::SmallVec;
 use thiserror::Error;
 
@@ -17,14 +16,12 @@ use crate::progress_bar::{dec_bar, dec_mp_bar, update_progress_bar_estimates};
 use crate::settings::EncodeArgs;
 use crate::util::printable_base10_digits;
 use crate::{
-  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Encoder, Instant,
-  Verbosity,
+  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Instant, Verbosity,
 };
 
 pub struct Broker<'a> {
   pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
-  pub total_chunks: usize,
   pub project: &'a EncodeArgs,
 }
 
@@ -110,7 +107,7 @@ impl<'a> Broker<'a> {
     mut set_thread_affinity: Option<usize>,
     audio_size_bytes: Arc<AtomicU64>,
   ) {
-    assert!(self.total_chunks != 0);
+    assert!(!self.chunk_queue.is_empty());
 
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
@@ -212,21 +209,14 @@ impl<'a> Broker<'a> {
     );
 
     // we display the index, so we need to subtract 1 to get the max index
-    let padding = printable_base10_digits(self.total_chunks - 1) as usize;
+    let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
 
-    // Run all passes for this chunk
-    let encoder = chunk.encoder;
     let passes = chunk.passes;
-    let mut tpl_crash_workaround = false;
     for current_pass in 1..=passes {
       for r#try in 1..=self.max_tries {
-        let res = self.project.create_pipes(
-          chunk,
-          current_pass,
-          worker_id,
-          padding,
-          tpl_crash_workaround,
-        );
+        let res = self
+          .project
+          .create_pipes(chunk, current_pass, worker_id, padding);
         if let Err((e, frames)) = res {
           if self.project.verbosity == Verbosity::Normal {
             dec_bar(frames);
@@ -244,19 +234,6 @@ impl<'a> Broker<'a> {
           // avoids double-print of the error message as both a WARN and ERROR,
           // since `Broker::encoding_loop` will print the error message as well
           warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
-
-          if encoder == Encoder::aom
-            && !tpl_crash_workaround
-            && memmem::rfind(e.stderr.as_bytes(), b"av1_tpl_stats_ready").is_some()
-          {
-            // aomenc has had a history of crashes related to TPL on certain chunks,
-            // particularly in videos with less motion, such as animated content.
-            // This workaround retries a chunk with TPL disabled if such a crash is detected.
-            // Although there is some amount of psychovisual quality loss with TPL disabled,
-            // this is preferable to being unable to complete the encode.
-            warn!("TPL-based crash, retrying chunk without TPL");
-            tpl_crash_workaround = true;
-          }
         } else {
           break;
         }

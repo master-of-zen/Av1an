@@ -14,13 +14,13 @@ The following examples assume the file you want to encode is in your current wor
 Linux
 
 ```bash
-docker run --privileged -v "$(pwd):/videos" --user $(id -u):$(id -g) -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+docker run --privileged -v "$(pwd):/videos" --user $(id -u):$(id -g) -it --rm masterofzen/av1an:master -i S01E01.mkv {options}
 ```
 
 Windows
 
 ```powershell
-docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:latest -i S01E01.mkv {options}
+docker run --privileged -v "${PWD}:/videos" -it --rm masterofzen/av1an:master -i S01E01.mkv {options}
 ```
 
 The image can also be manually built by running 

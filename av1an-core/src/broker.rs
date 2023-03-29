@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
-use memchr::memmem;
 use smallvec::SmallVec;
 use thiserror::Error;
 
@@ -17,8 +16,7 @@ use crate::progress_bar::{dec_bar, dec_mp_bar, update_progress_bar_estimates};
 use crate::settings::EncodeArgs;
 use crate::util::printable_base10_digits;
 use crate::{
-  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Encoder, Instant,
-  Verbosity,
+  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Instant, Verbosity,
 };
 
 pub struct Broker<'a> {
@@ -213,9 +211,6 @@ impl<'a> Broker<'a> {
     // we display the index, so we need to subtract 1 to get the max index
     let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
 
-    let encoder = chunk.encoder;
-
-    // Run all passes for this chunk
     let passes = chunk.passes;
     for current_pass in 1..=passes {
       for r#try in 1..=self.max_tries {
@@ -239,10 +234,6 @@ impl<'a> Broker<'a> {
           // avoids double-print of the error message as both a WARN and ERROR,
           // since `Broker::encoding_loop` will print the error message as well
           warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
-
-          if encoder == Encoder::aom
-            && memmem::rfind(e.stderr.as_bytes(), b"av1_tpl_stats_ready").is_some()
-          {}
         } else {
           break;
         }

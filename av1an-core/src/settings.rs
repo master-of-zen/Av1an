@@ -856,6 +856,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let output_ext = self.encoder.output_extension();
 
+    let frame_rate = self.input.frame_rate().unwrap();
+
     let mut chunk = Chunk {
       temp: self.temp.clone(),
       index,
@@ -864,6 +866,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       output_ext: output_ext.to_owned(),
       start_frame,
       end_frame,
+      frame_rate,
       video_params: overrides
         .as_ref()
         .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone()),
@@ -904,6 +907,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let output_ext = self.encoder.output_extension();
 
+    let frame_rate = self.input.frame_rate().unwrap();
+
     let mut chunk = Chunk {
       temp: self.temp.clone(),
       index,
@@ -912,6 +917,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       output_ext: output_ext.to_owned(),
       start_frame: scene.start_frame,
       end_frame: scene.end_frame,
+      frame_rate,
       video_params: scene
         .zone_overrides
         .as_ref()
@@ -1077,6 +1083,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     let num_frames = num_frames(Path::new(file))?;
 
+    let frame_rate = self.input.frame_rate().unwrap();
+
     let mut chunk = Chunk {
       temp: self.temp.clone(),
       input: Input::Video(PathBuf::from(file)),
@@ -1085,6 +1093,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       index,
       start_frame: 0,
       end_frame: num_frames,
+      frame_rate,
       video_params: overrides
         .as_ref()
         .map_or_else(|| self.video_params.clone(), |ovr| ovr.video_params.clone()),

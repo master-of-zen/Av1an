@@ -137,8 +137,6 @@ impl<'a> Broker<'a> {
         }
       }
 
-      let frame_rate = self.project.input.frame_rate().unwrap();
-
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.workers)
           .map(|idx| (receiver.clone(), &self, idx))
@@ -162,12 +160,9 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(
-                  &mut chunk,
-                  worker_id,
-                  frame_rate,
-                  Arc::clone(&audio_size_ref),
-                ) {
+                if let Err(e) =
+                  queue.encode_chunk(&mut chunk, worker_id, Arc::clone(&audio_size_ref))
+                {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -196,7 +191,6 @@ impl<'a> Broker<'a> {
     &self,
     chunk: &mut Chunk,
     worker_id: usize,
-    frame_rate: f64,
     audio_size_bytes: Arc<AtomicU64>,
   ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
@@ -261,7 +255,7 @@ impl<'a> Broker<'a> {
       .unwrap();
 
     update_progress_bar_estimates(
-      frame_rate,
+      chunk.frame_rate,
       self.project.frames,
       self.project.verbosity,
       audio_size_bytes.load(atomic::Ordering::SeqCst),

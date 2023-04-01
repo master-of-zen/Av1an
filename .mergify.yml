@@ -13,7 +13,6 @@ pull_request_rules:
       queue:
         name: default
         method: squash
-        rebase_fallback: none
         update_method: rebase
   - name: automatic merge for stable when CI passes and approved
     conditions:
@@ -29,7 +28,6 @@ pull_request_rules:
       queue:
         name: default
         method: rebase
-        rebase_fallback: merge
         update_method: rebase
 
 queue_rules:

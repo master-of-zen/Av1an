@@ -105,6 +105,14 @@ jobs:
           target/ci/av1an -i tt_sif.y4m -e x264 --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --preset ultrafast" --chunk-method select
           du -h tt_sif.mkv
 
+      - name: Testing target-quality
+        run: |
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -v " --preset ultrafast" --target-quality 95 -o "95.mkv" --log-file 95
+          target/ci/av1an -i tt_sif.y4m -e x265 --pix-format yuv420p -c mkvmerge --sc-method fast -y -v " --preset ultrafast" --target-quality 80 -o "80.mkv" --log-file 80
+          du -h 95.mkv 80.mkv
+          # compare the size of the two files to make sure 95.mkv is larger than 80.mkv
+          if [ $(stat -c%s "95.mkv") -gt $(stat -c%s "80.mkv") ]; then echo "Target quality is working correctly"; else echo "95.mkv is smaller than 80.mkv"; cat 95.log 80.log; exit 1; fi
+
       - name: Testing target-quality aom
         run: |
           target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" --target-quality 95
@@ -238,10 +246,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -253,7 +261,7 @@ jobs:
 
       - name: Build
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
@@ -270,30 +278,51 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
+  # Job to output if docker-publish should run or not based on if DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are set
+  publish-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.publish_check.outputs.should_publish }}
+    steps:
+      - name: Check for DOCKERHUB_USERNAME and DOCKERHUB_TOKEN
+        id: publish_check
+        run: |
+          if [ -z ${{ secrets.DOCKERHUB_USERNAME }} ] || [ -z ${{ secrets.DOCKERHUB_TOKEN }} ]; then
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
 
   docker-publish:
-    needs: [all-tests, docker]
+    needs: [all-tests, docker, publish-check]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: needs.publish-check.outputs.should_publish == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Docker meta
         id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v1
+
+        uses: docker/metadata-action@v4
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an # list of Docker images to use as base name for tags
-          tag-sha: true # add git short SHA as Docker tag
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an
+          tags: |
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -308,7 +337,7 @@ jobs:
 
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile

@@ -4,8 +4,9 @@ use std::path::Path;
 use av1_grain::{generate_photon_noise_params, write_grain_table, NoiseGenArgs};
 use serde::{Deserialize, Serialize};
 
+use crate::encoder::Encoder;
+use crate::settings::insert_noise_table_params;
 use crate::Input;
-use crate::{encoder::Encoder, settings::insert_noise_table_params};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
@@ -17,6 +18,7 @@ pub struct Chunk {
   pub start_frame: usize,
   // End frame is exclusive, i.e. the range of frames is `start_frame..end_frame`
   pub end_frame: usize,
+  pub frame_rate: f64,
   pub passes: u8,
   pub video_params: Vec<String>,
   pub encoder: Encoder,
@@ -95,6 +97,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       start_frame: 0,
       end_frame: 5,
+      frame_rate: 30.0,
       tq_cq: None,
       passes: 1,
       video_params: vec![],
@@ -112,6 +115,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       start_frame: 0,
       end_frame: 5,
+      frame_rate: 30.0,
       tq_cq: None,
       passes: 1,
       video_params: vec![],
@@ -130,6 +134,7 @@ mod tests {
       output_ext: "ivf".to_owned(),
       start_frame: 0,
       end_frame: 5,
+      frame_rate: 30.0,
       tq_cq: None,
       passes: 1,
       video_params: vec![],

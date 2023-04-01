@@ -1,6 +1,6 @@
 [package]
 name = "av1an-core"
-version = "0.4.0"
+version = "0.4.1"
 rust-version = "1.63"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
@@ -63,7 +63,7 @@ features = ["const_generics", "const_new", "union"]
 
 [dependencies.ffmpeg]
 package = "ffmpeg-the-third"
-version = "1.1.2"
+version = "1.2.0"
 features = ["serialize"]
 
 [dependencies.plotters]

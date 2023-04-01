@@ -179,7 +179,7 @@ dependencies = [
 
 [[package]]
 name = "av1an"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "affinity",
  "ansi_term",
@@ -597,9 +597,9 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-sys-the-third"
-version = "1.0.2+ffmpeg-5.1.2"
+version = "1.1.1+ffmpeg-6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba6e39e3bb60cc687e4be01ad5eefa1e42505f0b220c267e0e2c3d83280f642"
+checksum = "94a4b2e9c02074c0ee85661b23b3ac849bad6afc554b503c183975f5e2e0d3de"
 dependencies = [
  "bindgen",
  "cc",
@@ -611,9 +611,9 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-the-third"
-version = "1.1.2+ffmpeg-5.1.2"
+version = "1.2.2+ffmpeg-6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad99f870dcc508647be4efc47e8d96b8dd0b92060442afff37a9a2ff7e59160a"
+checksum = "301c55f432cce71d0cc5266e8e70e69cc7a865f8aa8785c44cb56c3935a13715"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-the-third",

@@ -195,6 +195,10 @@ impl<'a> Broker<'a> {
   ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
+    if let Some(ref tq) = self.project.target_quality {
+      tq.per_shot_target_quality_routine(chunk).unwrap();
+    }
+
     // space padding at the beginning to align with "finished chunk"
     debug!(
       " started chunk {:05}: {} frames",

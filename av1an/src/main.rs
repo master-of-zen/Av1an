@@ -51,8 +51,8 @@ fn version() -> &'static str {
   static INSTANCE: OnceCell<String> = OnceCell::new();
   INSTANCE.get_or_init(|| {
     match (
-      option_env!("VERGEN_GIT_SHA_SHORT"),
-      option_env!("VERGEN_CARGO_PROFILE"),
+      option_env!("VERGEN_GIT_SHA"),
+      option_env!("VERGEN_CARGO_DEBUG"),
       option_env!("VERGEN_RUSTC_SEMVER"),
       option_env!("VERGEN_RUSTC_LLVM_VERSION"),
       option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
@@ -60,7 +60,7 @@ fn version() -> &'static str {
     ) {
       (
         Some(git_hash),
-        Some(cargo_profile),
+        Some(cargo_debug),
         Some(rustc_ver),
         Some(llvm_ver),
         Some(target_triple),
@@ -81,7 +81,11 @@ fn version() -> &'static str {
 {}",
           env!("CARGO_PKG_VERSION"),
           git_hash,
-          cargo_profile,
+          if cargo_debug.parse::<bool>().unwrap() {
+            "Debug"
+          } else {
+            "Release"
+          },
           rustc_ver,
           llvm_ver,
           target_triple,

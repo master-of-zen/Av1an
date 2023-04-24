@@ -1,12 +1,15 @@
-use vergen::{vergen, Config, ShaKind, TimestampKind};
+use std::error::Error;
 
-fn main() {
-  let mut config = Config::default();
+use vergen::EmitBuilder;
 
-  *config.git_mut().sha_kind_mut() = ShaKind::Short;
-  *config.git_mut().commit_timestamp_kind_mut() = TimestampKind::All;
-  *config.build_mut().kind_mut() = TimestampKind::All;
-
-  // ignore error if we can't get the git commit hash
-  let _ = vergen(config);
+fn main() -> Result<(), Box<dyn Error>> {
+  EmitBuilder::builder()
+    .git_sha(true)
+    .git_commit_date()
+    .cargo_debug()
+    .cargo_target_triple()
+    .rustc_semver()
+    .rustc_llvm_version()
+    .emit()?;
+  Ok(())
 }

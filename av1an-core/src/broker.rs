@@ -174,7 +174,7 @@ impl<'a> Broker<'a> {
           })
           .collect();
         for consumer in consumers {
-          let _ = consumer.join().unwrap();
+          consumer.join().unwrap().ok();
         }
       })
       .unwrap();

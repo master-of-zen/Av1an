@@ -7,6 +7,7 @@ use std::process::Stdio;
 use std::thread::available_parallelism;
 
 use ffmpeg::format::Pixel;
+use serde::{Deserialize, Serialize};
 use splines::{Interpolation, Key, Spline};
 
 use crate::broker::EncoderCrash;
@@ -16,6 +17,7 @@ use crate::Encoder;
 
 const VMAF_PERCENTILE: f64 = 0.01;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
   pub vmaf_res: String,
   pub vmaf_scaler: String,

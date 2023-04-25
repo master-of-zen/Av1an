@@ -30,14 +30,14 @@ pub fn av_scenechange_detect(
     } else {
       eprintln!("Scene detection");
     }
-    progress_bar::init_progress_bar(total_frames as u64);
+    progress_bar::init_progress_bar(total_frames as u64, 0);
   }
 
   let input2 = input.clone();
   let frame_thread = thread::spawn(move || {
     let frames = input2.frames().unwrap();
     if verbosity != Verbosity::Quiet {
-      progress_bar::convert_to_progress();
+      progress_bar::convert_to_progress(0);
       progress_bar::set_len(frames as u64);
     }
     frames

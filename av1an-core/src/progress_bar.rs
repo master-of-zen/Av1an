@@ -38,15 +38,16 @@ pub fn get_progress_bar() -> Option<&'static ProgressBar> {
   PROGRESS_BAR.get()
 }
 
-fn pretty_progress_style() -> ProgressStyle {
+fn pretty_progress_style(resume_frames: u64) -> ProgressStyle {
   ProgressStyle::default_bar()
     .template(INDICATIF_PROGRESS_TEMPLATE)
     .unwrap()
-    .with_key("fps", |state: &ProgressState, w: &mut dyn Write| {
-      if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+    .with_key("fps", move |state: &ProgressState, w: &mut dyn Write| {
+      let resume_pos = state.pos() - resume_frames;
+      if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
         write!(w, "0 fps").unwrap();
       } else {
-        let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
+        let fps = resume_pos as f32 / state.elapsed().as_secs_f32();
         if fps < 1.0 {
           write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
         } else {
@@ -54,20 +55,24 @@ fn pretty_progress_style() -> ProgressStyle {
         }
       }
     })
-    .with_key("fixed_eta", |state: &ProgressState, w: &mut dyn Write| {
-      if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
-        write!(w, "unknown").unwrap();
-      } else {
-        let spf = state.elapsed().as_secs_f32() / state.pos() as f32;
-        let remaining = state.len().unwrap_or(0) - state.pos();
-        write!(
-          w,
-          "{:#}",
-          HumanDuration(Duration::from_secs_f32(spf * remaining as f32))
-        )
-        .unwrap();
-      }
-    })
+    .with_key(
+      "fixed_eta",
+      move |state: &ProgressState, w: &mut dyn Write| {
+        let resume_pos = state.pos() - resume_frames;
+        if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+          write!(w, "unknown").unwrap();
+        } else {
+          let spf = state.elapsed().as_secs_f32() / resume_pos as f32;
+          let remaining = state.len().unwrap_or(0) - state.pos();
+          write!(
+            w,
+            "{:#}",
+            HumanDuration(Duration::from_secs_f32(spf * remaining as f32))
+          )
+          .unwrap();
+        }
+      },
+    )
     .with_key("pos", |state: &ProgressState, w: &mut dyn Write| {
       write!(w, "{}/{}", state.pos(), state.len().unwrap_or(0)).unwrap();
     })
@@ -77,15 +82,16 @@ fn pretty_progress_style() -> ProgressStyle {
     .progress_chars(PROGRESS_CHARS)
 }
 
-fn spinner_style() -> ProgressStyle {
+fn spinner_style(resume_frames: u64) -> ProgressStyle {
   ProgressStyle::default_spinner()
     .template(INDICATIF_SPINNER_TEMPLATE)
     .unwrap()
-    .with_key("fps", |state: &ProgressState, w: &mut dyn Write| {
-      if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+    .with_key("fps", move |state: &ProgressState, w: &mut dyn Write| {
+      let resume_pos = state.pos() - resume_frames;
+      if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
         write!(w, "0 fps").unwrap();
       } else {
-        let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
+        let fps = resume_pos as f32 / state.elapsed().as_secs_f32();
         if fps < 1.0 {
           write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
         } else {
@@ -101,13 +107,14 @@ fn spinner_style() -> ProgressStyle {
 
 /// Initialize progress bar
 /// Enables steady 100 ms tick
-pub fn init_progress_bar(len: u64) {
+pub fn init_progress_bar(len: u64, resume_frames: u64) {
   let pb = if len > 0 {
-    PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style()))
+    PROGRESS_BAR
+      .get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style(resume_frames)))
   } else {
     // Avoid showing `xxx/0` if we don't know the length yet.
     // Affects scenechange progress.
-    PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(spinner_style()))
+    PROGRESS_BAR.get_or_init(|| ProgressBar::new(len).with_style(spinner_style(resume_frames)))
   };
   pb.set_draw_target(ProgressDrawTarget::stderr());
   pb.enable_steady_tick(Duration::from_millis(100));
@@ -117,9 +124,9 @@ pub fn init_progress_bar(len: u64) {
   pb.set_position(0);
 }
 
-pub fn convert_to_progress() {
+pub fn convert_to_progress(resume_frames: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
-    pb.set_style(pretty_progress_style());
+    pb.set_style(pretty_progress_style(resume_frames));
   }
 }
 
@@ -188,7 +195,7 @@ pub fn reset_mp_bar_at(pos: u64) {
   }
 }
 
-pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
+pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize, resume_frames: u64) {
   MULTI_PROGRESS_BAR.get_or_init(|| {
     let mpb = MultiProgress::new();
 
@@ -213,7 +220,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize) {
     }
 
     let pb = ProgressBar::hidden();
-    pb.set_style(pretty_progress_style());
+    pb.set_style(pretty_progress_style(resume_frames));
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.reset_elapsed();
     pb.reset_eta();

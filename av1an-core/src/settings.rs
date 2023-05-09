@@ -40,9 +40,9 @@ use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::{create_vs_file, is_ffms2_installed, is_lsmash_installed};
 use crate::vmaf::{self, validate_libvmaf};
 use crate::{
-  create_dir, determine_workers, finish_multi_progress_bar, get_done, init_done, into_vec,
-  read_chunk_queue, save_chunk_queue, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder,
-  Input, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
+  create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
+  ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod,
+  TargetQuality, Verbosity,
 };
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -1295,7 +1295,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       let broker = Broker {
         chunk_queue,
         project: self,
-        max_tries: self.max_tries,
       };
 
       let (tx, rx) = mpsc::channel();
@@ -1311,11 +1310,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       handle.join().unwrap();
 
-      if self.verbosity == Verbosity::Normal {
-        finish_progress_bar();
-      } else if self.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar();
-      }
+      finish_progress_bar();
 
       // TODO add explicit parameter to concatenation functions to control whether audio is also muxed in
       let _audio_output_exists =

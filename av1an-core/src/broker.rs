@@ -10,15 +10,12 @@ use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
 
-use crate::progress_bar::{dec_bar, dec_mp_bar, update_progress_bar_estimates};
+use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::settings::EncodeArgs;
 use crate::util::printable_base10_digits;
-use crate::{
-  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Instant, Verbosity,
-};
+use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
 pub struct Broker<'a> {
-  pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a EncodeArgs,
 }
@@ -169,11 +166,7 @@ impl<'a> Broker<'a> {
       })
       .unwrap();
 
-      if self.project.verbosity == Verbosity::Normal {
-        finish_progress_bar();
-      } else if self.project.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar();
-      }
+      finish_progress_bar();
     }
   }
 
@@ -196,21 +189,17 @@ impl<'a> Broker<'a> {
 
     let passes = chunk.passes;
     for current_pass in 1..=passes {
-      for r#try in 1..=self.max_tries {
+      for r#try in 1..=self.project.max_tries {
         let res = self
           .project
           .create_pipes(chunk, current_pass, worker_id, padding);
         if let Err((e, frames)) = res {
-          if self.project.verbosity == Verbosity::Normal {
-            dec_bar(frames);
-          } else if self.project.verbosity == Verbosity::Verbose {
-            dec_mp_bar(frames);
-          }
+          dec_bar(frames);
 
-          if r#try == self.max_tries {
+          if r#try == self.project.max_tries {
             error!(
               "[chunk {}] encoder failed {} times, shutting down worker",
-              chunk.index, self.max_tries
+              chunk.index, self.project.max_tries
             );
             return Err(e);
           }

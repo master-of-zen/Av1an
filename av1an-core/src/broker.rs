@@ -3,9 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
-use std::sync::atomic::{self, AtomicU64};
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
@@ -101,12 +99,7 @@ impl Display for EncoderCrash {
 
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
-  pub fn encoding_loop(
-    self,
-    tx: Sender<()>,
-    mut set_thread_affinity: Option<usize>,
-    audio_size_bytes: Arc<AtomicU64>,
-  ) {
+  pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
     assert!(!self.chunk_queue.is_empty());
 
     if !self.chunk_queue.is_empty() {
@@ -142,7 +135,6 @@ impl<'a> Broker<'a> {
           .map(|idx| (receiver.clone(), &self, idx))
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
-            let audio_size_ref = Arc::clone(&audio_size_bytes);
             s.spawn(move |_| {
               cfg_if! {
                 if #[cfg(any(target_os = "linux", target_os = "windows"))] {
@@ -160,9 +152,7 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) =
-                  queue.encode_chunk(&mut chunk, worker_id, Arc::clone(&audio_size_ref))
-                {
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -187,12 +177,7 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(
-    &self,
-    chunk: &mut Chunk,
-    worker_id: usize,
-    audio_size_bytes: Arc<AtomicU64>,
-  ) -> Result<(), Box<EncoderCrash>> {
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
     if let Some(ref tq) = self.project.target_quality {
@@ -262,7 +247,6 @@ impl<'a> Broker<'a> {
       chunk.frame_rate,
       self.project.frames,
       self.project.verbosity,
-      audio_size_bytes.load(atomic::Ordering::SeqCst),
     );
 
     debug!(

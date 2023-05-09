@@ -145,6 +145,11 @@ pub fn dec_bar(dec: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.set_position(pb.position().saturating_sub(dec));
   }
+
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    let pb = pbs.last().unwrap();
+    pb.set_position(pb.position().saturating_sub(dec));
+  }
 }
 
 pub fn update_bar_info(kbps: f64, est_size: HumanBytes) {
@@ -162,6 +167,12 @@ pub fn set_pos(pos: u64) {
 pub fn finish_progress_bar() {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.finish();
+  }
+
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    for pb in pbs.iter() {
+      pb.finish();
+    }
   }
 }
 
@@ -258,27 +269,12 @@ pub fn inc_mp_bar(inc: u64) {
   }
 }
 
-pub fn dec_mp_bar(dec: u64) {
-  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    let pb = pbs.last().unwrap();
-    pb.set_position(pb.position().saturating_sub(dec));
-  }
-}
-
 pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     pbs
       .last()
       .unwrap()
       .set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
-  }
-}
-
-pub fn finish_multi_progress_bar() {
-  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    for pb in pbs.iter() {
-      pb.finish();
-    }
   }
 }
 

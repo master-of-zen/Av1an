@@ -34,7 +34,7 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
 
 ## Commands
 
-- `--target_quality FLOAT` - enables target quality with default settings for that encoder, targets FLOAT value
+- `--target-quality FLOAT` - enables target quality with default settings for that encoder, targets FLOAT value
 
 - `--probes INT` - Overrides maximum amount of probes to make for each segment (Default 4)
 
@@ -42,9 +42,9 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
 
 ## Example of usage
 
-`av1an -i file --target_quality 90` - Will run aomenc with default settings of target_quality
+`av1an -i file --target-quality 90` - Will run aomenc with default settings of target-quality
 
-`av1an -i file --target_quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6` - With specified path to vmaf model and 6 probes per segment
+`av1an -i file --target-quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6` - With specified path to vmaf model and 6 probes per segment
 
 ## Scaling
 

@@ -33,6 +33,15 @@ const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
 };
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
+static AUDIO_BYTES: OnceCell<u64> = OnceCell::new();
+
+pub fn set_audio_size(val: u64) {
+  AUDIO_BYTES.get_or_init(|| val);
+}
+
+pub fn get_audio_size() -> u64 {
+  *AUDIO_BYTES.get().unwrap_or(&0u64)
+}
 
 pub fn get_progress_bar() -> Option<&'static ProgressBar> {
   PROGRESS_BAR.get()
@@ -140,6 +149,11 @@ pub fn dec_bar(dec: u64) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.set_position(pb.position().saturating_sub(dec));
   }
+
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    let pb = pbs.last().unwrap();
+    pb.set_position(pb.position().saturating_sub(dec));
+  }
 }
 
 pub fn update_bar_info(kbps: f64, est_size: HumanBytes) {
@@ -157,6 +171,12 @@ pub fn set_pos(pos: u64) {
 pub fn finish_progress_bar() {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.finish();
+  }
+
+  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
+    for pb in pbs.iter() {
+      pb.finish();
+    }
   }
 }
 
@@ -253,13 +273,6 @@ pub fn inc_mp_bar(inc: u64) {
   }
 }
 
-pub fn dec_mp_bar(dec: u64) {
-  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    let pb = pbs.last().unwrap();
-    pb.set_position(pb.position().saturating_sub(dec));
-  }
-}
-
 pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
     pbs
@@ -269,20 +282,7 @@ pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
   }
 }
 
-pub fn finish_multi_progress_bar() {
-  if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    for pb in pbs.iter() {
-      pb.finish();
-    }
-  }
-}
-
-pub fn update_progress_bar_estimates(
-  frame_rate: f64,
-  total_frames: usize,
-  verbosity: Verbosity,
-  audio_size: u64,
-) {
+pub fn update_progress_bar_estimates(frame_rate: f64, total_frames: usize, verbosity: Verbosity) {
   let completed_frames: usize = get_done()
     .done
     .iter()
@@ -296,7 +296,10 @@ pub fn update_progress_bar_estimates(
   let seconds_completed = completed_frames as f64 / frame_rate;
   let kbps = total_size as f64 * 8. / 1000. / seconds_completed;
   let progress = completed_frames as f64 / total_frames as f64;
-  let est_size = total_size as f64 / progress + audio_size as f64;
+
+  let audio_size_byte = get_audio_size();
+
+  let est_size = total_size as f64 / progress + audio_size_byte as f64;
   if verbosity == Verbosity::Normal {
     update_bar_info(kbps, HumanBytes(est_size as u64));
   } else if verbosity == Verbosity::Verbose {

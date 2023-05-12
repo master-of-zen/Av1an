@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
-use std::sync::atomic::{self, AtomicBool, AtomicU64, AtomicUsize};
+use std::sync::atomic::{self, AtomicBool, AtomicUsize};
 use std::sync::{mpsc, Arc};
 use std::thread::available_parallelism;
 use std::{cmp, fs, iter, thread};
@@ -31,7 +31,8 @@ use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
 use crate::parse::valid_params;
 use crate::progress_bar::{
   finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
-  reset_bar_at, reset_mp_bar_at, update_mp_chunk, update_mp_msg, update_progress_bar_estimates,
+  reset_bar_at, reset_mp_bar_at, set_audio_size, update_mp_chunk, update_mp_msg,
+  update_progress_bar_estimates,
 };
 use crate::scene_detect::av_scenechange_detect;
 use crate::scenes::{Scene, ZoneOptions};
@@ -39,9 +40,9 @@ use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::{create_vs_file, is_ffms2_installed, is_lsmash_installed};
 use crate::vmaf::{self, validate_libvmaf};
 use crate::{
-  create_dir, determine_workers, finish_multi_progress_bar, get_done, init_done, into_vec,
-  read_chunk_queue, save_chunk_queue, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder,
-  Input, ScenecutMethod, SplitMethod, TargetQuality, Verbosity,
+  create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
+  ChunkMethod, ChunkOrdering, DashMap, DoneJson, Encoder, Input, ScenecutMethod, SplitMethod,
+  TargetQuality, Verbosity,
 };
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -1237,14 +1238,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
     crossbeam_utils::thread::scope(|s| -> anyhow::Result<()> {
       // vapoursynth audio is currently unsupported
-      let audio_size_bytes = Arc::new(AtomicU64::new(0));
       let audio_thread = if self.input.is_video()
         && (!self.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst))
       {
         let input = self.input.as_video_path();
         let temp = self.temp.as_str();
         let audio_params = self.audio_params.as_slice();
-        let audio_size_ref = Arc::clone(&audio_size_bytes);
         Some(s.spawn(move |_| {
           let audio_output = crate::ffmpeg::encode_audio(input, temp, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
@@ -1256,10 +1255,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
             .unwrap();
 
           if let Some(ref audio_output) = audio_output {
-            audio_size_ref.store(
-              audio_output.metadata().unwrap().len(),
-              atomic::Ordering::SeqCst,
-            );
+            let audio_size = audio_output.metadata().unwrap().len();
+            set_audio_size(audio_size);
           }
 
           audio_output.is_some()
@@ -1313,27 +1310,19 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       if !get_done().done.is_empty() {
         let frame_rate = self.input.frame_rate()?;
-        update_progress_bar_estimates(
-          frame_rate,
-          self.frames,
-          self.verbosity,
-          audio_size_bytes.load(atomic::Ordering::SeqCst),
-        );
+        update_progress_bar_estimates(frame_rate, self.frames, self.verbosity);
       }
 
       let broker = Broker {
         chunk_queue,
         project: self,
-        max_tries: self.max_tries,
       };
 
-      let audio_size_ref = Arc::clone(&audio_size_bytes);
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
         broker.encoding_loop(
           tx,
           self.set_thread_affinity,
-          audio_size_ref,
           self.ignore_frame_mismatch,
         );
       });
@@ -1346,11 +1335,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
 
       handle.join().unwrap();
 
-      if self.verbosity == Verbosity::Normal {
-        finish_progress_bar();
-      } else if self.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar();
-      }
+      finish_progress_bar();
 
       // TODO add explicit parameter to concatenation functions to control whether audio is also muxed in
       let _audio_output_exists =

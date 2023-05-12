@@ -491,12 +491,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "const_fn_assert"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27d614f23f34f7b5165a77dc1591f497e2518f9cec4b4f4b92bfc4dc6cf7a190"
-
-[[package]]
 name = "core-foundation-sys"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1323,9 +1317,9 @@ dependencies = [
 
 [[package]]
 name = "rav1e"
-version = "0.6.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be22fc799d8dc5573ba290fd436cea91ccfc0c6b7e121750ea5939cc786429ec"
+checksum = "1958c98fa048e4a52218524b3688474943507e25caf29d333ad85aa8a43575de"
 dependencies = [
  "arbitrary",
  "arg_enum_proc_macro",
@@ -1335,7 +1329,6 @@ dependencies = [
  "built",
  "cc",
  "cfg-if",
- "const_fn_assert",
  "interpolate_name",
  "itertools",
  "libc",

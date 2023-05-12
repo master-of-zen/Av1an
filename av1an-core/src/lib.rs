@@ -44,7 +44,7 @@ use strum::{Display, EnumString, IntoStaticStr};
 use sysinfo::SystemExt;
 
 use crate::encoder::Encoder;
-use crate::progress_bar::{finish_multi_progress_bar, finish_progress_bar};
+use crate::progress_bar::finish_progress_bar;
 use crate::target_quality::TargetQuality;
 
 pub mod broker;

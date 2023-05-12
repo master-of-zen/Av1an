@@ -3,24 +3,19 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
-use std::sync::atomic::{self, AtomicU64};
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
 
-use crate::progress_bar::{dec_bar, dec_mp_bar, update_progress_bar_estimates};
+use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::settings::EncodeArgs;
 use crate::util::printable_base10_digits;
-use crate::{
-  finish_multi_progress_bar, finish_progress_bar, get_done, Chunk, DoneChunk, Instant, Verbosity,
-};
+use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
 pub struct Broker<'a> {
-  pub max_tries: usize,
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a EncodeArgs,
 }
@@ -105,7 +100,6 @@ impl<'a> Broker<'a> {
     self,
     tx: Sender<()>,
     mut set_thread_affinity: Option<usize>,
-    audio_size_bytes: Arc<AtomicU64>,
     ignore_frame_mismatch: bool,
   ) {
     assert!(!self.chunk_queue.is_empty());
@@ -143,7 +137,6 @@ impl<'a> Broker<'a> {
           .map(|idx| (receiver.clone(), &self, idx))
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
-            let audio_size_ref = Arc::clone(&audio_size_bytes);
             s.spawn(move |_| {
               cfg_if! {
                 if #[cfg(any(target_os = "linux", target_os = "windows"))] {
@@ -164,7 +157,6 @@ impl<'a> Broker<'a> {
                 if let Err(e) = queue.encode_chunk(
                   &mut chunk,
                   worker_id,
-                  Arc::clone(&audio_size_ref),
                   ignore_frame_mismatch,
                 ) {
                   error!("[chunk {}] {}", chunk.index, e);
@@ -183,11 +175,7 @@ impl<'a> Broker<'a> {
       })
       .unwrap();
 
-      if self.project.verbosity == Verbosity::Normal {
-        finish_progress_bar();
-      } else if self.project.verbosity == Verbosity::Verbose {
-        finish_multi_progress_bar();
-      }
+      finish_progress_bar();
     }
   }
 
@@ -195,7 +183,6 @@ impl<'a> Broker<'a> {
     &self,
     chunk: &mut Chunk,
     worker_id: usize,
-    audio_size_bytes: Arc<AtomicU64>,
     ignore_frame_mismatch: bool,
   ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
@@ -216,25 +203,23 @@ impl<'a> Broker<'a> {
 
     let passes = chunk.passes;
     for current_pass in 1..=passes {
-      for r#try in 1..=self.max_tries {
-        let res = self.project.create_pipes(
-          chunk,
-          current_pass,
-          worker_id,
-          padding,
-          ignore_frame_mismatch,
+      for r#try in 1..=self.project.max_tries {
+        let res = self
+          .project
+          .create_pipes(
+            chunk,
+            current_pass,
+            worker_id,
+            padding,
+            ignore_frame_mismatch
         );
         if let Err((e, frames)) = res {
-          if self.project.verbosity == Verbosity::Normal {
-            dec_bar(frames);
-          } else if self.project.verbosity == Verbosity::Verbose {
-            dec_mp_bar(frames);
-          }
+          dec_bar(frames);
 
-          if r#try == self.max_tries {
+          if r#try == self.project.max_tries {
             error!(
               "[chunk {}] encoder failed {} times, shutting down worker",
-              chunk.index, self.max_tries
+              chunk.index, self.project.max_tries
             );
             return Err(e);
           }
@@ -271,7 +256,6 @@ impl<'a> Broker<'a> {
       chunk.frame_rate,
       self.project.frames,
       self.project.verbosity,
-      audio_size_bytes.load(atomic::Ordering::SeqCst),
     );
 
     debug!(

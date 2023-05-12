@@ -154,11 +154,7 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(
-                  &mut chunk,
-                  worker_id,
-                  ignore_frame_mismatch,
-                ) {
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, ignore_frame_mismatch) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -204,14 +200,12 @@ impl<'a> Broker<'a> {
     let passes = chunk.passes;
     for current_pass in 1..=passes {
       for r#try in 1..=self.project.max_tries {
-        let res = self
-          .project
-          .create_pipes(
-            chunk,
-            current_pass,
-            worker_id,
-            padding,
-            ignore_frame_mismatch
+        let res = self.project.create_pipes(
+          chunk,
+          current_pass,
+          worker_id,
+          padding,
+          ignore_frame_mismatch,
         );
         if let Err((e, frames)) = res {
           dec_bar(frames);

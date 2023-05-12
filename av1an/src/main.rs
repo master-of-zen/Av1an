@@ -202,7 +202,7 @@ pub struct CliOpts {
   /// Maximum scene length, in seconds
   ///
   /// If both frames and seconds are specified, then the number of frames will take priority.
-  #[clap(long, default_value_t = 10.0, help_heading = "SCENE DETECTION")]
+  #[clap(long, default_value_t = 10.0, help_heading = "Scene Detection")]
   pub extra_split_sec: f64,
 
   /// Method used to determine chunk boundaries

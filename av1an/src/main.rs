@@ -8,6 +8,7 @@ use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
+use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
@@ -602,8 +603,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     };
 
     // TODO make an actual constructor for this
-    let mut arg = EncodeArgs {
-      frames: 0,
+    let arg = EncodeArgs {
       log_file: if let Some(log_file) = args.log_file.as_ref() {
         Path::new(&format!("{log_file}.log")).to_owned()
       } else {
@@ -698,11 +698,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.force_keyframes.as_deref().unwrap_or(""),
       )?,
       target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
-      vmaf: args.vmaf,
-      vmaf_filter: args.vmaf_filter.clone(),
-      vmaf_path: args.vmaf_path.clone(),
-      vmaf_res: args.vmaf_res.to_string().clone(),
-      vmaf_threads: args.vmaf_threads,
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {
@@ -712,11 +707,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       },
       workers: args.workers,
       set_thread_affinity: args.set_thread_affinity,
-      vs_script: None,
       zones: args.zones.clone(),
     };
-
-    arg.startup_check()?;
 
     if !args.overwrite {
       // UGLY: taking first file for output file
@@ -843,13 +835,12 @@ pub fn run() -> anyhow::Result<()> {
     )
     .start()?;
 
-  for mut arg in args {
+  for arg in args {
     // Change log file
     let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
     let _ = &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file))?;
 
-    arg.initialize()?;
-    arg.encode_file()?;
+    Av1anContext::new(arg)?.encode_file()?;
   }
 
   Ok(())

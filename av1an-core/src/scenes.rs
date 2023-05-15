@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::process::{exit, Command};
 use std::str::FromStr;
 
+use crate::context::Av1anContext;
 use anyhow::{anyhow, bail, Result};
 use itertools::Itertools;
 use nom::branch::alt;
@@ -13,7 +14,7 @@ use nom::sequence::{preceded, tuple};
 use serde::{Deserialize, Serialize};
 
 use crate::parse::valid_params;
-use crate::settings::{invalid_params, suggest_fix, EncodeArgs};
+use crate::settings::{invalid_params, suggest_fix};
 use crate::Encoder;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -35,7 +36,7 @@ pub struct ZoneOptions {
 }
 
 impl Scene {
-  pub fn parse_from_zone(input: &str, encode_args: &EncodeArgs) -> Result<Self> {
+  pub fn parse_from_zone(input: &str, context: &Av1anContext) -> Result<Self> {
     let (_, (start, _, end, _, encoder, reset, zone_args)): (
       _,
       (usize, _, usize, _, Encoder, bool, &str),
@@ -44,7 +45,7 @@ impl Scene {
       many1(char(' ')),
       map_res(alt((tag("-1"), digit1)), |res: &str| {
         if res == "-1" {
-          Ok(encode_args.frames)
+          Ok(context.frames)
         } else {
           res.parse::<usize>()
         }
@@ -74,24 +75,24 @@ impl Scene {
     if start >= end {
       bail!("Start frame must be earlier than the end frame");
     }
-    if start >= encode_args.frames || end > encode_args.frames {
+    if start >= context.frames || end > context.frames {
       bail!("Start and end frames must not be past the end of the video");
     }
-    if encoder.format() != encode_args.encoder.format() {
+    if encoder.format() != context.args.encoder.format() {
       bail!(
         "Zone specifies using {}, but this cannot be used in the same file as {}",
         encoder,
-        encode_args.encoder,
+        context.args.encoder,
       );
     }
-    if encoder != encode_args.encoder {
+    if encoder != context.args.encoder {
       if encoder
-        .get_format_bit_depth(encode_args.output_pix_format.format)
+        .get_format_bit_depth(context.args.output_pix_format.format)
         .is_err()
       {
         bail!(
           "Output pixel format {:?} is not supported by {} (used in zones file)",
-          encode_args.output_pix_format.format,
+          context.args.output_pix_format.format,
           encoder
         );
       }
@@ -104,20 +105,20 @@ impl Scene {
     let mut video_params = if reset {
       Vec::new()
     } else {
-      encode_args.video_params.clone()
+      context.args.video_params.clone()
     };
     let mut passes = if reset {
       encoder.get_default_pass()
     } else {
-      encode_args.passes
+      context.args.passes
     };
     let mut photon_noise = if reset {
       None
     } else {
-      encode_args.photon_noise
+      context.args.photon_noise
     };
-    let mut extra_splits_len = encode_args.extra_splits_len;
-    let mut min_scene_len = encode_args.min_scene_len;
+    let mut extra_splits_len = context.args.extra_splits_len;
+    let mut min_scene_len = context.args.min_scene_len;
 
     // Parse overrides
     let zone_args: (&str, Vec<(&str, Option<&str>)>) =
@@ -168,7 +169,7 @@ impl Scene {
         .collect::<Vec<String>>()
     };
 
-    if !encode_args.force {
+    if !context.args.force {
       let help_text = {
         let [cmd, arg] = encoder.help_command();
         String::from_utf8(Command::new(cmd).arg(arg).output().unwrap().stdout).unwrap()
@@ -242,19 +243,18 @@ impl Scene {
 }
 
 #[cfg(test)]
-fn get_test_args() -> EncodeArgs {
+fn get_test_args() -> Av1anContext {
   use std::path::PathBuf;
 
   use ffmpeg::format::Pixel;
 
   use crate::concat::ConcatMethod;
-  use crate::settings::{InputPixelFormat, PixelFormat};
+  use crate::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
   use crate::{
     into_vec, ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity,
   };
 
-  EncodeArgs {
-    frames: 6900,
+  let args = EncodeArgs {
     log_file: PathBuf::new(),
     ffmpeg_filter_args: Vec::new(),
     temp: String::new(),
@@ -291,15 +291,14 @@ fn get_test_args() -> EncodeArgs {
     force_keyframes: Vec::new(),
     target_quality: None,
     verbosity: Verbosity::Normal,
-    vmaf: false,
-    vmaf_filter: None,
-    vmaf_path: None,
-    vmaf_res: String::new(),
-    vmaf_threads: None,
     workers: 1,
     set_thread_affinity: None,
-    vs_script: None,
     zones: None,
+  };
+  Av1anContext {
+    vs_script: None,
+    frames: 6900,
+    args,
   }
 }
 

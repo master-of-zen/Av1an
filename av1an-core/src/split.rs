@@ -10,7 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::scenes::Scene;
 
-pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usize]) {
+/// Segments file  into provided folder
+/// TODO: check if there issues with fps mode -1
+pub fn segment(input: impl AsRef<Path>, split_path: impl AsRef<Path>, segments: &[usize]) {
   let input = input.as_ref();
   let split_path = split_path.as_ref();
   let mut cmd = Command::new("ffmpeg");
@@ -24,12 +26,14 @@ pub fn segment(input: impl AsRef<Path>, temp: impl AsRef<Path>, segments: &[usiz
     "-map",
     "0:V:0",
     "-an",
+    "-sn",
+    "-dn",
     "-c",
     "copy",
     "-avoid_negative_ts",
     "1",
-    "-vsync",
-    "0",
+    "-fps_mode",
+    "-1",
   ]);
 
   if segments.is_empty() {

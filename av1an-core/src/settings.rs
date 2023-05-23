@@ -973,9 +973,15 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     let input = self.input.as_video_path();
 
     debug!("Splitting video");
+
+    let split_path = &self.temp;
+    let split_path = Path::new(split_path).join("split");
+
+    dbg!(&split_path);
+
     segment(
       input,
-      &self.temp,
+      split_path,
       &scenes
         .iter()
         .skip(1)
@@ -1021,7 +1027,13 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       .collect();
 
     debug!("Segmenting video");
-    segment(input, &self.temp, &to_split[1..]);
+
+    let split_path = &self.temp;
+    let split_path = Path::new(split_path).join("split");
+
+    dbg!(&split_path);
+
+    segment(input, split_path, &to_split[1..]);
     debug!("Segment done");
 
     let source_path = Path::new(&self.temp).join("split");

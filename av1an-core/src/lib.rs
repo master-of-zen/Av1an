@@ -347,23 +347,31 @@ pub enum ChunkOrdering {
 
 /// Determine the optimal number of workers for an encoder
 #[must_use]
-pub fn determine_workers(encoder: Encoder) -> u64 {
+pub fn determine_workers(encoder: Encoder, tiles: (u32, u32), res: (u32, u32)) -> u64 {
   let mut system = sysinfo::System::new();
+  // Encoder memory use scales with resolution
+  let megapixels = (res.0 * res.1) as f64 / 1e6;
   system.refresh_memory();
 
   let cpu = available_parallelism()
     .expect("Unrecoverable: Failed to get thread count")
     .get() as u64;
-  // available_memory returns kb, convert to gb
-  let ram_gb = system.available_memory() / 10_u64.pow(6);
+  // sysinfo returns Bytes, convert to GB
+  // use total instead of available, because av1an does not resize worker pool
+  let ram_gb = system.total_memory() as f64 / 1e9;
 
   std::cmp::max(
     match encoder {
       Encoder::aom | Encoder::rav1e | Encoder::vpx => std::cmp::min(
-        (cpu as f64 / 3.0).round() as u64,
-        (ram_gb as f64 / 1.5).round() as u64,
+        // cpu usage scales with tiles, but not 1:1
+        cpu / ((tiles.0 * tiles.1) as f32 * 0.7).ceil() as u64,
+        (ram_gb / megapixels).round() as u64,
       ),
-      Encoder::svt_av1 | Encoder::x264 | Encoder::x265 => std::cmp::min(cpu, ram_gb) / 8,
+      // SVT-AV1 cpu usage doesn't scale with tiles.
+      Encoder::svt_av1 | Encoder::x264 | Encoder::x265 => std::cmp::min(
+        cpu / 6 as u64,
+        (ram_gb / (megapixels + 2.5)).round() as u64,
+      ),
     },
     1,
   )

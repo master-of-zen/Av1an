@@ -364,6 +364,7 @@ impl Encoder {
           "--cpu-used=6",
           "--end-usage=q",
           "--cq-level=30",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -381,7 +382,7 @@ impl Encoder {
       }
       Encoder::rav1e => {
         let defaults: Vec<String> =
-          into_vec!["--speed", "6", "--quantizer", "100", "--no-scene-detection"];
+          into_vec!["--speed", "6", "--quantizer", "100", "--keyint", "0"];
 
         if cols > 1 || rows > 1 {
           let tiles: Vec<String> = into_vec!["--tiles", format!("{}", cols * rows)];
@@ -404,6 +405,7 @@ impl Encoder {
           "--cq-level=30",
           "--row-mt=1",
           "--auto-alt-ref=6",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -420,7 +422,7 @@ impl Encoder {
         }
       }
       Encoder::svt_av1 => {
-        let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
+        let defaults = into_vec!["--preset", "4", "--keyint", "0", "--rc", "0", "--crf", "25"];
         if cols > 1 || rows > 1 {
           let columns = ilog2(cols);
           let rows = ilog2(rows);
@@ -436,7 +438,7 @@ impl Encoder {
           defaults
         }
       }
-      Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
+      Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25", "--keyint", "infinite"],
       Encoder::x265 => into_vec![
         "-p",
         "slow",
@@ -445,7 +447,9 @@ impl Encoder {
         "-D",
         "10",
         "--level-idc",
-        "5.0"
+        "5.0",
+        "--keyint",
+        "-1",
       ],
     }
   }

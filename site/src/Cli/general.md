@@ -48,7 +48,8 @@
 		Do not delete the temporary folder after encoding has finished
 
 	--force
-		Do not check if the encoder arguments specified by -v/--video-params are valid
+		Do not check if the encoder arguments specified by -v/--video-params are valid.
+		And do not include Av1an's default set of encoder parameters.
 
 -y
 		Overwrite output file, without confirmation

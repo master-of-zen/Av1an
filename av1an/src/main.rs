@@ -168,7 +168,8 @@ pub struct CliOpts {
   #[clap(short, long)]
   pub keep: bool,
 
-  /// Do not check if the encoder arguments specified by -v/--video-params are valid
+  /// Do not check if the encoder arguments specified by -v/--video-params are valid.
+  /// And do not include Av1an's default set of encoder parameters.
   #[clap(long)]
   pub force: bool,
 
@@ -285,7 +286,8 @@ pub struct CliOpts {
   /// These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be used.
   /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
   /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
-  /// a list of valid options.
+  /// a list of valid options. This list of parameters will be merged into Av1an's default set
+  /// of encoder parameters, except if --force is set.
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub video_params: Option<String>,
 

@@ -6,7 +6,7 @@ use std::process::{exit, Command};
 
 use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 
 use crate::concat::ConcatMethod;
@@ -177,10 +177,29 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       );
     }
 
-    if self.video_params.is_empty() {
-      self.video_params = self
-        .encoder
-        .get_default_arguments(self.input.calculate_tiles());
+    if !self.force {
+      if self.video_params.is_empty() {
+        self.video_params = self.encoder.get_default_arguments(self.input.calculate_tiles());
+      } else {
+        // merge video_params with defaults, overriding defaults
+        // TODO: consider using hashmap to store program arguments instead of string vector
+        let default_video_params = self.encoder.get_default_arguments(self.input.calculate_tiles());
+        let mut skip = false;
+        let mut _default_params: Vec<String> = Vec::new();
+        for param in default_video_params {
+          if skip && !(param.starts_with("-") && param != "-1") {
+            skip = false;
+            continue;
+          } else { skip = false; }
+          if (param.starts_with("-") && param != "-1") && self.video_params.iter().any(|x| *x == param){
+            skip = true;
+            continue;
+          } else {
+            _default_params.push(param);
+          }
+        }
+        self.video_params = chain!(_default_params, self.video_params.clone()).collect();
+      }
     }
 
     if let Some(strength) = self.photon_noise {

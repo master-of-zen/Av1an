@@ -59,16 +59,8 @@ impl Chunk {
       if !grain_table.exists() {
         debug!("Generating grain table at ISO {}", iso_setting);
         let (mut width, mut height) = self.input.resolution()?;
-
-        if self.noise_size.0.is_some() {
-          width = self.noise_size.0.unwrap();
-        }
-
-        if self.noise_size.1.is_some() {
-          height = self.noise_size.1.unwrap();
-        }
-
-        println!("noise size: {width}x{height}");
+        if self.noise_size.0.is_some() { width = self.noise_size.0.unwrap(); }
+        if self.noise_size.1.is_some() { height = self.noise_size.1.unwrap(); }
         let transfer_function = self
           .input
           .transfer_function_params_adjusted(&self.video_params)?;

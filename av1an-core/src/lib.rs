@@ -45,11 +45,11 @@ use sysinfo::SystemExt;
 
 use crate::encoder::Encoder;
 use crate::progress_bar::finish_progress_bar;
-use crate::target_quality::TargetQuality;
 
 pub mod broker;
 pub mod chunk;
 pub mod concat;
+pub mod context;
 pub mod encoder;
 pub mod ffmpeg;
 pub(crate) mod parse;

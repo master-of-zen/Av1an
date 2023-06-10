@@ -358,7 +358,7 @@ pub struct CliOpts {
   /// Manually set the width for the photon noise table.
   #[clap(long, help_heading = "Encoding")]
   pub photon_noise_width: Option<u32>,
-  
+
   /// Manually set the height for the photon noise table.
   #[clap(long, help_heading = "Encoding")]
   pub photon_noise_height: Option<u32>,

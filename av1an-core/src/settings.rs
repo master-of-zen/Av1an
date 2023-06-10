@@ -132,17 +132,6 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       warn!("The output video's frame count may differ, and VMAF calculations may be incorrect");
     }
 
-    if self.vmaf_res == "inputres" {
-      let inputres = self.input.resolution()?;
-      self.vmaf_res.clear();
-      self.vmaf_res.push_str(&format!(
-        "{}x{}",
-        &inputres.0.to_string(),
-        &inputres.1.to_string()
-      ));
-      self.vmaf_res.to_string();
-    }
-
     if let Some(vmaf_path) = &self
       .target_quality
       .as_ref()

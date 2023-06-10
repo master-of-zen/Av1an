@@ -308,7 +308,11 @@ impl Av1anContext {
 
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(tx, self.args.set_thread_affinity);
+        broker.encoding_loop(
+          tx,
+          self.args.set_thread_affinity,
+          self.args.ignore_frame_mismatch,
+        );
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
@@ -348,11 +352,25 @@ impl Av1anContext {
       }
 
       if let Some(ref tq) = self.args.target_quality {
+        let mut temp_res = tq.vmaf_res.to_string();
+        if tq.vmaf_res == "inputres" {
+          let inputres = self.args.input.resolution()?;
+          temp_res.push_str(&format!(
+            "{}x{}",
+            &inputres.0.to_string(),
+            &inputres.1.to_string()
+          ));
+          temp_res.to_string();
+        } else {
+          temp_res = tq.vmaf_res.to_string();
+        }
+
         if let Err(e) = vmaf::plot(
           self.args.output_file.as_ref(),
           &self.args.input,
           tq.model.as_deref(),
-          tq.vmaf_res.as_str(),
+          temp_res.as_str(),
+          tq.vmaf_scaler.as_str(),
           1,
           tq.vmaf_filter.as_deref(),
           tq.vmaf_threads,
@@ -400,6 +418,7 @@ impl Av1anContext {
     current_pass: u8,
     worker_id: usize,
     padding: usize,
+    ignore_frame_mismatch: bool,
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
@@ -618,11 +637,13 @@ impl Av1anContext {
       let encoded_frames = num_frames(chunk.output().as_ref());
 
       let err_str = match encoded_frames {
-        Ok(encoded_frames) if encoded_frames != chunk.frames() => Some(format!(
-          "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
-          chunk.index,
-          chunk.frames()
-        )),
+        Ok(encoded_frames) if !ignore_frame_mismatch && encoded_frames != chunk.frames() => {
+          Some(format!(
+            "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
+            chunk.index,
+            chunk.frames()
+          ))
+        }
         Err(error) => Some(format!(
           "FAILED TO COUNT FRAMES: chunk {}: {error}",
           chunk.index
@@ -689,6 +710,7 @@ impl Av1anContext {
         self.frames,
         self.args.min_scene_len,
         self.args.verbosity,
+        self.args.scaler.as_str(),
         self.args.sc_pix_format,
         self.args.sc_method,
         self.args.sc_downscale_height,

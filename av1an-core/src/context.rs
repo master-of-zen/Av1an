@@ -870,6 +870,7 @@ impl Av1anContext {
       ),
       passes: self.args.passes,
       encoder: self.args.encoder,
+      noise_size: self.args.photon_noise_size,
       tq_cq: None,
     };
     chunk.apply_photon_noise_args(
@@ -922,6 +923,7 @@ impl Av1anContext {
       ),
       passes: self.args.passes,
       encoder: self.args.encoder,
+      noise_size: self.args.photon_noise_size,
       tq_cq: None,
     };
     chunk.apply_photon_noise_args(
@@ -1104,6 +1106,7 @@ impl Av1anContext {
       ),
       passes: self.args.passes,
       encoder: self.args.encoder,
+      noise_size: self.args.photon_noise_size,
       tq_cq: None,
     };
     chunk.apply_photon_noise_args(

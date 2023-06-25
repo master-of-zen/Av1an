@@ -269,6 +269,7 @@ fn get_test_args() -> Av1anContext {
     encoder: Encoder::aom,
     extra_splits_len: Some(100),
     photon_noise: Some(10),
+    photon_noise_size: (None, None),
     chroma_noise: false,
     sc_pix_format: None,
     keep: false,

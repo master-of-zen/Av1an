@@ -57,6 +57,7 @@ pub struct EncodeArgs {
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
   pub photon_noise: Option<u8>,
+  pub photon_noise_size: (Option<u32>, Option<u32>), // Width and Height
   pub chroma_noise: bool,
   pub zones: Option<PathBuf>,
 

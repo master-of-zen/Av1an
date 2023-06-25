@@ -22,6 +22,7 @@ pub struct Chunk {
   pub passes: u8,
   pub video_params: Vec<String>,
   pub encoder: Encoder,
+  pub noise_size: (Option<u32>, Option<u32>),
   // do not break compatibility with output produced by older versions of av1an
   /// Optional target quality CQ level
   #[serde(rename = "per_shot_target_quality_cq")]
@@ -57,7 +58,13 @@ impl Chunk {
       let grain_table = Path::new(&self.temp).join(format!("iso{iso_setting}-grain.tbl"));
       if !grain_table.exists() {
         debug!("Generating grain table at ISO {}", iso_setting);
-        let (width, height) = self.input.resolution()?;
+        let (mut width, mut height) = self.input.resolution()?;
+        if self.noise_size.0.is_some() {
+          width = self.noise_size.0.unwrap();
+        }
+        if self.noise_size.1.is_some() {
+          height = self.noise_size.1.unwrap();
+        }
         let transfer_function = self
           .input
           .transfer_function_params_adjusted(&self.video_params)?;
@@ -102,6 +109,7 @@ mod tests {
       passes: 1,
       video_params: vec![],
       encoder: Encoder::x264,
+      noise_size: (None, None),
     };
     assert_eq!("00001", ch.name());
   }
@@ -120,6 +128,7 @@ mod tests {
       passes: 1,
       video_params: vec![],
       encoder: Encoder::x264,
+      noise_size: (None, None),
     };
     assert_eq!("10000", ch.name());
   }
@@ -139,6 +148,7 @@ mod tests {
       passes: 1,
       video_params: vec![],
       encoder: Encoder::x264,
+      noise_size: (None, None),
     };
     assert_eq!("d/encode/00001.ivf", ch.output());
   }

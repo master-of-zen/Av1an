@@ -10,12 +10,16 @@ use once_cell::sync::OnceCell;
 use crate::util::printable_base10_digits;
 use crate::{get_done, Verbosity};
 
-const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
+const PROGRESS_CHARS: &str = if cfg!(windows) {
+  "█▓▒░  "
+} else {
+  "█▉▊▋▌▍▎▏  "
+};
 
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
   // Do not use a spinner on Windows since the default console cannot display
   // the characters used for the spinner
-  "{elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
+  "{elapsed_precise:.bold} ▐{wide_bar:.blue/white.dim}▌ {percent:.bold} {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
 } else {
   "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
 };

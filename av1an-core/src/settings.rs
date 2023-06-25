@@ -37,6 +37,7 @@ pub struct EncodeArgs {
 
   pub chunk_method: ChunkMethod,
   pub chunk_order: ChunkOrdering,
+  pub scaler: String,
   pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_pix_format: Option<Pixel>,
@@ -46,6 +47,7 @@ pub struct EncodeArgs {
   pub extra_splits_len: Option<usize>,
   pub min_scene_len: usize,
   pub force_keyframes: Vec<usize>,
+  pub ignore_frame_mismatch: bool,
 
   pub max_tries: usize,
 
@@ -125,6 +127,10 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
     if self.chunk_method == ChunkMethod::Select {
       warn!("It is not recommended to use the \"select\" chunk method, as it is very slow");
+    }
+
+    if self.ignore_frame_mismatch {
+      warn!("The output video's frame count may differ, and VMAF calculations may be incorrect");
     }
 
     if let Some(vmaf_path) = &self

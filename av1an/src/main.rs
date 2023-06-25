@@ -166,9 +166,13 @@ pub struct CliOpts {
   #[clap(long)]
   pub force: bool,
 
-  /// Overwrite output file without confirmation
+  /// Overwrite output file, without confirmation
   #[clap(short = 'y')]
   pub overwrite: bool,
+
+  /// Never overwrite output file, without confirmation
+  #[clap(short = 'n', conflicts_with = "overwrite")]
+  pub never_overwrite: bool,
 
   /// Maximum number of chunk restarts for an encode
   #[clap(long, default_value_t = 3, value_parser = value_parser!(u32).range(1..))]
@@ -185,9 +189,22 @@ pub struct CliOpts {
   #[clap(long)]
   pub set_thread_affinity: Option<usize>,
 
+  /// Scaler used for scene detection (if --sc-downscale-height XXXX is used) and VMAF calculation
+  ///
+  /// Valid scalers are based on the scalers available in ffmpeg, including lanczos[1-9] with [1-9]
+  /// defining the width of the lanczos scaler.
+  #[clap(long, default_value = "bicubic")]
+  pub scaler: String,
+
   /// File location for scenes
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
+
+  /// Maximum scene length, in seconds
+  ///
+  /// If both frames and seconds are specified, then the number of frames will take priority.
+  #[clap(long, default_value_t = 10.0, help_heading = "Scene Detection")]
+  pub extra_split_sec: f64,
 
   /// Method used to determine chunk boundaries
   ///
@@ -243,6 +260,10 @@ pub struct CliOpts {
   /// Frame 0 will always be a keyframe and does not need to be specified here.
   #[clap(long, help_heading = "Scene Detection")]
   pub force_keyframes: Option<String>,
+
+  /// Ignore any detected mismatch between scene frame count and encoder frame count
+  #[clap(long, help_heading = "Encoding")]
+  pub ignore_frame_mismatch: bool,
 
   /// Video encoder to use
   #[clap(short, long, default_value_t = Encoder::aom, help_heading = "Encoding")]
@@ -450,6 +471,8 @@ pub struct CliOpts {
   pub vmaf_path: Option<PathBuf>,
 
   /// Resolution used for VMAF calculation
+  ///
+  /// If set to inputres, the output video will be scaled to the resolution of the input video.
   #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
   pub vmaf_res: String,
 
@@ -519,6 +542,7 @@ impl CliOpts {
 
       TargetQuality {
         vmaf_res: self.vmaf_res.clone(),
+        vmaf_scaler: self.scaler.clone(),
         vmaf_filter: self.vmaf_filter.clone(),
         vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
           available_parallelism()
@@ -666,9 +690,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       extra_splits_len: match args.extra_split {
         Some(0) => None,
         Some(x) => Some(x),
-        // Make sure it's at least 10 seconds
+        // Make sure it's at least 10 seconds, unless specified by user
         None => match input.frame_rate() {
-          Ok(fps) => Some((fps * 10.0) as usize),
+          Ok(fps) => Some((fps * args.extra_split_sec) as usize),
           Err(_) => Some(240_usize),
         },
       },
@@ -717,15 +741,31 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       workers: args.workers,
       set_thread_affinity: args.set_thread_affinity,
       zones: args.zones.clone(),
+      scaler: {
+        let mut scaler = args.scaler.to_string().clone();
+        let mut scaler_ext = "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
+        if scaler.starts_with("lanczos") {
+          for n in 1..=9 {
+            if scaler.ends_with(&n.to_string()) {
+              scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
+              scaler = "lanczos".to_string();
+            }
+          }
+        }
+        scaler.push_str(&scaler_ext);
+        scaler
+      },
+      ignore_frame_mismatch: args.ignore_frame_mismatch,
     };
 
     if !args.overwrite {
       // UGLY: taking first file for output file
       if let Some(path) = args.output_file.as_ref() {
         if path.exists()
-          && !confirm(&format!(
-            "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
-          ))?
+          && (args.never_overwrite
+            || !confirm(&format!(
+              "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+            ))?)
         {
           println!("Not overwriting, aborting.");
           exit(0);
@@ -734,9 +774,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         let path: &Path = arg.output_file.as_ref();
 
         if path.exists()
-          && !confirm(&format!(
-            "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
-          ))?
+          && (args.never_overwrite
+            || !confirm(&format!(
+              "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+            ))?)
         {
           println!("Not overwriting, aborting.");
           exit(0);

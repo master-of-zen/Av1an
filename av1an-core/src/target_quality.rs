@@ -20,6 +20,7 @@ const VMAF_PERCENTILE: f64 = 0.01;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
   pub vmaf_res: String,
+  pub vmaf_scaler: String,
   pub vmaf_filter: Option<String>,
   pub vmaf_threads: usize,
   pub model: Option<PathBuf>,
@@ -255,6 +256,7 @@ impl TargetQuality {
       &fl_path,
       self.model.as_ref(),
       &self.vmaf_res,
+      &self.vmaf_scaler,
       self.probing_rate,
       self.vmaf_filter.as_deref(),
       self.vmaf_threads,

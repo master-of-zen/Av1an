@@ -295,6 +295,8 @@ fn get_test_args() -> Av1anContext {
     workers: 1,
     set_thread_affinity: None,
     zones: None,
+    scaler: String::new(),
+    ignore_frame_mismatch: false,
   };
   Av1anContext {
     vs_script: None,

@@ -18,6 +18,7 @@ pub fn av_scenechange_detect(
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
+  sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
@@ -54,6 +55,7 @@ pub fn av_scenechange_detect(
       })
     },
     min_scene_len,
+    sc_scaler,
     sc_pix_format,
     sc_method,
     sc_downscale_height,
@@ -75,12 +77,19 @@ pub fn scene_detect(
   total_frames: usize,
   callback: Option<&dyn Fn(usize)>,
   min_scene_len: usize,
+  sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_method: ScenecutMethod,
   sc_downscale_height: Option<usize>,
   zones: &[Scene],
 ) -> anyhow::Result<Vec<Scene>> {
-  let (mut decoder, bit_depth) = build_decoder(input, encoder, sc_pix_format, sc_downscale_height)?;
+  let (mut decoder, bit_depth) = build_decoder(
+    input,
+    encoder,
+    sc_scaler,
+    sc_pix_format,
+    sc_downscale_height,
+  )?;
 
   let mut scenes = Vec::new();
   let mut cur_zone = zones.first().filter(|frame| frame.start_frame == 0);
@@ -194,6 +203,7 @@ pub fn scene_detect(
 fn build_decoder(
   input: &Input,
   encoder: Encoder,
+  sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_downscale_height: Option<usize>,
 ) -> anyhow::Result<(y4m::Decoder<impl Read>, usize)> {
@@ -202,12 +212,15 @@ fn build_decoder(
     (Some(sdh), Some(spf)) => into_smallvec![
       "-vf",
       format!(
-        "format={},scale=-2:'min({},ih)'",
+        "format={},scale=-2:'min({},ih)':flags={}",
         spf.descriptor().unwrap().name(),
-        sdh
+        sdh,
+        sc_scaler
       )
     ],
-    (Some(sdh), None) => into_smallvec!["-vf", format!("scale=-2:'min({sdh},ih)'")],
+    (Some(sdh), None) => {
+      into_smallvec!["-vf", format!("scale=-2:'min({sdh},ih)':flags={sc_scaler}")]
+    }
     (None, Some(spf)) => into_smallvec!["-pix_fmt", spf.descriptor().unwrap().name()],
     (None, None) => smallvec![],
   };

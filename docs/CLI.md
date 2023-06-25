@@ -66,7 +66,10 @@
 		Do not check if the encoder arguments specified by -v/--video-params are valid
 
 -y
-		Overwrite output file without confirmation
+		Overwrite output file, without confirmation
+
+-n
+		Never overwrite output file, without confirmation
 
 	--max-tries <MAX_TRIES>
 		Maximum number of chunk restarts for an encode
@@ -84,6 +87,13 @@
 		This is currently only supported on Linux and Windows, and does nothing on unsupported
 		platforms. Leaving this option unspecified allows the OS to schedule all processes
 		spawned.
+
+	--scaler <SCALER>
+		Scaler used for scene detection (if --sc-downscale-height XXXX is used) and VMAF
+        calculation
+		
+		Valid scalers are based on the scalers available in ffmpeg, including lanczos[1-9] with [1-9]
+        defining the width of the lanczos scaler.
 
 -h, --help
 		Print help information
@@ -138,16 +148,26 @@
 		By default, no downscaling is performed.
 
 -x, --extra-split <EXTRA_SPLIT>
-		Maximum scene length
+		Maximum scene length, in frames
 		
 		When a scenecut is found whose distance to the previous scenecut is greater than the
 		value specified by this option, one or more extra splits (scenecuts) are added. Set this
 		option to 0 to disable adding extra splits.
 
+    --extra-split-sec <EXTRA_SPLIT_SEC>
+		Maximum scene length, in seconds
+		
+        If both frames and seconds are specified, then the number of frames will take priority.
+        
+		[default: 10]
+
 	--min-scene-len <MIN_SCENE_LEN>
 		Minimum number of frames for a scenecut
 		
 		[default: 24]
+
+    --ignore-frame-mismatch
+        Ignore any detected mismatch between scene frame count and encoder frame count
 ```
 
 ## Encoding
@@ -359,6 +379,8 @@
 	--vmaf-res <VMAF_RES>
 		Resolution used for VMAF calculation
 		
+        If set to inputres, the output video will be scaled to the resolution of the input video.
+        
 		[default: 1920x1080]
 
 	--vmaf-threads <VMAF_THREADS>

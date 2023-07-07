@@ -453,17 +453,16 @@ impl Av1anContext {
     let mut enc_cmd = if chunk.passes == 1 {
       chunk
         .encoder
-        .compose_1_1_pass(video_params, chunk.output(), chunk.frames())
+        .compose_1_1_pass(video_params, chunk.output())
     } else if current_pass == 1 {
       chunk
         .encoder
-        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.frames())
+        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
     } else {
       chunk.encoder.compose_2_2_pass(
         video_params,
         fpf_file.to_str().unwrap(),
         chunk.output(),
-        chunk.frames(),
       )
     };
 

@@ -460,7 +460,7 @@ impl Encoder {
   pub const fn help_command(self) -> [&'static str; 2] {
     match self {
       Self::aom => ["aomenc", "--help"],
-      Self::rav1e => ["rav1e", "--fullhelp"],
+      Self::rav1e => ["rav1e", "--help"],
       Self::vpx => ["vpxenc", "--help"],
       Self::svt_av1 => ["SvtAv1EncApp", "--help"],
       Self::x264 => ["x264", "--fullhelp"],

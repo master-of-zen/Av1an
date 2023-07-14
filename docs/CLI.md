@@ -238,6 +238,14 @@
 		bugs that are not present in lsmash (that can cause artifacts in the piped output).
 		Slightly faster than lsmash for y4m input. Requires the ffms2 vapoursynth plugin to
 		be installed.
+
+        dgdecnv - Very fast and accurate, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
+	    Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin 
+        to be installed.
+
+	    bestsource - Slow but accurate. Linearly decodes input files with a few tricks to make it faster. Good alternative to dgdecnv 
+        if you don't have an NVIDIA GPU with CUVID. Does not require intermediate files, requires the BestSource vapoursynth plugin 
+        to be installed.
 		
 		Methods that only require ffmpeg:
 		
@@ -253,9 +261,9 @@
 		segment - Create chunks based on keyframes in the source. Not frame exact, as it can
 		only split on keyframes in the source. Requires intermediate files (which can be large).
 		
-		Default: lsmash (if available), otherwise ffms2 (if available), otherwise hybrid.
+		Default: DGDecNV (if available), lsmash (if available), otherwise ffms2 (if available), otherwise bestsource (if available), otherwise hybrid.
 		
-		[possible values: segment, select, ffms2, lsmash, hybrid]
+		[possible values: segment, select, ffms2, lsmash, dgdecnv, bestsource, hybrid]
 
 	--chunk-order <CHUNK_ORDER>
 		The order in which av1an will encode chunks

@@ -8,8 +8,10 @@ use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
+use std::process::Command;
 
 use super::ChunkMethod;
+
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
   let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
@@ -45,11 +47,29 @@ pub fn is_ffms2_installed() -> bool {
   *FFMS2_PRESENT
 }
 
+pub fn is_dgdecnv_installed() -> bool {
+  static DGDECNV_PRESENT: Lazy<bool> =
+    Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.dgdecodenv"));
+
+  *DGDECNV_PRESENT
+}
+
+pub fn is_bestsource_installed() -> bool {
+  static BESTSOURCE_PRESENT: Lazy<bool> =
+    Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.bestsource"));
+
+  *BESTSOURCE_PRESENT
+}
+
 pub fn best_available_chunk_method() -> ChunkMethod {
-  if is_lsmash_installed() {
+  if is_dgdecnv_installed() {
+    ChunkMethod::DGDECNV
+  } else if is_lsmash_installed() {
     ChunkMethod::LSMASH
-  } else if is_ffms2_installed() {
+  } else if is_ffms2_installed(){
     ChunkMethod::FFMS2
+  } else if is_bestsource_installed(){
+    ChunkMethod::BESTSOURCE
   } else {
     ChunkMethod::Hybrid
   }
@@ -181,33 +201,74 @@ pub fn create_vs_file(
   let mut load_script = File::create(&load_script_path)?;
 
   let cache_file = PathAbs::new(temp.join("split").join(format!(
-    "cache.{}",
-    match chunk_method {
-      ChunkMethod::FFMS2 => "ffindex",
-      ChunkMethod::LSMASH => "lwi",
-      _ => return Err(anyhow!("invalid chunk method")),
-    }
+      "cache.{}",
+      match chunk_method {
+          ChunkMethod::FFMS2 => "ffindex",
+          ChunkMethod::LSMASH => "lwi",
+          ChunkMethod::DGDECNV => "dgi",
+          ChunkMethod::BESTSOURCE => "json",
+          _ => return Err(anyhow!("invalid chunk method")),
+      }
   )))?;
 
-  load_script.write_all(
-    // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
-    format!(
-      "from vapoursynth import core\n\
-      core.max_cache_size=1024\n\
-core.{}({:?}, cachefile={:?}).set_output()",
-      match chunk_method {
-        ChunkMethod::FFMS2 => "ffms2.Source",
-        ChunkMethod::LSMASH => "lsmas.LWLibavSource",
-        _ => unreachable!(),
-      },
-      source,
-      cache_file
-    )
-    .as_bytes(),
+  if chunk_method == ChunkMethod::DGDECNV {
+
+      // Run dgindexnv to generate the .dgi index file
+      let dgindexnv_output = temp.join("split").join("index.dgi");
+
+      Command::new("dgindexnv")
+          .arg("-h")
+          .arg("-i")
+          .arg(source)
+          .arg("-o")
+          .arg(&dgindexnv_output)
+          .output()?;
+      
+      let dgindex_path = dgindexnv_output
+      .canonicalize()?;
+      load_script.write_all(
+          format!(
+              "from vapoursynth import core\n\
+              core.max_cache_size=1024\n\
+            core.dgdecodenv.DGSource(source={:?}).set_output()",
+              dgindex_path
+          )
+          .as_bytes(),
+      )?;
+    }
+  else if chunk_method == ChunkMethod::BESTSOURCE {
+    load_script.write_all(
+      format!(
+          "from vapoursynth import core\n\
+          core.max_cache_size=1024\n\
+        core.bs.VideoSource({:?}, cachepath={:?}).set_output()",
+          source,
+          cache_file
+      )
+      .as_bytes(),
   )?;
+  }
+  else {
+      load_script.write_all(
+          format!(
+            "from vapoursynth import core\n\
+            core.max_cache_size=1024\n\
+      core.{}({:?}, cachefile={:?}).set_output()",
+            match chunk_method {
+              ChunkMethod::FFMS2 => "ffms2.Source",
+              ChunkMethod::LSMASH => "lsmas.LWLibavSource",
+              _ => unreachable!(),
+              },
+              source,
+              cache_file
+          )
+          .as_bytes(),
+      )?;
+  }
 
   Ok(load_script_path)
 }
+
 
 pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
   // Create a new VSScript environment.

@@ -71,8 +71,9 @@ Prerequisites:
 Optional:
 
 - [L-SMASH](https://github.com/AkarinVS/L-SMASH-Works) VapourSynth plugin for better chunking (recommended)
+- [DGDecNV](https://www.rationalqm.us/dgdecnv/dgdecnv.html) Vapoursynth plugin for very fast and accurate chunking, `dgindexnv` executable needs to be present in system path and an NVIDIA GPU with CUVID 
 - [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
-- [DGDecNV](https://www.rationalqm.us/dgdecnv/dgdecnv.html) Vapoursynth plugin, `dgindexnv` executable present in system path, and an NVIDIA GPU for very fast chunking
+- [bestsource](https://github.com/vapoursynth/bestsource) Vapoursynth plugin for slow but accurate chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge instead of FFmpeg for file concatenation
 - [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/TargetQuality.md)
 

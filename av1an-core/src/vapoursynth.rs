@@ -250,6 +250,7 @@ pub fn create_vs_file(
   }
   else {
       load_script.write_all(
+          // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
           format!(
             "from vapoursynth import core\n\
             core.max_cache_size=1024\n\

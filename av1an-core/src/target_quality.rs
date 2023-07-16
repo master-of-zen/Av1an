@@ -42,11 +42,8 @@ impl TargetQuality {
     let mut vmaf_cq = vec![];
     let frames = chunk.frames();
 
-    let mut q_list = vec![];
-
     // Make middle probe
     let middle_point = (self.min_q + self.max_q) / 2;
-    q_list.push(middle_point);
     let last_q = middle_point;
 
     let mut score =
@@ -65,8 +62,6 @@ impl TargetQuality {
     } else {
       self.max_q
     };
-
-    q_list.push(next_q);
 
     // Edge case check
     score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize)?, VMAF_PERCENTILE).unwrap();
@@ -118,7 +113,6 @@ impl TargetQuality {
         break;
       }
 
-      q_list.push(new_point as u32);
       score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point)?, VMAF_PERCENTILE).unwrap();
       vmaf_cq.push((score, new_point as u32));
 

@@ -837,6 +837,7 @@ impl Av1anContext {
     src_path: &Path,
     start_frame: usize,
     end_frame: usize,
+    frame_rate: f64,
     overrides: Option<ZoneOptions>,
   ) -> anyhow::Result<Chunk> {
     assert!(
@@ -875,8 +876,6 @@ impl Av1anContext {
 
     let output_ext = self.args.encoder.output_extension();
 
-    let frame_rate = self.args.input.frame_rate().unwrap();
-
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       index,
@@ -910,6 +909,7 @@ impl Av1anContext {
     index: usize,
     vs_script: &Path,
     scene: &Scene,
+    frame_rate: f64,
   ) -> anyhow::Result<Chunk> {
     // the frame end boundary is actually a frame that should be included in the next chunk
     let frame_end = scene.end_frame - 1;
@@ -927,8 +927,6 @@ impl Av1anContext {
     ];
 
     let output_ext = self.args.encoder.output_extension();
-
-    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
@@ -959,10 +957,15 @@ impl Av1anContext {
   }
 
   fn create_video_queue_vs(&self, scenes: &[Scene], vs_script: &Path) -> Vec<Chunk> {
+    let frame_rate = self.args.input.frame_rate().unwrap();
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
       .enumerate()
-      .map(|(index, scene)| self.create_vs_chunk(index, vs_script, scene).unwrap())
+      .map(|(index, scene)| {
+        self
+          .create_vs_chunk(index, vs_script, scene, frame_rate)
+          .unwrap()
+      })
       .collect();
 
     chunk_queue
@@ -970,6 +973,7 @@ impl Av1anContext {
 
   fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Chunk> {
     let input = self.args.input.as_video_path();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
@@ -981,6 +985,7 @@ impl Av1anContext {
             input,
             scene.start_frame,
             scene.end_frame,
+            frame_rate,
             scene.zone_overrides.clone(),
           )
           .unwrap()
@@ -992,6 +997,7 @@ impl Av1anContext {
 
   fn create_video_queue_segment(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     debug!("Splitting video");
     segment(
@@ -1021,6 +1027,7 @@ impl Av1anContext {
           .create_chunk_from_segment(
             index,
             file.as_path().to_str().unwrap(),
+            frame_rate,
             scenes[index].zone_overrides.clone(),
           )
           .unwrap()
@@ -1032,6 +1039,7 @@ impl Av1anContext {
 
   fn create_video_queue_hybrid(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
 
@@ -1070,7 +1078,14 @@ impl Av1anContext {
       .enumerate()
       .map(|(index, &(file, (start, end, scene)))| {
         self
-          .create_select_chunk(index, file, start, end, scene.zone_overrides.clone())
+          .create_select_chunk(
+            index,
+            file,
+            start,
+            end,
+            frame_rate,
+            scene.zone_overrides.clone(),
+          )
           .unwrap()
       })
       .collect();
@@ -1082,6 +1097,7 @@ impl Av1anContext {
     &self,
     index: usize,
     file: &str,
+    frame_rate: f64,
     overrides: Option<ZoneOptions>,
   ) -> anyhow::Result<Chunk> {
     let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
@@ -1110,8 +1126,6 @@ impl Av1anContext {
     let output_ext = self.args.encoder.output_extension();
 
     let num_frames = num_frames(Path::new(file))?;
-
-    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),

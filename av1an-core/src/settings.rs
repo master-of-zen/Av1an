@@ -13,7 +13,9 @@ use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
 use crate::parse::valid_params;
 use crate::target_quality::TargetQuality;
-use crate::vapoursynth::{is_ffms2_installed, is_lsmash_installed, is_dgdecnv_installed, is_bestsource_installed};
+use crate::vapoursynth::{
+  is_bestsource_installed, is_dgdecnv_installed, is_ffms2_installed, is_lsmash_installed,
+};
 use crate::vmaf::validate_libvmaf;
 use crate::{ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity};
 

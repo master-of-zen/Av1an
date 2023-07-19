@@ -239,7 +239,7 @@
 		Slightly faster than lsmash for y4m input. Requires the ffms2 vapoursynth plugin to
 		be installed.
 
-        dgdecnv - Very fast and accurate, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
+        dgdecnv - Very fast, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
 	    Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin 
         to be installed.
 

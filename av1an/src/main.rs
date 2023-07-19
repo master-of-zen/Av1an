@@ -336,14 +336,14 @@ pub struct CliOpts {
   /// cause artifacts in the piped output). Slightly faster than lsmash for y4m input. Requires the ffms2 vapoursynth plugin to be
   /// installed.
   ///
-  /// dgdecnv - Very fast and accurate, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
-	///	Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin 
-  /// to be installed. 
-  /// 
-  /// bestsource - Slow but accurate. Linearly decodes input files with a few tricks to make it faster. Good alternative to dgdecnv 
-  /// if you don't have an NVIDIA GPU with CUVID. Does not require intermediate files, requires the BestSource vapoursynth plugin 
+  /// dgdecnv - Very fast, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
+  ///	Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin
   /// to be installed.
-  /// 
+  ///
+  /// bestsource - Slow but accurate. Linearly decodes input files with a few tricks to make it faster. Good alternative to dgdecnv
+  /// if you don't have an NVIDIA GPU with CUVID. Does not require intermediate files, requires the BestSource vapoursynth plugin
+  /// to be installed.
+  ///
   /// Methods that only require ffmpeg:
   ///
   /// hybrid - Uses a combination of segment and select. Usually accurate but requires intermediate files (which can be large). Avoids

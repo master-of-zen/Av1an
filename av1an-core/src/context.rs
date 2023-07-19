@@ -671,7 +671,10 @@ impl Av1anContext {
   fn create_encoding_queue(&mut self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let mut chunks = match &self.args.input {
       Input::Video(_) => match self.args.chunk_method {
-        ChunkMethod::FFMS2 | ChunkMethod::LSMASH | ChunkMethod::DGDECNV | ChunkMethod::BESTSOURCE => {
+        ChunkMethod::FFMS2
+        | ChunkMethod::LSMASH
+        | ChunkMethod::DGDECNV
+        | ChunkMethod::BESTSOURCE => {
           let vs_script = self.vs_script.as_ref().unwrap().as_path();
           self.create_video_queue_vs(scenes, vs_script)
         }

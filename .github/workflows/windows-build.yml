@@ -9,8 +9,10 @@ jobs:
     runs-on: windows-2022
 
     env:
-      vsynth_ver: R58
-      vsynth_path: C:/Program Files/Vapoursynth
+      ffmpeg_ver: "6.0"
+      ffmpeg_path: "C:/ffmpeg"
+      vsynth_ver: "R63"
+      vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:
       - name: Python 3 setup
@@ -22,19 +24,20 @@ jobs:
       - name: NASM setup
         uses: ilammy/setup-nasm@v1
         with:
-          version: 2.15.05
+          version: 2.16.01
           from-source: false
 
       - if: steps.cache-ff.outputs.cache-hit != 'true'
         name: FFmpeg installation
         run: |
           $tempFile = New-TemporaryFile
-          Invoke-WebRequest 'https://github.com/GyanD/codexffmpeg/releases/download/5.1/ffmpeg-5.1-full_build-shared.7z' -OutFile $tempFile -TimeoutSec 10
-          7z x -y -o'C:/ffmpeg' "$tempFile"
+          $uri = 'https://github.com/GyanD/codexffmpeg/releases/download/VER/ffmpeg-VER-full_build-shared.7z'.Replace('VER', "$env:ffmpeg_ver")
+          Invoke-WebRequest "$uri" -OutFile "$tempFile" -TimeoutSec 10
+          7z x -y -o"$env:ffmpeg_path" "$tempFile"
 
       - name: FFmpeg environment variable
         run: |
-          echo "FFMPEG_DIR=$((Get-ChildItem -Directory C:/ffmpeg).FullName)" | Out-File $env:GITHUB_ENV -Append
+          echo "FFMPEG_DIR=$((Get-ChildItem -Directory "$env:ffmpeg_path").FullName)" | Out-File $env:GITHUB_ENV -Append
 
       - name: VapourSynth cache
         id: cache-vsynth
@@ -47,8 +50,8 @@ jobs:
         name: VapourSynth installation
         run: |
           $tempFile = New-TemporaryFile
-          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.7z'.Replace('VER', "${{ env.vsynth_ver }}")
-          Invoke-WebRequest $uri -OutFile "$tempFile" -TimeoutSec 10
+          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.7z'.Replace('VER', "$env:vsynth_ver")
+          Invoke-WebRequest "$uri" -OutFile "$tempFile" -TimeoutSec 10
           7z x -y -o"$env:vsynth_path" "$tempFile"
 
       - uses: actions/checkout@v3

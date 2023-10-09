@@ -181,8 +181,8 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       if strength > 64 {
         bail!("Valid strength values for photon noise are 0-64");
       }
-      if ![Encoder::aom, Encoder::rav1e].contains(&self.encoder) {
-        bail!("Photon noise synth is only supported with aomenc and rav1e");
+      if ![Encoder::aom, Encoder::rav1e, Encoder::svt_av1].contains(&self.encoder) {
+        bail!("Photon noise synth is only supported with aomenc, rav1e, and svt-av1");
       }
     }
 
@@ -344,6 +344,17 @@ pub(crate) fn insert_noise_table_params(
     Encoder::aom => {
       video_params.retain(|param| !param.starts_with("--denoise-noise-level="));
       video_params.push(format!("--film-grain-table={}", table.to_str().unwrap()));
+    }
+    Encoder::svt_av1 => {
+      let film_grain_idx = video_params
+        .iter()
+        .find_position(|param| param.as_str() == "--film-grain");
+      if let Some((idx, _)) = film_grain_idx {
+        video_params.remove(idx + 1);
+        video_params.remove(idx);
+      }
+      video_params.push("--fgs-table".to_string());
+      video_params.push(table.to_str().unwrap().to_string());
     }
     Encoder::rav1e => {
       let photon_noise_idx = video_params

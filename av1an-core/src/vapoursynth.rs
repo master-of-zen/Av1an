@@ -61,12 +61,12 @@ pub fn is_bestsource_installed() -> bool {
 }
 
 pub fn best_available_chunk_method() -> ChunkMethod {
-  if is_dgdecnv_installed() {
-    ChunkMethod::DGDECNV
-  } else if is_lsmash_installed() {
+  if is_lsmash_installed() {
     ChunkMethod::LSMASH
   } else if is_ffms2_installed() {
     ChunkMethod::FFMS2
+  } else if is_dgdecnv_installed() {
+    ChunkMethod::DGDECNV
   } else if is_bestsource_installed() {
     ChunkMethod::BESTSOURCE
   } else {

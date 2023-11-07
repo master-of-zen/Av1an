@@ -340,8 +340,7 @@ pub struct CliOpts {
   ///	Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin
   /// to be installed.
   ///
-  /// bestsource - Slow but accurate. Linearly decodes input files with a few tricks to make it faster. Good alternative to dgdecnv
-  /// if you don't have an NVIDIA GPU with CUVID. Does not require intermediate files, requires the BestSource vapoursynth plugin
+  /// bestsource - Very slow but accurate. Linearly decodes input files, very slow. Does not require intermediate files, requires the BestSource vapoursynth plugin
   /// to be installed.
   ///
   /// Methods that only require ffmpeg:
@@ -356,7 +355,7 @@ pub struct CliOpts {
   /// segment - Create chunks based on keyframes in the source. Not frame exact, as it can only split on keyframes in the source.
   /// Requires intermediate files (which can be large).
   ///
-  /// Default: DGDecNV (if available), lsmash (if available), otherwise ffms2 (if available), otherwise bestsource (if available), otherwise hybrid.
+  /// Default: lsmash (if available), otherwise ffms2 (if available), otherwise DGDecNV (if available), otherwise bestsource (if available), otherwise hybrid.
   #[clap(short = 'm', long, help_heading = "Encoding")]
   pub chunk_method: Option<ChunkMethod>,
 

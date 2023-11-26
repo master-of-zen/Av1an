@@ -337,7 +337,7 @@ pub struct CliOpts {
   /// installed.
   ///
   /// dgdecnv - Very fast, but only decodes AVC, HEVC, MPEG-2, and VC1. Does not require intermediate files.
-  ///	Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin
+  /// Requires dgindexnv to be present in system path, NVIDIA GPU that support CUDA video decoding, and dgdecnv vapoursynth plugin
   /// to be installed.
   ///
   /// bestsource - Very slow but accurate. Linearly decodes input files, very slow. Does not require intermediate files, requires the BestSource vapoursynth plugin

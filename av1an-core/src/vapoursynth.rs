@@ -74,7 +74,7 @@ pub fn best_available_chunk_method() -> ChunkMethod {
   }
 }
 
-fn get_clip_info(env: &mut Environment) -> VideoInfo {
+fn get_clip_info(env: &Environment) -> VideoInfo {
   // Get the output node.
   const OUTPUT_INDEX: i32 = 0;
 
@@ -88,7 +88,7 @@ fn get_clip_info(env: &mut Environment) -> VideoInfo {
 
 /// Get the number of frames from an environment that has already been
 /// evaluated on a script.
-fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
+fn get_num_frames(env: &Environment) -> anyhow::Result<usize> {
   let info = get_clip_info(env);
 
   let num_frames = {
@@ -123,7 +123,7 @@ fn get_num_frames(env: &mut Environment) -> anyhow::Result<usize> {
   Ok(num_frames)
 }
 
-fn get_frame_rate(env: &mut Environment) -> anyhow::Result<f64> {
+fn get_frame_rate(env: &Environment) -> anyhow::Result<f64> {
   let info = get_clip_info(env);
 
   match info.framerate {
@@ -134,7 +134,7 @@ fn get_frame_rate(env: &mut Environment) -> anyhow::Result<f64> {
 
 /// Get the bit depth from an environment that has already been
 /// evaluated on a script.
-fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
+fn get_bit_depth(env: &Environment) -> anyhow::Result<usize> {
   let info = get_clip_info(env);
 
   let bits_per_sample = {
@@ -151,7 +151,7 @@ fn get_bit_depth(env: &mut Environment) -> anyhow::Result<usize> {
 
 /// Get the resolution from an environment that has already been
 /// evaluated on a script.
-fn get_resolution(env: &mut Environment) -> anyhow::Result<(u32, u32)> {
+fn get_resolution(env: &Environment) -> anyhow::Result<(u32, u32)> {
   let info = get_clip_info(env);
 
   let resolution = {
@@ -168,7 +168,7 @@ fn get_resolution(env: &mut Environment) -> anyhow::Result<(u32, u32)> {
 
 /// Get the transfer characteristics from an environment that has already been
 /// evaluated on a script.
-fn get_transfer(env: &mut Environment) -> anyhow::Result<u8> {
+fn get_transfer(env: &Environment) -> anyhow::Result<u8> {
   // Get the output node.
   const OUTPUT_INDEX: i32 = 0;
 
@@ -227,8 +227,7 @@ pub fn create_vs_file(
       format!(
         "from vapoursynth import core\n\
               core.max_cache_size=1024\n\
-            core.dgdecodenv.DGSource(source={:?}).set_output()",
-        dgindex_path
+            core.dgdecodenv.DGSource(source={dgindex_path:?}).set_output()"
       )
       .as_bytes(),
     )?;
@@ -237,8 +236,7 @@ pub fn create_vs_file(
       format!(
         "from vapoursynth import core\n\
           core.max_cache_size=1024\n\
-        core.bs.VideoSource({:?}, cachepath={:?}).set_output()",
-        source, cache_file
+        core.bs.VideoSource({source:?}, cachepath={cache_file:?}).set_output()"
       )
       .as_bytes(),
     )?;
@@ -273,7 +271,7 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  get_num_frames(&mut environment)
+  get_num_frames(&environment)
 }
 
 pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
@@ -285,7 +283,7 @@ pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  get_bit_depth(&mut environment)
+  get_bit_depth(&environment)
 }
 
 pub fn frame_rate(source: &Path) -> anyhow::Result<f64> {
@@ -297,7 +295,7 @@ pub fn frame_rate(source: &Path) -> anyhow::Result<f64> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  get_frame_rate(&mut environment)
+  get_frame_rate(&environment)
 }
 
 pub fn resolution(source: &Path) -> anyhow::Result<(u32, u32)> {
@@ -309,7 +307,7 @@ pub fn resolution(source: &Path) -> anyhow::Result<(u32, u32)> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  get_resolution(&mut environment)
+  get_resolution(&environment)
 }
 
 /// Transfer characteristics as specified in ITU-T H.265 Table E.4.
@@ -322,7 +320,7 @@ pub fn transfer_characteristics(source: &Path) -> anyhow::Result<u8> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  get_transfer(&mut environment)
+  get_transfer(&environment)
 }
 
 pub fn pixel_format(source: &Path) -> anyhow::Result<String> {
@@ -334,7 +332,7 @@ pub fn pixel_format(source: &Path) -> anyhow::Result<String> {
     .eval_file(source, EvalFlags::SetWorkingDir)
     .unwrap();
 
-  let info = get_clip_info(&mut environment);
+  let info = get_clip_info(&environment);
   match info.format {
     Property::Variable => bail!("Variable pixel format not supported"),
     Property::Constant(x) => Ok(x.name().to_string()),

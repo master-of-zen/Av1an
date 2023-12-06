@@ -174,7 +174,7 @@ pub fn finish_progress_bar() {
   }
 
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    for pb in pbs.iter() {
+    for pb in pbs {
       pb.finish();
     }
   }

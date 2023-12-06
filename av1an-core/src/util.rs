@@ -100,7 +100,7 @@ macro_rules! into_smallvec {
 macro_rules! create_dir {
   ($loc:expr) => {
     match std::fs::create_dir(&$loc) {
-      Ok(_) => Ok(()),
+      Ok(()) => Ok(()),
       Err(e) => match e.kind() {
         std::io::ErrorKind::AlreadyExists => Ok(()),
         _ => {

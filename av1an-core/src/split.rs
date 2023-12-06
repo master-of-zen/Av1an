@@ -63,7 +63,7 @@ pub fn extra_splits(scenes: &[Scene], total_frames: usize, split_size: usize) ->
     );
   }
 
-  for scene in scenes.iter() {
+  for scene in scenes {
     let distance = scene.end_frame - scene.start_frame;
     let split_size = scene
       .zone_overrides

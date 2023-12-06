@@ -317,7 +317,7 @@ impl Av1anContext {
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
       // more than MAX_TRIES. So, we have to explicitly exit the program if that happens.
-      while rx.recv().is_ok() {
+      if rx.recv().is_ok() {
         exit(1);
       }
 

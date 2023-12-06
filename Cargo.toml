@@ -1,5 +1,6 @@
 [workspace]
 members = ["av1an-core", "av1an"]
+resolver = "2"
 
 [profile.dev.package.av-scenechange]
 opt-level = 3

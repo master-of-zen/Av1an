@@ -50,6 +50,11 @@ cfg-if = "1.0.0"
 nom = "7.1.1"
 # TODO: move all of this CLI stuff to av1an-cli
 ansi_term = "0.12.1"
+bincode = "1"
+threadpool = "1.0"
+lz4_flex = "0.8.2"
+chacha20poly1305 = "0.9.0"
+
 
 # TODO: https://github.com/elast0ny/affinity/issues/2
 # update this when macos support is implemented

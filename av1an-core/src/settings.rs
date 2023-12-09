@@ -37,6 +37,9 @@ pub struct EncodeArgs {
   pub temp: String,
   pub output_file: String,
 
+  pub server: bool,
+  pub node: bool,
+
   pub chunk_method: ChunkMethod,
   pub chunk_order: ChunkOrdering,
   pub scaler: String,

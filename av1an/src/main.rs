@@ -125,6 +125,14 @@ pub struct CliOpts {
   #[clap(short)]
   pub output_file: Option<PathBuf>,
 
+  /// Run av1an in server mode
+  #[clap(long)]
+  pub server: bool,
+
+  /// Run av1an in node
+  #[clap(long)]
+  pub node: bool,
+
   /// Temporary directory to use
   ///
   /// If not specified, the temporary directory name is a hash of the input file name.
@@ -619,6 +627,14 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 
+  let is_server = &args.server;
+  let is_node = &args.node;
+
+  if *is_node && *is_server {
+    println!("Can't run node and server at the same time");
+    exit(0)
+  }
+
   let mut inputs = Vec::new();
   for path in input_paths {
     inputs.extend(resolve_file_paths(path)?);
@@ -652,6 +668,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       } else {
         Path::new(&temp).join("log.log")
       },
+      server: *is_server,
+      node: *is_node,
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
         shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
@@ -900,6 +918,19 @@ pub fn run() -> anyhow::Result<()> {
     // Change log file
     let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
     let _ = &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file))?;
+
+    if arg.server {
+      av1an_core::server::run_server();
+      // Run server
+      exit(0);
+    }
+
+    if arg.node {
+      // Run node
+      av1an_core::node::run_node();
+      println!("Boop Beep");
+      exit(0);
+    }
 
     Av1anContext::new(arg)?.encode_file()?;
   }

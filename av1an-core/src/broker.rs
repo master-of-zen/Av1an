@@ -26,6 +26,62 @@ pub enum StringOrBytes {
   Bytes(Vec<u8>),
 }
 
+#[derive(Debug, Clone)]
+pub enum ChunkStatus {
+  /// 1. Not ready to any processing.
+  Empty,
+
+  /// 2. Prepared to processing.
+  Available,
+
+  /// 3. Processing.
+  Processing,
+
+  /// 4. Moving out to the client.
+  MovingOut,
+
+  /// 5 Moving in from the client.
+  MovingIn,
+
+  /// 6. Finished chunk
+  Finished,
+}
+
+#[derive(Debug, Clone)]
+pub struct ChunkDeque {
+  chunks: Vec<(Chunk, ChunkStatus)>,
+}
+
+impl ChunkDeque {
+  pub fn new() -> Self {
+    ChunkDeque { chunks: Vec::new() }
+  }
+
+  /// Returns stats about chunks in quuee
+  pub fn stats(&self) -> (usize, usize, usize, usize, usize, usize) {
+    let mut empty = 0;
+    let mut available = 0;
+    let mut processing = 0;
+    let mut moving_out = 0;
+    let mut moving_in = 0;
+    let mut finished = 0;
+
+    for chunk in self.chunks.iter() {
+      match chunk.1 {
+        ChunkStatus::Empty => empty += 1,
+        ChunkStatus::Processing => available += 1,
+        ChunkStatus::Available => processing += 1,
+        ChunkStatus::MovingOut => moving_out += 1,
+        ChunkStatus::MovingIn => moving_in += 1,
+        ChunkStatus::Finished => finished += 1,
+      }
+    }
+    (
+      empty, available, processing, moving_out, moving_in, finished,
+    )
+  }
+}
+
 impl Debug for StringOrBytes {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {

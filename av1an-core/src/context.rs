@@ -22,7 +22,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 
 use crate::broker::{Broker, EncoderCrash};
-use crate::chunk::Chunk;
+use crate::chunk::{Chunk, ChunkStatus};
 use crate::concat::{self, ConcatMethod};
 use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
 use crate::progress_bar::{
@@ -35,10 +35,9 @@ use crate::scenes::{Scene, ZoneOptions};
 use crate::settings::{EncodeArgs, InputPixelFormat};
 use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::create_vs_file;
-use crate::vmaf;
 use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
-  ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
+  vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
 
 pub struct Av1anContext {
@@ -880,6 +879,7 @@ impl Av1anContext {
     let output_ext = self.args.encoder.output_extension();
 
     let mut chunk = Chunk {
+      status: ChunkStatus::Available,
       temp: self.args.temp.clone(),
       index,
       input: Input::Video(src_path.to_path_buf()),
@@ -932,6 +932,7 @@ impl Av1anContext {
     let output_ext = self.args.encoder.output_extension();
 
     let mut chunk = Chunk {
+      status: ChunkStatus::Available,
       temp: self.args.temp.clone(),
       index,
       input: Input::VapourSynth(vs_script.to_path_buf()),
@@ -1131,6 +1132,7 @@ impl Av1anContext {
     let num_frames = num_frames(Path::new(file))?;
 
     let mut chunk = Chunk {
+      status: ChunkStatus::Available,
       temp: self.args.temp.clone(),
       input: Input::Video(PathBuf::from(file)),
       source_cmd: ffmpeg_gen_cmd,

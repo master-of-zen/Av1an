@@ -10,6 +10,7 @@ use crate::Input;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
+  pub status: ChunkStatus,
   pub temp: String,
   pub index: usize,
   pub input: Input,
@@ -27,6 +28,33 @@ pub struct Chunk {
   /// Optional target quality CQ level
   #[serde(rename = "per_shot_target_quality_cq")]
   pub tq_cq: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChunkStatus {
+  /// 1. Not ready to any processing.
+  Empty,
+
+  /// 2. Prepared to processing.
+  Available,
+
+  /// 3. Processing.
+  Processing,
+
+  /// 4. Moving out to the client.
+  MovingOut,
+
+  /// 5 Moving in from the client.
+  MovingIn,
+
+  /// 6. Finished chunk
+  Finished,
+}
+
+impl Default for ChunkStatus {
+  fn default() -> Self {
+    ChunkStatus::Empty
+  }
 }
 
 impl Chunk {
@@ -97,6 +125,7 @@ mod tests {
   #[test]
   fn test_chunk_name_1() {
     let ch = Chunk {
+      status: ChunkStatus::Available,
       temp: "none".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),
@@ -116,6 +145,8 @@ mod tests {
   #[test]
   fn test_chunk_name_10000() {
     let ch = Chunk {
+      status: ChunkStatus::Available,
+
       temp: "none".to_owned(),
       index: 10000,
       input: Input::Video("test.mkv".into()),
@@ -136,6 +167,7 @@ mod tests {
   #[test]
   fn test_chunk_output() {
     let ch = Chunk {
+      status: ChunkStatus::Available,
       temp: "d".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),

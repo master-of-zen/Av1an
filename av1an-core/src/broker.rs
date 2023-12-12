@@ -10,7 +10,9 @@ use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
 
+use crate::chunk::ChunkStatus;
 use crate::context::Av1anContext;
+use crate::node_info::NodeID;
 use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
@@ -27,29 +29,8 @@ pub enum StringOrBytes {
 }
 
 #[derive(Debug, Clone)]
-pub enum ChunkStatus {
-  /// 1. Not ready to any processing.
-  Empty,
-
-  /// 2. Prepared to processing.
-  Available,
-
-  /// 3. Processing.
-  Processing,
-
-  /// 4. Moving out to the client.
-  MovingOut,
-
-  /// 5 Moving in from the client.
-  MovingIn,
-
-  /// 6. Finished chunk
-  Finished,
-}
-
-#[derive(Debug, Clone)]
 pub struct ChunkDeque {
-  chunks: Vec<(Chunk, ChunkStatus)>,
+  chunks: Vec<Chunk>,
 }
 
 impl ChunkDeque {
@@ -67,10 +48,10 @@ impl ChunkDeque {
     let mut finished = 0;
 
     for chunk in self.chunks.iter() {
-      match chunk.1 {
+      match chunk.status {
         ChunkStatus::Empty => empty += 1,
-        ChunkStatus::Processing => available += 1,
-        ChunkStatus::Available => processing += 1,
+        ChunkStatus::Available => available += 1,
+        ChunkStatus::Processing => processing += 1,
         ChunkStatus::MovingOut => moving_out += 1,
         ChunkStatus::MovingIn => moving_in += 1,
         ChunkStatus::Finished => finished += 1,
@@ -79,6 +60,37 @@ impl ChunkDeque {
     (
       empty, available, processing, moving_out, moving_in, finished,
     )
+  }
+
+  /// If there is a available chunk in the list return the index and a mutable reference to it.
+  /// Else return [`None`] if all chunks are in processing or finished state.
+  pub fn get_next_available_chunk(&mut self) -> Option<(usize, &mut Chunk)> {
+    self
+      .chunks
+      .iter()
+      .position(|chunk| match chunk.status {
+        ChunkStatus::Available => true,
+        _ => false,
+      })
+      .map(move |index| (index, &mut self.chunks[index]))
+  }
+
+  /// Returns a mutable reference to the chunk at the given index.
+  pub fn get(&mut self, index: usize) -> &mut Chunk {
+    &mut self.chunks[index]
+  }
+
+  /// Some nodes may have crashed or lost the network connection.
+  /// Sets all the chunks that these nodes have been processing to the available state.
+  pub fn heartbeat_timeout(&mut self, nodes: &[NodeID]) {
+    for chunk in self.chunks.iter_mut() {
+      for node_id in nodes.iter() {
+        match chunk.status {
+          ChunkStatus::Processing => chunk.status = ChunkStatus::Available,
+          _ => {}
+        }
+      }
+    }
   }
 }
 

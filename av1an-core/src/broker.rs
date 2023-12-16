@@ -96,12 +96,7 @@ impl Display for EncoderCrash {
 
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
-  pub fn encoding_loop(
-    self,
-    tx: Sender<()>,
-    mut set_thread_affinity: Option<usize>,
-    ignore_frame_mismatch: bool,
-  ) {
+  pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
     assert!(!self.chunk_queue.is_empty());
 
     if !self.chunk_queue.is_empty() {
@@ -154,7 +149,7 @@ impl<'a> Broker<'a> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, ignore_frame_mismatch) {
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
                   error!("[chunk {}] {}", chunk.index, e);
 
                   tx.send(()).unwrap();
@@ -175,12 +170,7 @@ impl<'a> Broker<'a> {
     }
   }
 
-  fn encode_chunk(
-    &self,
-    chunk: &mut Chunk,
-    worker_id: usize,
-    ignore_frame_mismatch: bool,
-  ) -> Result<(), Box<EncoderCrash>> {
+  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
     if let Some(ref tq) = self.project.args.target_quality {
@@ -200,13 +190,9 @@ impl<'a> Broker<'a> {
     let passes = chunk.passes;
     for current_pass in 1..=passes {
       for r#try in 1..=self.project.args.max_tries {
-        let res = self.project.create_pipes(
-          chunk,
-          current_pass,
-          worker_id,
-          padding,
-          ignore_frame_mismatch,
-        );
+        let res = self
+          .project
+          .create_pipes(chunk, current_pass, worker_id, padding);
         if let Err((e, frames)) = res {
           dec_bar(frames);
 

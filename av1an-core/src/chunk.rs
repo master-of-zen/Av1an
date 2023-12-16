@@ -27,6 +27,7 @@ pub struct Chunk {
   /// Optional target quality CQ level
   #[serde(rename = "per_shot_target_quality_cq")]
   pub tq_cq: Option<u32>,
+  pub ignore_frame_mismatch: bool,
 }
 
 impl Chunk {
@@ -110,6 +111,7 @@ mod tests {
       video_params: vec![],
       encoder: Encoder::x264,
       noise_size: (None, None),
+      ignore_frame_mismatch: false,
     };
     assert_eq!("00001", ch.name());
   }
@@ -129,6 +131,7 @@ mod tests {
       video_params: vec![],
       encoder: Encoder::x264,
       noise_size: (None, None),
+      ignore_frame_mismatch: false,
     };
     assert_eq!("10000", ch.name());
   }
@@ -149,6 +152,7 @@ mod tests {
       video_params: vec![],
       encoder: Encoder::x264,
       noise_size: (None, None),
+      ignore_frame_mismatch: false,
     };
     assert_eq!("d/encode/00001.ivf", ch.output());
   }

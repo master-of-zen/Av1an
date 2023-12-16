@@ -74,7 +74,7 @@ impl TargetQuality {
         &mut vmaf_cq,
         frames as u32,
         self.probing_rate as u32,
-        &chunk.name(),
+        chunk.index,
         next_q,
         score,
         if score < self.target {
@@ -131,7 +131,7 @@ impl TargetQuality {
       &mut vmaf_cq,
       frames as u32,
       self.probing_rate as u32,
-      &chunk.name(),
+      chunk.index,
       q as u32,
       q_vmaf,
       Skip::None,
@@ -342,21 +342,20 @@ pub fn log_probes(
   vmaf_cq_scores: &mut [(f64, u32)],
   frames: u32,
   probing_rate: u32,
-  chunk_idx: &str,
+  chunk_id: usize,
   target_q: u32,
   target_vmaf: f64,
   skip: Skip,
 ) {
   vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
 
-  // TODO: take chunk id as integer instead and format with {:05}
   debug!(
-    "chunk {}: P-Rate={}, {} frames",
-    chunk_idx, probing_rate, frames
+    "chunk {:05}: P-Rate={}, {} frames",
+    chunk_id, probing_rate, frames
   );
   debug!(
     "chunk {}: TQ-Probes: {:.2?}{}",
-    chunk_idx,
+    chunk_id,
     vmaf_cq_scores,
     match skip {
       Skip::High => " Early Skip High Q",
@@ -366,7 +365,7 @@ pub fn log_probes(
   );
   debug!(
     "chunk {}: Target Q={:.0}, VMAF={:.2}",
-    chunk_idx, target_q, target_vmaf
+    chunk_id, target_q, target_vmaf
   );
 }
 

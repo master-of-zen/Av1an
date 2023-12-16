@@ -15,9 +15,11 @@ use crate::context::Av1anContext;
 use crate::node_info::NodeID;
 use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
+use crate::worker::Worker;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
 pub struct Broker<'a> {
+  pub worker_pool: Vec<Worker>,
   pub chunk_queue: Vec<Chunk>,
   pub context: &'a Av1anContext,
 }

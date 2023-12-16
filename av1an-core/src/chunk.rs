@@ -28,6 +28,7 @@ pub struct Chunk {
   /// Optional target quality CQ level
   #[serde(rename = "per_shot_target_quality_cq")]
   pub tq_cq: Option<u32>,
+  pub ignore_frame_mismatch: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,7 +147,6 @@ mod tests {
   fn test_chunk_name_10000() {
     let ch = Chunk {
       status: ChunkStatus::Available,
-
       temp: "none".to_owned(),
       index: 10000,
       input: Input::Video("test.mkv".into()),
@@ -160,6 +160,7 @@ mod tests {
       video_params: vec![],
       encoder: Encoder::x264,
       noise_size: (None, None),
+      ignore_frame_mismatch: false,
     };
     assert_eq!("10000", ch.name());
   }
@@ -181,6 +182,7 @@ mod tests {
       video_params: vec![],
       encoder: Encoder::x264,
       noise_size: (None, None),
+      ignore_frame_mismatch: todo!(),
     };
     assert_eq!("d/encode/00001.ivf", ch.output());
   }

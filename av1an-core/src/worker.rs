@@ -13,17 +13,22 @@ use crate::{get_done, Chunk, DoneChunk, Instant};
 /// Worker spawns a thread that process a chunk,
 /// holds processing status,
 /// signals back it's status.
-struct Worker {
+pub struct Worker {
   sender: mpsc::Sender<String>,
   chunk: Chunk,
-  worker_id: usize
+  worker_id: usize,
   handle: Option<thread::JoinHandle<()>>,
   ignore_frame_mismatch: bool,
   context: Av1anContext,
 }
 
 impl Worker {
-  fn new(chunk: Chunk, context: Av1anContext, ignore_frame_mismatch: bool, worker_id:usize) -> Worker {
+  fn new(
+    chunk: Chunk,
+    context: Av1anContext,
+    ignore_frame_mismatch: bool,
+    worker_id: usize,
+  ) -> Worker {
     let (sender, _) = mpsc::channel();
 
     Worker {
@@ -32,13 +37,11 @@ impl Worker {
       handle: None,
       ignore_frame_mismatch,
       context,
-      worker_id
+      worker_id,
     }
   }
 
-  fn encode_chunk(
-    &self,
-  ) -> Result<(), Box<EncoderCrash>> {
+  fn encode_chunk(&self) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
     if let Some(ref tq) = self.context.args.target_quality {
@@ -129,7 +132,7 @@ impl Worker {
       println!("Processing");
 
       // encode chunk
-    self.encode_chunk();
+      self.encode_chunk();
 
       // Send a response back to the main thread
       sender.send(format!("Finished")).unwrap();

@@ -412,10 +412,7 @@ impl Av1anContext {
     chunk: &Chunk,
     current_pass: u8,
     worker_id: usize,
-    padding: usize,
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
-    update_mp_chunk(worker_id, chunk.index, padding);
-
     let fpf_file = Path::new(&chunk.temp)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));

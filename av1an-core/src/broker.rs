@@ -11,7 +11,7 @@ use smallvec::SmallVec;
 use thiserror::Error;
 
 use crate::context::Av1anContext;
-use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
+use crate::progress_bar::{dec_bar, update_mp_chunk, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
@@ -190,9 +190,9 @@ impl<'a> Broker<'a> {
     let passes = chunk.passes;
     for current_pass in 1..=passes {
       for r#try in 1..=self.project.args.max_tries {
-        let res = self
-          .project
-          .create_pipes(chunk, current_pass, worker_id, padding);
+        update_mp_chunk(worker_id, chunk.index, padding);
+
+        let res = self.project.create_pipes(chunk, current_pass, worker_id);
         if let Err((e, frames)) = res {
           dec_bar(frames);
 

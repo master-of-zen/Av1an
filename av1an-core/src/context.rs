@@ -35,10 +35,9 @@ use crate::scenes::{Scene, ZoneOptions};
 use crate::settings::{EncodeArgs, InputPixelFormat};
 use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::create_vs_file;
-use crate::vmaf;
 use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
-  ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
+  vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
 
 pub struct Av1anContext {
@@ -308,11 +307,7 @@ impl Av1anContext {
 
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(
-          tx,
-          self.args.set_thread_affinity,
-          self.args.ignore_frame_mismatch,
-        );
+        broker.encoding_loop(tx, self.args.set_thread_affinity);
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)
@@ -418,7 +413,6 @@ impl Av1anContext {
     current_pass: u8,
     worker_id: usize,
     padding: usize,
-    ignore_frame_mismatch: bool,
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
@@ -637,7 +631,7 @@ impl Av1anContext {
       let encoded_frames = num_frames(chunk.output().as_ref());
 
       let err_str = match encoded_frames {
-        Ok(encoded_frames) if !ignore_frame_mismatch && encoded_frames != chunk.frames() => {
+        Ok(encoded_frames) if !chunk.ignore_frame_mismatch && encoded_frames != chunk.frames() => {
           Some(format!(
             "FRAME MISMATCH: chunk {}: {encoded_frames}/{} (actual/expected frames)",
             chunk.index,
@@ -896,6 +890,7 @@ impl Av1anContext {
       encoder: self.args.encoder,
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
+      ignore_frame_mismatch: self.args.ignore_frame_mismatch,
     };
     chunk.apply_photon_noise_args(
       overrides.map_or(self.args.photon_noise, |ovr| ovr.photon_noise),
@@ -948,6 +943,7 @@ impl Av1anContext {
       encoder: self.args.encoder,
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
+      ignore_frame_mismatch: self.args.ignore_frame_mismatch,
     };
     chunk.apply_photon_noise_args(
       scene
@@ -1147,6 +1143,7 @@ impl Av1anContext {
       encoder: self.args.encoder,
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
+      ignore_frame_mismatch: self.args.ignore_frame_mismatch,
     };
     chunk.apply_photon_noise_args(
       overrides.map_or(self.args.photon_noise, |ovr| ovr.photon_noise),

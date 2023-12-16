@@ -19,7 +19,7 @@ use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
-  pub project: &'a Av1anContext,
+  pub context: &'a Av1anContext,
 }
 
 #[derive(Clone)]
@@ -184,7 +184,7 @@ impl<'a> Broker<'a> {
         if #[cfg(any(target_os = "linux", target_os = "windows"))] {
           if let Some(threads) = set_thread_affinity {
             let available_threads = available_parallelism().expect("Unrecoverable: Failed to get thread count").get();
-            let requested_threads = threads.saturating_mul(self.project.args.workers);
+            let requested_threads = threads.saturating_mul(self.context.args.workers);
             if requested_threads > available_threads {
               warn!(
                 "ignoring set_thread_affinity: requested more threads than available ({}/{})",
@@ -201,7 +201,7 @@ impl<'a> Broker<'a> {
       }
 
       crossbeam_utils::thread::scope(|s| {
-        let consumers: Vec<_> = (0..self.project.args.workers)
+        let consumers: Vec<_> = (0..self.context.args.workers)
           .map(|idx| (receiver.clone(), &self, idx))
           .map(|(rx, queue, worker_id)| {
             let tx = tx.clone();
@@ -251,7 +251,7 @@ impl<'a> Broker<'a> {
   ) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 
-    if let Some(ref tq) = self.project.args.target_quality {
+    if let Some(ref tq) = self.context.args.target_quality {
       tq.per_shot_target_quality_routine(chunk).unwrap();
     }
 
@@ -267,8 +267,8 @@ impl<'a> Broker<'a> {
 
     let passes = chunk.passes;
     for current_pass in 1..=passes {
-      for r#try in 1..=self.project.args.max_tries {
-        let res = self.project.create_pipes(
+      for r#try in 1..=self.context.args.max_tries {
+        let res = self.context.create_pipes(
           chunk,
           current_pass,
           worker_id,
@@ -278,10 +278,10 @@ impl<'a> Broker<'a> {
         if let Err((e, frames)) = res {
           dec_bar(frames);
 
-          if r#try == self.project.args.max_tries {
+          if r#try == self.context.args.max_tries {
             error!(
               "[chunk {}] encoder failed {} times, shutting down worker",
-              chunk.index, self.project.args.max_tries
+              chunk.index, self.context.args.max_tries
             );
             return Err(e);
           }
@@ -297,7 +297,7 @@ impl<'a> Broker<'a> {
     let enc_time = st_time.elapsed();
     let fps = chunk.frames() as f64 / enc_time.as_secs_f64();
 
-    let progress_file = Path::new(&self.project.args.temp).join("done.json");
+    let progress_file = Path::new(&self.context.args.temp).join("done.json");
     get_done().done.insert(
       chunk.name(),
       DoneChunk {
@@ -316,8 +316,8 @@ impl<'a> Broker<'a> {
 
     update_progress_bar_estimates(
       chunk.frame_rate,
-      self.project.frames,
-      self.project.args.verbosity,
+      self.context.frames,
+      self.context.args.verbosity,
     );
 
     debug!(

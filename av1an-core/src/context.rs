@@ -302,7 +302,7 @@ impl Av1anContext {
 
       let broker = Broker {
         chunk_queue,
-        project: self,
+        context: self,
       };
 
       let (tx, rx) = mpsc::channel();

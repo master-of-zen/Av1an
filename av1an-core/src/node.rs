@@ -11,6 +11,7 @@ use log::{debug, error, info};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+use crate::broker::Broker;
 use crate::communicator::Communicator;
 use crate::config::Configuration;
 use crate::error::Error;
@@ -512,7 +513,11 @@ impl RetryCounter {
   }
 }
 
-pub fn run_node() {}
+pub fn run_node() {
+  let configuration = Configuration {
+    ..Default::default()
+  };
+}
 
 #[cfg(test)]
 mod tests {

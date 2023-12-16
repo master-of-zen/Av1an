@@ -67,6 +67,7 @@ pub mod target_quality;
 pub mod util;
 pub mod vapoursynth;
 pub mod vmaf;
+pub mod worker;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {

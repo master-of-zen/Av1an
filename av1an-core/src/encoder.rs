@@ -615,8 +615,7 @@ impl Encoder {
         "--enable-tpl-model=0",
         "--sb-size=64",
         "--min-partition-size=32",
-        "--max-partition-size=32",
-        "--kf-min-dist=12",
+        "--disable-kf",
       ],
       Self::rav1e => inplace_vec![
         "rav1e",

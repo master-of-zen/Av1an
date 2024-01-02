@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail};
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
-use std::process::Command;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
@@ -46,13 +45,6 @@ pub fn is_ffms2_installed() -> bool {
   *FFMS2_PRESENT
 }
 
-pub fn is_dgdecnv_installed() -> bool {
-  static DGDECNV_PRESENT: Lazy<bool> =
-    Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.dgdecodenv"));
-
-  *DGDECNV_PRESENT
-}
-
 pub fn is_bestsource_installed() -> bool {
   static BESTSOURCE_PRESENT: Lazy<bool> =
     Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.bestsource"));
@@ -65,8 +57,6 @@ pub fn best_available_chunk_method() -> ChunkMethod {
     ChunkMethod::LSMASH
   } else if is_ffms2_installed() {
     ChunkMethod::FFMS2
-  } else if is_dgdecnv_installed() {
-    ChunkMethod::DGDECNV
   } else if is_bestsource_installed() {
     ChunkMethod::BESTSOURCE
   } else {
@@ -204,34 +194,12 @@ pub fn create_vs_file(
     match chunk_method {
       ChunkMethod::FFMS2 => "ffindex",
       ChunkMethod::LSMASH => "lwi",
-      ChunkMethod::DGDECNV => "dgi",
       ChunkMethod::BESTSOURCE => "json",
       _ => return Err(anyhow!("invalid chunk method")),
     }
   )))?;
 
-  if chunk_method == ChunkMethod::DGDECNV {
-    // Run dgindexnv to generate the .dgi index file
-    let dgindexnv_output = temp.join("split").join("index.dgi");
-
-    Command::new("dgindexnv")
-      .arg("-h")
-      .arg("-i")
-      .arg(source)
-      .arg("-o")
-      .arg(&dgindexnv_output)
-      .output()?;
-
-    let dgindex_path = dgindexnv_output.canonicalize()?;
-    load_script.write_all(
-      format!(
-        "from vapoursynth import core\n\
-              core.max_cache_size=1024\n\
-            core.dgdecodenv.DGSource(source={dgindex_path:?}).set_output()"
-      )
-      .as_bytes(),
-    )?;
-  } else if chunk_method == ChunkMethod::BESTSOURCE {
+  if chunk_method == ChunkMethod::BESTSOURCE {
     load_script.write_all(
       format!(
         "from vapoursynth import core\n\

@@ -305,8 +305,6 @@ pub enum ChunkMethod {
   FFMS2,
   #[strum(serialize = "lsmash")]
   LSMASH,
-  #[strum(serialize = "dgdecnv")]
-  DGDECNV,
   #[strum(serialize = "bestsource")]
   BESTSOURCE,
 }

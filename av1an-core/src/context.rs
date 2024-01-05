@@ -11,7 +11,6 @@ use std::sync::atomic::{self, AtomicBool, AtomicUsize};
 use std::sync::{mpsc, Arc};
 use std::{cmp, fs, iter, thread};
 
-use ansi_term::{Color, Style};
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
 use crossbeam_utils;
@@ -255,32 +254,14 @@ impl Av1anContext {
       }
       self.args.workers = cmp::min(self.args.workers, chunk_queue.len());
 
-      if atty::is(atty::Stream::Stderr) {
-        eprintln!(
-          "{}{} {} {}{} {} {}{} {}\n{}: {}",
-          Color::Green.bold().paint("Q"),
-          Color::Green.paint("ueue"),
-          Color::Green.bold().paint(format!("{}", chunk_queue.len())),
-          Color::Blue.bold().paint("W"),
-          Color::Blue.paint("orkers"),
-          Color::Blue.bold().paint(format!("{}", self.args.workers)),
-          Color::Purple.bold().paint("P"),
-          Color::Purple.paint("asses"),
-          Color::Purple.bold().paint(format!("{}", self.args.passes)),
-          Style::default().bold().paint("Params"),
-          Style::default()
-            .dimmed()
-            .paint(self.args.video_params.join(" "))
-        );
-      } else {
-        eprintln!(
-          "Queue {} Workers {} Passes {}\nParams: {}",
-          chunk_queue.len(),
-          self.args.workers,
-          self.args.passes,
-          self.args.video_params.join(" ")
-        );
-      }
+      info!(
+        "Queue {} Workers {} Passes {} Encoder {}\nParams: {}",
+        chunk_queue.len(),
+        self.args.workers,
+        self.args.passes,
+        self.args.encoder,
+        self.args.video_params.join(" ")
+      );
 
       if self.args.verbosity == Verbosity::Normal {
         init_progress_bar(self.frames as u64, initial_frames as u64);

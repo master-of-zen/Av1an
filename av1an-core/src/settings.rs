@@ -13,7 +13,9 @@ use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
 use crate::parse::valid_params;
 use crate::target_quality::TargetQuality;
-use crate::vapoursynth::{is_bestsource_installed, is_ffms2_installed, is_lsmash_installed};
+use crate::vapoursynth::{
+  is_bestsource_installed, is_dgdecnv_installed, is_ffms2_installed, is_lsmash_installed,
+};
 use crate::vmaf::validate_libvmaf;
 use crate::{ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity};
 
@@ -123,6 +125,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       ensure!(
         is_ffms2_installed(),
         "FFMS2 is not installed, but it was specified as the chunk method"
+      );
+    }
+    if self.chunk_method == ChunkMethod::DGDECNV && which::which("dgindexnv").is_err() {
+      ensure!(
+        is_dgdecnv_installed(),
+        "Either DGDecNV is not installed or DGIndexNV is not in system path, but it was specified as the chunk method"
       );
     }
     if self.chunk_method == ChunkMethod::BESTSOURCE {

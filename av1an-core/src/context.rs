@@ -259,7 +259,7 @@ impl Av1anContext {
       };
 
       if self.args.workers == 0 {
-        self.args.workers = determine_workers(self.args.encoder, self.args.input.calculate_tiles(), res) as usize;
+        self.args.workers = determine_workers(&self.args) as usize;
       }
       self.args.workers = cmp::min(self.args.workers, chunk_queue.len());
 

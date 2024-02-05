@@ -40,7 +40,6 @@ use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
-use sysinfo::SystemExt;
 
 use crate::encoder::Encoder;
 use crate::progress_bar::finish_progress_bar;

@@ -184,7 +184,7 @@ static MULTI_PROGRESS_BAR: OnceCell<(MultiProgress, Vec<ProgressBar>)> = OnceCel
 
 pub fn get_first_multi_progress_bar() -> Option<&'static ProgressBar> {
   if let Some((_, pbars)) = MULTI_PROGRESS_BAR.get() {
-    pbars.get(0)
+    pbars.first()
   } else {
     None
   }

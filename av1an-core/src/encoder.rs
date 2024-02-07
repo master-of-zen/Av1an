@@ -439,7 +439,7 @@ impl Encoder {
         "--scenecut", "0",
       ],
       Encoder::x265 => into_vec![
-        "-p", "slow",
+        "--preset", "slow",
         "--crf", "25",
         "-D", "10",
         "--level-idc", "5.0",

@@ -351,7 +351,7 @@ pub enum ChunkOrdering {
 #[must_use]
 pub fn determine_workers(args: &EncodeArgs) -> u64 {
   let res = args.input.resolution().unwrap();
-  let tiles = args.input.calculate_tiles();
+  let tiles = args.tiles;
   let megapixels = (res.0 * res.1) as f64 / 1e6;
   // encoder memory and chunk_method memory usage scales with resolution (megapixels),
   // approximately linearly. Expressed as GB/Megapixel

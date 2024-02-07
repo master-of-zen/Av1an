@@ -302,6 +302,12 @@ pub struct CliOpts {
   #[clap(short, long, value_parser = value_parser!(u8).range(1..=2), help_heading = "Encoding")]
   pub passes: Option<u8>,
 
+  /// Estimate tile count from source
+  ///
+  /// Worker estimation will consider tile count accordingly.
+  #[clap(long, help_heading = "Encoding")]
+  pub tile_auto: bool,
+
   /// Audio encoding parameters (ffmpeg syntax)
   ///
   /// If not specified, "-c:a copy" is used.
@@ -768,6 +774,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Verbosity::Normal
       },
       workers: args.workers,
+      tiles: (1, 1),  // default value; will be adjusted if tile_auto set
+      tile_auto: args.tile_auto,
       set_thread_affinity: args.set_thread_affinity,
       zones: args.zones.clone(),
       scaler: {

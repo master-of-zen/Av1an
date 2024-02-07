@@ -56,6 +56,7 @@ pub struct EncodeArgs {
 
   pub passes: u8,
   pub video_params: Vec<String>,
+  pub tiles: (u32, u32), // tile (cols, rows) count; log2 will be applied later for specific encoders
   pub encoder: Encoder,
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
@@ -75,6 +76,7 @@ pub struct EncodeArgs {
   pub resume: bool,
   pub keep: bool,
   pub force: bool,
+  pub tile_auto: bool,
 
   pub concat: ConcatMethod,
   pub target_quality: Option<TargetQuality>,
@@ -177,13 +179,17 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       );
     }
 
+    if self.tile_auto {
+        self.tiles = self.input.calculate_tiles();
+    }
+
     if !self.force {
       if self.video_params.is_empty() {
-        self.video_params = self.encoder.get_default_arguments(self.input.calculate_tiles());
+        self.video_params = self.encoder.get_default_arguments(self.tiles);
       } else {
         // merge video_params with defaults, overriding defaults
         // TODO: consider using hashmap to store program arguments instead of string vector
-        let default_video_params = self.encoder.get_default_arguments(self.input.calculate_tiles());
+        let default_video_params = self.encoder.get_default_arguments(self.tiles);
         let mut skip = false;
         let mut _default_params: Vec<String> = Vec::new();
         for param in default_video_params {

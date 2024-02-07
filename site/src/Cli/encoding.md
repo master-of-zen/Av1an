@@ -29,6 +29,9 @@
 
 		[possible values: 1, 2]
 
+--tile-auto
+		Estimate tile count based on resolution, and set encoder parameters, if applicable.
+
 -a, --audio-params <AUDIO_PARAMS>
 		Audio encoding parameters (ffmpeg syntax)
 

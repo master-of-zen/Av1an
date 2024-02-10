@@ -7,7 +7,8 @@
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 [![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
 
-<a href="https://www.buymeacoffee.com/master_of_zen"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=🐦&slug=master_of_zen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" /></a>
+<a href="https://www.buymeacoffee.com/master_of_zen" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
 
 Av1an is a video encoding framework. It can increase your encoding speed and improve cpu utilization by running multiple encoder processes in parallel. Target quality, VMAF plotting, and more, available to take advantage for video encoding.
 

@@ -7,6 +7,8 @@
 [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
 [![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
 
+<a href="https://www.buymeacoffee.com/master_of_zen"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=🐦&slug=master_of_zen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" /></a>
+
 Av1an is a video encoding framework. It can increase your encoding speed and improve cpu utilization by running multiple encoder processes in parallel. Target quality, VMAF plotting, and more, available to take advantage for video encoding.
 
 For help with av1an, please reach out to us on [Discord](https://discord.gg/Ar8MvJh) or file a GitHub issue.
@@ -14,7 +16,7 @@ For help with av1an, please reach out to us on [Discord](https://discord.gg/Ar8M
 ## Features
 
 - Hyper-scalable video encoding
-- [Target Quality](/docs/TargetQuality.md) mode, using VMAF control encoders rate control to achieve the desired video quality
+- [[DOC]](/docs/TargetQuality.md) Target Quality mode, using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
 - Cancel and resume encoding without loss of progress
 - Minimal and clean CLI
@@ -86,7 +88,3 @@ If you want to install the L-SMASH or ffms2 plugins and are on Windows, then you
 1. Open your VapourSynth installation directory
 2. Open a command prompt or PowerShell window via Shift + Right click
 3. Run `python3 vsrepo.py install lsmas ffms2`
-
-## Support the developer
-
-Bitcoin - 1GTRkvV4KdSaRyFDYTpZckPKQCoWbWkJV1

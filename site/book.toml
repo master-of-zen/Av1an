@@ -1,0 +1,6 @@
+[book]
+authors = ["Av1an Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Av1an Documentation"

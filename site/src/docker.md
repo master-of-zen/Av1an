@@ -1,4 +1,4 @@
-# Av1an in Docker
+# Docker
 
 The [docker image](https://hub.docker.com/r/masterofzen/av1an) is frequently updated and includes all supported encoders and all optional components. It is based on Arch Linux and provides recent versions of encoders and libraries.
 

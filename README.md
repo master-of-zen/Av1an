@@ -9,15 +9,16 @@
 
 <a href="https://www.buymeacoffee.com/master_of_zen" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-
 Av1an is a video encoding framework. It can increase your encoding speed and improve cpu utilization by running multiple encoder processes in parallel. Target quality, VMAF plotting, and more, available to take advantage for video encoding.
 
 For help with av1an, please reach out to us on [Discord](https://discord.gg/Ar8MvJh) or file a GitHub issue.
 
+# [**Av1an Book**](https://master-of-zen.github.io/Av1an/)
+
 ## Features
 
 - Hyper-scalable video encoding
-- [[DOC]](/docs/TargetQuality.md) Target Quality mode, using VMAF control encoders rate control to achieve the desired video quality
+- [Target Quality mode](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
 - Cancel and resume encoding without loss of progress
 - Minimal and clean CLI

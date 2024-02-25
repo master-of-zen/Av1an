@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 use std::sync::mpsc::Sender;
 use std::thread::available_parallelism;
@@ -18,6 +18,11 @@ use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a Av1anContext,
+
+  // Future
+  pub broker_port: Option<u32>,
+  pub http_port: Option<u32>,
+  pub cache_root: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -97,7 +102,7 @@ impl Display for EncoderCrash {
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
-    assert!(!self.chunk_queue.is_empty());
+    //if self.chunk_queue.is_empty() ?? {};
 
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());

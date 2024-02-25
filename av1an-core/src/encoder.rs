@@ -546,7 +546,7 @@ impl Encoder {
   }
 
   /// Returns changed q/crf in command line arguments
-  pub fn man_command(self, mut params: Vec<String>, q: usize) -> Vec<String> {
+  pub fn quantizer_replace(self, mut params: Vec<String>, q: usize) -> Vec<String> {
     let index = list_index(&params, self.q_match_fn());
     if let Some(index) = index {
       let (replace_index, replace_q) = self.replace_q(index, q);

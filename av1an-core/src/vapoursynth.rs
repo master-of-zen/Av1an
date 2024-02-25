@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use anyhow::{anyhow, bail};
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
-use std::process::Command;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
@@ -188,18 +188,18 @@ fn get_transfer(env: &Environment) -> anyhow::Result<u8> {
 }
 
 pub fn create_vs_file(
-  temp: &str,
+  cache: &str,
   source: &Path,
   chunk_method: ChunkMethod,
 ) -> anyhow::Result<PathBuf> {
-  let temp: &Path = temp.as_ref();
+  let cachee: &Path = cache.as_ref();
   let source = source.canonicalize()?;
 
-  let load_script_path = temp.join("split").join("loadscript.vpy");
+  let load_script_path = cachee.join("split").join("loadscript.vpy");
 
   let mut load_script = File::create(&load_script_path)?;
 
-  let cache_file = PathAbs::new(temp.join("split").join(format!(
+  let cache_file = PathAbs::new(cachee.join("split").join(format!(
     "cache.{}",
     match chunk_method {
       ChunkMethod::FFMS2 => "ffindex",
@@ -212,7 +212,7 @@ pub fn create_vs_file(
 
   if chunk_method == ChunkMethod::DGDECNV {
     // Run dgindexnv to generate the .dgi index file
-    let dgindexnv_output = temp.join("split").join("index.dgi");
+    let dgindexnv_output = cachee.join("split").join("index.dgi");
 
     Command::new("dgindexnv")
       .arg("-h")

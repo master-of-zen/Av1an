@@ -34,7 +34,7 @@ pub enum InputPixelFormat {
 #[allow(clippy::struct_excessive_bools)]
 pub struct EncodeArgs {
   pub input: Input,
-  pub temp: String,
+  pub cache: String,
   pub output_file: String,
 
   pub chunk_method: ChunkMethod,

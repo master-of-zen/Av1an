@@ -10,7 +10,7 @@ use crate::Input;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
-  pub temp: String,
+  pub cache: String,
   pub index: usize,
   pub input: Input,
   pub source_cmd: Vec<OsString>,
@@ -37,7 +37,7 @@ impl Chunk {
   }
 
   pub fn output(&self) -> String {
-    Path::new(&self.temp)
+    Path::new(&self.cache)
       .join("encode")
       .join(format!("{}.{}", self.name(), self.output_ext))
       .to_str()
@@ -56,7 +56,7 @@ impl Chunk {
   ) -> anyhow::Result<()> {
     if let Some(strength) = photon_noise {
       let iso_setting = u32::from(strength) * 100;
-      let grain_table = Path::new(&self.temp).join(format!("iso{iso_setting}-grain.tbl"));
+      let grain_table = Path::new(&self.cache).join(format!("iso{iso_setting}-grain.tbl"));
       if !grain_table.exists() {
         debug!("Generating grain table at ISO {}", iso_setting);
         let (mut width, mut height) = self.input.resolution()?;
@@ -98,7 +98,7 @@ mod tests {
   #[test]
   fn test_chunk_name_1() {
     let ch = Chunk {
-      temp: "none".to_owned(),
+      cache: "none".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),
       source_cmd: vec!["".into()],
@@ -118,7 +118,7 @@ mod tests {
   #[test]
   fn test_chunk_name_10000() {
     let ch = Chunk {
-      temp: "none".to_owned(),
+      cache: "none".to_owned(),
       index: 10000,
       input: Input::Video("test.mkv".into()),
       source_cmd: vec!["".into()],
@@ -139,7 +139,7 @@ mod tests {
   #[test]
   fn test_chunk_output() {
     let ch = Chunk {
-      temp: "d".to_owned(),
+      cache: "d".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),
       source_cmd: vec!["".into()],

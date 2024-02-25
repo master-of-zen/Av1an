@@ -816,7 +816,7 @@ impl Encoder {
   /// Constructs tuple of commands for target quality probing
   pub fn probe_cmd(
     self,
-    temp: String,
+    cache: String,
     chunk_index: usize,
     q: usize,
     pix_fmt: Pixel,
@@ -836,7 +836,7 @@ impl Encoder {
     );
 
     let probe_name = format!("v_{q}_{chunk_index}.ivf");
-    let mut probe = PathBuf::from(temp);
+    let mut probe = PathBuf::from(cache);
     probe.push("split");
     probe.push(&probe_name);
     let probe_path = probe.to_str().unwrap().to_owned();

@@ -215,7 +215,7 @@ impl<'a> Broker<'a> {
     let enc_time = st_time.elapsed();
     let fps = chunk.frames() as f64 / enc_time.as_secs_f64();
 
-    let progress_file = Path::new(&self.project.args.temp).join("done.json");
+    let progress_file = Path::new(&self.project.args.cache).join("done.json");
     get_done().done.insert(
       chunk.name(),
       DoneChunk {

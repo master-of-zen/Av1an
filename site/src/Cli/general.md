@@ -1,4 +1,3 @@
-
 ## General
 
 ```
@@ -10,7 +9,7 @@
 -o <OUTPUT_FILE>
 		Video output file
 
-	--temp <TEMP>
+	--cache <cache>
 		Temporary directory to use
 
 		If not specified, the temporary directory name is a hash of the input file name.
@@ -22,7 +21,7 @@
 		Print extra progress info and stats to terminal
 
 -l, --log-file <LOG_FILE>
-		Log file location [default: <temp dir>/log.log]
+		Log file location [default: <cache dir>/log.log]
 
 	--log-level <LOG_LEVEL>
 		Set log level for log file (does not affect command-line log level)

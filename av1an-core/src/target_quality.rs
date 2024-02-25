@@ -31,7 +31,7 @@ pub struct TargetQuality {
   pub max_q: u32,
   pub encoder: Encoder,
   pub pix_format: Pixel,
-  pub temp: String,
+  pub cache: String,
   pub workers: usize,
   pub video_params: Vec<String>,
   pub probe_slow: bool,
@@ -148,7 +148,7 @@ impl TargetQuality {
     };
 
     let cmd = self.encoder.probe_cmd(
-      self.temp.clone(),
+      self.cache.clone(),
       chunk.index,
       q,
       self.pix_format,
@@ -237,10 +237,10 @@ impl TargetQuality {
 
     rt.block_on(future)?;
 
-    let probe_name = Path::new(&chunk.temp)
+    let probe_name = Path::new(&chunk.cache)
       .join("split")
       .join(format!("v_{q}_{}.ivf", chunk.index));
-    let fl_path = Path::new(&chunk.temp)
+    let fl_path = Path::new(&chunk.cache)
       .join("split")
       .join(format!("{}.json", chunk.index));
 

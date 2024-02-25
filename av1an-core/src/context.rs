@@ -58,25 +58,25 @@ impl Av1anContext {
     Ok(this)
   }
 
-  /// Initialize logging routines and create temporary directories
+  /// Initialize logging routines and create cache directories
   fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg::init()?;
     ffmpeg::util::log::set_level(ffmpeg::util::log::level::Level::Fatal);
 
-    if !self.args.resume && Path::new(&self.args.temp).is_dir() {
-      fs::remove_dir_all(&self.args.temp)
-        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.args.temp))?;
+    if !self.args.resume && Path::new(&self.args.cache).is_dir() {
+      fs::remove_dir_all(&self.args.cache)
+        .with_context(|| format!("Failed to remove cache directory {:?}", &self.args.cache))?;
     }
 
-    create_dir!(Path::new(&self.args.temp))?;
-    create_dir!(Path::new(&self.args.temp).join("split"))?;
-    create_dir!(Path::new(&self.args.temp).join("encode"))?;
+    create_dir!(Path::new(&self.args.cache))?;
+    create_dir!(Path::new(&self.args.cache).join("split"))?;
+    create_dir!(Path::new(&self.args.cache).join("encode"))?;
 
-    debug!("temporary directory: {}", &self.args.temp);
+    debug!("cache directory: {}", &self.args.cache);
 
-    let done_path = Path::new(&self.args.temp).join("done.json");
+    let done_path = Path::new(&self.args.cache).join("done.json");
     let done_json_exists = done_path.exists();
-    let chunks_json_exists = Path::new(&self.args.temp).join("chunks.json").exists();
+    let chunks_json_exists = Path::new(&self.args.cache).join("chunks.json").exists();
 
     if self.args.resume {
       match (done_json_exists, chunks_json_exists) {
@@ -85,21 +85,21 @@ impl Av1anContext {
         (false, true) => {
           info!(
             "resume was set but done.json does not exist in temporary directory {:?}",
-            &self.args.temp
+            &self.args.cache
           );
           self.args.resume = false;
         }
         (true, false) => {
           info!(
             "resume was set but chunks.json does not exist in temporary directory {:?}",
-            &self.args.temp
+            &self.args.cache
           );
           self.args.resume = false;
         }
         (false, false) => {
           info!(
             "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
-            &self.args.temp
+            &self.args.cache
           );
           self.args.resume = false;
         }
@@ -152,7 +152,7 @@ impl Av1anContext {
         {
           self.vs_script = Some(match &self.args.input {
             Input::VapourSynth(path) => path.clone(),
-            Input::Video(path) => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
+            Input::Video(path) => create_vs_file(&self.args.cache, path, self.args.chunk_method)?,
           });
 
           let vs_script = self.vs_script.clone().unwrap();
@@ -198,8 +198,8 @@ impl Av1anContext {
     if self.args.sc_only {
       debug!("scene detection only");
 
-      if let Err(e) = fs::remove_dir_all(&self.args.temp) {
-        warn!("Failed to delete temp directory: {}", e);
+      if let Err(e) = fs::remove_dir_all(&self.args.cache) {
+        warn!("Failed to delete cache directory: {}", e);
       }
 
       exit(0);
@@ -227,13 +227,13 @@ impl Av1anContext {
         && (!self.args.resume || !get_done().audio_done.load(atomic::Ordering::SeqCst))
       {
         let input = self.args.input.as_video_path();
-        let temp = self.args.temp.as_str();
+        let cache = self.args.cache.as_str();
         let audio_params = self.args.audio_params.as_slice();
         Some(s.spawn(move |_| {
-          let audio_output = crate::ffmpeg::encode_audio(input, temp, audio_params);
+          let audio_output = crate::ffmpeg::encode_audio(input, cache, audio_params);
           get_done().audio_done.store(true, atomic::Ordering::SeqCst);
 
-          let progress_file = Path::new(temp).join("done.json");
+          let progress_file = Path::new(cache).join("done.json");
           let mut progress_file = File::create(progress_file).unwrap();
           progress_file
             .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
@@ -329,20 +329,20 @@ impl Av1anContext {
       match self.args.concat {
         ConcatMethod::Ivf => {
           concat::ivf(
-            &Path::new(&self.args.temp).join("encode"),
+            &Path::new(&self.args.cache).join("encode"),
             self.args.output_file.as_ref(),
           )?;
         }
         ConcatMethod::MKVMerge => {
           concat::mkvmerge(
-            self.args.temp.as_ref(),
+            self.args.cache.as_ref(),
             self.args.output_file.as_ref(),
             self.args.encoder,
             total_chunks,
           )?;
         }
         ConcatMethod::FFmpeg => {
-          concat::ffmpeg(self.args.temp.as_ref(), self.args.output_file.as_ref())?;
+          concat::ffmpeg(self.args.cache.as_ref(), self.args.output_file.as_ref())?;
         }
       }
 
@@ -376,12 +376,12 @@ impl Av1anContext {
 
       if !Path::new(&self.args.output_file).exists() {
         warn!(
-          "Concatenation failed for unknown reasons! Temp folder will not be deleted: {}",
-          &self.args.temp
+          "Concatenation failed for unknown reasons! cache folder will not be deleted: {}",
+          &self.args.cache
         );
       } else if !self.args.keep {
-        if let Err(e) = fs::remove_dir_all(&self.args.temp) {
-          warn!("Failed to delete temp directory: {}", e);
+        if let Err(e) = fs::remove_dir_all(&self.args.cache) {
+          warn!("Failed to delete cache directory: {}", e);
         }
       }
 
@@ -416,7 +416,7 @@ impl Av1anContext {
   ) -> Result<(), (Box<EncoderCrash>, u64)> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
-    let fpf_file = Path::new(&chunk.temp)
+    let fpf_file = Path::new(&chunk.cache)
       .join("split")
       .join(format!("{}_fpf", chunk.name()));
 
@@ -767,7 +767,7 @@ impl Av1anContext {
   // scenes.json and return that.
   fn split_routine(&mut self) -> anyhow::Result<Vec<Scene>> {
     let scene_file = self.args.scenes.as_ref().map_or_else(
-      || Cow::Owned(Path::new(&self.args.temp).join("scenes.json")),
+      || Cow::Owned(Path::new(&self.args.cache).join("scenes.json")),
       |path| Cow::Borrowed(path.as_path()),
     );
 
@@ -874,7 +874,7 @@ impl Av1anContext {
     let output_ext = self.args.encoder.output_extension();
 
     let mut chunk = Chunk {
-      temp: self.args.temp.clone(),
+      cache: self.args.cache.clone(),
       index,
       input: Input::Video(src_path.to_path_buf()),
       source_cmd: ffmpeg_gen_cmd,
@@ -927,7 +927,7 @@ impl Av1anContext {
     let output_ext = self.args.encoder.output_extension();
 
     let mut chunk = Chunk {
-      temp: self.args.temp.clone(),
+      cache: self.args.cache.clone(),
       index,
       input: Input::VapourSynth(vs_script.to_path_buf()),
       source_cmd: vspipe_cmd_gen,
@@ -1001,7 +1001,7 @@ impl Av1anContext {
     debug!("Splitting video");
     segment(
       input,
-      &self.args.temp,
+      &self.args.cache,
       &scenes
         .iter()
         .skip(1)
@@ -1010,12 +1010,12 @@ impl Av1anContext {
     );
     debug!("Splitting done");
 
-    let source_path = Path::new(&self.args.temp).join("split");
+    let source_path = Path::new(&self.args.cache).join("split");
     let queue_files = Self::read_queue_files(&source_path)?;
 
     assert!(
       !queue_files.is_empty(),
-      "Error: No files found in temp/split, probably splitting not working"
+      "Error: No files found in cache/split, probably splitting not working"
     );
 
     let chunk_queue: Vec<Chunk> = queue_files
@@ -1049,10 +1049,10 @@ impl Av1anContext {
       .collect();
 
     debug!("Segmenting video");
-    segment(input, &self.args.temp, &to_split[1..]);
+    segment(input, &self.args.cache, &to_split[1..]);
     debug!("Segment done");
 
-    let source_path = Path::new(&self.args.temp).join("split");
+    let source_path = Path::new(&self.args.cache).join("split");
     let queue_files = Self::read_queue_files(&source_path)?;
 
     let kf_list = to_split
@@ -1127,7 +1127,7 @@ impl Av1anContext {
     let num_frames = num_frames(Path::new(file))?;
 
     let mut chunk = Chunk {
-      temp: self.args.temp.clone(),
+      cache: self.args.cache.clone(),
       input: Input::Video(PathBuf::from(file)),
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
@@ -1155,7 +1155,7 @@ impl Av1anContext {
   /// Returns unfinished chunks and number of total chunks
   fn load_or_gen_chunk_queue(&mut self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.args.resume {
-      let mut chunks = read_chunk_queue(self.args.temp.as_ref())?;
+      let mut chunks = read_chunk_queue(self.args.cache.as_ref())?;
       let num_chunks = chunks.len();
 
       let done = get_done();
@@ -1167,7 +1167,7 @@ impl Av1anContext {
     } else {
       let chunks = self.create_encoding_queue(splits)?;
       let num_chunks = chunks.len();
-      save_chunk_queue(&self.args.temp, &chunks)?;
+      save_chunk_queue(&self.args.cache, &chunks)?;
       Ok((chunks, num_chunks))
     }
   }

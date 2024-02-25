@@ -354,8 +354,8 @@ pub fn hash_path(path: &Path) -> String {
   format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
-  let mut file = File::create(Path::new(temp).join("chunks.json"))
+fn save_chunk_queue(cache: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
+  let mut file = File::create(Path::new(cache).join("chunks.json"))
     .with_context(|| "Failed to create chunks.json file")?;
 
   file
@@ -373,8 +373,8 @@ pub enum Verbosity {
   Quiet,
 }
 
-fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
-  let file = Path::new(temp).join("chunks.json");
+fn read_chunk_queue(cachee: &Path) -> anyhow::Result<Vec<Chunk>> {
+  let file = Path::new(cachee).join("chunks.json");
 
   let contents = fs::read_to_string(&file)
     .with_context(|| format!("Failed to read chunk queue file {:?}", &file))?;

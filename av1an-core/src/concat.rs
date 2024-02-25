@@ -37,7 +37,7 @@ impl Display for ConcatMethod {
 
 pub fn sort_files_by_filename(files: &mut [PathBuf]) {
   files.sort_unstable_by_key(|x| {
-    // If the temp directory follows the expected format of 00000.ivf, 00001.ivf, etc.,
+    // If the cache directory follows the expected format of 00000.ivf, 00001.ivf, etc.,
     // then these unwraps will not fail
     x.file_stem()
       .unwrap()
@@ -242,10 +242,10 @@ pub fn mkvmerge_options_json(
 }
 
 /// Concatenates using ffmpeg (does not work with x265)
-pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
-  fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
-    let concat_file = temp_folder.join("concat");
-    let encode_folder = temp_folder.join("encode");
+pub fn ffmpeg(cache: &Path, output: &Path) -> anyhow::Result<()> {
+  fn write_concat_file(cache_folder: &Path) -> anyhow::Result<()> {
+    let concat_file = cache_folder.join("concat");
+    let encode_folder = cache_folder.join("encode");
 
     let mut files = read_encoded_chunks(&encode_folder)?;
 
@@ -270,16 +270,16 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
     Ok(())
   }
 
-  let temp = PathAbs::new(temp)?;
-  let temp = temp.as_path();
+  let cache = PathAbs::new(cache)?;
+  let cache = cache.as_path();
 
-  let concat = temp.join("concat");
+  let concat = cache.join("concat");
   let concat_file = concat.to_str().unwrap();
 
-  write_concat_file(temp)?;
+  write_concat_file(cache)?;
 
   let audio_file = {
-    let file = temp.join("audio.mkv");
+    let file = cache.join("audio.mkv");
     if file.exists() && file.metadata().unwrap().len() > 1000 {
       Some(file)
     } else {

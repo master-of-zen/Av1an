@@ -149,14 +149,14 @@ pub fn has_audio(file: &Path) -> bool {
 #[must_use]
 pub fn encode_audio<S: AsRef<OsStr>>(
   input: impl AsRef<Path>,
-  temp: impl AsRef<Path>,
+  cache: impl AsRef<Path>,
   audio_params: &[S],
 ) -> Option<PathBuf> {
   let input = input.as_ref();
-  let temp = temp.as_ref();
+  let cache = cache.as_ref();
 
   if has_audio(input) {
-    let audio_file = Path::new(temp).join("audio.mkv");
+    let audio_file = Path::new(cache).join("audio.mkv");
     let mut encode_audio = Command::new("ffmpeg");
 
     encode_audio.stdout(Stdio::piped());

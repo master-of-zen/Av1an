@@ -125,11 +125,11 @@ pub struct CliOpts {
   #[clap(short)]
   pub output_file: Option<PathBuf>,
 
-  /// Temporary directory to use
+  /// Temporary directory to use for cache
   ///
   /// If not specified, the temporary directory name is a hash of the input file name.
   #[clap(long)]
-  pub temp: Option<PathBuf>,
+  pub cache: Option<PathBuf>,
 
   /// Disable printing progress to the terminal
   #[clap(short, long, conflicts_with = "verbose")]
@@ -139,7 +139,7 @@ pub struct CliOpts {
   #[clap(long)]
   pub verbose: bool,
 
-  /// Log file location [default: <temp dir>/log.log]
+  /// Log file location [default: <cache dir>/log.log]
   #[clap(short, long)]
   pub log_file: Option<String>,
 
@@ -542,7 +542,7 @@ pub struct CliOpts {
 impl CliOpts {
   pub fn target_quality_params(
     &self,
-    temp_dir: String,
+    cache_dir: String,
     video_params: Vec<String>,
     output_pix_format: Pixel,
   ) -> Option<TargetQuality> {
@@ -567,7 +567,7 @@ impl CliOpts {
         max_q,
         encoder: self.encoder,
         pix_format: output_pix_format,
-        temp: temp_dir.clone(),
+        cache: cache_dir.clone(),
         workers: self.workers,
         video_params: video_params.clone(),
         probe_slow: self.probe_slow,
@@ -627,7 +627,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let mut valid_args: Vec<EncodeArgs> = Vec::with_capacity(inputs.len());
 
   for input in inputs {
-    let temp = if let Some(path) = args.temp.as_ref() {
+    let cache = if let Some(path) = args.cache.as_ref() {
       path.to_str().unwrap().to_owned()
     } else {
       format!(".{}", hash_path(input.as_path()))
@@ -650,14 +650,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       log_file: if let Some(log_file) = args.log_file.as_ref() {
         Path::new(&format!("{log_file}.log")).to_owned()
       } else {
-        Path::new(&temp).join("log.log")
+        Path::new(&cache).join("log.log")
       },
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
         shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
         Vec::new()
       },
-      temp: temp.clone(),
+      cache: cache.clone(),
       force: args.force,
       passes: if let Some(passes) = args.passes {
         passes
@@ -741,7 +741,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       force_keyframes: parse_comma_separated_numbers(
         args.force_keyframes.as_deref().unwrap_or(""),
       )?,
-      target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
+      target_quality: args.target_quality_params(cache, video_params, output_pix_format.format),
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {

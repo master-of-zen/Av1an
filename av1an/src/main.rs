@@ -121,6 +121,10 @@ pub struct CliOpts {
   #[clap(short, required = true)]
   pub input: Vec<PathBuf>,
 
+  /// Alternate input for scene detection (must have the same frame count)
+  #[clap(short = 'I')]
+  pub input_sc: Option<PathBuf>,
+
   /// Video output file
   #[clap(short)]
   pub output_file: Option<PathBuf>,
@@ -634,6 +638,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     };
 
     let input = Input::from(input);
+    let input_sc = args.input_sc.as_ref().map(Input::from);
 
     let video_params = if let Some(args) = args.video_params.as_ref() {
       shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
@@ -731,6 +736,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         }
       },
       input,
+      input_sc,
       output_pix_format,
       resume: args.resume,
       scenes: args.scenes.clone(),

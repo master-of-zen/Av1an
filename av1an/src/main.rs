@@ -899,7 +899,8 @@ pub fn run() -> anyhow::Result<()> {
   for arg in args {
     // Change log file
     let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
-    let _ = &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file))?;
+    let _ =
+      &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file).append())?;
 
     Av1anContext::new(arg)?.encode_file()?;
   }

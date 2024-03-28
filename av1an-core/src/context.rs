@@ -533,7 +533,7 @@ impl Av1anContext {
           None
         };
 
-        let f_stdr2 = ffmpeg_stderr.as_ref().map(Arc::clone);
+        let f_stdr2 = ffmpeg_stderr.clone();
 
         tokio::spawn(async move {
           while let Some(line) = source_reader.next_line().await.unwrap() {

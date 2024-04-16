@@ -1,6 +1,6 @@
 # Av1an
 
-![av1an fully utilizing a 96-core CPU for video encoding](https://cdn.discordapp.com/attachments/738825198534656100/1215548328939487272/av1an_preview.jpg?ex=65fd2699&is=65eab199&hm=c1df6948a8cb9973456006ff2ffed157d2761335a0255d9dc43cec951f758e2f&)
+![av1an fully utilizing a 96-core CPU for video encoding](https://github.com/master-of-zen/Av1an/assets/46526140/15f68b63-7be5-45e8-bf48-ae7eb2fc4bb6)
 
 [![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
 [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)

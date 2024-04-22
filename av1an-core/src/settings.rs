@@ -77,6 +77,7 @@ pub struct EncodeArgs {
 
   pub concat: ConcatMethod,
   pub target_quality: Option<TargetQuality>,
+  pub vmaf: bool,
 }
 
 impl EncodeArgs {

@@ -368,6 +368,7 @@ impl Av1anContext {
             temp_res.as_str(),
             tq.vmaf_scaler.as_str(),
             1,
+            1,
             tq.vmaf_filter.as_deref(),
             tq.vmaf_threads,
           ) {

@@ -25,6 +25,7 @@ pub struct TargetQuality {
   pub vmaf_threads: usize,
   pub model: Option<PathBuf>,
   pub probing_rate: usize,
+  pub probing_subsample: usize,
   pub probes: u32,
   pub target: f64,
   pub min_q: u32,
@@ -252,6 +253,7 @@ impl TargetQuality {
       &self.vmaf_res,
       &self.vmaf_scaler,
       self.probing_rate,
+      self.probing_subsample,
       self.vmaf_filter.as_deref(),
       self.vmaf_threads,
     )?;

@@ -291,6 +291,7 @@ fn get_test_args() -> Av1anContext {
     sc_downscale_height: None,
     force_keyframes: Vec::new(),
     target_quality: None,
+    vmaf: false,
     verbosity: Verbosity::Normal,
     workers: 1,
     set_thread_affinity: None,

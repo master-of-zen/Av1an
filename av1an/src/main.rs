@@ -742,6 +742,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.force_keyframes.as_deref().unwrap_or(""),
       )?,
       target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
+      vmaf: args.vmaf,
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {

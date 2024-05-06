@@ -51,6 +51,7 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
   Ok(
     ictx
       .packets()
+      .filter_map(Result::ok)
       .filter(|(stream, _)| stream.index() == video_stream_index)
       .count(),
   )
@@ -122,6 +123,7 @@ pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
 
   let kfs = ictx
     .packets()
+    .filter_map(Result::ok)
     .filter(|(stream, _)| stream.index() == video_stream_index)
     .map(|(_, packet)| packet)
     .enumerate()

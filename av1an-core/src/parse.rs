@@ -158,10 +158,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
   };
 
   let ascending = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-  let num_digits = match first_space_index.checked_sub(first_digit_index) {
-    Some(nd) => nd,
-    None => return None,
-  };
+  let num_digits = first_space_index.checked_sub(first_digit_index)?;
 
   let dynamic_mask = _mm_cmplt_epi8(ascending, _mm_set1_epi8(num_digits as i8));
 

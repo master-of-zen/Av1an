@@ -83,7 +83,7 @@ pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
   if let Some((major, minor, _)) = parse_svt_av1_version(&version.stdout) {
     match major {
       0 => minor < 9,
-      1.. => false,
+      _ => false,
     }
   } else {
     // assume an old version of SVT-AV1 if the version failed to parse, as

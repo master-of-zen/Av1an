@@ -11,7 +11,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
 
-      ffmpeg_ver: "6.0"
+      ffmpeg_ver: "7.0"
       ffmpeg_path: "C:/ffmpeg"
       vsynth_ver: "R66"
       vsynth_path: "C:/Program Files/Vapoursynth"

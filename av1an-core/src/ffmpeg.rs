@@ -166,7 +166,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
 
     encode_audio.args(["-y", "-hide_banner", "-loglevel", "error"]);
     encode_audio.args(["-i", input.to_str().unwrap()]);
-    encode_audio.args(["-map_metadata", "0",]);
+    encode_audio.args(["-map_metadata", "0"]);
     encode_audio.args(["-map", "0", "-c", "copy", "-vn", "-dn"]);
 
     encode_audio.args(audio_params);

@@ -170,16 +170,12 @@ pub fn encode_audio<S: AsRef<OsStr>>(
     encode_audio.args([
       "-map_metadata",
       "0",
-      "-vn",
-      "-dn",
       "-map",
       "0",
-      "-map",
-      "-0:a",
+      "-vn",
+      "-dn",
       "-c",
       "copy",
-      "-map",
-      "0:a",
     ]);
 
     encode_audio.args(audio_params);

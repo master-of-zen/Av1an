@@ -1,0 +1,63 @@
+name: Build Av1an (Windows x64)
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      CARGO_INCREMENTAL: 0
+
+      ffmpeg_ver: "7.0"
+      ffmpeg_path: "C:/ffmpeg"
+      vsynth_ver: "R66"
+      vsynth_path: "C:/Program Files/Vapoursynth"
+
+    steps:
+      - name: Python 3 setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: '~3.12'
+          architecture: x64
+
+      - name: NASM setup
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: 2.16.01
+          from-source: false
+
+      - name: FFmpeg installation
+        run: |
+          $tempFile = New-TemporaryFile
+          $uri = 'https://github.com/GyanD/codexffmpeg/releases/download/VER/ffmpeg-VER-full_build-shared.7z'.Replace('VER', "$env:ffmpeg_ver")
+          Invoke-WebRequest "$uri" -OutFile "$tempFile" -TimeoutSec 10
+          7z x -y -o"$env:ffmpeg_path" "$tempFile"
+
+      - name: FFmpeg environment variable
+        run: |
+          echo "FFMPEG_DIR=$((Get-ChildItem -Directory "$env:ffmpeg_path").FullName)" | Out-File $env:GITHUB_ENV -Append
+
+      - name: VapourSynth installation
+        run: |
+          $tempFile = New-TemporaryFile
+          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.zip'.Replace('VER', "$env:vsynth_ver")
+          Invoke-WebRequest "$uri" -OutFile "$tempFile" -TimeoutSec 10
+          Expand-Archive "$tempFile" "$env:vsynth_path"
+
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Av1an build
+        run: cargo build --release
+
+      - name: Create prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: latest
+          files: target/release/av1an.exe
+          fail_on_unmatched_files: true
+

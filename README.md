@@ -1,36 +1,38 @@
+<img align="right" width=45% src="https://github.com/master-of-zen/Av1an/assets/46526140/15f68b63-7be5-45e8-bf48-ae7eb2fc4bb6" alt="av1an fully utilizing a 96-core CPU for video encoding">
+
 # Av1an
 
-![av1an fully utilizing a 96-core CPU for video encoding](https://github.com/master-of-zen/Av1an/assets/46526140/15f68b63-7be5-45e8-bf48-ae7eb2fc4bb6)
+[![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh) [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml) [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an) [![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
 
-[![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh)
-[![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml)
-[![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an)
-[![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
+Av1an is a video encoding framework which aims to increase your encoding speed and improve CPU-utilization by running multiple encoder processes in parallel. Additional features include Scene-detection, VMAF-score plotting & quality-targeting.
+
 
 <a href="https://www.buymeacoffee.com/master_of_zen" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-Av1an is a video encoding framework. It can increase your encoding speed and improve cpu utilization by running multiple encoder processes in parallel. Target quality, VMAF plotting, and more, available to take advantage for video encoding.
 
-For help with av1an, please reach out to us on [Discord](https://discord.gg/Ar8MvJh) or file a GitHub issue.
+> [!TIP]
+> Check out the [**Av1an Book**](https://master-of-zen.github.io/Av1an/) for more details on usage.
 
-# [**Av1an Book**](https://master-of-zen.github.io/Av1an/)
+For help with av1an, feel free to reach out to us on [Discord](https://discord.gg/Ar8MvJh) or file an [issue on GitHub](https://github.com/master-of-zen/Av1an/issues).
+
 
 ## Features
 
 - Hyper-scalable video encoding
 - [Target Quality mode](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
-- Cancel and resume encoding without loss of progress
+- Cancel and resume encoding without loss of progress (see `--keep` & `--resume`)
 - Minimal and clean CLI
 - Docker images available
 - Cross-platform application written in Rust
 
 ## Usage
 
-For complete reference, refer to [CLI](/docs/CLI.md)
-or run `av1an --help`
+Av1an offers a comprehensive command-line interface for streamlined operation. For complete reference of it's offerings, refer to the [CLI Reference](https://master-of-zen.github.io/Av1an/Cli/general.html) in the docs or run `av1an --help`.
 
-Encode a video file with the default parameters:
+### Examples:
+
+Encode a video file with the default parameters (uses `aom` for encoding):
 
 ```sh
 av1an -i input.mkv
@@ -45,26 +47,28 @@ av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 
 ## Supported encoders
 
 At least one encoder is required to use Av1an. The following encoders are supported:
+| Codec | Encoder | `-e` option | Source |
+| -:| - | - |:-:|
+| AV1 | aomenc | `aom` |[Google Source](https://aomedia.googlesource.com/aom/) |
+| AV1 | rav1e | `rav1e` | [GitHub](https://github.com/xiph/rav1e) |
+| AV1 | SvtAv1EncApp | `svt-av1` | [GitLab](https://gitlab.com/AOMediaCodec/SVT-AV1) |
+| VP8 & VP9 | vpxenc | `vpx` | [Google Source](https://chromium.googlesource.com/webm/libvpx/) |
+| H.264/AVC | x264 | `x264` | [VideoLAN](https://www.videolan.org/developers/x264.html) |
+| H.256/HEVC | x265 | `x265` | [VideoLAN](https://www.videolan.org/developers/x265.html) |
 
-- [aomenc](https://aomedia.googlesource.com/aom/) (AV1)
-- [SvtAv1EncApp](https://gitlab.com/AOMediaCodec/SVT-AV1) (AV1)
-- [rav1e](https://github.com/xiph/rav1e) (AV1)
-- [vpxenc](https://chromium.googlesource.com/webm/libvpx/) (VP8 and VP9)
-- [x264](https://www.videolan.org/developers/x264.html) (H.264/AVC)
-- [x265](https://www.videolan.org/developers/x265.html) (H.265/HEVC)
-
-Note that Av1an requires the executable encoder. If you use a package manager to install encoders, check that the installation includes an executable encoder (e.g. vpxenc, SvtAv1EncApp) from the list above. Just installing the library (e.g. libvpx, libSvtAv1Enc) is not enough.
+> [!IMPORTANT]
+> Note that Av1an requires the encoder executables. If you use a package manager to install encoders, check that packages you've installed the encoder executables (e.g. vpxenc, SvtAv1EncApp) from the list above. Simply installing their respective libraries (e.g. `libvpx`, `libSvtAv1Enc`) is not enough.
 
 ## Installation
 
-av1an can be installed from package managers, cargo.io, or compliled manually. There are also pre-built [Docker images](/docs/DOCKER.md) which include all dependencies and are frequently updated.
+Av1an can be installed from package managers, cargo, or compliled manually. There are also pre-built [Docker images](/docs/DOCKER.md) which include all dependencies and are frequently updated.
 
 For Windows users, prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
 
 ### Package managers
 
-Arch Linux & Manjaro: `pacman -S av1an`
-Cargo: `cargo install av1an`
+ - Arch Linux & Manjaro: `pacman -S av1an`
+ - Cargo (Universal): `cargo install av1an`
 
 ### Manual installation
 

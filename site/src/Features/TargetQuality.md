@@ -2,62 +2,62 @@
 
 ## Table of Contents
 
-1. [Description](#Description)
-2. [Requirements](#Requirements)
-3. [Commands](#Commands)
-4. [Example of usage](#Example-of-usage)
+1. [Introduction](#introduction)
+2. [Prerequisites](#prerequisites)
+3. [Parameters](#parameters)
+4. [Usage examples](#usage-examples)
+5. [Considerations when Cropping](#considerations-when-cropping)
 
-## Description
+## Overview
 
-Target Quality has a really simple goal, instead of guessing what the CQ/CRF value to choose for desired level of video quality we set quality level we want, quality goal is set in value of VMAF score we want to achieve and let the algorithm find CRF/CQ value that will result in that score, for each segment. Which simultaneously achieve 3 things, if compared to usual, single value CRF/CQ encode.
+Av1an's Target Quality feature has a really simple goal; instead of having the user guess what the appropriate CQ/CRF value is to achieve their desired video quality, we simply set a VMAF score 'target' that we wish to achieve and let av1an automatically determine the appropriate CRF/CQ values per segment through testing. This approach offers a multitude of benefits:
 
-- Ensuring better level of visual consistency than default rate controls
-- Give enough bitrate to complex segments to match target quality.
-- Save bitrate by not overspending on scenes, which saves bit rate.
+- It ensures a better level of visual consistency than regular rate controls.
+- It allocates enough bitrate to complex segments to match target quality, while similarly saving bitrate by not overspending on simpler scenes.
+- Unlike CRF, av1an's Target Quality feature a unified scale/interface for setting encoding quality across all encoders.
 
-## Requirements
+However, using Target Quality also greatly increases total-encoding time, as each segement will be re-tested until the the appropriate CRF/CQ value is found. The time that's usually taken to manually determine these values is instead simply automated and standarized.
 
-- Working VMAF setup
-  - FFMPEG with libvmaf (It's de facto default configuration from 2020)
-  - Installed or manually selected VMAF models
-    - by default it grabs /usr/share/model/vmaf_v0.6.1.pkl
+## Prerequisites
 
-- Supported encoder
-  - aomenc
-  - rav1e
-  - svt-av1
-  - x265
-  - x264
-  - vpx
+ - A build of `ffmpeg` compiled with `libvmaf` (included by default configuration since 2020)
+ - Pre-installed or or otherwise manually selected VMAF models
+   - The default model used by ffmpeg is `/usr/share/model/vmaf_v0.6.1.pkl`
+   - Windows-user are likely to have to manually specify their VMAF-model. See [this](https://github.com/Netflix/vmaf/blob/master/resource/doc/ffmpeg.md#note-about-the-model-path-on-windows) for using Target Quality / VMAF on Windows.
+ - An encoder with Constant Quality (CQ) / Constant Rate Control (CRF) support (e.g. `--crf 30`, `--cq-level=30`). These values will then be tweaked for each scene/segment until the desired score is achieved.
 
-- Quality/Constant Rate control (Target quality change crf/cq value for each segment). Which means that encoders must be in mode that use CRF/CQ and have those options specified ( `--crf 30`, `--cq-level=30`) those values get replaced for each segment
+## Parameters
 
-## Commands
+- `--target-quality <float>` - Enables target quality with default settings for your encoder. Targets the `<float>` VMAF score (0-100, higher = better)
 
-- `--target-quality FLOAT` - enables target quality with default settings for that encoder, targets FLOAT value
+- `--probes <int>` - Overrides maximum amount of probes to make for each segment (Default: `4`)
 
-- `--probes INT` - Overrides maximum amount of probes to make for each segment (Default 4)
+- `--min_q <int> --max_q <int>` - Overrides default CRF/CQ boundaries for search
 
-- `--min_q INT --max_q INT` - Overrides default CRF/CQ boundaries for search
+- `--vmaf-res <resolution>` - Overrides default VMAF calculation resolution for video (Default: `1920x1080`)
 
-## Example of usage
+## Usage examples
 
-`av1an -i file --target-quality 90` - Will run aomenc with default settings of target-quality
+Run av1an with default settings (aomenc), targetting a VMAF-score of 90:
+```bash
+$ av1an -i file --target-quality 90
+```
 
-`av1an -i file --target-quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6` - With specified path to vmaf model and 6 probes per segment
+Target a VMAF score of 95 using a custom VMAF-model and probe-count:
+```bash
+av1an -i file --target-quality 95 --vmaf_path "vmaf_v.0.6.3.pkl" --probes 6
+```
 
-## Scaling
+## Considerations when Cropping
 
-By default vmaf calculation is done at 1920x1080 with default model.
-VMAF calculation resolution can be changed
+When cropping video during Av1an's encoding process using ffmpeg filters, one should additionally pass these filters to the VMAF process, as well as the target-resolution: 
 
-`--vmaf-res 3840x2160`
+```bash
+$ av1an -i input.mkv --ffmpeg "-vf crop=3840:1900:0:0" --vmaf-filter "crop=3840:1900:0:0" --vmaf-res "3840x1900" --target-quality 90
+```
 
-## Cropping with target quality
+If cropping is performed through a VaporSynth script, the user need only set `--vmaf-res` to the appropriate output resolution:
 
-Filter with crop should be supplied for both ffmpeg options and vmaf filter
-
-`--ffmpeg "-vf crop=3840:1900:0:0" --vmaf-filter "crop=3840:1900:0:0" --vmaf-res "3840x1900"`
-
-or cropping and resizing could be done with vapoursynth script 
-` -i 4k_crop.vpy --vmaf-res "3840x1600" --target-quality 90 -o test.mkv `
+```bash
+$ av1an -i 4k_crop.vpy --vmaf-res "3840x1600" --target-quality 90
+```

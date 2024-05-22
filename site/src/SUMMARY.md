@@ -12,7 +12,7 @@
 
 
 # Features Documentation
-- [Target Quality](./Features/TargetQuality.md)
+- [Target Quality](./Features/target_quality.md)
 
 
 # Installation

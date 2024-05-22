@@ -20,7 +20,7 @@ For help with av1an, feel free to reach out to us on [Discord](https://discord.g
 ## Features
 
 - Hyper-scalable video encoding
-- [Target Quality mode](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), using VMAF control encoders rate control to achieve the desired video quality
+- [Target Quality mode](https://master-of-zen.github.io/Av1an/Features/target_quality.html), using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
 - Cancel and resume encoding without loss of progress (see `--keep` & `--resume`)
 - Minimal and clean CLI
@@ -49,7 +49,7 @@ Encode a video file with cinematic cropping using ffmpeg parameters:
 $ av1an -i input.mkv -f "-vf crop=1920:800"
 ```
 
-Encode from a VapourSynth script with custom video encoder settings, 10 workers, [target quality](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), audio encoding options, logging and custom output file-name:
+Encode from a VapourSynth script with custom video encoder settings, 10 workers, [target quality](https://master-of-zen.github.io/Av1an/Features/target_quality.html), audio encoding options, logging and custom output file-name:
 
 ```bash
 $ av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
@@ -108,7 +108,7 @@ Optional:
 - [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
 - [bestsource](https://github.com/vapoursynth/bestsource) Vapoursynth plugin for slow but accurate chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge instead of FFmpeg for file concatenation
-- [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/TargetQuality.md)
+- [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/target_quality.md)
 
 #### VapourSynth plugins on Windows
 

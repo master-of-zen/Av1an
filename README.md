@@ -58,7 +58,10 @@ At least one encoder is required to use Av1an. The following encoders are suppor
 | H.256/HEVC | x265 | `x265` | [VideoLAN](https://www.videolan.org/developers/x265.html) |
 
 > [!IMPORTANT]
-> Note that Av1an requires the encoder executables. If you use a package manager to install encoders, check that packages you've installed the encoder executables (e.g. vpxenc, SvtAv1EncApp) from the list above. Simply installing their respective libraries (e.g. `libvpx`, `libSvtAv1Enc`) is not enough.
+> 
+> Note that Av1an requires the encoder executables.
+>
+> If you use a package manager to install encoders, check that packages you've installed the encoder executables (e.g. `vpxenc`, `SvtAv1EncApp`) from the list above. Simply installing their respective libraries (e.g. `libvpx`, `libSvtAv1Enc`) is not enough.
 
 ## Installation
 

@@ -1,6 +1,7 @@
-<img align="right" width=45% src="https://github.com/master-of-zen/Av1an/assets/46526140/15f68b63-7be5-45e8-bf48-ae7eb2fc4bb6" alt="av1an fully utilizing a 96-core CPU for video encoding">
-
 # Av1an
+
+<img align="right" width=40% src="https://github.com/master-of-zen/Av1an/assets/46526140/15f68b63-7be5-45e8-bf48-ae7eb2fc4bb6" alt="av1an fully utilizing a 96-core CPU for video encoding">
+
 
 [![Discord server](https://discordapp.com/api/guilds/696849974230515794/embed.png)](https://discord.gg/Ar8MvJh) [![CI tests](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml/badge.svg)](https://github.com/master-of-zen/Av1an/actions/workflows/tests.yml) [![](https://img.shields.io/crates/v/av1an.svg)](https://crates.io/crates/av1an) [![](https://tokei.rs/b1/github/master-of-zen/Av1an?category=code)](https://github.com/master-of-zen/Av1an)
 

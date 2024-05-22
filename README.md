@@ -31,18 +31,28 @@ For help with av1an, feel free to reach out to us on [Discord](https://discord.g
 
 Av1an offers a comprehensive command-line interface for streamlined operation. For complete reference of it's offerings, refer to the [CLI Reference](https://master-of-zen.github.io/Av1an/Cli/general.html) in the docs or run `av1an --help`.
 
-### Examples:
+### Examples
 
 Encode a video file with the default parameters (uses `aom` for encoding):
 
-```sh
-av1an -i input.mkv
+```bash
+$ av1an -i input.mkv
 ```
 
-Or use a VapourSynth script and custom parameters:
+Encode a video file and all it's accompanying audio-tracks to 2-channel 192kbps opus:
+```bash
+$ av1an -i input.mkv -a "-c:a libopus -ac 2 -b:a 192k"
+```
 
-```sh
-av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
+Encode a video file with cinematic cropping using ffmpeg parameters:
+```bash
+$ av1an -i input.mkv -f "-vf crop=1920:800"
+```
+
+Encode from a VapourSynth script with custom video encoder settings, 10 workers, [target quality](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), audio encoding options, logging and custom output file-name:
+
+```bash
+$ av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 ```
 
 ## Supported encoders

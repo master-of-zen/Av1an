@@ -1,6 +1,5 @@
 # Av1an
-[av1an](./av1an.md)
-
+[Av1an](./av1an.md)
 
 
 # CLI Reference
@@ -11,21 +10,20 @@
  - [VMAF](Cli/vmaf.md)
  - [Target Quality](Cli/target_quality.md)
 
-# Features Documentation
 
+# Features Documentation
 - [Target Quality](./Features/TargetQuality.md)
 
-# Instalation
 
+# Installation
  - [Compiling](./compiling.md)
  - [Docker](./docker.md)
 
 
-
 # Encoders
-
 - [Aomenc](./Encoders/aomenc.md)
 - [SVT-AV1](./Encoders/svt-av1.md)
 - [Rav1e](./Encoders/rav1e.md)
+
 
 # Video encoding knowledge

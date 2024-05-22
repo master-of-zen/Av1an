@@ -75,33 +75,42 @@ At least one encoder is required to use Av1an. The following encoders are suppor
 
 ## Installation
 
-Av1an can be installed from package managers, cargo, or compliled manually. There are also pre-built [Docker images](/docs/DOCKER.md) which include all dependencies and are frequently updated.
+Av1an can be installed from package managers, cargo, or compiled manually. There are also pre-built [Docker images](/docs/DOCKER.md) available that include all dependencies and are frequently updated.
 
 For Windows users, prebuilt binaries are also included in every [release](https://github.com/master-of-zen/Av1an/releases), and a [nightly build](https://github.com/master-of-zen/Av1an/releases/tag/latest) of the current `master` branch is also available.
 
 ### Package managers
 
- - Arch Linux & Manjaro: `pacman -S av1an`
- - Cargo (Universal): `cargo install av1an`
+Av1an is available officially for download from the [Arch Linux](https://archlinux.org/packages/extra/x86_64/av1an/) & [Manjaro](https://packages.manjaro.org/?query=av1an) package repositories
+```bash
+$ pacman -S av1an
+```
 
-### Manual installation
+In addition, Av1an is also available as a Rust Package, and can therefore easily be compiled from source and installed using Cargo:
+```bash
+cargo install av1an
+```
 
-Prerequisites:
+See [Compiling](https://master-of-zen.github.io/Av1an/compiling.html) for details on building Av1an from source.
+
+### Dependencies
+
+Requirements:
 
 - [FFmpeg](https://ffmpeg.org/download.html)
 - [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases)
-- At least one [encoder](#supported-encoders)
+- At least one [supported encoder](#supported-encoders)
 
 Optional:
 
 - [L-SMASH](https://github.com/AkarinVS/L-SMASH-Works) VapourSynth plugin for better chunking (recommended)
-- [DGDecNV](https://www.rationalqm.us/dgdecnv/dgdecnv.html) Vapoursynth plugin for very fast and accurate chunking, `dgindexnv` executable needs to be present in system path and an NVIDIA GPU with CUVID 
+- [DGDecNV](https://www.rationalqm.us/dgdecnv/dgdecnv.html) Vapoursynth plugin for very fast and accurate chunking, `dgindexnv` executable needs to be present in system path and an Nvidia GPU with CUVID
 - [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
 - [bestsource](https://github.com/vapoursynth/bestsource) Vapoursynth plugin for slow but accurate chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge instead of FFmpeg for file concatenation
 - [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/TargetQuality.md)
 
-### VapourSynth plugins on Windows
+#### VapourSynth plugins on Windows
 
 If you want to install the L-SMASH or ffms2 plugins and are on Windows, then you have [two installation options](http://vapoursynth.com/doc/installation.html#plugins-and-scripts). The easiest way is using the included plugin script:
 

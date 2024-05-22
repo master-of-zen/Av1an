@@ -1,3 +1,0 @@
-[http]
-timeout = 60                # timeout for each HTTP request, in seconds
-multiplexing = false

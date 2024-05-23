@@ -40,7 +40,8 @@ crossbeam-channel = "0.5.1"
 crossbeam-utils = "0.8.5"
 textwrap = "0.16.0"
 path_abs = "0.5.1"
-av-scenechange = { version = "0.11.0", default-features = false, features = [
+av-scenechange = { version = "0.12.0", default-features = false, features = [
+  "ffmpeg",
   "vapoursynth",
 ] }
 y4m = "0.8.0"

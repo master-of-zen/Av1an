@@ -5,6 +5,7 @@ use std::thread;
 use ansi_term::Style;
 use anyhow::bail;
 use av_scenechange::decoder::Decoder;
+use av_scenechange::ffmpeg::FfmpegDecoder;
 use av_scenechange::vapoursynth::VapoursynthDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
@@ -263,19 +264,23 @@ fn build_decoder(
       let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {e:?}"));
       bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;
-      Decoder::Y4m(y4m::Decoder::new(
-        Command::new("ffmpeg")
-          .args(["-r", "1", "-i"])
-          .arg(path)
-          .args(filters.as_ref())
-          .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
-          .stdin(Stdio::null())
-          .stdout(Stdio::piped())
-          .stderr(Stdio::null())
-          .spawn()?
-          .stdout
-          .unwrap(),
-      )?)
+      if !filters.is_empty() {
+        Decoder::Y4m(y4m::Decoder::new(
+          Command::new("ffmpeg")
+            .args(["-r", "1", "-i"])
+            .arg(path)
+            .args(filters.as_ref())
+            .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?
+            .stdout
+            .unwrap(),
+        )?)
+      } else {
+        Decoder::Ffmpeg(FfmpegDecoder::new(path)?)
+      }
     }
   };
 

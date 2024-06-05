@@ -51,6 +51,7 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
   Ok(
     ictx
       .packets()
+      .filter_map(Result::ok)
       .filter(|(stream, _)| stream.index() == video_stream_index)
       .count(),
   )
@@ -122,6 +123,7 @@ pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
 
   let kfs = ictx
     .packets()
+    .filter_map(Result::ok)
     .filter(|(stream, _)| stream.index() == video_stream_index)
     .map(|(_, packet)| packet)
     .enumerate()
@@ -162,23 +164,10 @@ pub fn encode_audio<S: AsRef<OsStr>>(
     encode_audio.stdout(Stdio::piped());
     encode_audio.stderr(Stdio::piped());
 
-    encode_audio.args(["-y", "-hide_banner", "-loglevel", "error", "-i"]);
-    encode_audio.arg(input);
-
-    encode_audio.args([
-      "-map_metadata",
-      "0",
-      "-vn",
-      "-dn",
-      "-map",
-      "0",
-      "-map",
-      "-0:a",
-      "-c",
-      "copy",
-      "-map",
-      "0:a",
-    ]);
+    encode_audio.args(["-y", "-hide_banner", "-loglevel", "error"]);
+    encode_audio.args(["-i", input.to_str().unwrap()]);
+    encode_audio.args(["-map_metadata", "0"]);
+    encode_audio.args(["-map", "0", "-c", "copy", "-vn", "-dn"]);
 
     encode_audio.args(audio_params);
     encode_audio.arg(&audio_file);

@@ -9,16 +9,18 @@ jobs:
     runs-on: windows-2022
 
     env:
-      ffmpeg_ver: "6.0"
+      CARGO_INCREMENTAL: 0
+
+      ffmpeg_ver: "7.0"
       ffmpeg_path: "C:/ffmpeg"
-      vsynth_ver: "R63"
+      vsynth_ver: "R66"
       vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:
       - name: Python 3 setup
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '~3.10'
+          python-version: '~3.12'
           architecture: x64
 
       - name: NASM setup
@@ -27,8 +29,7 @@ jobs:
           version: 2.16.01
           from-source: false
 
-      - if: steps.cache-ff.outputs.cache-hit != 'true'
-        name: FFmpeg installation
+      - name: FFmpeg installation
         run: |
           $tempFile = New-TemporaryFile
           $uri = 'https://github.com/GyanD/codexffmpeg/releases/download/VER/ffmpeg-VER-full_build-shared.7z'.Replace('VER', "$env:ffmpeg_ver")
@@ -39,43 +40,24 @@ jobs:
         run: |
           echo "FFMPEG_DIR=$((Get-ChildItem -Directory "$env:ffmpeg_path").FullName)" | Out-File $env:GITHUB_ENV -Append
 
-      - name: VapourSynth cache
-        id: cache-vsynth
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.vsynth_path }}
-          key: vsynth-${{ env.vsynth_ver }}
-
-      - if: steps.cache-vsynth.outputs.cache-hit != 'true'
-        name: VapourSynth installation
+      - name: VapourSynth installation
         run: |
           $tempFile = New-TemporaryFile
-          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.7z'.Replace('VER', "$env:vsynth_ver")
+          $uri = 'https://github.com/vapoursynth/vapoursynth/releases/download/VER/VapourSynth64-Portable-VER.zip'.Replace('VER', "$env:vsynth_ver")
           Invoke-WebRequest "$uri" -OutFile "$tempFile" -TimeoutSec 10
-          7z x -y -o"$env:vsynth_path" "$tempFile"
+          Expand-Archive "$tempFile" "$env:vsynth_path"
 
-      - uses: actions/checkout@v3
-
-      - name: Package cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
 
       - name: Av1an build
-        env:
-          CARGO_TERM_COLOR: always
-        run: cargo build -rv
+        run: cargo build --release
 
       - name: Create prerelease
-        uses: marvinpinto/action-automatic-releases@v1.2.1
+        uses: softprops/action-gh-release@v2
         with:
-          repo_token: ${{ github.token }}
-          automatic_release_tag: latest
           prerelease: true
-          draft: false
+          tag_name: latest
           files: target/release/av1an.exe
+          fail_on_unmatched_files: true
+

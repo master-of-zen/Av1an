@@ -4,6 +4,9 @@ use std::thread;
 
 use ansi_term::Style;
 use anyhow::bail;
+use av_scenechange::decoder::Decoder;
+use av_scenechange::ffmpeg::FfmpegDecoder;
+use av_scenechange::vapoursynth::VapoursynthDecoder;
 use av_scenechange::{detect_scene_changes, DetectionOptions, SceneDetectionSpeed};
 use ffmpeg::format::Pixel;
 use itertools::Itertools;
@@ -147,7 +150,7 @@ pub fn scene_detect(
         frame_limit,
         callback.as_ref().map(|cb| cb as &dyn Fn(usize, usize)),
       )
-    };
+    }?;
     if let Some(limit) = frame_limit {
       if limit != sc_result.frame_count {
         bail!(
@@ -206,7 +209,7 @@ fn build_decoder(
   sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_downscale_height: Option<usize>,
-) -> anyhow::Result<(y4m::Decoder<impl Read>, usize)> {
+) -> anyhow::Result<(Decoder<impl Read>, usize)> {
   let bit_depth;
   let filters: SmallVec<[String; 4]> = match (sc_downscale_height, sc_pix_format) {
     (Some(sdh), Some(spf)) => into_smallvec![
@@ -225,53 +228,61 @@ fn build_decoder(
     (None, None) => smallvec![],
   };
 
-  let decoder = y4m::Decoder::new(match input {
+  let decoder = match input {
     Input::VapourSynth(path) => {
       bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
-      let vspipe = Command::new("vspipe")
-        .arg("-c")
-        .arg("y4m")
-        .arg(path)
-        .arg("-")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap();
 
       if !filters.is_empty() {
-        Command::new("ffmpeg")
-          .stdin(vspipe)
-          .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
-          .args(filters)
+        let vspipe = Command::new("vspipe")
+          .arg("-c")
+          .arg("y4m")
+          .arg(path)
           .arg("-")
+          .stdin(Stdio::null())
           .stdout(Stdio::piped())
           .stderr(Stdio::null())
           .spawn()?
           .stdout
-          .unwrap()
+          .unwrap();
+        Decoder::Y4m(y4m::Decoder::new(
+          Command::new("ffmpeg")
+            .stdin(vspipe)
+            .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
+            .args(filters)
+            .arg("-")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?
+            .stdout
+            .unwrap(),
+        )?)
       } else {
-        vspipe
+        Decoder::Vapoursynth(VapoursynthDecoder::new(path.as_ref())?)
       }
     }
     Input::Video(path) => {
       let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {e:?}"));
       bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;
-      Command::new("ffmpeg")
-        .args(["-r", "1", "-i"])
-        .arg(path)
-        .args(filters.as_ref())
-        .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?
-        .stdout
-        .unwrap()
+      if !filters.is_empty() {
+        Decoder::Y4m(y4m::Decoder::new(
+          Command::new("ffmpeg")
+            .args(["-r", "1", "-i"])
+            .arg(path)
+            .args(filters.as_ref())
+            .args(["-f", "yuv4mpegpipe", "-strict", "-1", "-"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?
+            .stdout
+            .unwrap(),
+        )?)
+      } else {
+        Decoder::Ffmpeg(FfmpegDecoder::new(path)?)
+      }
     }
-  })?;
+  };
 
   Ok((decoder, bit_depth))
 }

@@ -360,17 +360,19 @@ impl Av1anContext {
           temp_res = tq.vmaf_res.to_string();
         }
 
-        if let Err(e) = vmaf::plot(
-          self.args.output_file.as_ref(),
-          &self.args.input,
-          tq.model.as_deref(),
-          temp_res.as_str(),
-          tq.vmaf_scaler.as_str(),
-          1,
-          tq.vmaf_filter.as_deref(),
-          tq.vmaf_threads,
-        ) {
-          error!("VMAF calculation failed with error: {}", e);
+        if self.args.vmaf {
+          if let Err(e) = vmaf::plot(
+            self.args.output_file.as_ref(),
+            &self.args.input,
+            tq.model.as_deref(),
+            temp_res.as_str(),
+            tq.vmaf_scaler.as_str(),
+            1,
+            tq.vmaf_filter.as_deref(),
+            tq.vmaf_threads,
+          ) {
+            error!("VMAF calculation failed with error: {}", e);
+          }
         }
       }
 
@@ -533,7 +535,7 @@ impl Av1anContext {
           None
         };
 
-        let f_stdr2 = ffmpeg_stderr.as_ref().map(Arc::clone);
+        let f_stdr2 = ffmpeg_stderr.clone();
 
         tokio::spawn(async move {
           while let Some(line) = source_reader.next_line().await.unwrap() {

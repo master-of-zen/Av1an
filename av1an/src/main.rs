@@ -748,6 +748,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.force_keyframes.as_deref().unwrap_or(""),
       )?,
       target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
+      vmaf: args.vmaf,
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {
@@ -905,7 +906,8 @@ pub fn run() -> anyhow::Result<()> {
   for arg in args {
     // Change log file
     let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
-    let _ = &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file))?;
+    let _ =
+      &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file).append())?;
 
     Av1anContext::new(arg)?.encode_file()?;
   }

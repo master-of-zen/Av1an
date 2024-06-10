@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "av-scenechange"
-version = "0.12.0"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5fa17f98b2134d5459bbf2e69b297b1be2047a3f617af34fad7ecca362c6cb5"
+checksum = "f0707e4b0e933849f2955134399e268cbefb96fb9524b0aa3fb612c3d3ddacf5"
 dependencies = [
  "anyhow",
  "ffmpeg-the-third",

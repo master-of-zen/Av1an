@@ -704,7 +704,7 @@ impl Av1anContext {
 
     Ok(match self.args.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
-        &self.args.input,
+        self.args.input_sc.as_ref().unwrap_or(&self.args.input),
         self.args.encoder,
         self.frames,
         self.args.min_scene_len,

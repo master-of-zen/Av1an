@@ -51,6 +51,8 @@ If you want to build the binary yourself, you will need the following dependenci
 - Create a new environment variable named `VAPOURSYNTH_LIB_DIR` and set it to the directory path where you extracted `VapourSynth64-Portable-R68.zip`, appending `\sdk\lib64` to the path.
   - (For example, set `VAPOURSYNTH_LIB_DIR` to `C:\Users\Username\Downloads\VapourSynth64-Portable-R68\sdk\lib64`)
 
+Then, either clone the repository by running
+
 ```sh
 git clone https://github.com/master-of-zen/Av1an
 ```

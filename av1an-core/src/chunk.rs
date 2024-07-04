@@ -13,6 +13,7 @@ pub struct Chunk {
   pub temp: String,
   pub index: usize,
   pub input: Input,
+  pub vspipe_args: Vec<String>,
   pub source_cmd: Vec<OsString>,
   pub output_ext: String,
   pub start_frame: usize,
@@ -59,7 +60,7 @@ impl Chunk {
       let grain_table = Path::new(&self.temp).join(format!("iso{iso_setting}-grain.tbl"));
       if !grain_table.exists() {
         debug!("Generating grain table at ISO {}", iso_setting);
-        let (mut width, mut height) = self.input.resolution()?;
+        let (mut width, mut height) = self.input.resolution(self.vspipe_args.clone())?;
         if self.noise_size.0.is_some() {
           width = self.noise_size.0.unwrap();
         }
@@ -68,7 +69,7 @@ impl Chunk {
         }
         let transfer_function = self
           .input
-          .transfer_function_params_adjusted(&self.video_params)?;
+          .transfer_function_params_adjusted(&self.video_params, self.vspipe_args.clone())?;
         let params = generate_photon_noise_params(
           0,
           u64::MAX,
@@ -101,6 +102,7 @@ mod tests {
       temp: "none".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),
+      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -121,6 +123,7 @@ mod tests {
       temp: "none".to_owned(),
       index: 10000,
       input: Input::Video("test.mkv".into()),
+      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -142,6 +145,7 @@ mod tests {
       temp: "d".to_owned(),
       index: 1,
       input: Input::Video("test.mkv".into()),
+      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,

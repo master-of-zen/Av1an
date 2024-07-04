@@ -199,7 +199,13 @@ pub struct CliOpts {
   /// defining the width of the lanczos scaler.
   #[clap(long, default_value = "bicubic")]
   pub scaler: String,
-
+  
+  /// Pass python argument(s) to the script environment
+  /// 
+  /// --vspipe-args "message=fluffy kittens" "head=empty"
+  #[clap(long, num_args(0..))]
+  pub vspipe_args: Vec<String>,
+  
   /// File location for scenes
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
@@ -570,6 +576,7 @@ impl CliOpts {
         temp: temp_dir.clone(),
         workers: self.workers,
         video_params: video_params.clone(),
+        vspipe_args: self.vspipe_args.clone(),
         probe_slow: self.probe_slow,
         probing_rate: adapt_probing_rate(self.probing_rate as usize),
       }
@@ -665,6 +672,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.encoder.get_default_pass()
       },
       video_params: video_params.clone(),
+      vspipe_args: args.vspipe_args.clone(),
       output_file: if let Some(path) = args.output_file.as_ref() {
         let path = PathAbs::new(path)?;
 
@@ -702,7 +710,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Some(0) => None,
         Some(x) => Some(x),
         // Make sure it's at least 10 seconds, unless specified by user
-        None => match input.frame_rate() {
+        None => match input.frame_rate(args.vspipe_args.clone()) {
           Ok(fps) => Some((fps * args.extra_split_sec) as usize),
           Err(_) => Some(240_usize),
         },
@@ -724,7 +732,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             })?,
           },
           Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
-            bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
+            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), args.vspipe_args.clone()).with_context(|| {
               format!("VapourSynth failed to get bit depth for input video {path:?}")
             })?,
           },

@@ -18,6 +18,7 @@ use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosi
 pub fn av_scenechange_detect(
   input: &Input,
   encoder: Encoder,
+  vspipe_args: Vec<String>,
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
@@ -37,8 +38,9 @@ pub fn av_scenechange_detect(
   }
 
   let input2 = input.clone();
+  let vspipe_args2 = vspipe_args.clone();
   let frame_thread = thread::spawn(move || {
-    let frames = input2.frames().unwrap();
+    let frames = input2.frames(vspipe_args2).unwrap();
     if verbosity != Verbosity::Quiet {
       progress_bar::convert_to_progress(0);
       progress_bar::set_len(frames as u64);
@@ -49,6 +51,7 @@ pub fn av_scenechange_detect(
   let scenes = scene_detect(
     input,
     encoder,
+    vspipe_args,
     total_frames,
     if verbosity == Verbosity::Quiet {
       None
@@ -77,6 +80,7 @@ pub fn av_scenechange_detect(
 pub fn scene_detect(
   input: &Input,
   encoder: Encoder,
+  vspipe_args: Vec<String>,
   total_frames: usize,
   callback: Option<&dyn Fn(usize)>,
   min_scene_len: usize,
@@ -89,6 +93,7 @@ pub fn scene_detect(
   let (mut decoder, bit_depth) = build_decoder(
     input,
     encoder,
+    vspipe_args,
     sc_scaler,
     sc_pix_format,
     sc_downscale_height,
@@ -206,6 +211,7 @@ pub fn scene_detect(
 fn build_decoder(
   input: &Input,
   encoder: Encoder,
+  vspipe_args: Vec<String>,
   sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_downscale_height: Option<usize>,
@@ -230,17 +236,22 @@ fn build_decoder(
 
   let decoder = match input {
     Input::VapourSynth(path) => {
-      bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
+      bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), vspipe_args.clone())?;
 
-      if !filters.is_empty() {
-        let vspipe = Command::new("vspipe")
-          .arg("-c")
+      if !filters.is_empty() || !vspipe_args.is_empty() {
+        let mut command = Command::new("vspipe");
+        command.arg("-c")
           .arg("y4m")
           .arg(path)
           .arg("-")
           .stdin(Stdio::null())
           .stdout(Stdio::piped())
-          .stderr(Stdio::null())
+          .stderr(Stdio::null());
+        // Append vspipe python arguments to the environment if there are any
+        for arg in vspipe_args {
+          command.args(["-a", &arg]);
+        }
+        let vspipe = command
           .spawn()?
           .stdout
           .unwrap();

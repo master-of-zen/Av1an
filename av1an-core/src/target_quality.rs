@@ -34,6 +34,7 @@ pub struct TargetQuality {
   pub temp: String,
   pub workers: usize,
   pub video_params: Vec<String>,
+  pub vspipe_args: Vec<String>,
   pub probe_slow: bool,
 }
 
@@ -247,6 +248,7 @@ impl TargetQuality {
     vmaf::run_vmaf(
       &probe_name,
       chunk.source_cmd.as_slice(),
+      self.vspipe_args.clone(),
       &fl_path,
       self.model.as_ref(),
       &self.vmaf_res,

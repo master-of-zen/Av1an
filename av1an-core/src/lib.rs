@@ -108,35 +108,35 @@ impl Input {
     matches!(&self, Input::VapourSynth(_))
   }
 
-  pub fn frames(&self) -> anyhow::Result<usize> {
+  pub fn frames(&self, vspipe_args: Vec<String>) -> anyhow::Result<usize> {
     const FAIL_MSG: &str = "Failed to get number of frames for input video";
     Ok(match &self {
       Input::Video(path) => {
         ffmpeg::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
       Input::VapourSynth(path) => {
-        vapoursynth::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        vapoursynth::num_frames(path.as_path(), vspipe_args).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
     })
   }
 
-  pub fn frame_rate(&self) -> anyhow::Result<f64> {
+  pub fn frame_rate(&self, vspipe_args: Vec<String>) -> anyhow::Result<f64> {
     const FAIL_MSG: &str = "Failed to get frame rate for input video";
     Ok(match &self {
       Input::Video(path) => {
         crate::ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
       Input::VapourSynth(path) => {
-        vapoursynth::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        vapoursynth::frame_rate(path.as_path(), vspipe_args).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
     })
   }
 
-  pub fn resolution(&self) -> anyhow::Result<(u32, u32)> {
+  pub fn resolution(&self, vspipe_args: Vec<String>) -> anyhow::Result<(u32, u32)> {
     const FAIL_MSG: &str = "Failed to get resolution for input video";
     Ok(match self {
       Input::VapourSynth(video) => {
-        crate::vapoursynth::resolution(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        crate::vapoursynth::resolution(video, vspipe_args).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
       Input::Video(video) => {
         crate::ffmpeg::resolution(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
@@ -144,11 +144,11 @@ impl Input {
     })
   }
 
-  pub fn pixel_format(&self) -> anyhow::Result<String> {
+  pub fn pixel_format(&self, vspipe_args: Vec<String>) -> anyhow::Result<String> {
     const FAIL_MSG: &str = "Failed to get resolution for input video";
     Ok(match self {
       Input::VapourSynth(video) => {
-        crate::vapoursynth::pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+        crate::vapoursynth::pixel_format(video, vspipe_args).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
       Input::Video(video) => {
         let fmt = crate::ffmpeg::get_pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
@@ -157,11 +157,11 @@ impl Input {
     })
   }
 
-  fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
+  fn transfer_function(&self, vspipe_args: Vec<String>) -> anyhow::Result<TransferFunction> {
     const FAIL_MSG: &str = "Failed to get transfer characteristics for input video";
     Ok(match self {
       Input::VapourSynth(video) => {
-        match crate::vapoursynth::transfer_characteristics(video)
+        match crate::vapoursynth::transfer_characteristics(video, vspipe_args)
           .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
         {
           16 => TransferFunction::SMPTE2084,
@@ -182,6 +182,7 @@ impl Input {
   pub fn transfer_function_params_adjusted(
     &self,
     enc_params: &[String],
+    vspipe_args: Vec<String>
   ) -> anyhow::Result<TransferFunction> {
     if enc_params.iter().any(|p| {
       let p = p.to_ascii_lowercase();
@@ -201,15 +202,15 @@ impl Input {
     }) {
       return Ok(TransferFunction::BT1886);
     }
-    self.transfer_function()
+    self.transfer_function(vspipe_args)
   }
 
   /// Calculates tiles from resolution
   /// Don't convert tiles to encoder specific representation
   /// Default video without tiling is 1,1
   /// Return number of horizontal and vertical tiles
-  pub fn calculate_tiles(&self) -> (u32, u32) {
-    match self.resolution() {
+  pub fn calculate_tiles(&self, vspipe_args: Vec<String>) -> (u32, u32) {
+    match self.resolution(vspipe_args) {
       Ok((h, v)) => {
         // tile range 0-1440 pixels
         let horizontal = max((h - 1) / 720, 1);

@@ -118,6 +118,7 @@ pub fn validate_libvmaf() -> anyhow::Result<()> {
 pub fn plot(
   encoded: &Path,
   reference: &Input,
+  vspipe_args: Vec<String>,
   model: Option<impl AsRef<Path>>,
   res: &str,
   scaler: &str,
@@ -127,30 +128,37 @@ pub fn plot(
 ) -> Result<(), Box<EncoderCrash>> {
   let json_file = encoded.with_extension("json");
   let plot_file = encoded.with_extension("svg");
+  let mut vspipe_args = vspipe_args.clone();
 
   println!(":: VMAF Run");
 
   let pipe_cmd: SmallVec<[&OsStr; 8]> = match reference {
-    Input::Video(ref path) => ref_smallvec!(
-      OsStr,
-      8,
-      [
-        "ffmpeg",
-        "-i",
-        path,
-        "-strict",
-        "-1",
-        "-f",
-        "yuv4mpegpipe",
-        "-"
-      ]
-    ),
+    Input::Video(ref path) => {
+      // We need to clear vspipe arguments to avoid adding them to the cli in case ffmpeg is used.
+      // Very ugly, but I couldn't figure out how to push to a smallvec programmatically :(
+      vspipe_args.clear();
+      ref_smallvec!(
+        OsStr,
+        8,
+        [
+          "ffmpeg",
+          "-i",
+          path,
+          "-strict",
+          "-1",
+          "-f",
+          "yuv4mpegpipe",
+          "-"
+        ]
+      )
+    },
     Input::VapourSynth(ref path) => ref_smallvec!(OsStr, 8, ["vspipe", "-c", "y4m", path, "-"]),
   };
 
   run_vmaf(
     encoded,
     &pipe_cmd,
+    vspipe_args,
     &json_file,
     model,
     res,
@@ -167,6 +175,7 @@ pub fn plot(
 pub fn run_vmaf(
   encoded: &Path,
   reference_pipe_cmd: &[impl AsRef<OsStr>],
+  vspipe_args: Vec<String>,
   stat_file: impl AsRef<Path>,
   model: Option<impl AsRef<Path>>,
   res: &str,
@@ -208,6 +217,10 @@ pub fn run_vmaf(
 
   let mut source_pipe = if let [cmd, args @ ..] = reference_pipe_cmd {
     let mut source_pipe = Command::new(cmd);
+    // Append vspipe python arguments to the environment if there are any
+    for arg in vspipe_args {
+      source_pipe.args(["-a", &arg]);
+    }
     source_pipe.args(args);
     source_pipe.stdout(Stdio::piped());
     source_pipe.stderr(Stdio::null());

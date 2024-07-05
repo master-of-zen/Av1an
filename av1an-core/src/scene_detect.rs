@@ -18,7 +18,6 @@ use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosi
 pub fn av_scenechange_detect(
   input: &Input,
   encoder: Encoder,
-  vspipe_args: Vec<String>,
   total_frames: usize,
   min_scene_len: usize,
   verbosity: Verbosity,
@@ -50,7 +49,6 @@ pub fn av_scenechange_detect(
   let scenes = scene_detect(
     input,
     encoder,
-    vspipe_args,
     total_frames,
     if verbosity == Verbosity::Quiet {
       None
@@ -79,7 +77,6 @@ pub fn av_scenechange_detect(
 pub fn scene_detect(
   input: &Input,
   encoder: Encoder,
-  vspipe_args: Vec<String>,
   total_frames: usize,
   callback: Option<&dyn Fn(usize)>,
   min_scene_len: usize,
@@ -92,7 +89,6 @@ pub fn scene_detect(
   let (mut decoder, bit_depth) = build_decoder(
     input,
     encoder,
-    vspipe_args,
     sc_scaler,
     sc_pix_format,
     sc_downscale_height,
@@ -210,7 +206,6 @@ pub fn scene_detect(
 fn build_decoder(
   input: &Input,
   encoder: Encoder,
-  vspipe_args: Vec<String>,
   sc_scaler: &str,
   sc_pix_format: Option<Pixel>,
   sc_downscale_height: Option<usize>,
@@ -236,6 +231,7 @@ fn build_decoder(
   let decoder = match input {
     Input::VapourSynth { path, .. } => {
       bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)?;
+      let vspipe_args = input.as_vspipe_args_vec()?;
 
       if !filters.is_empty() || !vspipe_args.is_empty() {
         let mut command = Command::new("vspipe");

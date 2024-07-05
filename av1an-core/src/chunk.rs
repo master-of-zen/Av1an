@@ -13,7 +13,6 @@ pub struct Chunk {
   pub temp: String,
   pub index: usize,
   pub input: Input,
-  pub vspipe_args: Vec<String>,
   pub source_cmd: Vec<OsString>,
   pub output_ext: String,
   pub start_frame: usize,
@@ -104,7 +103,6 @@ mod tests {
       input: Input::Video {
         path: "test.mkv".into()
       },
-      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -127,7 +125,6 @@ mod tests {
       input: Input::Video {
         path: "test.mkv".into()
       },
-      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -151,7 +148,6 @@ mod tests {
       input: Input::Video {
         path: "test.mkv".into()
       },
-      vspipe_args: vec![],
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,

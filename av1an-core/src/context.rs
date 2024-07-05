@@ -711,7 +711,6 @@ impl Av1anContext {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.args.input,
         self.args.encoder,
-        self.args.input.as_vspipe_args_vec()?,
         self.frames,
         self.args.min_scene_len,
         self.args.verbosity,
@@ -889,7 +888,6 @@ impl Av1anContext {
       },
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
-      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       start_frame,
       end_frame,
       frame_rate,
@@ -945,7 +943,6 @@ impl Av1anContext {
         vspipe_args: self.args.input.as_vspipe_args_vec()?
       },
       source_cmd: vspipe_cmd_gen,
-      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       output_ext: output_ext.to_owned(),
       start_frame: scene.start_frame,
       end_frame: scene.end_frame,
@@ -1146,7 +1143,6 @@ impl Av1anContext {
       input: Input::Video {
         path: PathBuf::from(file)
       },
-      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,

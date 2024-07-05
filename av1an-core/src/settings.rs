@@ -40,7 +40,6 @@ pub struct EncodeArgs {
   pub chunk_method: ChunkMethod,
   pub chunk_order: ChunkOrdering,
   pub scaler: String,
-  pub vspipe_args: Vec<String>,
   pub scenes: Option<PathBuf>,
   pub split_method: SplitMethod,
   pub sc_pix_format: Option<Pixel>,
@@ -176,7 +175,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     if self.video_params.is_empty() {
       self.video_params = self
         .encoder
-        .get_default_arguments(self.input.calculate_tiles(self.vspipe_args.clone()));
+        .get_default_arguments(self.input.calculate_tiles());
     }
 
     if let Some(strength) = self.photon_noise {

@@ -38,9 +38,8 @@ pub fn av_scenechange_detect(
   }
 
   let input2 = input.clone();
-  let vspipe_args2 = vspipe_args.clone();
   let frame_thread = thread::spawn(move || {
-    let frames = input2.frames(vspipe_args2).unwrap();
+    let frames = input2.frames().unwrap();
     if verbosity != Verbosity::Quiet {
       progress_bar::convert_to_progress(0);
       progress_bar::set_len(frames as u64);
@@ -235,8 +234,8 @@ fn build_decoder(
   };
 
   let decoder = match input {
-    Input::VapourSynth(path) => {
-      bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), vspipe_args.clone())?;
+    Input::VapourSynth(path, _) => {
+      bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)?;
 
       if !filters.is_empty() || !vspipe_args.is_empty() {
         let mut command = Command::new("vspipe");

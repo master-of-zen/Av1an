@@ -115,7 +115,7 @@ impl Av1anContext {
 
       // frames need to be recalculated in this case
       if self.frames == 0 {
-        self.frames = self.args.input.frames(self.args.vspipe_args.clone())?;
+        self.frames = self.args.input.frames()?;
         done.frames.store(self.frames, atomic::Ordering::Relaxed);
       }
 
@@ -151,12 +151,12 @@ impl Av1anContext {
             && !self.args.resume
         {
           self.vs_script = Some(match &self.args.input {
-            Input::VapourSynth(path) => path.clone(),
+            Input::VapourSynth(path, _) => path.clone(),
             Input::Video(path) => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
           });
 
           let vs_script = self.vs_script.clone().unwrap();
-          let vspipe_args = self.args.vspipe_args.clone();
+          let vspipe_args = self.args.input.as_vspipe_args_vec()?;
           Some({
             thread::spawn(move || {
               let mut command = Command::new("vspipe");
@@ -166,7 +166,7 @@ impl Av1anContext {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
               // Append vspipe arguments to the environment if there are any
-              for arg in vspipe_args.clone() {
+              for arg in vspipe_args {
                 command.args(["-a", &arg]);
               }
               command.spawn()
@@ -179,13 +179,13 @@ impl Av1anContext {
           None
         };
 
-    let res = self.args.input.resolution(self.args.vspipe_args.clone())?;
-    let fps = self.args.input.frame_rate(self.args.vspipe_args.clone())?;
-    let format = self.args.input.pixel_format(self.args.vspipe_args.clone())?;
+    let res = self.args.input.resolution()?;
+    let fps = self.args.input.frame_rate()?;
+    let format = self.args.input.pixel_format()?;
     let tfc = self
       .args
       .input
-      .transfer_function_params_adjusted(&self.args.video_params, self.args.vspipe_args.clone())?;
+      .transfer_function_params_adjusted(&self.args.video_params)?;
     info!(
       "Input: {}x{} @ {:.3} fps, {}, {}",
       res.0,
@@ -301,7 +301,7 @@ impl Av1anContext {
       }
 
       if !get_done().done.is_empty() {
-        let frame_rate = self.args.input.frame_rate(self.args.vspipe_args.clone())?;
+        let frame_rate = self.args.input.frame_rate()?;
         update_progress_bar_estimates(frame_rate, self.frames, self.args.verbosity);
       }
 
@@ -354,7 +354,7 @@ impl Av1anContext {
       if let Some(ref tq) = self.args.target_quality {
         let mut temp_res = tq.vmaf_res.to_string();
         if tq.vmaf_res == "inputres" {
-          let inputres = self.args.input.resolution(self.args.vspipe_args.clone())?;
+          let inputres = self.args.input.resolution()?;
           temp_res.push_str(&format!(
             "{}x{}",
             &inputres.0.to_string(),
@@ -369,7 +369,6 @@ impl Av1anContext {
           if let Err(e) = vmaf::plot(
             self.args.output_file.as_ref(),
             &self.args.input,
-            self.args.vspipe_args.clone(),
             tq.model.as_deref(),
             temp_res.as_str(),
             tq.vmaf_scaler.as_str(),
@@ -684,7 +683,7 @@ impl Av1anContext {
         ChunkMethod::Select => self.create_video_queue_select(scenes),
         ChunkMethod::Segment => self.create_video_queue_segment(scenes)?,
       },
-      Input::VapourSynth(vs_script) => self.create_video_queue_vs(scenes, vs_script.as_path()),
+      Input::VapourSynth(vs_script, _) => self.create_video_queue_vs(scenes, vs_script.as_path()),
     };
 
     match self.args.chunk_order {
@@ -712,7 +711,7 @@ impl Av1anContext {
       SplitMethod::AvScenechange => av_scenechange_detect(
         &self.args.input,
         self.args.encoder,
-        self.args.vspipe_args.clone(),
+        self.args.input.as_vspipe_args_vec()?,
         self.frames,
         self.args.min_scene_len,
         self.args.verbosity,
@@ -748,7 +747,7 @@ impl Av1anContext {
           });
         }
 
-        (scenes, self.args.input.frames(self.args.vspipe_args.clone())?)
+        (scenes, self.args.input.frames()?)
       }
     })
   }
@@ -787,7 +786,7 @@ impl Av1anContext {
         crate::split::read_scenes_from_file(scene_file.as_ref())?
       } else {
         used_existing_cuts = false;
-        self.frames = self.args.input.frames(self.args.vspipe_args.clone())?;
+        self.frames = self.args.input.frames()?;
         self.calc_split_locations()?
       };
     self.frames = frames;
@@ -888,7 +887,7 @@ impl Av1anContext {
       input: Input::Video(src_path.to_path_buf()),
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
-      vspipe_args: self.args.vspipe_args.clone(),
+      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       start_frame,
       end_frame,
       frame_rate,
@@ -939,9 +938,9 @@ impl Av1anContext {
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       index,
-      input: Input::VapourSynth(vs_script.to_path_buf()),
+      input: Input::VapourSynth(vs_script.to_path_buf(), self.args.input.as_vspipe_args_vec()?),
       source_cmd: vspipe_cmd_gen,
-      vspipe_args: self.args.vspipe_args.clone(),
+      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       output_ext: output_ext.to_owned(),
       start_frame: scene.start_frame,
       end_frame: scene.end_frame,
@@ -967,7 +966,7 @@ impl Av1anContext {
   }
 
   fn create_video_queue_vs(&self, scenes: &[Scene], vs_script: &Path) -> Vec<Chunk> {
-    let frame_rate = self.args.input.frame_rate(self.args.vspipe_args.clone()).unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap();
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
       .enumerate()
@@ -983,7 +982,7 @@ impl Av1anContext {
 
   fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Chunk> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate(self.args.vspipe_args.clone()).unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
@@ -1007,7 +1006,7 @@ impl Av1anContext {
 
   fn create_video_queue_segment(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate(self.args.vspipe_args.clone()).unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     debug!("Splitting video");
     segment(
@@ -1049,7 +1048,7 @@ impl Av1anContext {
 
   fn create_video_queue_hybrid(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate(self.args.vspipe_args.clone()).unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap();
 
     let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
 
@@ -1140,7 +1139,7 @@ impl Av1anContext {
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       input: Input::Video(PathBuf::from(file)),
-      vspipe_args: self.args.vspipe_args.clone(),
+      vspipe_args: self.args.input.as_vspipe_args_vec()?,
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,

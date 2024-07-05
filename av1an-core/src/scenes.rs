@@ -261,7 +261,6 @@ fn get_test_args() -> Av1anContext {
     force: false,
     passes: 2,
     video_params: into_vec!["--cq-level=40", "--cpu-used=0", "--aq-mode=1"],
-    vspipe_args: vec![],
     output_file: String::new(),
     audio_params: Vec::new(),
     chunk_method: ChunkMethod::LSMASH,

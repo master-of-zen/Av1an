@@ -640,7 +640,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       format!(".{}", hash_path(input.as_path()))
     };
 
-    let input = Input::from(input);
+    let input = Input::from((input, args.vspipe_args.clone()));
 
     let video_params = if let Some(args) = args.video_params.as_ref() {
       shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
@@ -672,7 +672,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         args.encoder.get_default_pass()
       },
       video_params: video_params.clone(),
-      vspipe_args: args.vspipe_args.clone(),
       output_file: if let Some(path) = args.output_file.as_ref() {
         let path = PathAbs::new(path)?;
 
@@ -710,7 +709,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Some(0) => None,
         Some(x) => Some(x),
         // Make sure it's at least 10 seconds, unless specified by user
-        None => match input.frame_rate(args.vspipe_args.clone()) {
+        None => match input.frame_rate() {
           Ok(fps) => Some((fps * args.extra_split_sec) as usize),
           Err(_) => Some(240_usize),
         },
@@ -731,8 +730,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
               format!("FFmpeg failed to get pixel format for input video {path:?}")
             })?,
           },
-          Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
-            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), args.vspipe_args.clone()).with_context(|| {
+          Input::VapourSynth(path, _) => InputPixelFormat::VapourSynth {
+            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?).with_context(|| {
               format!("VapourSynth failed to get bit depth for input video {path:?}")
             })?,
           },

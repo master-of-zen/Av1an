@@ -460,8 +460,11 @@ impl Av1anContext {
     let (source_pipe_stderr, ffmpeg_pipe_stderr, enc_output, enc_stderr, frame) =
       rt.block_on(async {
         let mut source_pipe = if let [source, args @ ..] = &*chunk.source_cmd {
-          tokio::process::Command::new(source)
-            .args(args)
+          let mut command = tokio::process::Command::new(source);
+          for arg in chunk.input.as_vspipe_args_vec().unwrap() {
+            command.args(["-a", &arg]);
+          }
+          command.args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()

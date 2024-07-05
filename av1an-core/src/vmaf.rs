@@ -132,7 +132,7 @@ pub fn plot(
   println!(":: VMAF Run");
 
   let pipe_cmd: SmallVec<[&OsStr; 8]> = match reference {
-    Input::Video(ref path) => {
+    Input::Video { ref path } => {
       vspipe_args = vec![];
       ref_smallvec!(
         OsStr,
@@ -149,8 +149,8 @@ pub fn plot(
         ]
       )
     },
-    Input::VapourSynth(ref path, vspipe_args_) => {
-      vspipe_args = vspipe_args_.to_owned();
+    Input::VapourSynth { ref path, vspipe_args: args } => {
+      vspipe_args = args.to_owned();
       ref_smallvec!(OsStr, 8, ["vspipe", "-c", "y4m", path, "-"])
     },
   };

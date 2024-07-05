@@ -234,7 +234,7 @@ fn build_decoder(
   };
 
   let decoder = match input {
-    Input::VapourSynth(path, _) => {
+    Input::VapourSynth { path, .. } => {
       bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)?;
 
       if !filters.is_empty() || !vspipe_args.is_empty() {
@@ -270,7 +270,7 @@ fn build_decoder(
         Decoder::Vapoursynth(VapoursynthDecoder::new(path.as_ref())?)
       }
     }
-    Input::Video(path) => {
+    Input::Video { path } => {
       let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {e:?}"));
       bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;

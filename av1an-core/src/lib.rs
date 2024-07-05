@@ -65,16 +65,21 @@ pub mod vmaf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {
-  VapourSynth(PathBuf, Vec<String>),
-  Video(PathBuf),
+  VapourSynth {
+    path: PathBuf,
+    vspipe_args: Vec<String>
+  },
+  Video {
+    path: PathBuf
+  },
 }
 
 impl Input {
   /// Returns a reference to the inner path, panicking if the input is not an `Input::Video`.
   pub fn as_video_path(&self) -> &Path {
     match &self {
-      Input::Video(path) => path.as_ref(),
-      Input::VapourSynth(_, _) => {
+      Input::Video { path } => path.as_ref(),
+      Input::VapourSynth { .. } => {
         panic!("called `Input::as_video_path()` on an `Input::VapourSynth` variant")
       }
     }
@@ -83,8 +88,8 @@ impl Input {
   /// Returns a reference to the inner path, panicking if the input is not an `Input::VapourSynth`.
   pub fn as_vapoursynth_path(&self) -> &Path {
     match &self {
-      Input::VapourSynth(path, _) => path.as_ref(),
-      Input::Video(_) => {
+      Input::VapourSynth { path, .. } => path.as_ref(),
+      Input::Video { .. } => {
         panic!("called `Input::as_vapoursynth_path()` on an `Input::Video` variant")
       }
     }
@@ -98,25 +103,25 @@ impl Input {
   /// input type!
   pub fn as_path(&self) -> &Path {
     match &self {
-      Input::Video(path) | Input::VapourSynth(path, _) => path.as_ref(),
+      Input::Video { path } | Input::VapourSynth { path, .. } => path.as_ref(),
     }
   }
 
   pub const fn is_video(&self) -> bool {
-    matches!(&self, Input::Video(_))
+    matches!(&self, Input::Video { .. })
   }
 
   pub const fn is_vapoursynth(&self) -> bool {
-    matches!(&self, Input::VapourSynth(_, _))
+    matches!(&self, Input::VapourSynth { .. })
   }
 
   pub fn frames(&self) -> anyhow::Result<usize> {
     const FAIL_MSG: &str = "Failed to get number of frames for input video";
     Ok(match &self {
-      Input::Video(path) => {
+      Input::Video { path } => {
         ffmpeg::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
-      Input::VapourSynth(path, _) => {
+      Input::VapourSynth { path, .. } => {
         vapoursynth::num_frames(path.as_path(), self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
     })
@@ -125,10 +130,10 @@ impl Input {
   pub fn frame_rate(&self) -> anyhow::Result<f64> {
     const FAIL_MSG: &str = "Failed to get frame rate for input video";
     Ok(match &self {
-      Input::Video(path) => {
+      Input::Video { path } => {
         crate::ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
-      Input::VapourSynth(path, _) => {
+      Input::VapourSynth { path, .. } => {
         vapoursynth::frame_rate(path.as_path(), self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
     })
@@ -137,11 +142,11 @@ impl Input {
   pub fn resolution(&self) -> anyhow::Result<(u32, u32)> {
     const FAIL_MSG: &str = "Failed to get resolution for input video";
     Ok(match self {
-      Input::VapourSynth(video, _) => {
-        crate::vapoursynth::resolution(video, self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      Input::VapourSynth { path, .. } => {
+        crate::vapoursynth::resolution(path, self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
-      Input::Video(video) => {
-        crate::ffmpeg::resolution(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      Input::Video { path } => {
+        crate::ffmpeg::resolution(path).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
     })
   }
@@ -149,11 +154,11 @@ impl Input {
   pub fn pixel_format(&self) -> anyhow::Result<String> {
     const FAIL_MSG: &str = "Failed to get resolution for input video";
     Ok(match self {
-      Input::VapourSynth(video, _) => {
-        crate::vapoursynth::pixel_format(video, self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
+      Input::VapourSynth { path, .. } => {
+        crate::vapoursynth::pixel_format(path, self.as_vspipe_args_map()?).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
-      Input::Video(video) => {
-        let fmt = crate::ffmpeg::get_pixel_format(video).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
+      Input::Video { path } => {
+        let fmt = crate::ffmpeg::get_pixel_format(path).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
         format!("{fmt:?}")
       }
     })
@@ -162,16 +167,16 @@ impl Input {
   fn transfer_function(&self) -> anyhow::Result<TransferFunction> {
     const FAIL_MSG: &str = "Failed to get transfer characteristics for input video";
     Ok(match self {
-      Input::VapourSynth(video, _) => {
-        match crate::vapoursynth::transfer_characteristics(video, self.as_vspipe_args_map()?)
+      Input::VapourSynth { path, .. } => {
+        match crate::vapoursynth::transfer_characteristics(path, self.as_vspipe_args_map()?)
           .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
         {
           16 => TransferFunction::SMPTE2084,
           _ => TransferFunction::BT1886,
         }
       }
-      Input::Video(video) => {
-        match crate::ffmpeg::transfer_characteristics(video)
+      Input::Video { path } => {
+        match crate::ffmpeg::transfer_characteristics(path)
           .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
         {
           TransferCharacteristic::SMPTE2084 => TransferFunction::SMPTE2084,
@@ -224,11 +229,11 @@ impl Input {
   }
 
   /// Returns the vector of arguments passed to the vspipe python environment
-  /// /// If the input is not a vapoursynth script, the vector will be empty.
+  /// If the input is not a vapoursynth script, the vector will be empty.
   pub fn as_vspipe_args_vec(&self) -> Result<Vec<String>, anyhow::Error> {
     match self {
-      Input::VapourSynth(_, vspipe_args) => Ok(vspipe_args.to_owned()),
-      Input::Video(_) => Ok(vec![])
+      Input::VapourSynth { vspipe_args, .. } => Ok(vspipe_args.to_owned()),
+      Input::Video { .. } => Ok(vec![])
     }
   }
 
@@ -253,12 +258,19 @@ impl<P: AsRef<Path> + Into<PathBuf>> From<(P, Vec<String>)> for Input {
   fn from((path, vspipe_args): (P, Vec<String>)) -> Self {
     if let Some(ext) = path.as_ref().extension() {
       if ext == "py" || ext == "vpy" {
-        Self::VapourSynth(path.into(), vspipe_args)
+        Self::VapourSynth {
+          path: path.into(),
+          vspipe_args
+        }
       } else {
-        Self::Video(path.into())
+        Self::Video {
+          path: path.into()
+        }
       }
     } else {
-      Self::Video(path.into())
+      Self::Video {
+        path: path.into()
+      }
     }
   }
 }

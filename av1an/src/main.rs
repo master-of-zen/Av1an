@@ -725,12 +725,12 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       min_scene_len: args.min_scene_len,
       input_pix_format: {
         match &input {
-          Input::Video(path) => InputPixelFormat::FFmpeg {
+          Input::Video { path } => InputPixelFormat::FFmpeg {
             format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
               format!("FFmpeg failed to get pixel format for input video {path:?}")
             })?,
           },
-          Input::VapourSynth(path, _) => InputPixelFormat::VapourSynth {
+          Input::VapourSynth { path, .. } => InputPixelFormat::VapourSynth {
             bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?).with_context(|| {
               format!("VapourSynth failed to get bit depth for input video {path:?}")
             })?,

@@ -199,13 +199,12 @@ pub struct CliOpts {
   /// defining the width of the lanczos scaler.
   #[clap(long, default_value = "bicubic")]
   pub scaler: String,
-  
+
   /// Pass python argument(s) to the script environment
-  /// 
   /// --vspipe-args "message=fluffy kittens" "head=empty"
   #[clap(long, num_args(0..))]
   pub vspipe_args: Vec<String>,
-  
+
   /// File location for scenes
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
@@ -731,9 +730,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             })?,
           },
           Input::VapourSynth { path, .. } => InputPixelFormat::VapourSynth {
-            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?).with_context(|| {
-              format!("VapourSynth failed to get bit depth for input video {path:?}")
-            })?,
+            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)
+              .with_context(|| {
+                format!("VapourSynth failed to get bit depth for input video {path:?}")
+              })?,
           },
         }
       },

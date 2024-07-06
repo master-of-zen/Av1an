@@ -101,7 +101,7 @@ mod tests {
       temp: "none".to_owned(),
       index: 1,
       input: Input::Video {
-        path: "test.mkv".into()
+        path: "test.mkv".into(),
       },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
@@ -123,7 +123,7 @@ mod tests {
       temp: "none".to_owned(),
       index: 10000,
       input: Input::Video {
-        path: "test.mkv".into()
+        path: "test.mkv".into(),
       },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
@@ -146,7 +146,7 @@ mod tests {
       temp: "d".to_owned(),
       index: 1,
       input: Input::Video {
-        path: "test.mkv".into()
+        path: "test.mkv".into(),
       },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),

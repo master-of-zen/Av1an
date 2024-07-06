@@ -235,7 +235,8 @@ fn build_decoder(
 
       if !filters.is_empty() || !vspipe_args.is_empty() {
         let mut command = Command::new("vspipe");
-        command.arg("-c")
+        command
+          .arg("-c")
           .arg("y4m")
           .arg(path)
           .arg("-")
@@ -246,10 +247,7 @@ fn build_decoder(
         for arg in vspipe_args {
           command.args(["-a", &arg]);
         }
-        let vspipe = command
-          .spawn()?
-          .stdout
-          .unwrap();
+        let vspipe = command.spawn()?.stdout.unwrap();
         Decoder::Y4m(y4m::Decoder::new(
           Command::new("ffmpeg")
             .stdin(vspipe)

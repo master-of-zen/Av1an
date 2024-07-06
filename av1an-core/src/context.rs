@@ -464,7 +464,8 @@ impl Av1anContext {
           for arg in chunk.input.as_vspipe_args_vec().unwrap() {
             command.args(["-a", &arg]);
           }
-          command.args(args)
+          command
+            .args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -887,7 +888,7 @@ impl Av1anContext {
       temp: self.args.temp.clone(),
       index,
       input: Input::Video {
-        path: src_path.to_path_buf()
+        path: src_path.to_path_buf(),
       },
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
@@ -943,7 +944,7 @@ impl Av1anContext {
       index,
       input: Input::VapourSynth {
         path: vs_script.to_path_buf(),
-        vspipe_args: self.args.input.as_vspipe_args_vec()?
+        vspipe_args: self.args.input.as_vspipe_args_vec()?,
       },
       source_cmd: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
@@ -1144,7 +1145,7 @@ impl Av1anContext {
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       input: Input::Video {
-        path: PathBuf::from(file)
+        path: PathBuf::from(file),
       },
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),

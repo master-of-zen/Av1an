@@ -200,6 +200,11 @@ pub struct CliOpts {
   #[clap(long, default_value = "bicubic")]
   pub scaler: String,
 
+  /// Pass python argument(s) to the script environment
+  /// --vspipe-args "message=fluffy kittens" "head=empty"
+  #[clap(long, num_args(0..))]
+  pub vspipe_args: Vec<String>,
+
   /// File location for scenes
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
@@ -570,6 +575,7 @@ impl CliOpts {
         temp: temp_dir.clone(),
         workers: self.workers,
         video_params: video_params.clone(),
+        vspipe_args: self.vspipe_args.clone(),
         probe_slow: self.probe_slow,
         probing_rate: adapt_probing_rate(self.probing_rate as usize),
       }
@@ -633,7 +639,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       format!(".{}", hash_path(input.as_path()))
     };
 
-    let input = Input::from(input);
+    let input = Input::from((input, args.vspipe_args.clone()));
 
     let video_params = if let Some(args) = args.video_params.as_ref() {
       shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
@@ -718,15 +724,16 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       min_scene_len: args.min_scene_len,
       input_pix_format: {
         match &input {
-          Input::Video(path) => InputPixelFormat::FFmpeg {
+          Input::Video { path } => InputPixelFormat::FFmpeg {
             format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
               format!("FFmpeg failed to get pixel format for input video {path:?}")
             })?,
           },
-          Input::VapourSynth(path) => InputPixelFormat::VapourSynth {
-            bit_depth: crate::vapoursynth::bit_depth(path.as_ref()).with_context(|| {
-              format!("VapourSynth failed to get bit depth for input video {path:?}")
-            })?,
+          Input::VapourSynth { path, .. } => InputPixelFormat::VapourSynth {
+            bit_depth: crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)
+              .with_context(|| {
+                format!("VapourSynth failed to get bit depth for input video {path:?}")
+              })?,
           },
         }
       },

@@ -262,9 +262,13 @@ pub fn create_vs_file(
   Ok(load_script_path)
 }
 
-pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
+pub fn num_frames(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment
@@ -274,9 +278,13 @@ pub fn num_frames(source: &Path) -> anyhow::Result<usize> {
   get_num_frames(&environment)
 }
 
-pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
+pub fn bit_depth(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment
@@ -286,9 +294,13 @@ pub fn bit_depth(source: &Path) -> anyhow::Result<usize> {
   get_bit_depth(&environment)
 }
 
-pub fn frame_rate(source: &Path) -> anyhow::Result<f64> {
+pub fn frame_rate(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<f64> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment
@@ -298,9 +310,13 @@ pub fn frame_rate(source: &Path) -> anyhow::Result<f64> {
   get_frame_rate(&environment)
 }
 
-pub fn resolution(source: &Path) -> anyhow::Result<(u32, u32)> {
+pub fn resolution(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<(u32, u32)> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment
@@ -311,9 +327,13 @@ pub fn resolution(source: &Path) -> anyhow::Result<(u32, u32)> {
 }
 
 /// Transfer characteristics as specified in ITU-T H.265 Table E.4.
-pub fn transfer_characteristics(source: &Path) -> anyhow::Result<u8> {
+pub fn transfer_characteristics(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<u8> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment
@@ -323,9 +343,13 @@ pub fn transfer_characteristics(source: &Path) -> anyhow::Result<u8> {
   get_transfer(&environment)
 }
 
-pub fn pixel_format(source: &Path) -> anyhow::Result<String> {
+pub fn pixel_format(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<String> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
+
+  if environment.set_variables(&vspipe_args_map).is_err() {
+    bail!("Failed to set vspipe arguments");
+  };
 
   // Evaluate the script.
   environment

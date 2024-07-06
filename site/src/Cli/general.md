@@ -80,6 +80,11 @@
 		Valid scalers are based on the scalers available in ffmpeg, including lanczos[1-9] with [1-9]
         defining the width of the lanczos scaler.
 
+	--vspipe-args <VSPIPE_ARGS>
+		Pass python argument(s) to the script environment
+
+		Example: --vspipe-args "message=fluffy kittens" "head=empty"
+
 -h, --help
 		Print help information
 

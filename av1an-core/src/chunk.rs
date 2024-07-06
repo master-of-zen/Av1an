@@ -100,7 +100,9 @@ mod tests {
     let ch = Chunk {
       temp: "none".to_owned(),
       index: 1,
-      input: Input::Video("test.mkv".into()),
+      input: Input::Video {
+        path: "test.mkv".into(),
+      },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -120,7 +122,9 @@ mod tests {
     let ch = Chunk {
       temp: "none".to_owned(),
       index: 10000,
-      input: Input::Video("test.mkv".into()),
+      input: Input::Video {
+        path: "test.mkv".into(),
+      },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,
@@ -141,7 +145,9 @@ mod tests {
     let ch = Chunk {
       temp: "d".to_owned(),
       index: 1,
-      input: Input::Video("test.mkv".into()),
+      input: Input::Video {
+        path: "test.mkv".into(),
+      },
       source_cmd: vec!["".into()],
       output_ext: "ivf".to_owned(),
       start_frame: 0,

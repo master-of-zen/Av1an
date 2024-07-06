@@ -229,21 +229,25 @@ fn build_decoder(
   };
 
   let decoder = match input {
-    Input::VapourSynth(path) => {
-      bit_depth = crate::vapoursynth::bit_depth(path.as_ref())?;
+    Input::VapourSynth { path, .. } => {
+      bit_depth = crate::vapoursynth::bit_depth(path.as_ref(), input.as_vspipe_args_map()?)?;
+      let vspipe_args = input.as_vspipe_args_vec()?;
 
-      if !filters.is_empty() {
-        let vspipe = Command::new("vspipe")
+      if !filters.is_empty() || !vspipe_args.is_empty() {
+        let mut command = Command::new("vspipe");
+        command
           .arg("-c")
           .arg("y4m")
           .arg(path)
           .arg("-")
           .stdin(Stdio::null())
           .stdout(Stdio::piped())
-          .stderr(Stdio::null())
-          .spawn()?
-          .stdout
-          .unwrap();
+          .stderr(Stdio::null());
+        // Append vspipe python arguments to the environment if there are any
+        for arg in vspipe_args {
+          command.args(["-a", &arg]);
+        }
+        let vspipe = command.spawn()?.stdout.unwrap();
         Decoder::Y4m(y4m::Decoder::new(
           Command::new("ffmpeg")
             .stdin(vspipe)
@@ -260,7 +264,7 @@ fn build_decoder(
         Decoder::Vapoursynth(VapoursynthDecoder::new(path.as_ref())?)
       }
     }
-    Input::Video(path) => {
+    Input::Video { path } => {
       let input_pix_format = crate::ffmpeg::get_pixel_format(path.as_ref())
         .unwrap_or_else(|e| panic!("FFmpeg failed to get pixel format for input video: {e:?}"));
       bit_depth = encoder.get_format_bit_depth(sc_pix_format.unwrap_or(input_pix_format))?;

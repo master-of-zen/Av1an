@@ -169,9 +169,7 @@ impl Av1anContext {
               for arg in vspipe_args {
                 command.args(["-a", &arg]);
               }
-              command.spawn()
-                .unwrap()
-                .wait()
+              command.status()
                 .unwrap()
             })
           })

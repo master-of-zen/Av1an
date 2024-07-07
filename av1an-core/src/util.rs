@@ -39,7 +39,7 @@ macro_rules! inplace_vec {
         idx += 1;
       )*
 
-      mem::transmute::<_, Vec<Cow<_>>>(v)
+      mem::transmute::<Vec<MaybeUninit<Cow<_>>>, Vec<Cow<_>>>(v)
     }
   }};
 }

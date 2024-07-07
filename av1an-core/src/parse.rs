@@ -185,7 +185,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
   let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
   chunk = _mm_madd_epi16(chunk, mult);
 
-  let chunk = transmute::<_, [u64; 2]>(chunk);
+  let chunk = transmute::<__m128i, [u64; 2]>(chunk);
 
   Some(((chunk[0] & 0xffff_ffff) * 100_000_000) + (chunk[0] >> 32))
 }

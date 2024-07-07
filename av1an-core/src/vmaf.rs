@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::usize;
 
 use anyhow::{anyhow, Context};
 use plotters::prelude::*;
@@ -260,7 +259,7 @@ pub fn run_vmaf(
   cmd.stderr(Stdio::piped());
   cmd.stdout(Stdio::null());
 
-  let output = cmd.spawn().unwrap().wait_with_output().unwrap();
+  let output = cmd.output().unwrap();
 
   if !output.status.success() {
     return Err(Box::new(EncoderCrash {

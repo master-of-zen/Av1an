@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  io,
+  path::{absolute, Path, PathBuf},
+};
 
 /// Count the number of elements passed to this macro.
 ///
@@ -131,6 +134,15 @@ pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>>
       }
     })
   }))
+}
+
+#[inline]
+pub(crate) fn to_absolute_path(path: &Path) -> io::Result<PathBuf> {
+  if cfg!(target_os = "windows") {
+    absolute(path)
+  } else {
+    path.canonicalize()
+  }
 }
 
 #[cfg(test)]

@@ -519,6 +519,10 @@ pub struct CliOpts {
   #[clap(long, default_value_t = 1, help_heading = "Target Quality")]
   pub probing_rate: u32,
 
+  /// VMAF subsample for probes to speedup VMAF calculation
+  #[clap(long, default_value_t = 1, help_heading = "Target Quality")]
+  pub probing_subsample: usize,
+
   /// Use encoding settings for probes specified by --video-params rather than faster, less accurate settings
   ///
   /// Note that this always performs encoding in one-pass mode, regardless of --passes.
@@ -578,6 +582,7 @@ impl CliOpts {
         vspipe_args: self.vspipe_args.clone(),
         probe_slow: self.probe_slow,
         probing_rate: adapt_probing_rate(self.probing_rate as usize),
+        probing_subsample: self.probing_subsample,
       }
     })
   }

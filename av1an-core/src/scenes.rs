@@ -296,6 +296,8 @@ fn get_test_args() -> Av1anContext {
     vmaf: false,
     verbosity: Verbosity::Normal,
     workers: 1,
+    tiles: (1, 1),
+    tile_auto: false,
     set_thread_affinity: None,
     zones: None,
     scaler: String::new(),

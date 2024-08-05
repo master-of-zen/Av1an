@@ -10,6 +10,8 @@ use std::process::Command;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
+use crate::util::to_absolute_path;
+
 use super::ChunkMethod;
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
@@ -193,7 +195,7 @@ pub fn create_vs_file(
   chunk_method: ChunkMethod,
 ) -> anyhow::Result<PathBuf> {
   let temp: &Path = temp.as_ref();
-  let source = source.canonicalize()?;
+  let source = to_absolute_path(source)?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
 
@@ -222,7 +224,7 @@ pub fn create_vs_file(
       .arg(&dgindexnv_output)
       .output()?;
 
-    let dgindex_path = dgindexnv_output.canonicalize()?;
+    let dgindex_path = to_absolute_path(&dgindexnv_output)?;
     load_script.write_all(
       format!(
         "from vapoursynth import core\n\

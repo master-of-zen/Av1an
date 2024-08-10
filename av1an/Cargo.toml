@@ -33,9 +33,9 @@ version = "0.28.0"
 default-features = false
 features = ["colors"]
 
-[build-dependencies.vergen]
-version = "8.1.1"
-features = ["git", "git2", "build", "rustc", "cargo"]
+[build-dependencies.vergen-git2]
+version = "1.0.0"
+features = ["build", "rustc", "cargo"]
 
 [dependencies.ffmpeg]
 package = "ffmpeg-the-third"

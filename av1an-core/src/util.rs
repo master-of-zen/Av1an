@@ -29,6 +29,7 @@ macro_rules! inplace_vec {
     const SIZE: usize = $crate::count!($($x)*);
     #[allow(unused_assignments)]
     #[allow(clippy::transmute_undefined_repr)]
+    #[allow(clippy::macro_metavars_in_unsafe)]
     unsafe {
       let mut v: Vec<MaybeUninit<Cow<_>>> = Vec::with_capacity(SIZE);
       v.set_len(SIZE);

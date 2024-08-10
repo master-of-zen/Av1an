@@ -671,7 +671,7 @@ impl Av1anContext {
     Ok(())
   }
 
-  fn create_encoding_queue(&mut self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
+  fn create_encoding_queue(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let mut chunks = match &self.args.input {
       Input::Video { .. } => match self.args.chunk_method {
         ChunkMethod::FFMS2
@@ -860,11 +860,7 @@ impl Av1anContext {
       "-i",
       src_path,
       "-vf",
-      format!(
-        "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
-        start_frame,
-        end_frame - 1
-      ),
+      format!("select=between(n\\,{}\\,{})", start_frame, end_frame - 1),
       "-pix_fmt",
       self
         .args
@@ -1169,7 +1165,7 @@ impl Av1anContext {
   }
 
   /// Returns unfinished chunks and number of total chunks
-  fn load_or_gen_chunk_queue(&mut self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
+  fn load_or_gen_chunk_queue(&self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.args.resume {
       let mut chunks = read_chunk_queue(self.args.temp.as_ref())?;
       let num_chunks = chunks.len();

@@ -860,11 +860,7 @@ impl Av1anContext {
       "-i",
       src_path,
       "-vf",
-      format!(
-        "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
-        start_frame,
-        end_frame - 1
-      ),
+      format!("select=between(n\\,{}\\,{})", start_frame, end_frame - 1),
       "-pix_fmt",
       self
         .args

@@ -207,7 +207,7 @@ pub fn create_vs_file(
       ChunkMethod::FFMS2 => "ffindex",
       ChunkMethod::LSMASH => "lwi",
       ChunkMethod::DGDECNV => "dgi",
-      ChunkMethod::BESTSOURCE => "json",
+      ChunkMethod::BESTSOURCE => "bsindex",
       _ => return Err(anyhow!("invalid chunk method")),
     }
   )))?;

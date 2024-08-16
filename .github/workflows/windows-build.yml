@@ -13,7 +13,7 @@ jobs:
 
       ffmpeg_ver: "7.0"
       ffmpeg_path: "C:/ffmpeg"
-      vsynth_ver: "R66"
+      vsynth_ver: "R69"
       vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:

@@ -37,8 +37,8 @@ If you want to build the binary yourself, you will need the following dependenci
 
 - [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) - this is a dependency for Rust
 - [The Rust toolchain](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe)
-- [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases/download/R68/VapourSynth64-Portable-R68.zip)
-- [NASM](https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-installer-x64.exe)
+- [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases/latest) (download the portable version; the installed version could also work)
+- [NASM](https://nasm.us/)
 - [FFmpeg](https://github.com/GyanD/codexffmpeg/releases/download/7.0/ffmpeg-7.0-full_build-shared.7z) (thanks to [gyan](https://github.com/GyanD) for providing these builds)
 
 ### FFmpeg setup:
@@ -47,9 +47,9 @@ If you want to build the binary yourself, you will need the following dependenci
   - (For example, set `FFMPEG_DIR` to `C:\Users\Username\Downloads\ffmpeg-7.0-full_build-shared`)
 	
 ### VapourSynth setup:
-- Extract the file `VapourSynth64-Portable-R68.zip` to a directory.
-- Create a new environment variable named `VAPOURSYNTH_LIB_DIR` and set it to the directory path where you extracted `VapourSynth64-Portable-R68.zip`, appending `\sdk\lib64` to the path.
-  - (For example, set `VAPOURSYNTH_LIB_DIR` to `C:\Users\Username\Downloads\VapourSynth64-Portable-R68\sdk\lib64`)
+- Extract the contents of the portable VapourSynth zip file to a directory.
+- Create a new environment variable named `VAPOURSYNTH_LIB_DIR` and set it to the directory path where you extracted the file, appending `\sdk\lib64` to the path.
+  - (For example, set `VAPOURSYNTH_LIB_DIR` to `C:\Users\Username\Downloads\VapourSynth64-Portable-R69\sdk\lib64`)
 
 Then, either clone the repository by running
 

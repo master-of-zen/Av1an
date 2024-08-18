@@ -204,7 +204,7 @@ pub fn run_vmaf(
 
   let vmaf = if let Some(model) = model {
     format!(
-      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='path={}':n_threads={}",
       ffmpeg::escape_path_in_filter(stat_file),
       ffmpeg::escape_path_in_filter(&model),
       threads

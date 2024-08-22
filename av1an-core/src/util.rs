@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  io,
+  path::{absolute, Path, PathBuf},
+};
 
 /// Count the number of elements passed to this macro.
 ///
@@ -29,6 +32,7 @@ macro_rules! inplace_vec {
     const SIZE: usize = $crate::count!($($x)*);
     #[allow(unused_assignments)]
     #[allow(clippy::transmute_undefined_repr)]
+    #[allow(clippy::macro_metavars_in_unsafe)]
     unsafe {
       let mut v: Vec<MaybeUninit<Cow<_>>> = Vec::with_capacity(SIZE);
       v.set_len(SIZE);
@@ -39,7 +43,7 @@ macro_rules! inplace_vec {
         idx += 1;
       )*
 
-      mem::transmute::<_, Vec<Cow<_>>>(v)
+      mem::transmute::<Vec<MaybeUninit<Cow<_>>>, Vec<Cow<_>>>(v)
     }
   }};
 }
@@ -130,6 +134,15 @@ pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>>
       }
     })
   }))
+}
+
+#[inline]
+pub(crate) fn to_absolute_path(path: &Path) -> io::Result<PathBuf> {
+  if cfg!(target_os = "windows") {
+    absolute(path)
+  } else {
+    path.canonicalize()
+  }
 }
 
 #[cfg(test)]

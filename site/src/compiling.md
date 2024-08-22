@@ -37,12 +37,19 @@ If you want to build the binary yourself, you will need the following dependenci
 
 - [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) - this is a dependency for Rust
 - [The Rust toolchain](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe)
-- [Python](https://www.python.org/) (version 3.8 or 3.10) - this is a dependency for VapourSynth. Recommended to install for all users
-- [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases/download/R58/VapourSynth64-R58.exe)
-- [NASM](https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-installer-x64.exe)
-- [FFmpeg](https://github.com/GyanD/codexffmpeg/releases/download/5.0.1/ffmpeg-5.0.1-full_build-shared.7z) (thanks to [gyan](https://github.com/GyanD) for providing these builds)
+- [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases/latest) (download the portable version; the installed version could also work)
+- [NASM](https://nasm.us/)
+- [FFmpeg](https://github.com/GyanD/codexffmpeg/releases/download/7.0/ffmpeg-7.0-full_build-shared.7z) (thanks to [gyan](https://github.com/GyanD) for providing these builds)
 
-Extract the file `ffmpeg-5.0.1-full_build-shared.7z` to a directory, then create a new environment variable called `FFMPEG_DIR` (this can be done with with the "Edit environment variables for your account" function available in the control panel), and set it to the directory that you extracted the original file to (for example, set it to `C:\Users\Username\Downloads\ffmpeg-5.0.1-full_build-shared`).
+### FFmpeg setup:
+- Extract the file `ffmpeg-7.0-full_build-shared.7z` to a directory.
+- Create a new environment variable named `FFMPEG_DIR` and set it to the directory path where you extracted `ffmpeg-7.0-full_build-shared.7z`.
+  - (For example, set `FFMPEG_DIR` to `C:\Users\Username\Downloads\ffmpeg-7.0-full_build-shared`)
+	
+### VapourSynth setup:
+- Extract the contents of the portable VapourSynth zip file to a directory.
+- Create a new environment variable named `VAPOURSYNTH_LIB_DIR` and set it to the directory path where you extracted the file, appending `\sdk\lib64` to the path.
+  - (For example, set `VAPOURSYNTH_LIB_DIR` to `C:\Users\Username\Downloads\VapourSynth64-Portable-R69\sdk\lib64`)
 
 Then, either clone the repository by running
 
@@ -54,4 +61,4 @@ Or download and extract the [source code](https://github.com/master-of-zen/Av1an
 
 Open a command prompt or PowerShell window inside the cloned repository/extracted ZIP folder and run the command `cargo build --release`. If this command executes successfully with no errors, `av1an.exe` will be in the folder `target\release`.
 
-To use `av1an.exe`, copy all the `.dll` files from `ffmpeg-5.0.1-full_build-shared\bin` to the same directory as `av1an.exe`, and ensure that `ffmpeg.exe` is in a folder accessible via the `PATH` environment variable.
+To use `av1an.exe`, copy all the `.dll` files from `ffmpeg-7.0-full_build-shared\bin` to the same directory as `av1an.exe`, and ensure that `ffmpeg.exe` is in a folder accessible via the `PATH` environment variable.

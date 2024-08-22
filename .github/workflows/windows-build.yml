@@ -13,20 +13,14 @@ jobs:
 
       ffmpeg_ver: "7.0"
       ffmpeg_path: "C:/ffmpeg"
-      vsynth_ver: "R66"
+      vsynth_ver: "R69"
       vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:
-      - name: Python 3 setup
-        uses: actions/setup-python@v5
-        with:
-          python-version: '~3.12'
-          architecture: x64
-
       - name: NASM setup
         uses: ilammy/setup-nasm@v1
         with:
-          version: 2.16.01
+          version: 2.16.03
           from-source: false
 
       - name: FFmpeg installation

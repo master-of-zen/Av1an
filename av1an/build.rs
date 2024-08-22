@@ -1,15 +1,22 @@
 use std::error::Error;
 
-use vergen::EmitBuilder;
+use vergen_git2::{CargoBuilder, Emitter, Git2Builder, RustcBuilder};
 
 fn main() -> Result<(), Box<dyn Error>> {
-  EmitBuilder::builder()
-    .git_sha(true)
-    .git_commit_date()
-    .cargo_debug()
-    .cargo_target_triple()
-    .rustc_semver()
-    .rustc_llvm_version()
+  let git2 = Git2Builder::default().sha(true).commit_date(true).build()?;
+  let cargo = CargoBuilder::default()
+    .debug(true)
+    .target_triple(true)
+    .build()?;
+  let rustc = RustcBuilder::default()
+    .semver(true)
+    .llvm_version(true)
+    .build()?;
+
+  Emitter::default()
+    .add_instructions(&git2)?
+    .add_instructions(&cargo)?
+    .add_instructions(&rustc)?
     .emit()?;
   Ok(())
 }

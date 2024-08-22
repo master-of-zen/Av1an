@@ -151,23 +151,26 @@ impl Av1anContext {
             && !self.args.resume
         {
           self.vs_script = Some(match &self.args.input {
-            Input::VapourSynth(path) => path.clone(),
-            Input::Video(path) => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
+            Input::VapourSynth { path, .. } => path.clone(),
+            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
           });
 
           let vs_script = self.vs_script.clone().unwrap();
+          let vspipe_args = self.args.input.as_vspipe_args_vec()?;
           Some({
             thread::spawn(move || {
-              Command::new("vspipe")
-                  .arg("-i")
-                  .arg(vs_script)
-                  .args(["-i", "-"])
-                  .stdout(Stdio::piped())
-                  .stderr(Stdio::piped())
-                  .spawn()
-                  .unwrap()
-                  .wait()
-                  .unwrap()
+              let mut command = Command::new("vspipe");
+              command.arg("-i")
+                .arg(vs_script)
+                .args(["-i", "-"])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+              // Append vspipe arguments to the environment if there are any
+              for arg in vspipe_args {
+                command.args(["-a", &arg]);
+              }
+              command.status()
+                .unwrap()
             })
           })
         } else {
@@ -455,7 +458,11 @@ impl Av1anContext {
     let (source_pipe_stderr, ffmpeg_pipe_stderr, enc_output, enc_stderr, frame) =
       rt.block_on(async {
         let mut source_pipe = if let [source, args @ ..] = &*chunk.source_cmd {
-          tokio::process::Command::new(source)
+          let mut command = tokio::process::Command::new(source);
+          for arg in chunk.input.as_vspipe_args_vec().unwrap() {
+            command.args(["-a", &arg]);
+          }
+          command
             .args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -664,9 +671,9 @@ impl Av1anContext {
     Ok(())
   }
 
-  fn create_encoding_queue(&mut self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
+  fn create_encoding_queue(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let mut chunks = match &self.args.input {
-      Input::Video(_) => match self.args.chunk_method {
+      Input::Video { .. } => match self.args.chunk_method {
         ChunkMethod::FFMS2
         | ChunkMethod::LSMASH
         | ChunkMethod::DGDECNV
@@ -678,7 +685,7 @@ impl Av1anContext {
         ChunkMethod::Select => self.create_video_queue_select(scenes),
         ChunkMethod::Segment => self.create_video_queue_segment(scenes)?,
       },
-      Input::VapourSynth(vs_script) => self.create_video_queue_vs(scenes, vs_script.as_path()),
+      Input::VapourSynth { path, .. } => self.create_video_queue_vs(scenes, path.as_path()),
     };
 
     match self.args.chunk_order {
@@ -853,11 +860,7 @@ impl Av1anContext {
       "-i",
       src_path,
       "-vf",
-      format!(
-        "select=between(n\\,{}\\,{}),setpts=PTS-STARTPTS",
-        start_frame,
-        end_frame - 1
-      ),
+      format!("select=between(n\\,{}\\,{})", start_frame, end_frame - 1),
       "-pix_fmt",
       self
         .args
@@ -878,7 +881,9 @@ impl Av1anContext {
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       index,
-      input: Input::Video(src_path.to_path_buf()),
+      input: Input::Video {
+        path: src_path.to_path_buf(),
+      },
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       start_frame,
@@ -931,7 +936,10 @@ impl Av1anContext {
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
       index,
-      input: Input::VapourSynth(vs_script.to_path_buf()),
+      input: Input::VapourSynth {
+        path: vs_script.to_path_buf(),
+        vspipe_args: self.args.input.as_vspipe_args_vec()?,
+      },
       source_cmd: vspipe_cmd_gen,
       output_ext: output_ext.to_owned(),
       start_frame: scene.start_frame,
@@ -1130,7 +1138,9 @@ impl Av1anContext {
 
     let mut chunk = Chunk {
       temp: self.args.temp.clone(),
-      input: Input::Video(PathBuf::from(file)),
+      input: Input::Video {
+        path: PathBuf::from(file),
+      },
       source_cmd: ffmpeg_gen_cmd,
       output_ext: output_ext.to_owned(),
       index,
@@ -1155,7 +1165,7 @@ impl Av1anContext {
   }
 
   /// Returns unfinished chunks and number of total chunks
-  fn load_or_gen_chunk_queue(&mut self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
+  fn load_or_gen_chunk_queue(&self, splits: &[Scene]) -> anyhow::Result<(Vec<Chunk>, usize)> {
     if self.args.resume {
       let mut chunks = read_chunk_queue(self.args.temp.as_ref())?;
       let num_chunks = chunks.len();

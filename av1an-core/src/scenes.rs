@@ -278,7 +278,9 @@ fn get_test_args() -> Av1anContext {
     input_pix_format: InputPixelFormat::FFmpeg {
       format: Pixel::YUV420P10LE,
     },
-    input: Input::Video(PathBuf::new()),
+    input: Input::Video {
+      path: PathBuf::new(),
+    },
     output_pix_format: PixelFormat {
       format: Pixel::YUV420P10LE,
       bit_depth: 10,

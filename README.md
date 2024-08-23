@@ -55,23 +55,25 @@ Encode from a VapourSynth script with custom video encoder settings, 10 workers,
 $ av1an -i input.vpy -v "--cpu-used=3 --end-usage=q --cq-level=30 --threads=8" -w 10 --target-quality 95 -a "-c:a libopus -ac 2 -b:a 192k" -l my_log -o output.mkv
 ```
 
-## Supported encoders
-
-At least one encoder is required to use Av1an. The following encoders are supported:
-| Codec | Encoder | `-e` option | Source |
-| -:| - | - |:-:|
-| AV1 | aomenc | `aom` |[Google Source](https://aomedia.googlesource.com/aom/) |
-| AV1 | rav1e | `rav1e` | [GitHub](https://github.com/xiph/rav1e) |
-| AV1 | SvtAv1EncApp | `svt-av1` | [GitLab](https://gitlab.com/AOMediaCodec/SVT-AV1) |
-| VP8 & VP9 | vpxenc | `vpx` | [Google Source](https://chromium.googlesource.com/webm/libvpx/) |
-| H.264/AVC | x264 | `x264` | [VideoLAN](https://www.videolan.org/developers/x264.html) |
-| H.256/HEVC | x265 | `x265` | [VideoLAN](https://www.videolan.org/developers/x265.html) |
+## Supported Video encoders
+Av1an is able to use a variety of external video-encoders to encode your chosen video. At least one of these encoders must be installed in order to use Av1an. The following are supported:
+| Codec | Encoder | `-e` option | Default encoder Parameters (`-v`) | Source |
+| -:| - | - | - |:-:|
+| AV1 | aomenc | `aom` | `--threads=8 --cpu-used=6 --end-usage=q --cq-level=30 --tile-columns=1 --tile-rows=0` |[Google Source](https://aomedia.googlesource.com/aom/) |
+| AV1 | rav1e | `rav1e` | `--speed 6 --quantizer 100 --no-scene-detection --tiles 2` | [GitHub](https://github.com/xiph/rav1e) |
+| AV1 | SvtAv1EncApp | `svt-av1` | `--preset 4 --keyint 240 --rc 0 --crf 25 --tile-columns 1 --tile-rows 0` | [GitLab](https://gitlab.com/AOMediaCodec/SVT-AV1) |
+| VP8 & VP9 | vpxenc | `vpx` | `--codec=vp9 -b 10 --profile=2 --threads=4 --cpu-used=2 --end-usage=q --cq-level=30 --row-mt=1 --auto-alt-ref=6 --tile-columns=1 --tile-rows=0` | [Google Source](https://chromium.googlesource.com/webm/libvpx/) |
+| H.264/AVC | x264 | `x264` | `--preset slow --crf 25` | [VideoLAN](https://www.videolan.org/developers/x264.html) |
+| H.256/HEVC | x265 | `x265` | `-p slow --crf 25 -D 10 --level-idc 5.0` | [VideoLAN](https://www.videolan.org/developers/x265.html) |
 
 > [!IMPORTANT]
 > 
-> Note that Av1an requires the encoder executables.
+> Note that Av1an depends on external encoder executables as opposed to libraries.
 >
-> If you use a package manager to install encoders, check that packages you've installed the encoder executables (e.g. `vpxenc`, `SvtAv1EncApp`) from the list above. Simply installing their respective libraries (e.g. `libvpx`, `libSvtAv1Enc`) is not enough.
+> If you use a package manager to install your encoders, check that the packages you've installed include the encoder executables (e.g. `vpxenc`, `SvtAv1EncApp`) from the list above, and not simply their respective libraries (e.g. `libvpx`, `libSvtAv1Enc`).
+
+## Supported Audio encoders
+Av1an relies entirely on your system's `ffmpeg` binary for audio encoding.
 
 ## Installation
 

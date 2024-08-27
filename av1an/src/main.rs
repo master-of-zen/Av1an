@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::thread::available_parallelism;
@@ -824,7 +824,7 @@ impl LogWriter for StderrLogger {
       return Ok(());
     }
 
-    let style = if atty::is(atty::Stream::Stderr) {
+    let style = if io::stderr().is_terminal() {
       match record.level() {
         Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
         Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),

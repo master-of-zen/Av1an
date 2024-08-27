@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{IsTerminal, Read};
 use std::process::{Command, Stdio};
 use std::thread;
 
@@ -28,7 +28,7 @@ pub fn av_scenechange_detect(
   zones: &[Scene],
 ) -> anyhow::Result<(Vec<Scene>, usize)> {
   if verbosity != Verbosity::Quiet {
-    if atty::is(atty::Stream::Stderr) {
+    if std::io::stderr().is_terminal() {
       eprintln!("{}", Style::default().bold().paint("Scene detection"));
     } else {
       eprintln!("Scene detection");

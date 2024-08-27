@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::sync::OnceLock;
 use std::thread::available_parallelism;
 use std::{panic, process};
 
@@ -21,7 +22,6 @@ use av1an_core::{
 use clap::{value_parser, Parser};
 use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
-use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 
 fn main() -> anyhow::Result<()> {
@@ -53,7 +53,7 @@ fn version() -> &'static str {
     )
   }
 
-  static INSTANCE: OnceCell<String> = OnceCell::new();
+  static INSTANCE: OnceLock<String> = OnceLock::new();
   INSTANCE.get_or_init(|| {
     match (
       option_env!("VERGEN_GIT_SHA"),

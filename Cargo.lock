@@ -249,7 +249,6 @@ dependencies = [
  "clap",
  "ffmpeg-the-third",
  "flexi_logger",
- "once_cell",
  "path_abs",
  "shlex",
  "thiserror",

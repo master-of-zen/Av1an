@@ -76,7 +76,7 @@ Prerequisites:
 
 Optional:
 
-- [L-SMASH](https://github.com/AkarinVS/L-SMASH-Works) VapourSynth plugin for better chunking (recommended)
+- [L-SMASH](https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works) VapourSynth plugin for better chunking (recommended)
 - [DGDecNV](https://www.rationalqm.us/dgdecnv/dgdecnv.html) Vapoursynth plugin for very fast and accurate chunking, `dgindexnv` executable needs to be present in system path and an NVIDIA GPU with CUVID 
 - [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
 - [bestsource](https://github.com/vapoursynth/bestsource) Vapoursynth plugin for slow but accurate chunking

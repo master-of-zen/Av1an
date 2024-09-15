@@ -1984,9 +1984,9 @@ dependencies = [
 
 [[package]]
 name = "vapoursynth-sys"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fc59bbb7980ce21ece45bc5b3e316bf27ac164b7b1c273ce4846c29d0642a9c"
+checksum = "2b35092be61a799005aabfd2e9e95d074125984013142d87a5d3edecc039b9b5"
 dependencies = [
  "cfg-if",
 ]

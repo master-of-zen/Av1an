@@ -121,6 +121,7 @@ pub fn plot(
   res: &str,
   scaler: &str,
   sample_rate: usize,
+  subsample: usize,
   filter: Option<&str>,
   threads: usize,
 ) -> Result<(), Box<EncoderCrash>> {
@@ -166,6 +167,7 @@ pub fn plot(
     res,
     scaler,
     sample_rate,
+    subsample,
     filter,
     threads,
   )?;
@@ -183,6 +185,7 @@ pub fn run_vmaf(
   res: &str,
   scaler: &str,
   sample_rate: usize,
+  subsample: usize,
   vmaf_filter: Option<&str>,
   threads: usize,
 ) -> Result<(), Box<EncoderCrash>> {
@@ -204,16 +207,18 @@ pub fn run_vmaf(
 
   let vmaf = if let Some(model) = model {
     format!(
-      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}:n_subsample={}",
       ffmpeg::escape_path_in_filter(stat_file),
       ffmpeg::escape_path_in_filter(&model),
-      threads
+      threads,
+      subsample,
     )
   } else {
     format!(
-      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}",
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}:n_subsample={}",
       ffmpeg::escape_path_in_filter(stat_file),
-      threads
+      threads,
+      subsample,
     )
   };
 

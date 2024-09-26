@@ -359,21 +359,24 @@ impl Av1anContext {
             tq.vmaf_res.clone()
           }
         } else {
-          self.args
+          self
+            .args
             .vmaf_res
             .clone()
             .unwrap_or_else(|| "1920x1080".to_string())
         };
 
         let vmaf_model = self.args.vmaf_path.as_deref().or_else(|| {
-          self.args
+          self
+            .args
             .target_quality
             .as_ref()
             .and_then(|tq| tq.model.as_deref())
         });
         let vmaf_scaler = "bicubic";
         let vmaf_filter = self.args.vmaf_filter.as_deref().or_else(|| {
-          self.args
+          self
+            .args
             .target_quality
             .as_ref()
             .and_then(|tq| tq.vmaf_filter.as_deref())

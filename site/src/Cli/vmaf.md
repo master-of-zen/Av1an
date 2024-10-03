@@ -21,7 +21,7 @@
 		[default: 1920x1080]
 
 	--vmaf-threads <VMAF_THREADS>
-		Number of threads to use for VMAF calculation
+		Number of threads to use for target quality VMAF calculation
 
 	--vmaf-filter <VMAF_FILTER>
 		Filter applied to source at VMAF calcualation

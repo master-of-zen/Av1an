@@ -97,8 +97,6 @@ impl Display for EncoderCrash {
 impl<'a> Broker<'a> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   pub fn encoding_loop(self, tx: Sender<()>, set_thread_affinity: Option<usize>) {
-    assert!(!self.chunk_queue.is_empty());
-
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 

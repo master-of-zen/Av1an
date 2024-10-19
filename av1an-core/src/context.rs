@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
 use std::sync::atomic::{self, AtomicBool, AtomicUsize};
 use std::sync::{mpsc, Arc};
+use std::thread::available_parallelism;
 use std::{cmp, fs, iter, thread};
 
 use ansi_term::{Color, Style};
@@ -349,30 +350,46 @@ impl Av1anContext {
         }
       }
 
-      if let Some(ref tq) = self.args.target_quality {
-        let mut temp_res = tq.vmaf_res.to_string();
-        if tq.vmaf_res == "inputres" {
-          let inputres = self.args.input.resolution()?;
-          temp_res.push_str(&format!(
-            "{}x{}",
-            &inputres.0.to_string(),
-            &inputres.1.to_string()
-          ));
-          temp_res.to_string();
+      if self.args.vmaf || self.args.target_quality.is_some() {
+        let vmaf_res = if let Some(ref tq) = self.args.target_quality {
+          if tq.vmaf_res == "inputres" {
+            let inputres = self.args.input.resolution()?;
+            format!("{}x{}", inputres.0, inputres.1)
+          } else {
+            tq.vmaf_res.clone()
+          }
         } else {
-          temp_res = tq.vmaf_res.to_string();
-        }
+          self.args.vmaf_res.clone()
+        };
+
+        let vmaf_model = self.args.vmaf_path.as_deref().or_else(|| {
+          self
+            .args
+            .target_quality
+            .as_ref()
+            .and_then(|tq| tq.model.as_deref())
+        });
+        let vmaf_scaler = "bicubic";
+        let vmaf_filter = self.args.vmaf_filter.as_deref().or_else(|| {
+          self
+            .args
+            .target_quality
+            .as_ref()
+            .and_then(|tq| tq.vmaf_filter.as_deref())
+        });
 
         if self.args.vmaf {
+          let vmaf_threads = available_parallelism().map_or(1, std::num::NonZero::get);
+
           if let Err(e) = vmaf::plot(
             self.args.output_file.as_ref(),
             &self.args.input,
-            tq.model.as_deref(),
-            temp_res.as_str(),
-            tq.vmaf_scaler.as_str(),
+            vmaf_model,
+            &vmaf_res,
+            vmaf_scaler,
             1,
-            tq.vmaf_filter.as_deref(),
-            tq.vmaf_threads,
+            vmaf_filter,
+            vmaf_threads,
           ) {
             error!("VMAF calculation failed with error: {}", e);
           }

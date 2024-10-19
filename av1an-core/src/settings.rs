@@ -78,6 +78,10 @@ pub struct EncodeArgs {
   pub concat: ConcatMethod,
   pub target_quality: Option<TargetQuality>,
   pub vmaf: bool,
+  pub vmaf_path: Option<PathBuf>,
+  pub vmaf_res: String,
+  pub vmaf_threads: Option<usize>,
+  pub vmaf_filter: Option<String>,
 }
 
 impl EncodeArgs {

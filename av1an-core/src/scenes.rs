@@ -300,6 +300,10 @@ fn get_test_args() -> Av1anContext {
     zones: None,
     scaler: String::new(),
     ignore_frame_mismatch: false,
+    vmaf_path: None,
+    vmaf_res: "1920x1080".to_string(),
+    vmaf_threads: None,
+    vmaf_filter: None,
   };
   Av1anContext {
     vs_script: None,

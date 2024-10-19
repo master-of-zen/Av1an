@@ -492,7 +492,7 @@ pub struct CliOpts {
   #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
   pub vmaf_res: String,
 
-  /// Number of threads to use for VMAF calculation
+  /// Number of threads to use for target quality VMAF calculation
   #[clap(long, help_heading = "VMAF")]
   pub vmaf_threads: Option<usize>,
 
@@ -750,6 +750,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       )?,
       target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
       vmaf: args.vmaf,
+      vmaf_path: args.vmaf_path.clone(),
+      vmaf_res: args.vmaf_res.clone(),
+      vmaf_threads: args.vmaf_threads,
+      vmaf_filter: args.vmaf_filter.clone(),
       verbosity: if args.quiet {
         Verbosity::Quiet
       } else if args.verbose {

@@ -198,8 +198,11 @@ pub fn create_vs_file(
   let source = to_absolute_path(source)?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
-
   let mut load_script = File::create(&load_script_path)?;
+
+  // Only used for DGDECNV
+  let dgindexnv_output = temp.join("split").join("index.dgi");
+  let dgindex_path = to_absolute_path(&dgindexnv_output)?;
 
   let cache_file = PathAbs::new(temp.join("split").join(format!(
     "cache.{}",
@@ -211,55 +214,48 @@ pub fn create_vs_file(
       _ => return Err(anyhow!("invalid chunk method")),
     }
   )))?;
+  let chunk_method_lower = match chunk_method {
+    ChunkMethod::FFMS2 => "ffms2",
+    ChunkMethod::LSMASH => "lsmash",
+    ChunkMethod::DGDECNV => "dgdecnv",
+    ChunkMethod::BESTSOURCE => "bestsource",
+    _ => return Err(anyhow!("invalid chunk method")),
+  };
 
   if chunk_method == ChunkMethod::DGDECNV {
     // Run dgindexnv to generate the .dgi index file
-    let dgindexnv_output = temp.join("split").join("index.dgi");
-
     Command::new("dgindexnv")
       .arg("-h")
       .arg("-i")
-      .arg(source)
+      .arg(&source)
       .arg("-o")
       .arg(&dgindexnv_output)
       .output()?;
-
-    let dgindex_path = to_absolute_path(&dgindexnv_output)?;
-    load_script.write_all(
-      format!(
-        "from vapoursynth import core\n\
-              core.max_cache_size=1024\n\
-            core.dgdecodenv.DGSource(source={dgindex_path:?}).set_output()"
-      )
-      .as_bytes(),
-    )?;
-  } else if chunk_method == ChunkMethod::BESTSOURCE {
-    load_script.write_all(
-      format!(
-        "from vapoursynth import core\n\
-          core.max_cache_size=1024\n\
-        core.bs.VideoSource({source:?}, cachepath={cache_file:?}).set_output()"
-      )
-      .as_bytes(),
-    )?;
-  } else {
-    load_script.write_all(
-      // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
-      format!(
-        "from vapoursynth import core\n\
-            core.max_cache_size=1024\n\
-      core.{}({:?}, cachefile={:?}).set_output()",
-        match chunk_method {
-          ChunkMethod::FFMS2 => "ffms2.Source",
-          ChunkMethod::LSMASH => "lsmas.LWLibavSource",
-          _ => unreachable!(),
-        },
-        source,
-        cache_file
-      )
-      .as_bytes(),
-    )?;
   }
+
+  // Include rich loadscript.vpy and specify source, chunk_method, and cache_file
+  let load_script_text = include_str!("loadscript.vpy")
+    .replace(
+      "source = os.environ.get('AV1AN_SOURCE', None)",
+      &format!(
+        "source = {:?}",
+        match chunk_method {
+          ChunkMethod::DGDECNV => &dgindex_path,
+          _ => &source,
+        }
+      ),
+    )
+    .replace(
+      "chunk_method = os.environ.get('AV1AN_CHUNK_METHOD', None)",
+      &format!("chunk_method = {chunk_method_lower:?}"),
+    )
+    .replace(
+      "cache_file = os.environ.get('AV1AN_CACHE_FILE', None)",
+      &format!(
+        "cache_file = {:?}", to_absolute_path(cache_file.as_path())?),
+    );
+
+  load_script.write_all(load_script_text.as_bytes())?;
 
   Ok(load_script_path)
 }

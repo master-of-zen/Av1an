@@ -1,7 +1,5 @@
-use std::{
-  io,
-  path::{absolute, Path, PathBuf},
-};
+use std::io;
+use std::path::{absolute, Path, PathBuf};
 
 /// Count the number of elements passed to this macro.
 ///

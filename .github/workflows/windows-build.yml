@@ -56,6 +56,13 @@ jobs:
       - name: Av1an build
         run: cargo build --release
 
+      - name: Delete existing release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag
+
       - name: Create prerelease
         uses: softprops/action-gh-release@v2
         with:

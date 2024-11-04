@@ -10,10 +10,9 @@ jobs:
 
     env:
       CARGO_INCREMENTAL: 0
-
-      ffmpeg_ver: "7.0"
+      ffmpeg_ver: "7.0.2"
       ffmpeg_path: "C:/ffmpeg"
-      vsynth_ver: "R69"
+      vsynth_ver: "R70"
       vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:
@@ -42,7 +41,17 @@ jobs:
           Expand-Archive "$tempFile" "$env:vsynth_path"
 
       - uses: actions/checkout@v4
+
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v${{ env.ffmpeg_ver }}-rust"
+
+      - name: Get latest commit
+        id: get_commit
+        shell: pwsh
+        run: |
+          $commit = git log -1 --pretty=format:"%h: %s (%an)"
+          echo "message=$commit" >> $env:GITHUB_OUTPUT
 
       - name: Av1an build
         run: cargo build --release
@@ -52,6 +61,8 @@ jobs:
         with:
           prerelease: true
           tag_name: latest
+          body: |
+            Commit:
+            ${{ steps.get_commit.outputs.message }}
           files: target/release/av1an.exe
           fail_on_unmatched_files: true
-

@@ -81,7 +81,7 @@ Optional:
 - [ffms2](https://github.com/FFMS/ffms2) VapourSynth plugin for better chunking
 - [bestsource](https://github.com/vapoursynth/bestsource) Vapoursynth plugin for slow but accurate chunking
 - [mkvmerge](https://mkvtoolnix.download/) to use mkvmerge instead of FFmpeg for file concatenation
-- [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](docs/TargetQuality.md)
+- [VMAF](https://github.com/Netflix/vmaf) to calculate VMAF scores and to use [target quality mode](site/src/Features/TargetQuality.md)
 
 ### VapourSynth plugins on Windows
 

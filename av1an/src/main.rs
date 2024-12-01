@@ -21,10 +21,10 @@ use av1an_core::{
 };
 use clap::{value_parser, Parser};
 use flexi_logger::writers::LogWriter;
-use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
+use flexi_logger::{Level, LevelFilter};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{instrument, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();

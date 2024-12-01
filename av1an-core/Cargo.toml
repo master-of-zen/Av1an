@@ -52,6 +52,10 @@ cfg-if = "1.0.0"
 nom = "7.1.1"
 # TODO: move all of this CLI stuff to av1an-cli
 ansi_term = "0.12.1"
+tracing-appender = "0.2"
+tracing = "0.1"
+tokio = { version = "1.28", features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # TODO: https://github.com/elast0ny/affinity/issues/2
 # update this when macos support is implemented
@@ -76,10 +80,6 @@ features = ["svg_backend", "line_series"]
 [dependencies.vapoursynth]
 version = "0.4.0"
 features = ["vsscript-functions", "vapoursynth-functions"]
-
-[dependencies.tokio]
-version = "1"
-features = ["rt", "process", "io-util", "net"]
 
 [dependencies.dashmap]
 version = "6.0.0"

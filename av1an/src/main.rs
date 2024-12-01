@@ -4,6 +4,7 @@ use std::process::exit;
 use std::thread::available_parallelism;
 use std::{panic, process};
 
+use av1an_core::logging::init_logging;
 use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
@@ -23,6 +24,7 @@ use flexi_logger::writers::LogWriter;
 use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
+use tracing::{debug, error, info, instrument, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();
@@ -814,6 +816,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   Ok(valid_args)
 }
 
+#[derive(Debug)]
 pub struct StderrLogger {
   level: Level,
 }
@@ -869,8 +872,13 @@ impl LogWriter for StderrLogger {
   }
 }
 
+#[instrument]
 pub fn run() -> anyhow::Result<()> {
+
+  init_logging();
+
   let cli_args = CliOpts::parse();
+
   let log_level = cli_args.log_level;
   let args = parse_cli(cli_args)?;
 

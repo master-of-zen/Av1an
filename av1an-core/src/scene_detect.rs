@@ -15,6 +15,7 @@ use smallvec::{smallvec, SmallVec};
 use crate::scenes::Scene;
 use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
 
+#[tracing::instrument]
 pub fn av_scenechange_detect(
   input: &Input,
   encoder: Encoder,
@@ -203,6 +204,7 @@ pub fn scene_detect(
   Ok(scenes)
 }
 
+#[tracing::instrument]
 fn build_decoder(
   input: &Input,
   encoder: Encoder,

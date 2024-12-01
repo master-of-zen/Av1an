@@ -26,6 +26,10 @@ av1an-core = { path = "../av1an-core", version = "0.4.1" }
 thiserror = "1.0.30"
 once_cell = "1.8.0"
 ansi_term = "0.12.1"
+tracing-appender = "0.2"
+tracing = "0.1"
+tokio = { version = "1.28", features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.flexi_logger]
 version = "0.28.0"

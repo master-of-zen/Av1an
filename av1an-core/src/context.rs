@@ -40,7 +40,9 @@ use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
   vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
+use tracing::{debug, error, info, instrument, warn};
 
+#[derive(Debug)]
 pub struct Av1anContext {
   pub frames: usize,
   pub vs_script: Option<PathBuf>,
@@ -60,6 +62,7 @@ impl Av1anContext {
   }
 
   /// Initialize logging routines and create temporary directories
+  #[tracing::instrument]
   fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg::init()?;
     ffmpeg::util::log::set_level(ffmpeg::util::log::level::Level::Fatal);
@@ -135,6 +138,7 @@ impl Av1anContext {
     Ok(())
   }
 
+  #[tracing::instrument]
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
     let initial_frames = get_done()
       .done
@@ -414,6 +418,7 @@ impl Av1anContext {
     Ok(())
   }
 
+  #[tracing::instrument]
   fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     let mut queue_files = fs::read_dir(source_path)
       .with_context(|| format!("Failed to read queue files from source path {source_path:?}"))?
@@ -1119,6 +1124,7 @@ impl Av1anContext {
     Ok(chunk_queue)
   }
 
+  #[tracing::instrument]
   fn create_chunk_from_segment(
     &self,
     index: usize,

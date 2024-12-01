@@ -14,7 +14,7 @@ use crate::context::Av1anContext;
 use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, warn};
 
 
 #[derive(Debug)]

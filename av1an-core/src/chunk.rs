@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::encoder::Encoder;
 use crate::settings::insert_noise_table_params;
 use crate::Input;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {

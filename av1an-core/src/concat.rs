@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::encoder::Encoder;
 use crate::util::read_in_dir;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, warn};
 
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,

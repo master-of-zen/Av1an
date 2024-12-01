@@ -7,7 +7,6 @@ use ffmpeg::format::{input, Pixel};
 use ffmpeg::media::Type as MediaType;
 use ffmpeg::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
-use tracing::{span, Level};
 
 use crate::{into_array, into_vec};
 

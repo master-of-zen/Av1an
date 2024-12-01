@@ -547,6 +547,8 @@ pub struct CliOpts {
 }
 
 impl CliOpts {
+
+  #[tracing::instrument]
   pub fn target_quality_params(
     &self,
     temp_dir: String,
@@ -624,6 +626,7 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
+#[tracing::instrument]
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 
@@ -879,49 +882,11 @@ pub fn run() -> anyhow::Result<()> {
 
   let cli_args = CliOpts::parse();
 
-  let log_level = cli_args.log_level;
+  //let log_level = cli_args.log_level;
   let args = parse_cli(cli_args)?;
 
-  let log = LogSpecBuilder::new()
-    .default(LevelFilter::Error)
-    .module("av1an", log_level)
-    .module("av1an_cli", log_level)
-    .module("av1an_core", log_level)
-    .module(
-      "rav1e::scenechange",
-      match log_level {
-        LevelFilter::Trace => LevelFilter::Debug,
-        LevelFilter::Debug => LevelFilter::Info,
-        other => other,
-      },
-    )
-    .build();
-
-  // Note that with all write modes except WriteMode::Direct (which is the default)
-  // you should keep the LoggerHandle alive up to the very end of your program,
-  // because it will, in its Drop implementation, flush all writers to ensure that
-  // all buffered log lines are flushed before the program terminates,
-  // and then it calls their shutdown method.
-  let logger = Logger::with(log)
-    .log_to_file_and_writer(
-      // UGLY: take first or the files for log path
-      FileSpec::try_from(PathAbs::new(&args[0].log_file)?)?,
-      Box::new(StderrLogger {
-        // UGLY: take first or the files for verbosity
-        level: match args[0].verbosity {
-          Verbosity::Quiet => Level::Warn,
-          Verbosity::Normal | Verbosity::Verbose => Level::Info,
-        },
-      }),
-    )
-    .start()?;
 
   for arg in args {
-    // Change log file
-    let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
-    let _ =
-      &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file).append())?;
-
     Av1anContext::new(arg)?.encode_file()?;
   }
 

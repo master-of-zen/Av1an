@@ -50,6 +50,8 @@ pub struct Av1anContext {
 }
 
 impl Av1anContext {
+  
+  #[tracing::instrument]
   pub fn new(mut args: EncodeArgs) -> anyhow::Result<Self> {
     args.validate()?;
     let mut this = Self {
@@ -1168,7 +1170,7 @@ impl Av1anContext {
       output_ext: output_ext.to_owned(),
       index,
       start_frame: 0,
-      end_frame: num_frames,
+      end_frame: num_frames,  
       frame_rate,
       video_params: overrides.as_ref().map_or_else(
         || self.args.video_params.clone(),

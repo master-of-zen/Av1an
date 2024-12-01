@@ -15,10 +15,10 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 ///
 /// This function will panic if it fails to initialize the global logger.
 pub fn init_logging() {
-    let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "INFO".to_string());
+    let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "ERROR".to_string());
 
     // Set up daily rotating file appender
-    let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "application.log");
+    let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log");
 
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 

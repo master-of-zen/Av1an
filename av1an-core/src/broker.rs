@@ -96,7 +96,7 @@ impl Display for EncoderCrash {
   }
 }
 
-impl<'a> Broker<'a> {
+impl Broker<'_> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   #[tracing::instrument(skip(self))]
   pub fn encoding_loop(self, tx: Sender<()>, set_thread_affinity: Option<usize>) {

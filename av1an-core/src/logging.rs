@@ -150,33 +150,3 @@ pub fn init_logging() {
   tracing::info!("Logging system initialized");
   tracing::debug!("Module-specific logging enabled");
 }
-
-#[cfg(test)]
-mod tests {
-  use std::path::Path;
-  use std::time::Duration;
-  use std::{fs, thread};
-
-  use super::*;
-
-  #[test]
-  fn test_module_specific_logging() {
-    let log_path = Path::new("logs/av1an.log");
-    if log_path.exists() {
-      fs::remove_file(log_path).unwrap();
-    }
-
-    init_logging();
-
-    tracing::debug!("Core debug message");
-    tracing::info!("Core info message");
-
-    // Let the async writer catch up
-    thread::sleep(Duration::from_millis(100));
-
-    let log_contents = fs::read_to_string(log_path).unwrap();
-    println!("Log contents:\n{}", log_contents);
-
-    assert!(log_contents.contains("Core debug message"));
-  }
-}

@@ -150,7 +150,7 @@ impl Encoder {
       Self::x265 => chain!(
         into_array!["x265", "--y4m", "--frames", frame_count.to_string()],
         params,
-        into_array!["-", "-o", output]
+        into_array!["--input", "-", "-o", output]
       )
       .collect(),
     }
@@ -233,6 +233,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           NULL
@@ -332,6 +333,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           output

@@ -1,6 +1,8 @@
 use std::env;
+
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{fmt, EnvFilter};
 
 /// Initialize the logging system for the application.
 ///
@@ -15,36 +17,36 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 ///
 /// This function will panic if it fails to initialize the global logger.
 pub fn init_logging() {
-    let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "ERROR".to_string());
+  let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "ERROR".to_string());
 
-    // Set up daily rotating file appender
-    let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log");
+  // Set up daily rotating file appender
+  let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log");
 
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+  let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let subscriber = tracing_subscriber::registry()
-        .with(EnvFilter::new(rust_log))
-        .with(
-            fmt::Layer::new()
-                .with_writer(std::io::stdout)
-                .with_ansi(true)
-                .with_file(true)
-                .with_line_number(true)
-                .with_thread_ids(true)
-                .with_thread_names(true),
-        )
-        .with(
-            fmt::Layer::new()
-                .with_writer(non_blocking)
-                .with_ansi(false)
-                .with_file(true)
-                .with_line_number(true)
-                .with_thread_ids(true)
-                .with_thread_names(true),
-        );
+  let subscriber = tracing_subscriber::registry()
+    .with(EnvFilter::new(rust_log))
+    .with(
+      fmt::Layer::new()
+        .with_writer(std::io::stdout)
+        .with_ansi(true)
+        .with_file(true)
+        .with_line_number(true)
+        .with_thread_ids(true)
+        .with_thread_names(true),
+    )
+    .with(
+      fmt::Layer::new()
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .with_file(true)
+        .with_line_number(true)
+        .with_thread_ids(true)
+        .with_thread_names(true),
+    );
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Failed to set global default subscriber");
+  tracing::subscriber::set_global_default(subscriber)
+    .expect("Failed to set global default subscriber");
 
-    tracing::info!("Logging initialized with daily rotation");
+  tracing::info!("Logging initialized with daily rotation");
 }

@@ -3,11 +3,11 @@ use std::path::Path;
 
 use av1_grain::{generate_photon_noise_params, write_grain_table, NoiseGenArgs};
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::encoder::Encoder;
 use crate::settings::insert_noise_table_params;
 use crate::Input;
-use tracing::debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {

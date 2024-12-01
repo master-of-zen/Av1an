@@ -4,13 +4,13 @@ use std::process::exit;
 use std::thread::available_parallelism;
 use std::{panic, process};
 
-use av1an_core::logging::init_logging;
 use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
+use av1an_core::logging::init_logging;
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
@@ -547,7 +547,6 @@ pub struct CliOpts {
 }
 
 impl CliOpts {
-
   #[tracing::instrument]
   pub fn target_quality_params(
     &self,
@@ -877,14 +876,12 @@ impl LogWriter for StderrLogger {
 
 #[instrument]
 pub fn run() -> anyhow::Result<()> {
-
   init_logging();
 
   let cli_args = CliOpts::parse();
 
   //let log_level = cli_args.log_level;
   let args = parse_cli(cli_args)?;
-
 
   for arg in args {
     Av1anContext::new(arg)?.encode_file()?;

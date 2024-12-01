@@ -13,10 +13,10 @@ use av_ivf::demuxer::IvfDemuxer;
 use av_ivf::muxer::IvfMuxer;
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, warn};
 
 use crate::encoder::Encoder;
 use crate::util::read_in_dir;
-use tracing::{debug, error, warn};
 
 #[derive(
   PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, strum::EnumString, strum::IntoStaticStr,

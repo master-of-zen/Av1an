@@ -21,6 +21,7 @@ use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
+use tracing::{debug, error, info, warn};
 
 use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
@@ -40,7 +41,6 @@ use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
   vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
-use tracing::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct Av1anContext {
@@ -50,7 +50,6 @@ pub struct Av1anContext {
 }
 
 impl Av1anContext {
-  
   #[tracing::instrument]
   pub fn new(mut args: EncodeArgs) -> anyhow::Result<Self> {
     args.validate()?;
@@ -1170,7 +1169,7 @@ impl Av1anContext {
       output_ext: output_ext.to_owned(),
       index,
       start_frame: 0,
-      end_frame: num_frames,  
+      end_frame: num_frames,
       frame_rate,
       video_params: overrides.as_ref().map_or_else(
         || self.args.video_params.clone(),

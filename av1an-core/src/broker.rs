@@ -9,13 +9,12 @@ use std::thread::available_parallelism;
 use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
+use tracing::{debug, error, warn};
 
 use crate::context::Av1anContext;
 use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
-use tracing::{debug, error, warn};
-
 
 #[derive(Debug)]
 pub struct Broker<'a> {

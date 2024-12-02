@@ -52,6 +52,7 @@ pub mod concat;
 pub mod context;
 pub mod encoder;
 pub mod ffmpeg;
+pub mod logging;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;
@@ -404,7 +405,7 @@ fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
   Ok(())
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verbosity {
   Verbose,
   Normal,

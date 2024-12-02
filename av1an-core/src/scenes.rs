@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::process::{exit, Command};
 use std::str::FromStr;
 
-use crate::context::Av1anContext;
 use anyhow::{anyhow, bail, Result};
 use itertools::Itertools;
 use nom::branch::alt;
@@ -13,6 +12,7 @@ use nom::multi::{many1, separated_list0};
 use nom::sequence::{preceded, tuple};
 use serde::{Deserialize, Serialize};
 
+use crate::context::Av1anContext;
 use crate::parse::valid_params;
 use crate::settings::{invalid_params, suggest_fix};
 use crate::Encoder;

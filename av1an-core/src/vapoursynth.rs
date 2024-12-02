@@ -2,17 +2,16 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use anyhow::{anyhow, bail};
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
-use std::process::Command;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
-use crate::util::to_absolute_path;
-
 use super::ChunkMethod;
+use crate::util::to_absolute_path;
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
   let environment = Environment::new().expect("Failed to initialize VapourSynth environment");

@@ -234,7 +234,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-cli"
-version = "0.1.0"
+version = "0.4.4"
 
 [[package]]
 name = "av1an-config"
@@ -295,11 +295,11 @@ version = "0.1.0"
 
 [[package]]
 name = "av1an-input"
-version = "0.1.0"
+version = "0.4.4"
 
 [[package]]
 name = "av1an-metrics"
-version = "0.1.0"
+version = "0.4.4"
 
 [[package]]
 name = "av1an-output"

@@ -17,7 +17,6 @@ use std::{
         Arc,
     },
     thread,
-    thread::available_parallelism,
 };
 
 use ansi_term::{Color, Style};
@@ -62,7 +61,6 @@ use crate::{
     settings::{EncodeArgs, InputPixelFormat},
     split::{extra_splits, segment, write_scenes_to_file},
     vapoursynth::create_vs_file,
-    vmaf,
     ChunkMethod,
     ChunkOrdering,
     DashMap,
@@ -428,7 +426,7 @@ impl Av1anContext {
             }
 
             if self.args.vmaf || self.args.target_quality.is_some() {
-                let vmaf_res = if let Some(ref tq) = self.args.target_quality {
+                let _vmaf_res = if let Some(ref tq) = self.args.target_quality {
                     if tq.vmaf_res == "inputres" {
                         let inputres = self.args.input.resolution()?;
                         format!("{}x{}", inputres.0, inputres.1)
@@ -453,24 +451,6 @@ impl Av1anContext {
                             .as_ref()
                             .and_then(|tq| tq.vmaf_filter.as_deref())
                     });
-
-                if self.args.vmaf {
-                    let vmaf_threads = available_parallelism()
-                        .map_or(1, std::num::NonZero::get);
-
-                    if let Err(e) = vmaf::plot(
-                        self.args.output_file.as_ref(),
-                        &self.args.input,
-                        vmaf_model,
-                        &vmaf_res,
-                        vmaf_scaler,
-                        1,
-                        vmaf_filter,
-                        vmaf_threads,
-                    ) {
-                        error!("VMAF calculation failed with error: {}", e);
-                    }
-                }
             }
 
             if !Path::new(&self.args.output_file).exists() {

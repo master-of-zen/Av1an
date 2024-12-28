@@ -5,17 +5,13 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use plotters::prelude::*;
 use serde::Deserialize;
-use smallvec::SmallVec;
 
 use crate::{
     broker::EncoderCrash,
     ffmpeg,
-    ref_smallvec,
-    util::printable_base10_digits,
-    Input,
 };
 
 #[derive(Deserialize, Debug)]
@@ -31,95 +27,6 @@ struct Metrics {
 #[derive(Deserialize, Debug)]
 struct VmafResult {
     frames: Vec<Metrics>,
-}
-
-pub fn plot_vmaf_score_file(
-    scores_file: &Path,
-    plot_path: &Path,
-) -> anyhow::Result<()> {
-    let scores = read_vmaf_file(scores_file)
-        .with_context(|| "Failed to parse VMAF file")?;
-
-    let mut sorted_scores = scores.clone();
-    sorted_scores
-        .sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-    let plot_width = 1600 + (printable_base10_digits(scores.len()) * 200);
-    let plot_heigth = 600;
-
-    let length = scores.len() as u32;
-
-    let root =
-        SVGBackend::new(plot_path.as_os_str(), (plot_width, plot_heigth))
-            .into_drawing_area();
-
-    root.fill(&WHITE)?;
-
-    let perc_1 = percentile_of_sorted(&sorted_scores, 0.01);
-    let perc_25 = percentile_of_sorted(&sorted_scores, 0.25);
-    let perc_50 = percentile_of_sorted(&sorted_scores, 0.50);
-    let perc_75 = percentile_of_sorted(&sorted_scores, 0.75);
-
-    let mut chart = ChartBuilder::on(&root)
-        .set_label_area_size(LabelAreaPosition::Bottom, (5).percent())
-        .set_label_area_size(LabelAreaPosition::Left, (5).percent())
-        .set_label_area_size(LabelAreaPosition::Right, (7).percent())
-        .set_label_area_size(LabelAreaPosition::Top, (5).percent())
-        .margin((1).percent())
-        .build_cartesian_2d(0_u32..length, perc_1.floor()..100.0)?;
-
-    chart.configure_mesh().draw()?;
-
-    // 1%
-    chart
-        .draw_series(LineSeries::new((0..=length).map(|x| (x, perc_1)), RED))?
-        .label(format!("1%: {perc_1}"))
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED));
-
-    // 25%
-    chart
-        .draw_series(LineSeries::new(
-            (0..=length).map(|x| (x, perc_25)),
-            YELLOW,
-        ))?
-        .label(format!("25%: {perc_25}"))
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], YELLOW));
-
-    // 50% (median, except not averaged in the case of an even number of
-    // elements)
-    chart
-        .draw_series(LineSeries::new(
-            (0..=length).map(|x| (x, perc_50)),
-            BLACK,
-        ))?
-        .label(format!("50%: {perc_50}"))
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
-
-    // 75%
-    chart
-        .draw_series(LineSeries::new(
-            (0..=length).map(|x| (x, perc_75)),
-            GREEN,
-        ))?
-        .label(format!("75%: {perc_75}"))
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], GREEN));
-
-    // Data
-    chart.draw_series(LineSeries::new(
-        (0..).zip(scores.iter()).map(|(x, y)| (x, *y)),
-        BLUE,
-    ))?;
-
-    chart
-        .configure_series_labels()
-        .background_style(WHITE.mix(0.8))
-        .border_style(BLACK)
-        .draw()?;
-
-    root.present()
-        .expect("Unable to write result plot to file");
-
-    Ok(())
 }
 
 pub fn validate_libvmaf() -> anyhow::Result<()> {
@@ -138,64 +45,6 @@ pub fn validate_libvmaf() -> anyhow::Result<()> {
              or VMAF plotting was enabled"
         ));
     }
-    Ok(())
-}
-
-pub fn plot(
-    encoded: &Path,
-    reference: &Input,
-    model: Option<impl AsRef<Path>>,
-    res: &str,
-    scaler: &str,
-    sample_rate: usize,
-    filter: Option<&str>,
-    threads: usize,
-) -> Result<(), Box<EncoderCrash>> {
-    let json_file = encoded.with_extension("json");
-    let plot_file = encoded.with_extension("svg");
-    let vspipe_args;
-
-    println!(":: VMAF Run");
-
-    let pipe_cmd: SmallVec<[&OsStr; 8]> = match reference {
-        Input::Video {
-            ref path,
-        } => {
-            vspipe_args = vec![];
-            ref_smallvec!(OsStr, 8, [
-                "ffmpeg",
-                "-i",
-                path,
-                "-strict",
-                "-1",
-                "-f",
-                "yuv4mpegpipe",
-                "-"
-            ])
-        },
-        Input::VapourSynth {
-            ref path,
-            vspipe_args: args,
-        } => {
-            vspipe_args = args.to_owned();
-            ref_smallvec!(OsStr, 8, ["vspipe", "-c", "y4m", path, "-"])
-        },
-    };
-
-    run_vmaf(
-        encoded,
-        &pipe_cmd,
-        vspipe_args,
-        &json_file,
-        model,
-        res,
-        scaler,
-        sample_rate,
-        filter,
-        threads,
-    )?;
-
-    plot_vmaf_score_file(&json_file, &plot_file).unwrap();
     Ok(())
 }
 

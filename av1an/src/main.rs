@@ -1,5 +1,5 @@
 use std::{
-    io::{self, IsTerminal, Write},
+    io::{self, Write},
     panic,
     path::{Path, PathBuf},
     process,
@@ -8,7 +8,6 @@ use std::{
 };
 
 use ::ffmpeg::format::Pixel;
-use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::{
     concat::ConcatMethod,
@@ -18,7 +17,6 @@ use av1an_core::{
     hash_path,
     into_vec,
     logging::init_logging,
-    progress_bar::{get_first_multi_progress_bar, get_progress_bar},
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
     target_quality::{adapt_probing_rate, TargetQuality},
     util::read_in_dir,
@@ -31,7 +29,6 @@ use av1an_core::{
     Verbosity,
 };
 use clap::{value_parser, Parser};
-use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};
 

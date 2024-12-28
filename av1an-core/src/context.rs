@@ -485,7 +485,7 @@ impl Av1anContext {
 
         let video_params = chunk.video_params.clone();
 
-        let mut enc_cmd = if chunk.passes == 1 {
+        let enc_cmd = if chunk.passes == 1 {
             chunk.encoder.compose_1_1_pass(
                 video_params,
                 chunk.output(),

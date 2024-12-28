@@ -4,7 +4,6 @@ use std::{
     path::{Path, PathBuf},
     process,
     process::exit,
-    thread::available_parallelism,
 };
 
 use ::ffmpeg::format::Pixel;

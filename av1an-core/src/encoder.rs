@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp, fmt::Display, iter::Iterator, path::PathBuf};
+use std::{fmt::Display, iter::Iterator};
 
 use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
@@ -8,11 +8,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    ffmpeg::compose_ffmpeg_pipe,
-    inplace_vec,
     into_array,
     into_vec,
-    list_index,
 };
 
 const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };

@@ -249,6 +249,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "av1an-config"
+version = "0.1.0"
+
+[[package]]
 name = "av1an-core"
 version = "0.4.4"
 dependencies = [
@@ -296,6 +300,10 @@ dependencies = [
  "which",
  "y4m",
 ]
+
+[[package]]
+name = "av1an-encoders"
+version = "0.1.0"
 
 [[package]]
 name = "backtrace"

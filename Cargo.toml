@@ -1,5 +1,5 @@
 [workspace]
-members = ["av1an-core", "av1an"]
+members = ["av1an-core", "av1an", "av1an-config", "av1an-encoders"]
 resolver = "2"
 
 [profile.dev.package.av-scenechange]

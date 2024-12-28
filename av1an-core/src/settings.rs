@@ -67,9 +67,6 @@ pub struct EncodeArgs {
     pub encoder:             Encoder,
     pub workers:             usize,
     pub set_thread_affinity: Option<usize>,
-    pub photon_noise:        Option<u8>,
-    pub photon_noise_size:   (Option<u32>, Option<u32>), // Width and Height
-    pub chroma_noise:        bool,
     pub zones:               Option<PathBuf>,
 
     // FFmpeg params
@@ -187,20 +184,6 @@ impl EncodeArgs {
             self.video_params = self
                 .encoder
                 .get_default_arguments(self.input.calculate_tiles());
-        }
-
-        if let Some(strength) = self.photon_noise {
-            if strength > 64 {
-                bail!("Valid strength values for photon noise are 0-64");
-            }
-            if ![Encoder::aom, Encoder::rav1e, Encoder::svt_av1]
-                .contains(&self.encoder)
-            {
-                bail!(
-                    "Photon noise synth is only supported with aomenc, rav1e, \
-                     and svt-av1"
-                );
-            }
         }
 
         if self.encoder == Encoder::aom

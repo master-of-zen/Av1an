@@ -993,7 +993,7 @@ impl Av1anContext {
 
         let output_ext = self.args.encoder.output_extension();
 
-        let mut chunk = Chunk {
+        let chunk = Chunk {
             temp: self.args.temp.clone(),
             index,
             input: Input::Video {
@@ -1010,14 +1010,8 @@ impl Av1anContext {
             ),
             passes: self.args.passes,
             encoder: self.args.encoder,
-            noise_size: self.args.photon_noise_size,
-            tq_cq: None,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        chunk.apply_photon_noise_args(
-            overrides.map_or(self.args.photon_noise, |ovr| ovr.photon_noise),
-            self.args.chroma_noise,
-        )?;
         Ok(chunk)
     }
 
@@ -1046,7 +1040,7 @@ impl Av1anContext {
 
         let output_ext = self.args.encoder.output_extension();
 
-        let mut chunk = Chunk {
+        let chunk = Chunk {
             temp: self.args.temp.clone(),
             index,
             input: Input::VapourSynth {
@@ -1064,17 +1058,8 @@ impl Av1anContext {
             ),
             passes: self.args.passes,
             encoder: self.args.encoder,
-            noise_size: self.args.photon_noise_size,
-            tq_cq: None,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        chunk.apply_photon_noise_args(
-            scene
-                .zone_overrides
-                .as_ref()
-                .map_or(self.args.photon_noise, |ovr| ovr.photon_noise),
-            self.args.chroma_noise,
-        )?;
         Ok(chunk)
     }
 
@@ -1277,14 +1262,8 @@ impl Av1anContext {
             ),
             passes: self.args.passes,
             encoder: self.args.encoder,
-            noise_size: self.args.photon_noise_size,
-            tq_cq: None,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        chunk.apply_photon_noise_args(
-            overrides.map_or(self.args.photon_noise, |ovr| ovr.photon_noise),
-            self.args.chroma_noise,
-        )?;
         Ok(chunk)
     }
 

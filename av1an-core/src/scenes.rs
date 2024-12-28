@@ -36,7 +36,6 @@ pub struct ZoneOptions {
     pub encoder:          Encoder,
     pub passes:           u8,
     pub video_params:     Vec<String>,
-    pub photon_noise:     Option<u8>,
     pub extra_splits_len: Option<usize>,
     pub min_scene_len:    usize,
 }
@@ -121,8 +120,6 @@ impl Scene {
         } else {
             context.args.passes
         };
-        let mut photon_noise =
-            if reset { None } else { context.args.photon_noise };
         let mut extra_splits_len = context.args.extra_splits_len;
         let mut min_scene_len = context.args.min_scene_len;
 
@@ -150,9 +147,7 @@ impl Scene {
         {
             passes = 1;
         }
-        if let Some(zone_photon_noise) = zone_args.remove("--photon-noise") {
-            photon_noise = Some(zone_photon_noise.unwrap().parse().unwrap());
-        }
+
         if let Some(zone_xs) = zone_args
             .remove("-x")
             .or_else(|| zone_args.remove("--extra-split"))
@@ -275,7 +270,6 @@ impl Scene {
                 encoder,
                 passes,
                 video_params,
-                photon_noise,
                 extra_splits_len,
                 min_scene_len,
             }),

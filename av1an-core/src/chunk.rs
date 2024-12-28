@@ -1,12 +1,6 @@
 use std::{ffi::OsString, path::Path};
 
-use av1_grain::{
-    generate_photon_noise_params,
-    write_grain_table,
-    NoiseGenArgs,
-};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 
 use crate::{encoder::Encoder, Input};
 
@@ -25,12 +19,6 @@ pub struct Chunk {
     pub passes:                u8,
     pub video_params:          Vec<String>,
     pub encoder:               Encoder,
-    pub noise_size:            (Option<u32>, Option<u32>),
-    // do not break compatibility with output produced by older versions of
-    // av1an
-    /// Optional target quality CQ level
-    #[serde(rename = "per_shot_target_quality_cq")]
-    pub tq_cq:                 Option<u32>,
     pub ignore_frame_mismatch: bool,
 }
 
@@ -51,42 +39,5 @@ impl Chunk {
 
     pub const fn frames(&self) -> usize {
         self.end_frame - self.start_frame
-    }
-
-    pub(crate) fn apply_photon_noise_args(
-        &mut self,
-        photon_noise: Option<u8>,
-        chroma_noise: bool,
-    ) -> anyhow::Result<()> {
-        if let Some(strength) = photon_noise {
-            let iso_setting = u32::from(strength) * 100;
-            let grain_table = Path::new(&self.temp)
-                .join(format!("iso{iso_setting}-grain.tbl"));
-            if !grain_table.exists() {
-                debug!("Generating grain table at ISO {}", iso_setting);
-                let (mut width, mut height) = self.input.resolution()?;
-                if self.noise_size.0.is_some() {
-                    width = self.noise_size.0.unwrap();
-                }
-                if self.noise_size.1.is_some() {
-                    height = self.noise_size.1.unwrap();
-                }
-                let transfer_function = self
-                    .input
-                    .transfer_function_params_adjusted(&self.video_params)?;
-                let params =
-                    generate_photon_noise_params(0, u64::MAX, NoiseGenArgs {
-                        iso_setting,
-                        width,
-                        height,
-                        transfer_function,
-                        chroma_grain: chroma_noise,
-                        random_seed: None,
-                    });
-                write_grain_table(&grain_table, &[params])?;
-            }
-        }
-
-        Ok(())
     }
 }

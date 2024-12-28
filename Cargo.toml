@@ -1,5 +1,13 @@
 [workspace]
-members = ["av1an-core", "av1an", "av1an-config", "av1an-encoders"]
+members = [
+    "av1an-core",
+    "av1an",
+    "av1an-config",
+    "av1an-encoders",
+    "av1an-metrics",
+    "av1an-output",
+    "av1an-input",
+]
 resolver = "2"
 
 [profile.dev.package.av-scenechange]
@@ -15,3 +23,7 @@ lto = "off"
 codegen-units = 1024
 debug-assertions = true
 overflow-checks = true
+
+[workspace.dependencies]
+tracing-appender = "0.2"
+tracing = "0.1"

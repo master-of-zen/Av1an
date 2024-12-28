@@ -806,9 +806,7 @@ impl Av1anContext {
             ChunkOrdering::ShortestFirst => {
                 chunks.sort_unstable_by_key(Chunk::frames);
             },
-            ChunkOrdering::Sequential => {
-                // Already in order
-            },
+            ChunkOrdering::Sequential => {},
             ChunkOrdering::Random => {
                 chunks.shuffle(&mut thread_rng());
             },

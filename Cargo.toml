@@ -6,7 +6,7 @@ members = [
     "av1an-encoders",
     "av1an-metrics",
     "av1an-output",
-    "av1an-input",
+    "av1an-input", "av1an-cli",
 ]
 resolver = "2"
 

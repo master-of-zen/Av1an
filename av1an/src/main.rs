@@ -9,14 +9,8 @@ use std::{
 
 use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
-use anyhow::{Context, anyhow, bail, ensure};
+use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::{
-    ChunkMethod,
-    ChunkOrdering,
-    Input,
-    ScenecutMethod,
-    SplitMethod,
-    Verbosity,
     concat::ConcatMethod,
     context::Av1anContext,
     encoder::Encoder,
@@ -26,11 +20,17 @@ use av1an_core::{
     logging::init_logging,
     progress_bar::{get_first_multi_progress_bar, get_progress_bar},
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
-    target_quality::{TargetQuality, adapt_probing_rate},
+    target_quality::{adapt_probing_rate, TargetQuality},
     util::read_in_dir,
     vapoursynth,
+    ChunkMethod,
+    ChunkOrdering,
+    Input,
+    ScenecutMethod,
+    SplitMethod,
+    Verbosity,
 };
-use clap::{Parser, value_parser};
+use clap::{value_parser, Parser};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};
@@ -45,88 +45,10 @@ fn main() -> anyhow::Result<()> {
     run()
 }
 
-// needs to be static, runtime allocated string to avoid evil hacks to
-// concatenate non-trivial strings at compile-time
-fn version() -> &'static str {
-    fn get_vs_info() -> String {
-        let isfound = |found: bool| if found { "Found" } else { "Not found" };
-        format!(
-            "\
-* VapourSynth Plugins
-  systems.innocent.lsmas : {}
-  com.vapoursynth.ffms2  : {}
-  com.vapoursynth.dgdecodenv : {}
-  com.vapoursynth.bestsource : {}",
-            isfound(vapoursynth::is_lsmash_installed()),
-            isfound(vapoursynth::is_ffms2_installed()),
-            isfound(vapoursynth::is_dgdecnv_installed()),
-            isfound(vapoursynth::is_bestsource_installed())
-        )
-    }
-
-    static INSTANCE: OnceCell<String> = OnceCell::new();
-    INSTANCE.get_or_init(|| {
-        match (
-            option_env!("VERGEN_GIT_SHA"),
-            option_env!("VERGEN_CARGO_DEBUG"),
-            option_env!("VERGEN_RUSTC_SEMVER"),
-            option_env!("VERGEN_RUSTC_LLVM_VERSION"),
-            option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
-            option_env!("VERGEN_GIT_COMMIT_DATE"),
-        ) {
-            (
-                Some(git_hash),
-                Some(cargo_debug),
-                Some(rustc_ver),
-                Some(llvm_ver),
-                Some(target_triple),
-                Some(commit_date),
-            ) => {
-                format!(
-                    "{}-unstable (rev {}) ({})
-
-* Compiler
-  rustc {} (LLVM {})
-
-* Target Triple
-  {}
-
-* Date Info
-  Commit Date:  {}
-
-{}",
-                    env!("CARGO_PKG_VERSION"),
-                    git_hash,
-                    if cargo_debug.parse::<bool>().unwrap() {
-                        "Debug"
-                    } else {
-                        "Release"
-                    },
-                    rustc_ver,
-                    llvm_ver,
-                    target_triple,
-                    commit_date,
-                    get_vs_info(),
-                )
-            },
-            _ => format!(
-                "\
-{}
-
-{}",
-                // only include the semver on a release (when git information
-                // isn't available)
-                env!("CARGO_PKG_VERSION"),
-                get_vs_info()
-            ),
-        }
-    })
-}
-
 /// Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with
 /// per-scene quality encoding
 #[derive(Parser, Debug)]
-#[clap(name = "av1an", version = version())]
+#[clap(name = "av1an")]
 pub struct CliOpts {
     /// Input file to encode
     ///
@@ -680,7 +602,6 @@ pub(crate) fn resolve_file_paths(
     }
 }
 
-/// Returns vector of Encode args ready to be fed to encoder
 #[tracing::instrument]
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     let input_paths = &*args.input;
@@ -786,9 +707,13 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
                     Err(_) => Some(240_usize),
                 },
             },
-            photon_noise: args
-                .photon_noise
-                .and_then(|arg| if arg == 0 { None } else { Some(arg) }),
+            photon_noise: args.photon_noise.and_then(|arg| {
+                if arg == 0 {
+                    None
+                } else {
+                    Some(arg)
+                }
+            }),
             photon_noise_size: (
                 args.photon_noise_width,
                 args.photon_noise_height,
@@ -921,7 +846,6 @@ pub fn run() -> anyhow::Result<()> {
 
     let cli_args = CliOpts::parse();
 
-    //let log_level = cli_args.log_level;
     let args = parse_cli(cli_args)?;
 
     for arg in args {

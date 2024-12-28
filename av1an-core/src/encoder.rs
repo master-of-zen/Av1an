@@ -1,17 +1,9 @@
-use std::{
-    borrow::Cow,
-    cmp,
-    fmt::Display,
-    iter::Iterator,
-    path::PathBuf,
-    process::Command,
-};
+use std::{borrow::Cow, cmp, fmt::Display, iter::Iterator, path::PathBuf};
 
 use arrayvec::ArrayVec;
 use cfg_if::cfg_if;
 use ffmpeg::format::Pixel;
 use itertools::chain;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -89,24 +81,6 @@ mod tests {
         }
     }
 }
-
-pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
-    let version = Command::new("SvtAv1EncApp")
-        .arg("--version")
-        .output()
-        .unwrap();
-
-    if let Some((major, minor, _)) = parse_svt_av1_version(&version.stdout) {
-        match major {
-            0 => minor < 9,
-            1.. => false,
-        }
-    } else {
-        // assume an old version of SVT-AV1 if the version failed to parse, as
-        // the format for v0.9.0+ should be the same
-        true
-    }
-});
 
 impl Display for Encoder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -716,89 +690,23 @@ impl Encoder {
                 "--row-mt=1",
             ],
             Self::svt_av1 => {
-                if *USE_OLD_SVT_AV1 {
-                    inplace_vec![
-                        "SvtAv1EncApp",
-                        "-i",
-                        "stdin",
-                        "--lp",
-                        threads.to_string(),
-                        "--preset",
-                        "8",
-                        "--keyint",
-                        "240",
-                        "--crf",
-                        q.to_string(),
-                        "--tile-rows",
-                        "1",
-                        "--tile-columns",
-                        "2",
-                        "--pred-struct",
-                        "0",
-                        "--sg-filter-mode",
-                        "0",
-                        "--enable-restoration-filtering",
-                        "0",
-                        "--cdef-level",
-                        "0",
-                        "--disable-dlf",
-                        "0",
-                        "--mrp-level",
-                        "0",
-                        "--enable-mfmv",
-                        "0",
-                        "--enable-local-warp",
-                        "0",
-                        "--enable-global-motion",
-                        "0",
-                        "--enable-interintra-comp",
-                        "0",
-                        "--obmc-level",
-                        "0",
-                        "--rdoq-level",
-                        "0",
-                        "--filter-intra-level",
-                        "0",
-                        "--enable-intra-edge-filter",
-                        "0",
-                        "--enable-pic-based-rate-est",
-                        "0",
-                        "--pred-me",
-                        "0",
-                        "--bipred-3x3",
-                        "0",
-                        "--compound",
-                        "0",
-                        "--ext-block",
-                        "0",
-                        "--hbd-md",
-                        "0",
-                        "--palette-level",
-                        "0",
-                        "--umv",
-                        "0",
-                        "--tf-level",
-                        "3",
-                    ]
-                } else {
-                    inplace_vec![
-                        "SvtAv1EncApp",
-                        "-i",
-                        "stdin",
-                        "--lp",
-                        threads.to_string(),
-                        "--preset",
-                        "12",
-                        "--keyint",
-                        "240",
-                        "--crf",
-                        q.to_string(),
-                        "--tile-rows",
-                        "1",
-                        "--tile-columns",
-                        "2",
-                    ]
-                }
+                inplace_vec![
+                    "SvtAv1EncApp",
+                    "-i",
+                    "stdin",
+                    "--lp",
+                    threads.to_string(),
+                    "--preset",
+                    "12",
+                    "--keyint",
+                    "240",
+                    "--crf",
+                    q.to_string(),
+                    "--tile-rows",
+                    "1",
+                    "--tile-columns",
+                    "2",
+                ]
             },
             Self::x264 => inplace_vec![
                 "x264",

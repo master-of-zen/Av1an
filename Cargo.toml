@@ -6,9 +6,20 @@ members = [
     "av1an-encoders",
     "av1an-metrics",
     "av1an-output",
-    "av1an-input", "av1an-cli",
+    "av1an-input",
+    "av1an-cli",
 ]
 resolver = "2"
+
+[workspace.package]
+version = "0.4.4"
+rust-version = "1.79"
+edition = "2021"
+authors = ["Zen <master_of_zen@protonmail.com>"]
+description = """
+Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Core library]
+"""
+repository = "https://github.com/master-of-zen/Av1an"
 
 [profile.dev.package.av-scenechange]
 opt-level = 3
@@ -27,3 +38,4 @@ overflow-checks = true
 [workspace.dependencies]
 tracing-appender = "0.2"
 tracing = "0.1"
+clap = { version = "4.0.32", features = ["derive"] }

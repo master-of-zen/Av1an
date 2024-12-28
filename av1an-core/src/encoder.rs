@@ -559,12 +559,12 @@ impl Encoder {
                 cfg_if! {
                   if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
                     if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-                      return unsafe { parse_AOM_frames_sse41(line.as_bytes()) };
+                      return unsafe { parse_aom_frames_sse41(line.as_bytes()) };
                     }
                   }
                 }
 
-                parse_AOM_frames(line)
+                parse_aom_frames(line)
             },
             Self::rav1e => parse_rav1e_frames(line),
             Self::svt_av1 => parse_svt_av1_frames(line),

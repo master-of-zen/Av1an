@@ -1,13 +1,13 @@
 [package]
 name = "av1an-core"
-version = "0.4.4"
-rust-version = "1.79"
-edition = "2021"
-authors = ["Zen <master_of_zen@protonmail.com>"]
+rust-version.workspace = true
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Core library]
 """
-repository = "https://github.com/master-of-zen/Av1an"
+repository.workspace = true
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"

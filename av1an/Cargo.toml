@@ -1,15 +1,15 @@
 [package]
 name = "av1an"
-version = "0.4.4"
-authors = ["Zen <master_of_zen@protonmail.com>"]
+authors.workspace = true
+version.workspace = true
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Command line library]
 """
-repository = "https://github.com/master-of-zen/Av1an"
+repository.workspace = true
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"
-rust-version = "1.70"
+rust-version.workspace = true
 edition = "2021"
 readme = "../README.md"
 
@@ -18,7 +18,7 @@ name = "av1an"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.0.32", features = ["derive"] }
+
 shlex = "1.3.0"
 path_abs = "0.5.1"
 anyhow = "1.0.42"
@@ -30,6 +30,7 @@ tracing-appender = "0.2"
 tracing = "0.1"
 tokio = { version = "1.28", features = ["full"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap.workspace = true
 
 
 [build-dependencies.vergen-git2]

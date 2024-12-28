@@ -13,7 +13,7 @@ resolver = "2"
 
 [workspace.package]
 version = "0.4.4"
-rust-version = "1.79"
+rust-version = "1.83"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """

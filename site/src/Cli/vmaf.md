@@ -19,12 +19,4 @@
         If set to inputres, the output video will be scaled to the resolution of the input video.
 
 		[default: 1920x1080]
-
-	--vmaf-threads <VMAF_THREADS>
-		Number of threads to use for target quality VMAF calculation
-
-	--vmaf-filter <VMAF_FILTER>
-		Filter applied to source at VMAF calcualation
-
-		This option should be specified if the source is cropped, for example.
 ```

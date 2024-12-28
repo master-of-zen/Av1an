@@ -59,10 +59,8 @@ pub mod scene_detect;
 mod scenes;
 pub mod settings;
 pub mod split;
-pub mod target_quality;
 pub mod util;
 pub mod vapoursynth;
-pub mod vmaf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {

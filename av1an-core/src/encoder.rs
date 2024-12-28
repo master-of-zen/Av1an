@@ -449,16 +449,6 @@ impl Encoder {
         }
     }
 
-    /// Default quantizer range target quality mode
-    pub const fn get_default_cq_range(self) -> (usize, usize) {
-        match self {
-            Self::aom => (15, 55),
-            Self::rav1e => (50, 140),
-            Self::svt_av1 => (15, 50),
-            Self::x264 | Self::x265 => (15, 35),
-        }
-    }
-
     /// Returns help command for encoder
     pub const fn help_command(self) -> [&'static str; 2] {
         match self {
@@ -498,58 +488,6 @@ impl Encoder {
         }
     }
 
-    /// Returns function pointer used for matching Q/CRF arguments in command
-    /// line
-    fn q_match_fn(self) -> fn(&str) -> bool {
-        match self {
-            Self::aom => |p| p.starts_with("--cq-level="),
-            Self::rav1e => |p| p == "--quantizer",
-            Self::svt_av1 => |p| matches!(p, "--qp" | "-q" | "--crf"),
-            Self::x264 | Self::x265 => |p| p == "--crf",
-        }
-    }
-
-    fn replace_q(self, index: usize, q: usize) -> (usize, String) {
-        match self {
-            Self::aom => (index, format!("--cq-level={q}")),
-            Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => {
-                (index + 1, q.to_string())
-            },
-        }
-    }
-
-    fn insert_q(self, q: usize) -> ArrayVec<String, 2> {
-        let mut output = ArrayVec::new();
-        match self {
-            Self::aom => {
-                output.push(format!("--cq-level={q}"));
-            },
-            Self::rav1e => {
-                output.push("--quantizer".into());
-                output.push(q.to_string());
-            },
-            Self::svt_av1 | Self::x264 | Self::x265 => {
-                output.push("--crf".into());
-                output.push(q.to_string());
-            },
-        }
-        output
-    }
-
-    /// Returns changed q/crf in command line arguments
-    pub fn man_command(self, mut params: Vec<String>, q: usize) -> Vec<String> {
-        let index = list_index(&params, self.q_match_fn());
-        if let Some(index) = index {
-            let (replace_index, replace_q) = self.replace_q(index, q);
-            params[replace_index] = replace_q;
-        } else {
-            let args = self.insert_q(q);
-            params.extend_from_slice(&args);
-        }
-
-        params
-    }
-
     /// Parses the number of encoded frames
     pub(crate) fn parse_encoded_frames(self, line: &str) -> Option<u64> {
         use crate::parse::*;
@@ -559,161 +497,16 @@ impl Encoder {
                 cfg_if! {
                   if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
                     if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-                      return unsafe { parse_AOM_frames_sse41(line.as_bytes()) };
+                      return unsafe { parse_aom_frames_sse41(line.as_bytes()) };
                     }
                   }
                 }
 
-                parse_AOM_frames(line)
+                parse_aom_frames(line)
             },
             Self::rav1e => parse_rav1e_frames(line),
             Self::svt_av1 => parse_svt_av1_frames(line),
             Self::x264 | Self::x265 => parse_x26x_frames(line),
-        }
-    }
-
-    /// Returns command used for target quality probing
-    pub fn construct_target_quality_command(
-        self,
-        threads: usize,
-        q: usize,
-    ) -> Vec<Cow<'static, str>> {
-        match &self {
-            Self::aom => inplace_vec![
-                "aomenc",
-                "--passes=1",
-                format!("--threads={threads}"),
-                "--tile-columns=2",
-                "--tile-rows=1",
-                "--end-usage=q",
-                "-b",
-                "8",
-                "--cpu-used=6",
-                format!("--cq-level={q}"),
-                "--enable-filter-intra=0",
-                "--enable-smooth-intra=0",
-                "--enable-paeth-intra=0",
-                "--enable-cfl-intra=0",
-                "--enable-angle-delta=0",
-                "--reduced-tx-type-set=1",
-                "--enable-intra-edge-filter=0",
-                "--enable-order-hint=0",
-                "--enable-flip-idtx=0",
-                "--enable-global-motion=0",
-                "--enable-cdef=0",
-                "--max-reference-frames=3",
-                "--cdf-update-mode=2",
-                "--enable-tpl-model=0",
-                "--sb-size=64",
-                "--min-partition-size=32",
-                "--disable-kf",
-            ],
-            Self::rav1e => inplace_vec![
-                "rav1e",
-                "-y",
-                "-s",
-                "10",
-                "--threads",
-                threads.to_string(),
-                "--tiles",
-                "16",
-                "--quantizer",
-                q.to_string(),
-                "--low-latency",
-                "--rdo-lookahead-frames",
-                "5",
-                "--no-scene-detection",
-            ],
-            Self::svt_av1 => {
-                inplace_vec![
-                    "SvtAv1EncApp",
-                    "-i",
-                    "stdin",
-                    "--lp",
-                    threads.to_string(),
-                    "--preset",
-                    "12",
-                    "--keyint",
-                    "240",
-                    "--crf",
-                    q.to_string(),
-                    "--tile-rows",
-                    "1",
-                    "--tile-columns",
-                    "2",
-                ]
-            },
-            Self::x264 => inplace_vec![
-                "x264",
-                "--log-level",
-                "error",
-                "--demuxer",
-                "y4m",
-                "-",
-                "--no-progress",
-                "--threads",
-                threads.to_string(),
-                "--preset",
-                "medium",
-                "--crf",
-                q.to_string(),
-            ],
-            Self::x265 => inplace_vec![
-                "x265",
-                "--log-level",
-                "0",
-                "--no-progress",
-                "--y4m",
-                "--frame-threads",
-                cmp::min(threads, 16).to_string(),
-                "--preset",
-                "fast",
-                "--crf",
-                q.to_string(),
-            ],
-        }
-    }
-
-    /// Returns command used for target quality probing (slow, correctness
-    /// focused version)
-    pub fn construct_target_quality_command_probe_slow(
-        self,
-        q: usize,
-    ) -> Vec<Cow<'static, str>> {
-        match &self {
-            Self::aom => {
-                inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}")]
-            },
-            Self::rav1e => {
-                inplace_vec!["rav1e", "-y", "--quantizer", q.to_string()]
-            },
-            Self::svt_av1 => inplace_vec![
-                "SvtAv1EncApp",
-                "-i",
-                "stdin",
-                "--crf",
-                q.to_string()
-            ],
-            Self::x264 => inplace_vec![
-                "x264",
-                "--log-level",
-                "error",
-                "--demuxer",
-                "y4m",
-                "-",
-                "--no-progress",
-                "--crf",
-                q.to_string(),
-            ],
-            Self::x265 => inplace_vec![
-                "x265",
-                "--log-level",
-                "0",
-                "--no-progress",
-                "--y4m",
-                "--crf",
-                q.to_string(),
-            ],
         }
     }
 
@@ -731,62 +524,6 @@ impl Encoder {
                 }
             }
         }
-    }
-
-    /// Constructs tuple of commands for target quality probing
-    pub fn probe_cmd(
-        self,
-        temp: String,
-        chunk_index: usize,
-        q: usize,
-        pix_fmt: Pixel,
-        probing_rate: usize,
-        vmaf_threads: usize,
-        mut video_params: Vec<String>,
-        probe_slow: bool,
-    ) -> (Vec<String>, Vec<Cow<'static, str>>) {
-        let pipe = compose_ffmpeg_pipe(
-            [
-                "-vf",
-                format!("select=not(mod(n\\,{probing_rate}))").as_str(),
-                "-vsync",
-                "0",
-            ],
-            pix_fmt,
-        );
-
-        let probe_name = format!("v_{q}_{chunk_index}.ivf");
-        let mut probe = PathBuf::from(temp);
-        probe.push("split");
-        probe.push(&probe_name);
-        let probe_path = probe.to_str().unwrap().to_owned();
-
-        let params: Vec<Cow<str>> = if probe_slow {
-            let patterns =
-                ["--cq-level=", "--passes=", "--pass=", "--crf", "--quantizer"];
-            Self::remove_patterns(&mut video_params, &patterns);
-            let mut ps = self.construct_target_quality_command_probe_slow(q);
-
-            ps.reserve(video_params.len());
-            for arg in video_params {
-                ps.push(Cow::Owned(arg));
-            }
-
-            ps
-        } else {
-            self.construct_target_quality_command(vmaf_threads, q)
-        };
-
-        let output: Vec<Cow<str>> = match self {
-            Self::svt_av1 => {
-                chain!(params, into_array!["-b", probe_path]).collect()
-            },
-            Self::aom | Self::rav1e | Self::x264 | Self::x265 => {
-                chain!(params, into_array!["-o", probe_path, "-"]).collect()
-            },
-        };
-
-        (pipe, output)
     }
 
     pub fn get_format_bit_depth(

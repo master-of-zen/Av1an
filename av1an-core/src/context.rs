@@ -425,34 +425,6 @@ impl Av1anContext {
                 },
             }
 
-            if self.args.vmaf || self.args.target_quality.is_some() {
-                let _vmaf_res = if let Some(ref tq) = self.args.target_quality {
-                    if tq.vmaf_res == "inputres" {
-                        let inputres = self.args.input.resolution()?;
-                        format!("{}x{}", inputres.0, inputres.1)
-                    } else {
-                        tq.vmaf_res.clone()
-                    }
-                } else {
-                    self.args.vmaf_res.clone()
-                };
-
-                let vmaf_model = self.args.vmaf_path.as_deref().or_else(|| {
-                    self.args
-                        .target_quality
-                        .as_ref()
-                        .and_then(|tq| tq.model.as_deref())
-                });
-                let vmaf_scaler = "bicubic";
-                let vmaf_filter =
-                    self.args.vmaf_filter.as_deref().or_else(|| {
-                        self.args
-                            .target_quality
-                            .as_ref()
-                            .and_then(|tq| tq.vmaf_filter.as_deref())
-                    });
-            }
-
             if !Path::new(&self.args.output_file).exists() {
                 warn!(
                     "Concatenation failed for unknown reasons! Temp folder \
@@ -533,12 +505,6 @@ impl Av1anContext {
                 chunk.frames(),
             )
         };
-
-        if let Some(per_shot_target_quality_cq) = chunk.tq_cq {
-            enc_cmd = chunk
-                .encoder
-                .man_command(enc_cmd, per_shot_target_quality_cq as usize);
-        }
 
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
@@ -861,7 +827,6 @@ impl Av1anContext {
                 self.frames,
                 self.args.min_scene_len,
                 self.args.verbosity,
-                self.args.scaler.as_str(),
                 self.args.sc_pix_format,
                 self.args.sc_method,
                 self.args.sc_downscale_height,
@@ -1055,9 +1020,6 @@ impl Av1anContext {
             overrides.map_or(self.args.photon_noise, |ovr| ovr.photon_noise),
             self.args.chroma_noise,
         )?;
-        if let Some(ref tq) = self.args.target_quality {
-            tq.per_shot_target_quality_routine(&mut chunk)?;
-        }
         Ok(chunk)
     }
 

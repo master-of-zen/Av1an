@@ -15,14 +15,12 @@ use crate::{
     concat::ConcatMethod,
     encoder::Encoder,
     parse::valid_params,
-    target_quality::TargetQuality,
     vapoursynth::{
         is_bestsource_installed,
         is_dgdecnv_installed,
         is_ffms2_installed,
         is_lsmash_installed,
     },
-    vmaf::validate_libvmaf,
     ChunkMethod,
     ChunkOrdering,
     Input,
@@ -52,7 +50,6 @@ pub struct EncodeArgs {
 
     pub chunk_method:          ChunkMethod,
     pub chunk_order:           ChunkOrdering,
-    pub scaler:                String,
     pub scenes:                Option<PathBuf>,
     pub split_method:          SplitMethod,
     pub sc_pix_format:         Option<Pixel>,
@@ -88,13 +85,7 @@ pub struct EncodeArgs {
     pub keep:      bool,
     pub force:     bool,
 
-    pub concat:         ConcatMethod,
-    pub target_quality: Option<TargetQuality>,
-    pub vmaf:           bool,
-    pub vmaf_path:      Option<PathBuf>,
-    pub vmaf_res:       String,
-    pub vmaf_threads:   Option<usize>,
-    pub vmaf_filter:    Option<String>,
+    pub concat: ConcatMethod,
 }
 
 impl EncodeArgs {
@@ -115,10 +106,6 @@ impl EncodeArgs {
             "Input file {:?} does not exist!",
             self.input
         );
-
-        if self.target_quality.is_some() {
-            validate_libvmaf()?;
-        }
 
         if which::which("ffmpeg").is_err() {
             bail!("FFmpeg not found. Is it installed in system path?");
@@ -187,25 +174,6 @@ impl EncodeArgs {
                 "The output video's frame count may differ, and VMAF \
                  calculations may be incorrect"
             );
-        }
-
-        if let Some(vmaf_path) = &self
-            .target_quality
-            .as_ref()
-            .and_then(|tq| tq.model.as_ref())
-        {
-            ensure!(vmaf_path.exists());
-        }
-
-        if let Some(target_quality) = &self.target_quality {
-            if target_quality.probes < 4 {
-                eprintln!(
-                    "Target quality with less than 4 probes is experimental \
-                     and not recommended"
-                );
-            }
-
-            ensure!(target_quality.min_q >= 1);
         }
 
         let encoder_bin = self.encoder.bin();

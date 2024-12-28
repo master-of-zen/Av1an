@@ -18,7 +18,6 @@ For help with av1an, please reach out to us on [Discord](https://discord.gg/Ar8M
 ## Features
 
 - Hyper-scalable video encoding
-- [Target Quality mode](https://master-of-zen.github.io/Av1an/Features/TargetQuality.html), using VMAF control encoders rate control to achieve the desired video quality
 - [VapourSynth](http://www.vapoursynth.com) script support
 - Cancel and resume encoding without loss of progress
 - Minimal and clean CLI

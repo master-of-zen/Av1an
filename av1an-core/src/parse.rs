@@ -32,7 +32,7 @@ const AOM_IGNORED_PREFIX: &str =
 // As you can see, the relevant part of the output always starts past
 // the length of the ignored prefix.
 
-pub fn parse_AOM_frames(s: &str) -> Option<u64> {
+pub fn parse_aom_frames(s: &str) -> Option<u64> {
     // The numbers for aomenc are buffered/encoded frames, so we want the
     // second number (actual encoded frames)
     let first_digit_index = s
@@ -66,7 +66,7 @@ pub fn parse_AOM_frames(s: &str) -> Option<u64> {
 #[inline]
 #[target_feature(enable = "ssse3,sse4.1")]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub unsafe fn parse_AOM_frames_sse41(s: &[u8]) -> Option<u64> {
+pub unsafe fn parse_aom_frames_sse41(s: &[u8]) -> Option<u64> {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -459,14 +459,14 @@ mod tests {
         {
             for (s, ans) in test_cases {
                 assert_eq!(
-                    unsafe { parse_AOM_frames_sse41(s.as_bytes()) },
+                    unsafe { parse_aom_frames_sse41(s.as_bytes()) },
                     ans
                 );
             }
         }
 
         for (s, ans) in test_cases {
-            assert_eq!(parse_AOM_frames(s), ans);
+            assert_eq!(parse_aom_frames(s), ans);
         }
     }
 }

@@ -343,18 +343,11 @@ fn get_test_args() -> Av1anContext {
         sc_only:               false,
         sc_downscale_height:   None,
         force_keyframes:       Vec::new(),
-        target_quality:        None,
-        vmaf:                  false,
         verbosity:             Verbosity::Normal,
         workers:               1,
         set_thread_affinity:   None,
         zones:                 None,
-        scaler:                String::new(),
         ignore_frame_mismatch: false,
-        vmaf_path:             None,
-        vmaf_res:              "1920x1080".to_string(),
-        vmaf_threads:          None,
-        vmaf_filter:           None,
     };
     Av1anContext {
         vs_script: None,

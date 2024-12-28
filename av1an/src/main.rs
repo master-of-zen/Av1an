@@ -18,7 +18,6 @@ use av1an_core::{
     into_vec,
     logging::init_logging,
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
-    target_quality::{adapt_probing_rate, TargetQuality},
     util::read_in_dir,
     vapoursynth,
     ChunkMethod,
@@ -113,14 +112,6 @@ pub struct CliOpts {
     /// the OS to schedule all processes spawned.
     #[clap(long)]
     pub set_thread_affinity: Option<usize>,
-
-    /// Scaler used for scene detection (if --sc-downscale-height XXXX is used)
-    /// and VMAF calculation
-    ///
-    /// Valid scalers are based on the scalers available in ffmpeg, including
-    /// lanczos[1-9] with [1-9] defining the width of the lanczos scaler.
-    #[clap(long, default_value = "bicubic")]
-    pub scaler: String,
 
     /// Pass python argument(s) to the script environment
     /// --vspipe-args "message=fluffy kittens" "head=empty"
@@ -432,125 +423,6 @@ pub struct CliOpts {
     /// - `--photon-noise` (aomenc/rav1e only)
     #[clap(long, help_heading = "Encoding", verbatim_doc_comment)]
     pub zones: Option<PathBuf>,
-
-    /// Plot an SVG of the VMAF for the encode
-    ///
-    /// This option is independent of --target-quality, i.e. it can be used
-    /// with or without it. The SVG plot is created in the same directory
-    /// as the output file.
-    #[clap(long, help_heading = "VMAF")]
-    pub vmaf: bool,
-
-    /// Path to VMAF model (used by --vmaf and --target-quality)
-    ///
-    /// If not specified, ffmpeg's default is used.
-    #[clap(long, help_heading = "VMAF")]
-    pub vmaf_path: Option<PathBuf>,
-
-    /// Resolution used for VMAF calculation
-    ///
-    /// If set to inputres, the output video will be scaled to the resolution
-    /// of the input video.
-    #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
-    pub vmaf_res: String,
-
-    /// Number of threads to use for target quality VMAF calculation
-    #[clap(long, help_heading = "VMAF")]
-    pub vmaf_threads: Option<usize>,
-
-    /// Filter applied to source at VMAF calcualation
-    ///
-    /// This option should be specified if the source is cropped, for example.
-    #[clap(long, help_heading = "VMAF")]
-    pub vmaf_filter: Option<String>,
-
-    /// Target a VMAF score for encoding (disabled by default)
-    ///
-    /// For each chunk, target quality uses an algorithm to find the
-    /// quantizer/crf needed to achieve a certain VMAF score.
-    /// Target quality mode is much slower than normal encoding, but can
-    /// improve the consistency of quality in some cases.
-    ///
-    /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is
-    /// the best). Floating-point values are allowed.
-    #[clap(long, help_heading = "Target Quality")]
-    pub target_quality: Option<f64>,
-
-    /// Maximum number of probes allowed for target quality
-    #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
-    pub probes: u32,
-
-    /// Framerate for probes, 1 - original
-    #[clap(long, default_value_t = 1, help_heading = "Target Quality")]
-    pub probing_rate: u32,
-
-    /// Use encoding settings for probes specified by --video-params rather
-    /// than faster, less accurate settings
-    ///
-    /// Note that this always performs encoding in one-pass mode, regardless of
-    /// --passes.
-    #[clap(long, help_heading = "Target Quality")]
-    pub probe_slow: bool,
-
-    /// Lower bound for target quality Q-search early exit
-    ///
-    /// If min_q is tested and the probe's VMAF score is lower than
-    /// target_quality, the Q-search early exits and min_q is used for the
-    /// chunk.
-    ///
-    /// If not specified, the default value is used (chosen per encoder).
-    #[clap(long, help_heading = "Target Quality")]
-    pub min_q: Option<u32>,
-
-    /// Upper bound for target quality Q-search early exit
-    ///
-    /// If max_q is tested and the probe's VMAF score is higher than
-    /// target_quality, the Q-search early exits and max_q is used for the
-    /// chunk.
-    ///
-    /// If not specified, the default value is used (chosen per encoder).
-    #[clap(long, help_heading = "Target Quality")]
-    pub max_q: Option<u32>,
-}
-
-impl CliOpts {
-    #[tracing::instrument]
-    pub fn target_quality_params(
-        &self,
-        temp_dir: String,
-        video_params: Vec<String>,
-        output_pix_format: Pixel,
-    ) -> Option<TargetQuality> {
-        self.target_quality.map(|tq| {
-            let (min, max) = self.encoder.get_default_cq_range();
-            let min_q = self.min_q.unwrap_or(min as u32);
-            let max_q = self.max_q.unwrap_or(max as u32);
-
-            TargetQuality {
-                vmaf_res: self.vmaf_res.clone(),
-                vmaf_scaler: self.scaler.clone(),
-                vmaf_filter: self.vmaf_filter.clone(),
-                vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
-                    available_parallelism()
-                        .expect("Unrecoverable: Failed to get thread count")
-                        .get()
-                }),
-                model: self.vmaf_path.clone(),
-                probes: self.probes,
-                target: tq,
-                min_q,
-                max_q,
-                encoder: self.encoder,
-                pix_format: output_pix_format,
-                temp: temp_dir.clone(),
-                workers: self.workers,
-                video_params: video_params.clone(),
-                vspipe_args: self.vspipe_args.clone(),
-                probe_slow: self.probe_slow,
-                probing_rate: adapt_probing_rate(self.probing_rate as usize),
-            }
-        })
-    }
 }
 
 fn confirm(prompt: &str) -> io::Result<bool> {
@@ -760,16 +632,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             force_keyframes: parse_comma_separated_numbers(
                 args.force_keyframes.as_deref().unwrap_or(""),
             )?,
-            target_quality: args.target_quality_params(
-                temp,
-                video_params,
-                output_pix_format.format,
-            ),
-            vmaf: args.vmaf,
-            vmaf_path: args.vmaf_path.clone(),
-            vmaf_res: args.vmaf_res.clone(),
-            vmaf_threads: args.vmaf_threads,
-            vmaf_filter: args.vmaf_filter.clone(),
+
             verbosity: if args.quiet {
                 Verbosity::Quiet
             } else if args.verbose {
@@ -780,25 +643,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             workers: args.workers,
             set_thread_affinity: args.set_thread_affinity,
             zones: args.zones.clone(),
-            scaler: {
-                let mut scaler = args.scaler.to_string().clone();
-                let mut scaler_ext =
-                    "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact"
-                        .to_string();
-                if scaler.starts_with("lanczos") {
-                    for n in 1..=9 {
-                        if scaler.ends_with(&n.to_string()) {
-                            scaler_ext.push_str(&format!(
-                                ":param0={}",
-                                &n.to_string()
-                            ));
-                            scaler = "lanczos".to_string();
-                        }
-                    }
-                }
-                scaler.push_str(&scaler_ext);
-                scaler
-            },
+
             ignore_frame_mismatch: args.ignore_frame_mismatch,
         };
 

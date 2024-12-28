@@ -66,7 +66,6 @@ impl Scene {
                     tag("rav1e"),
                     tag("x264"),
                     tag("x265"),
-                    tag("vpx"),
                     tag("svt-av1"),
                 )),
                 Encoder::from_str,
@@ -146,7 +145,7 @@ impl Scene {
         let mut zone_args = zone_args.1.into_iter().collect::<HashMap<_, _>>();
         if let Some(zone_passes) = zone_args.remove("--passes") {
             passes = zone_passes.unwrap().parse().unwrap();
-        } else if [Encoder::aom, Encoder::vpx].contains(&encoder)
+        } else if [Encoder::aom].contains(&encoder)
             && zone_args.contains_key("--rt")
         {
             passes = 1;
@@ -163,7 +162,7 @@ impl Scene {
         if let Some(zone_min_scene_len) = zone_args.remove("--min-scene-len") {
             min_scene_len = zone_min_scene_len.unwrap().parse().unwrap();
         }
-        let raw_zone_args = if [Encoder::aom, Encoder::vpx].contains(&encoder) {
+        let raw_zone_args = if [Encoder::aom].contains(&encoder) {
             zone_args
                 .into_iter()
                 .map(|(key, value)| {
@@ -203,7 +202,7 @@ impl Scene {
                 .iter()
                 .filter_map(|param| {
                     if param.starts_with('-')
-                        && [Encoder::aom, Encoder::vpx].contains(&encoder)
+                        && [Encoder::aom].contains(&encoder)
                     {
                         // These encoders require args to be passed using an
                         // equal sign,
@@ -253,7 +252,7 @@ impl Scene {
                 }) {
                     video_params.remove(pos);
                     if let Some(next) = video_params.get(pos) {
-                        if !([Encoder::aom, Encoder::vpx].contains(&encoder)
+                        if !([Encoder::aom].contains(&encoder)
                             || next.starts_with("--")
                             || (next.starts_with('-')
                                 && next

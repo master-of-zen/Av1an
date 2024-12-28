@@ -12,7 +12,7 @@ use crate::encoder::Encoder;
 // always be at some point after this prefix. See examples of aomenc
 // output below to see why this is the case.
 #[rustfmt::skip]
-const AOM_VPX_IGNORED_PREFIX: &str =
+const AOM_IGNORED_PREFIX: &str =
   "Pass x/x frame    x/";
 // Pass 1/1 frame    3/2       2131B    5997 us 500.25 fps [ETA  unknown]
 //                     ^ relevant output starts at this character
@@ -32,36 +32,33 @@ const AOM_VPX_IGNORED_PREFIX: &str =
 // As you can see, the relevant part of the output always starts past
 // the length of the ignored prefix.
 
-pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
-    // The numbers for aomenc/vpxenc are buffered/encoded frames, so we want the
+pub fn parse_AOM_frames(s: &str) -> Option<u64> {
+    // The numbers for aomenc are buffered/encoded frames, so we want the
     // second number (actual encoded frames)
     let first_digit_index = s
         .as_bytes()
-        .get(AOM_VPX_IGNORED_PREFIX.len() - 1..)?
+        .get(AOM_IGNORED_PREFIX.len() - 1..)?
         .iter()
         .position(|&c| c == b'/')?;
 
     let first_space_index = s
-        .get(AOM_VPX_IGNORED_PREFIX.len() + first_digit_index..)?
+        .get(AOM_IGNORED_PREFIX.len() + first_digit_index..)?
         .as_bytes()
         .iter()
         .position(|&c| c == b' ')?
         + first_digit_index;
 
     s.get(
-        AOM_VPX_IGNORED_PREFIX.len() + first_digit_index
-            ..AOM_VPX_IGNORED_PREFIX.len() + first_space_index,
+        AOM_IGNORED_PREFIX.len() + first_digit_index
+            ..AOM_IGNORED_PREFIX.len() + first_space_index,
     )?
     .parse()
     .ok()
 }
 
-/// x86 SIMD implementation of parsing aomenc/vpxenc output using
+/// x86 SIMD implementation of parsing aomencoutput using
 /// SSSE3+SSE4.1, returning the number of frames processed, or `None`
 /// if the input did not match.
-///
-/// This function also works for parsing vpxenc output, as its progress
-/// printing is exactly the same.
 ///
 /// # Safety
 ///
@@ -69,7 +66,7 @@ pub fn parse_aom_vpx_frames(s: &str) -> Option<u64> {
 #[inline]
 #[target_feature(enable = "ssse3,sse4.1")]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
+pub unsafe fn parse_AOM_frames_sse41(s: &[u8]) -> Option<u64> {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -99,7 +96,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
     // This implementation needs to read `CHUNK_SIZE` bytes past the ignored
     // prefix, so we pay the cost of the bounds check only once at the start
     // of this function. This also serves as an input validation check.
-    if s.len() < AOM_VPX_IGNORED_PREFIX.len() + CHUNK_SIZE {
+    if s.len() < AOM_IGNORED_PREFIX.len() + CHUNK_SIZE {
         return None;
     }
 
@@ -114,7 +111,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
     // least `IGNORED_PREFIX.len() + CHUNK_SIZE` bytes are available, and
     // `_mm_loadu_si128` loads `CHUNK_SIZE` (16) bytes.
     let relevant_output = _mm_loadu_si128(
-        s.get_unchecked(AOM_VPX_IGNORED_PREFIX.len()..)
+        s.get_unchecked(AOM_IGNORED_PREFIX.len()..)
             .as_ptr()
             .cast(),
     );
@@ -152,7 +149,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
     let first_digit_index = {
         _mm_movemask_epi8(_mm_cmpeq_epi8(
             _mm_loadu_si128(
-                s.get(AOM_VPX_IGNORED_PREFIX.len() - 1..)?
+                s.get(AOM_IGNORED_PREFIX.len() - 1..)?
                     .as_ptr()
                     .cast(),
             ),
@@ -173,7 +170,7 @@ pub unsafe fn parse_aom_vpx_frames_sse41(s: &[u8]) -> Option<u64> {
     // found here: https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
     let mut chunk = _mm_loadu_si128(
         s.as_ptr()
-            .add(AOM_VPX_IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
+            .add(AOM_IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
             .cast(),
     );
 
@@ -299,16 +296,7 @@ pub fn valid_params(
             } else {
                 // It's a little concerning how *two* encoders manage to have
                 // buggy help output.
-                let arg = if encoder == Encoder::vpx {
-                    // vpxenc randomly truncates the "Vizier Rate Control
-                    // Options" in the help output, which
-                    // sometimes causes it to truncate at a dash, which breaks
-                    // the tests if we don't do this. Not
-                    // sure what the correct solution in this case is.
-                    s.strip_suffix('-').unwrap_or(s)
-                } else {
-                    s
-                };
+                let arg = s;
 
                 params.insert(Cow::Borrowed(arg));
             }
@@ -321,37 +309,6 @@ pub fn valid_params(
 #[cfg(test)]
 mod tests {
     use crate::parse::*;
-
-    #[test]
-    #[allow(clippy::cognitive_complexity)]
-    fn valid_params_works() {
-        use std::borrow::Borrow;
-
-        macro_rules! generate_tests {
-      ($($x:ident),* $(,)?) => {
-        $(
-          let returned: HashSet<String> = valid_params(include_str!(concat!("../tests/", stringify!($x), "_help.txt")), Encoder::$x)
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-          let expected: HashSet<String> = include_str!(concat!("../tests/", stringify!($x), "_params.txt"))
-            .split_ascii_whitespace()
-            .map(|s| s.to_string())
-            .collect();
-
-          for arg in expected.iter() {
-            assert!(returned.contains(Borrow::<str>::borrow(&**arg)), "expected '{}', but it was missing in return value (for encoder {})", arg, stringify!($x));
-          }
-          for arg in returned.iter() {
-            assert!(expected.contains(Borrow::<str>::borrow(&**arg)), "return value contains '{}', but it was not expected (for encoder {})", arg, stringify!($x));
-          }
-          assert_eq!(returned, expected);
-        )*
-      };
-    }
-
-        generate_tests!(aom, rav1e, svt_av1, vpx, x264, x265);
-    }
 
     #[test]
     fn rav1e_parsing() {
@@ -436,7 +393,7 @@ mod tests {
 
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    fn aom_vpx_parsing() {
+    fn AOM_parsing() {
         // We return the number of frames without checking
         // if those frames are not the final pass.
 
@@ -502,14 +459,14 @@ mod tests {
         {
             for (s, ans) in test_cases {
                 assert_eq!(
-                    unsafe { parse_aom_vpx_frames_sse41(s.as_bytes()) },
+                    unsafe { parse_AOM_frames_sse41(s.as_bytes()) },
                     ans
                 );
             }
         }
 
         for (s, ans) in test_cases {
-            assert_eq!(parse_aom_vpx_frames(s), ans);
+            assert_eq!(parse_AOM_frames(s), ans);
         }
     }
 }

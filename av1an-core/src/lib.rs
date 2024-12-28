@@ -469,7 +469,7 @@ pub fn determine_workers(encoder: Encoder) -> u64 {
 
     std::cmp::max(
         match encoder {
-            Encoder::aom | Encoder::rav1e | Encoder::vpx => std::cmp::min(
+            Encoder::aom | Encoder::rav1e => std::cmp::min(
                 (cpu as f64 / 3.0).round() as u64,
                 (ram_gb as f64 / 1.5).round() as u64,
             ),

@@ -32,7 +32,6 @@ const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 pub enum Encoder {
     aom,
     rav1e,
-    vpx,
     #[strum(serialize = "svt-av1")]
     svt_av1,
     x264,
@@ -115,12 +114,7 @@ impl Encoder {
                 into_array!["--output", output]
             )
             .collect(),
-            Self::vpx => chain!(
-                into_array!["vpxenc", "--passes=1"],
-                params,
-                into_array!["-o", output, "-"]
-            )
-            .collect(),
+
             Self::svt_av1 => chain!(
                 into_array!["SvtAv1EncApp", "-i", "stdin", "--progress", "2"],
                 params,
@@ -186,12 +180,6 @@ impl Encoder {
                     "--output",
                     NULL
                 ]
-            )
-            .collect(),
-            Self::vpx => chain!(
-                into_array!["vpxenc", "--passes=2", "--pass=1"],
-                params,
-                into_array![format!("--fpf={fpf}.log"), "-o", NULL, "-"],
             )
             .collect(),
             Self::svt_av1 => chain!(
@@ -291,12 +279,6 @@ impl Encoder {
                     "--output",
                     output
                 ]
-            )
-            .collect(),
-            Self::vpx => chain!(
-                into_array!["vpxenc", "--passes=2", "--pass=2"],
-                params,
-                into_array![format!("--fpf={fpf}.log"), "-o", output, "-"],
             )
             .collect(),
             Self::svt_av1 => chain!(
@@ -425,36 +407,6 @@ impl Encoder {
                     defaults
                 }
             },
-            // vpxenc does not infer the pixel format from the input, so `-b 10`
-            // is still required to work with the default pixel
-            // format (yuv420p10le).
-            Encoder::vpx => {
-                let defaults = into_vec![
-                    "--codec=vp9",
-                    "-b",
-                    "10",
-                    "--profile=2",
-                    "--threads=4",
-                    "--cpu-used=2",
-                    "--end-usage=q",
-                    "--cq-level=30",
-                    "--row-mt=1",
-                    "--auto-alt-ref=6",
-                ];
-
-                if cols > 1 || rows > 1 {
-                    let columns = ilog2(cols);
-                    let rows = ilog2(rows);
-
-                    let aom_tiles: Vec<String> = into_vec![
-                        format!("--tile-columns={columns}"),
-                        format!("--tile-rows={rows}")
-                    ];
-                    chain!(defaults, aom_tiles).collect()
-                } else {
-                    defaults
-                }
-            },
             Encoder::svt_av1 => {
                 let defaults = into_vec![
                     "--preset", "4", "--keyint", "240", "--rc", "0", "--crf",
@@ -492,7 +444,7 @@ impl Encoder {
     /// Return number of default passes for encoder
     pub const fn get_default_pass(self) -> u8 {
         match self {
-            Self::aom | Self::vpx => 2,
+            Self::aom => 2,
             _ => 1,
         }
     }
@@ -500,7 +452,7 @@ impl Encoder {
     /// Default quantizer range target quality mode
     pub const fn get_default_cq_range(self) -> (usize, usize) {
         match self {
-            Self::aom | Self::vpx => (15, 55),
+            Self::aom => (15, 55),
             Self::rav1e => (50, 140),
             Self::svt_av1 => (15, 50),
             Self::x264 | Self::x265 => (15, 35),
@@ -512,7 +464,6 @@ impl Encoder {
         match self {
             Self::aom => ["aomenc", "--help"],
             Self::rav1e => ["rav1e", "--fullhelp"],
-            Self::vpx => ["vpxenc", "--help"],
             Self::svt_av1 => ["SvtAv1EncApp", "--help"],
             Self::x264 => ["x264", "--fullhelp"],
             Self::x265 => ["x265", "--fullhelp"],
@@ -524,7 +475,6 @@ impl Encoder {
         match self {
             Self::aom => "aomenc",
             Self::rav1e => "rav1e",
-            Self::vpx => "vpxenc",
             Self::svt_av1 => "SvtAv1EncApp",
             Self::x264 => "x264",
             Self::x265 => "x265",
@@ -535,7 +485,6 @@ impl Encoder {
     pub const fn format(self) -> &'static str {
         match self {
             Self::aom | Self::rav1e | Self::svt_av1 => "av1",
-            Self::vpx => "vpx",
             Self::x264 => "h264",
             Self::x265 => "h265",
         }
@@ -544,7 +493,7 @@ impl Encoder {
     /// Get the default output extension for the encoder
     pub const fn output_extension(&self) -> &'static str {
         match &self {
-            Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
+            Self::aom | Self::rav1e | Self::svt_av1 => "ivf",
             Self::x264 | Self::x265 => "mkv",
         }
     }
@@ -553,7 +502,7 @@ impl Encoder {
     /// line
     fn q_match_fn(self) -> fn(&str) -> bool {
         match self {
-            Self::aom | Self::vpx => |p| p.starts_with("--cq-level="),
+            Self::aom => |p| p.starts_with("--cq-level="),
             Self::rav1e => |p| p == "--quantizer",
             Self::svt_av1 => |p| matches!(p, "--qp" | "-q" | "--crf"),
             Self::x264 | Self::x265 => |p| p == "--crf",
@@ -562,7 +511,7 @@ impl Encoder {
 
     fn replace_q(self, index: usize, q: usize) -> (usize, String) {
         match self {
-            Self::aom | Self::vpx => (index, format!("--cq-level={q}")),
+            Self::aom => (index, format!("--cq-level={q}")),
             Self::rav1e | Self::svt_av1 | Self::x265 | Self::x264 => {
                 (index + 1, q.to_string())
             },
@@ -572,7 +521,7 @@ impl Encoder {
     fn insert_q(self, q: usize) -> ArrayVec<String, 2> {
         let mut output = ArrayVec::new();
         match self {
-            Self::aom | Self::vpx => {
+            Self::aom => {
                 output.push(format!("--cq-level={q}"));
             },
             Self::rav1e => {
@@ -606,16 +555,16 @@ impl Encoder {
         use crate::parse::*;
 
         match self {
-            Self::aom | Self::vpx => {
+            Self::aom => {
                 cfg_if! {
                   if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
                     if is_x86_feature_detected!("sse4.1") && is_x86_feature_detected!("ssse3") {
-                      return unsafe { parse_aom_vpx_frames_sse41(line.as_bytes()) };
+                      return unsafe { parse_AOM_frames_sse41(line.as_bytes()) };
                     }
                   }
                 }
 
-                parse_aom_vpx_frames(line)
+                parse_AOM_frames(line)
             },
             Self::rav1e => parse_rav1e_frames(line),
             Self::svt_av1 => parse_svt_av1_frames(line),
@@ -674,20 +623,6 @@ impl Encoder {
                 "--rdo-lookahead-frames",
                 "5",
                 "--no-scene-detection",
-            ],
-            Self::vpx => inplace_vec![
-                "vpxenc",
-                "-b",
-                "10",
-                "--profile=2",
-                "--passes=1",
-                "--pass=1",
-                "--codec=vp9",
-                format!("--threads={threads}"),
-                "--cpu-used=9",
-                "--end-usage=q",
-                format!("--cq-level={q}"),
-                "--row-mt=1",
             ],
             Self::svt_av1 => {
                 inplace_vec![
@@ -752,14 +687,6 @@ impl Encoder {
             Self::rav1e => {
                 inplace_vec!["rav1e", "-y", "--quantizer", q.to_string()]
             },
-            Self::vpx => inplace_vec![
-                "vpxenc",
-                "--passes=1",
-                "--pass=1",
-                "--codec=vp9",
-                "--end-usage=q",
-                format!("--cq-level={q}"),
-            ],
             Self::svt_av1 => inplace_vec![
                 "SvtAv1EncApp",
                 "-i",
@@ -790,8 +717,6 @@ impl Encoder {
         }
     }
 
-    /// Function `remove_patterns` that takes in args and patterns and removes
-    /// all instances of the patterns from the args.
     pub fn remove_patterns(args: &mut Vec<String>, patterns: &[&str]) {
         for pattern in patterns {
             if let Some(index) = args
@@ -856,7 +781,7 @@ impl Encoder {
             Self::svt_av1 => {
                 chain!(params, into_array!["-b", probe_path]).collect()
             },
-            Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
+            Self::aom | Self::rav1e | Self::x264 | Self::x265 => {
                 chain!(params, into_array!["-o", probe_path, "-"]).collect()
             },
         };
@@ -877,7 +802,7 @@ impl Encoder {
         }
       };
     }
-        impl_this_function!(x264, x265, vpx, aom, rav1e, svt_av1)
+        impl_this_function!(x264, x265, aom, rav1e, svt_av1)
     }
 }
 
@@ -919,12 +844,6 @@ create_get_format_bit_depth_function!(
    8: [YUV420P, YUVJ420P, YUV422P, YUVJ422P, YUV444P, YUVJ444P, GBRP, GRAY8],
   10: [YUV420P10LE, YUV422P10LE, YUV444P10LE, GBRP10LE, GRAY10LE],
   12: [YUV420P12LE, YUV422P12LE, YUV444P12LE, GBRP12LE, GRAY12LE]
-);
-create_get_format_bit_depth_function!(
-  vpx,
-   8: [YUV420P, YUVA420P, YUV422P, YUV440P, YUV444P, GBRP],
-  10: [YUV420P10LE, YUV422P10LE, YUV440P10LE, YUV444P10LE, GBRP10LE],
-  12: [YUV420P12LE, YUV422P12LE, YUV440P12LE, YUV444P12LE, GBRP12LE]
 );
 create_get_format_bit_depth_function!(
   aom,

@@ -28,7 +28,6 @@ Target Quality has a really simple goal, instead of guessing what the CQ/CRF val
   - svt-av1
   - x265
   - x264
-  - vpx
 
 - Quality/Constant Rate control (Target quality change crf/cq value for each segment). Which means that encoders must be in mode that use CRF/CQ and have those options specified ( `--crf 30`, `--cq-level=30`) those values get replaced for each segment
 

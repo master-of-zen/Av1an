@@ -223,14 +223,14 @@ pub struct CliOpts {
 
     /// Number of encoder passes
     ///
-    /// Since aom and vpx benefit from two-pass mode even with constant quality
+    /// Since aom benefit from two-pass mode even with constant quality
     /// mode (unlike other encoders in which two-pass mode is used for more
     /// accurate VBR rate control), two-pass mode is used by default for
     /// these encoders.
     ///
-    /// When using aom or vpx with RT mode (--rt), one-pass mode is always used
+    /// When using aom with RT mode (--rt), one-pass mode is always used
     /// regardless of the value specified by this flag (as RT mode in aom
-    /// and vpx only supports one-pass encoding).
+    /// supports one-pass encoding).
     #[clap(short, long, value_parser = value_parser!(u8).range(1..=2), help_heading = "Encoding")]
     pub passes: Option<u8>,
 

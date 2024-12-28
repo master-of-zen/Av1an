@@ -5,7 +5,7 @@
 		Video encoder to use
 
 		[default: aom]
-		[possible values: aom, rav1e, vpx, svt-av1, x264, x265]
+		[possible values: aom, rav1e, svt-av1, x264, x265]
 
 -v, --video-params <VIDEO_PARAMS>
 		Parameters for video encoder
@@ -18,12 +18,12 @@
 -p, --passes <PASSES>
 		Number of encoder passes
 
-		Since aom and vpx benefit from two-pass mode even with constant quality mode (unlike
+		Since aom benefit from two-pass mode even with constant quality mode (unlike
 		other encoders in which two-pass mode is used for more accurate VBR rate control), two-
 		pass mode is used by default for these encoders.
 
-		When using aom or vpx with RT mode (--rt), one-pass mode is always used regardless
-		of the value specified by this flag (as RT mode in aom and vpx only supports one-pass
+		When using aom with RT mode (--rt), one-pass mode is always used regardless
+		of the value specified by this flag (as RT mode in aom only supports one-pass
 		encoding).
 
 		[possible values: 1, 2]

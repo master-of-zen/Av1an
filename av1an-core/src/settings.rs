@@ -102,7 +102,7 @@ impl EncodeArgs {
         if self.concat == ConcatMethod::Ivf
             && !matches!(
                 self.encoder,
-                Encoder::rav1e | Encoder::aom | Encoder::svt_av1 | Encoder::vpx
+                Encoder::rav1e | Encoder::aom | Encoder::svt_av1
             )
         {
             bail!(".ivf only supports VP8, VP9, and AV1");
@@ -249,7 +249,7 @@ impl EncodeArgs {
             );
         }
 
-        if matches!(self.encoder, Encoder::aom | Encoder::vpx)
+        if matches!(self.encoder, Encoder::aom)
             && self.passes != 1
             && self
                 .video_params
@@ -274,7 +274,7 @@ impl EncodeArgs {
             .iter()
             .filter_map(|param| {
                 if param.starts_with('-')
-                    && [Encoder::aom, Encoder::vpx].contains(&self.encoder)
+                    && [Encoder::aom].contains(&self.encoder)
                 {
                     // These encoders require args to be passed using an equal
                     // sign, e.g. `--cq-level=30`

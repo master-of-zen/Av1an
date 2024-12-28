@@ -49,11 +49,10 @@ At least one encoder is required to use Av1an. The following encoders are suppor
 - [aomenc](https://aomedia.googlesource.com/aom/) (AV1)
 - [SvtAv1EncApp](https://gitlab.com/AOMediaCodec/SVT-AV1) (AV1)
 - [rav1e](https://github.com/xiph/rav1e) (AV1)
-- [vpxenc](https://chromium.googlesource.com/webm/libvpx/) (VP8 and VP9)
 - [x264](https://www.videolan.org/developers/x264.html) (H.264/AVC)
 - [x265](https://www.videolan.org/developers/x265.html) (H.265/HEVC)
 
-Note that Av1an requires the executable encoder. If you use a package manager to install encoders, check that the installation includes an executable encoder (e.g. vpxenc, SvtAv1EncApp) from the list above. Just installing the library (e.g. libvpx, libSvtAv1Enc) is not enough.
+Note that Av1an requires the executable encoder. If you use a package manager to install encoders, check that the installation includes an executable encoder (e.g. SvtAv1EncApp) from the list above. Just installing the library (e.g. libSvtAv1Enc) is not enough.
 
 ## Installation
 

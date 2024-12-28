@@ -2,13 +2,12 @@ use std::{
     borrow::{Borrow, Cow},
     cmp::Ordering,
     collections::HashSet,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{exit, Command},
 };
 
 use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -375,46 +374,4 @@ pub(crate) fn suggest_fix<'a>(
                 None
             }
         })
-}
-
-pub(crate) fn insert_noise_table_params(
-    encoder: Encoder,
-    video_params: &mut Vec<String>,
-    table: &Path,
-) {
-    match encoder {
-        Encoder::aom => {
-            video_params
-                .retain(|param| !param.starts_with("--denoise-noise-level="));
-            video_params.push(format!(
-                "--film-grain-table={}",
-                table.to_str().unwrap()
-            ));
-        },
-        Encoder::svt_av1 => {
-            let film_grain_idx = video_params
-                .iter()
-                .find_position(|param| param.as_str() == "--film-grain");
-            if let Some((idx, _)) = film_grain_idx {
-                video_params.remove(idx + 1);
-                video_params.remove(idx);
-            }
-            video_params.push("--fgs-table".to_string());
-            video_params.push(table.to_str().unwrap().to_string());
-        },
-        Encoder::rav1e => {
-            let photon_noise_idx = video_params
-                .iter()
-                .find_position(|param| param.as_str() == "--photon-noise");
-            if let Some((idx, _)) = photon_noise_idx {
-                video_params.remove(idx + 1);
-                video_params.remove(idx);
-            }
-            video_params.push("--photon-noise-table".to_string());
-            video_params.push(table.to_str().unwrap().to_string());
-        },
-        _ => unimplemented!(
-            "This encoder does not support grain synth through av1an"
-        ),
-    }
 }

@@ -8,7 +8,7 @@ use av1_grain::{
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::{encoder::Encoder, settings::insert_noise_table_params, Input};
+use crate::{encoder::Encoder, Input};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
@@ -85,12 +85,6 @@ impl Chunk {
                     });
                 write_grain_table(&grain_table, &[params])?;
             }
-
-            insert_noise_table_params(
-                self.encoder,
-                &mut self.video_params,
-                &grain_table,
-            );
         }
 
         Ok(())

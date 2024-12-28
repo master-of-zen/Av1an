@@ -9,8 +9,14 @@ use std::{
 
 use ::ffmpeg::format::Pixel;
 use ansi_term::{Color, Style};
-use anyhow::{anyhow, bail, ensure, Context};
+use anyhow::{Context, anyhow, bail, ensure};
 use av1an_core::{
+    ChunkMethod,
+    ChunkOrdering,
+    Input,
+    ScenecutMethod,
+    SplitMethod,
+    Verbosity,
     concat::ConcatMethod,
     context::Av1anContext,
     encoder::Encoder,
@@ -20,18 +26,11 @@ use av1an_core::{
     logging::init_logging,
     progress_bar::{get_first_multi_progress_bar, get_progress_bar},
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
-    target_quality::{adapt_probing_rate, TargetQuality},
+    target_quality::{TargetQuality, adapt_probing_rate},
     util::read_in_dir,
     vapoursynth,
-    ChunkMethod,
-    ChunkOrdering,
-    Input,
-    ScenecutMethod,
-    SplitMethod,
-    Verbosity,
 };
-use clap::{value_parser, Parser};
-use flexi_logger::{writers::LogWriter, Level, LevelFilter};
+use clap::{Parser, value_parser};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};
@@ -157,23 +156,6 @@ pub struct CliOpts {
     /// Log file location [default: <temp dir>/log.log]
     #[clap(short, long)]
     pub log_file: Option<String>,
-
-    /// Set log level for log file (does not affect command-line log level)
-    ///
-    /// error: Designates very serious errors.
-    ///
-    /// warn: Designates hazardous situations.
-    ///
-    /// info: Designates useful information.
-    ///
-    /// debug: Designates lower priority information.
-    ///
-    /// trace: Designates very low priority, often extremely verbose,
-    /// information. Includes rav1e scenechange decision info.
-    #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true)]
-    // "off" is also an allowed value for LevelFilter but we just disable the
-    // user from setting it
-    pub log_level: LevelFilter,
 
     /// Resume previous session from temporary directory
     #[clap(short, long)]
@@ -804,13 +786,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
                     Err(_) => Some(240_usize),
                 },
             },
-            photon_noise: args.photon_noise.and_then(|arg| {
-                if arg == 0 {
-                    None
-                } else {
-                    Some(arg)
-                }
-            }),
+            photon_noise: args
+                .photon_noise
+                .and_then(|arg| if arg == 0 { None } else { Some(arg) }),
             photon_noise_size: (
                 args.photon_noise_width,
                 args.photon_noise_height,
@@ -935,62 +913,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     }
 
     Ok(valid_args)
-}
-
-#[derive(Debug)]
-pub struct StderrLogger {
-    level: Level,
-}
-
-impl LogWriter for StderrLogger {
-    fn write(
-        &self,
-        _now: &mut flexi_logger::DeferredNow,
-        record: &flexi_logger::Record,
-    ) -> std::io::Result<()> {
-        if record.level() > self.level {
-            return Ok(());
-        }
-
-        let style = if io::stderr().is_terminal() {
-            match record.level() {
-                Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
-                Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
-                Level::Info => Style::default().bold(),
-                Level::Debug => Style::default().dimmed(),
-                _ => Style::default(),
-            }
-        } else {
-            Style::default()
-        };
-
-        let msg = style.paint(format!("{}", record.args()));
-
-        macro_rules! create_format_args {
-            () => {
-                format_args!(
-                    "{} [{}] {}",
-                    style.paint(format!("{}", record.level())),
-                    record.module_path().unwrap_or("<unnamed>"),
-                    msg
-                )
-            };
-        }
-
-        if let Some(pbar) = get_first_multi_progress_bar() {
-            pbar.println(std::fmt::format(create_format_args!()));
-        } else if let Some(pbar) = get_progress_bar() {
-            pbar.println(std::fmt::format(create_format_args!()));
-        } else {
-            eprintln!("{}", create_format_args!());
-        }
-
-        Ok(())
-    }
-
-    fn flush(&self) -> std::io::Result<()> {
-        Ok(())
-    }
 }
 
 #[instrument]

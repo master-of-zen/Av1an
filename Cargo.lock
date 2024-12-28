@@ -214,11 +214,12 @@ dependencies = [
 
 [[package]]
 name = "av1an"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "ansi_term",
  "anyhow",
  "av1an-core",
+ "av1an-logging",
  "clap",
  "ffmpeg-the-third",
  "once_cell",
@@ -234,7 +235,7 @@ dependencies = [
 
 [[package]]
 name = "av1an-cli"
-version = "0.4.4"
+version = "0.4.5"
 
 [[package]]
 name = "av1an-config"
@@ -242,7 +243,7 @@ version = "0.1.0"
 
 [[package]]
 name = "av1an-core"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "affinity",
  "ansi_term",
@@ -252,6 +253,7 @@ dependencies = [
  "av-ivf",
  "av-scenechange",
  "av1-grain",
+ "av1an-logging",
  "cfg-if",
  "crossbeam-channel",
  "crossbeam-utils",
@@ -281,8 +283,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
  "vapoursynth",
  "which",
  "y4m",
@@ -294,15 +294,25 @@ version = "0.1.0"
 
 [[package]]
 name = "av1an-input"
-version = "0.4.4"
+version = "0.4.5"
+
+[[package]]
+name = "av1an-logging"
+version = "0.4.5"
+dependencies = [
+ "once_cell",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "av1an-metrics"
-version = "0.4.4"
+version = "0.4.5"
 
 [[package]]
 name = "av1an-output"
-version = "0.4.4"
+version = "0.4.5"
 
 [[package]]
 name = "backtrace"

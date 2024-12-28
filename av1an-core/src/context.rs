@@ -1245,7 +1245,7 @@ impl Av1anContext {
 
         let num_frames = num_frames(Path::new(file))?;
 
-        let mut chunk = Chunk {
+        let chunk = Chunk {
             temp: self.args.temp.clone(),
             input: Input::Video {
                 path: PathBuf::from(file)

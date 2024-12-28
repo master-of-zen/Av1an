@@ -15,7 +15,6 @@ use av1an_core::{
     ffmpeg,
     hash_path,
     into_vec,
-    logging::init_logging,
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
     util::read_in_dir,
     vapoursynth,
@@ -26,6 +25,7 @@ use av1an_core::{
     SplitMethod,
     Verbosity,
 };
+use av1an_logging::init_logging;
 use clap::{value_parser, Parser};
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};

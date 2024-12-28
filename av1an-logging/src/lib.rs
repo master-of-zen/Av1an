@@ -105,37 +105,37 @@ pub fn init_logging() {
 
     // Create our subscriber with correctly ordered layers
     let subscriber = tracing_subscriber::registry()
-    // Console output layer
-    .with(
-      fmt::Layer::new()
-        // First configure all formatting
-        .with_ansi(std::io::stderr().is_terminal())
-        .with_target(true)
-        .with_thread_ids(false)
-        .with_file(false)
-        .with_line_number(false)
-        .with_level(true)
-        // Set the writer
-        .with_writer(std::io::stdout)
-        // Apply the filter last
-        .with_filter(console_filter),
-    )
-    // File output layer
-    .with(
-      fmt::Layer::new()
-        // First configure all formatting
-        .with_ansi(false)
-        .with_target(true)
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_file(true)
-        .with_line_number(true)
-        .with_level(true)
-        // Set the writer
-        .with_writer(non_blocking)
-        // Apply the filter last
-        .with_filter(file_filter),
-    );
+        // Console output layer
+        .with(
+            fmt::Layer::new()
+                // First configure all formatting
+                .with_ansi(std::io::stderr().is_terminal())
+                .with_target(true)
+                .with_thread_ids(false)
+                .with_file(false)
+                .with_line_number(false)
+                .with_level(true)
+                // Set the writer
+                .with_writer(std::io::stdout)
+                // Apply the filter last
+                .with_filter(console_filter),
+        )
+        // File output layer
+        .with(
+            fmt::Layer::new()
+                // First configure all formatting
+                .with_ansi(false)
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_file(true)
+                .with_line_number(true)
+                .with_level(true)
+                // Set the writer
+                .with_writer(non_blocking)
+                // Apply the filter last
+                .with_filter(file_filter),
+        );
 
     // Set as global default
     tracing::subscriber::set_global_default(subscriber)

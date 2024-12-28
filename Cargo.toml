@@ -8,11 +8,12 @@ members = [
     "av1an-output",
     "av1an-input",
     "av1an-cli",
+    "av1an-logging",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.4"
+version = "0.4.5"
 rust-version = "1.83"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]

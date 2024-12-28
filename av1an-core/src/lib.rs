@@ -52,7 +52,6 @@ pub mod concat;
 pub mod context;
 pub mod encoder;
 pub mod ffmpeg;
-pub mod logging;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;

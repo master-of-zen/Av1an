@@ -1,0 +1,13 @@
+[package]
+name = "av1an-logging"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Logging functionality for av1an video encoder"
+repository.workspace = true
+
+[dependencies]
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+once_cell = "1.8.0"

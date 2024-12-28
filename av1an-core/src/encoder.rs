@@ -7,10 +7,7 @@ use itertools::chain;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{
-    into_array,
-    into_vec,
-};
+use crate::{into_array, into_vec};
 
 const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 
@@ -65,7 +62,6 @@ impl Display for Encoder {
 }
 
 impl Encoder {
-    /// Composes 1st pass command for 1 pass encoding
     pub fn compose_1_1_pass(
         self,
         params: Vec<String>,

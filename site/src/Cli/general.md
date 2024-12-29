@@ -57,7 +57,7 @@
 		Never overwrite output file, without confirmation
 
 	--max-tries <MAX_TRIES>
-		Maximum number of chunk restarts for an encode
+		Maximum number of task restarts for an encode
 
 		[default: 3]
 

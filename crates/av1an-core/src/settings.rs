@@ -20,11 +20,11 @@ use crate::{
         is_ffms2_installed,
         is_lsmash_installed,
     },
-    ChunkMethod,
-    ChunkOrdering,
     Input,
     ScenecutMethod,
     SplitMethod,
+    TaskMethod,
+    TaskOrdering,
     Verbosity,
 };
 
@@ -47,8 +47,8 @@ pub struct EncodeArgs {
     pub temp:        String,
     pub output_file: String,
 
-    pub chunk_method:          ChunkMethod,
-    pub chunk_order:           ChunkOrdering,
+    pub task_method:           TaskMethod,
+    pub task_order:            TaskOrdering,
     pub scenes:                Option<PathBuf>,
     pub split_method:          SplitMethod,
     pub sc_pix_format:         Option<Pixel>,
@@ -128,39 +128,39 @@ impl EncodeArgs {
             );
         }
 
-        if self.chunk_method == ChunkMethod::LSMASH {
+        if self.task_method == TaskMethod::LSMASH {
             ensure!(
                 is_lsmash_installed(),
-                "LSMASH is not installed, but it was specified as the chunk \
+                "LSMASH is not installed, but it was specified as the task \
                  method"
             );
         }
-        if self.chunk_method == ChunkMethod::FFMS2 {
+        if self.task_method == TaskMethod::FFMS2 {
             ensure!(
                 is_ffms2_installed(),
-                "FFMS2 is not installed, but it was specified as the chunk \
+                "FFMS2 is not installed, but it was specified as the task \
                  method"
             );
         }
-        if self.chunk_method == ChunkMethod::DGDECNV
+        if self.task_method == TaskMethod::DGDECNV
             && which::which("dgindexnv").is_err()
         {
             ensure!(
                 is_dgdecnv_installed(),
                 "Either DGDecNV is not installed or DGIndexNV is not in \
-                 system path, but it was specified as the chunk method"
+                 system path, but it was specified as the task method"
             );
         }
-        if self.chunk_method == ChunkMethod::BESTSOURCE {
+        if self.task_method == TaskMethod::BESTSOURCE {
             ensure!(
                 is_bestsource_installed(),
                 "BestSource is not installed, but it was specified as the \
-                 chunk method"
+                 task method"
             );
         }
-        if self.chunk_method == ChunkMethod::Select {
+        if self.task_method == TaskMethod::Select {
             warn!(
-                "It is not recommended to use the \"select\" chunk method, as \
+                "It is not recommended to use the \"select\" task method, as \
                  it is very slow"
             );
         }

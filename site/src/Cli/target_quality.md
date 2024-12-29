@@ -4,7 +4,7 @@
 	--target-quality <TARGET_QUALITY>
 		Target a VMAF score for encoding (disabled by default)
 
-		For each chunk, target quality uses an algorithm to find the quantizer/crf needed to
+		For each task, target quality uses an algorithm to find the quantizer/crf needed to
 		achieve a certain VMAF score. Target quality mode is much slower than normal encoding,
 		but can improve the consistency of quality in some cases.
 
@@ -31,7 +31,7 @@
 		Lower bound for target quality Q-search early exit
 
 		If min_q is tested and the probe's VMAF score is lower than target_quality, the Q-search
-		early exits and min_q is used for the chunk.
+		early exits and min_q is used for the task.
 
 		If not specified, the default value is used (chosen per encoder).
 
@@ -39,7 +39,7 @@
 		Upper bound for target quality Q-search early exit
 
 		If max_q is tested and the probe's VMAF score is higher than target_quality, the Q-
-		search early exits and max_q is used for the chunk.
+		search early exits and max_q is used for the task.
 
 		If not specified, the default value is used (chosen per encoder).
 ```

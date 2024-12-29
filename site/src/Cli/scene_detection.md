@@ -6,7 +6,7 @@
 		File location for scenes
 
 	--split-method <SPLIT_METHOD>
-		Method used to determine chunk boundaries
+		Method used to determine task boundaries
 
 		"av-scenechange" uses an algorithm to analyze which frames of the video are the start
 		of new scenes, while "none" disables scene detection entirely (and only relies on

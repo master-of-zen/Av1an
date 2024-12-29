@@ -50,7 +50,7 @@
 -f, --ffmpeg <FFMPEG_FILTER_ARGS>
 		FFmpeg filter options
 
--m, --chunk-method <CHUNK_METHOD>
+-m, --task-method <CHUNK_METHOD>
 		Method used for piping exact ranges of frames to the encoder
 
 		Methods that require an external vapoursynth plugin:
@@ -85,27 +85,27 @@
 		from the first frame to the requested frame, without skipping irrelevant frames (causing
 		quadratic decoding complexity).
 
-		segment - Create chunks based on keyframes in the source. Not frame exact, as it can
+		segment - Create tasks based on keyframes in the source. Not frame exact, as it can
 		only split on keyframes in the source. Requires intermediate files (which can be large).
 
 		Default: lsmash (if available), otherwise ffms2 (if available), otherwise DGDecNV (if available), otherwise bestsource (if available), otherwise hybrid.
 
 		[possible values: segment, select, ffms2, lsmash, dgdecnv, bestsource, hybrid]
 
-	--chunk-order <CHUNK_ORDER>
-		The order in which av1an will encode chunks
+	--task-order <CHUNK_ORDER>
+		The order in which av1an will encode tasks
 
 		Available methods:
 
-		long-to-short - The longest chunks will be encoded first. This method results in the
+		long-to-short - The longest tasks will be encoded first. This method results in the
 		smallest amount of time with idle cores, as the encode will not be waiting on a very
-		long chunk to finish at the end of the encode after all other chunks have finished.
+		long task to finish at the end of the encode after all other tasks have finished.
 
-		short-to-long - The shortest chunks will be encoded first.
+		short-to-long - The shortest tasks will be encoded first.
 
-		sequential - The chunks will be encoded in the order they appear in the video.
+		sequential - The tasks will be encoded in the order they appear in the video.
 
-		random - The chunks will be encoded in a random order. This will provide a more accurate
+		random - The tasks will be encoded in a random order. This will provide a more accurate
 		estimated filesize sooner in the encode.
 
 		[default: long-to-short]
@@ -125,7 +125,7 @@
 		specifying this option will disable the encoder's internal grain synthesis.
 
 -c, --concat <CONCAT>
-		Determines method used for concatenating encoded chunks and audio into output file
+		Determines method used for concatenating encoded tasks and audio into output file
 
 		ffmpeg - Uses ffmpeg for concatenation. Unfortunately, ffmpeg sometimes produces files
 		with partially broken audio seeking, so mkvmerge should generally be preferred if

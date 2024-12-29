@@ -33,7 +33,6 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     broker::{Broker, EncoderCrash},
-    chunk::Chunk,
     create_dir,
     determine_workers,
     ffmpeg::{compose_ffmpeg_pipe, num_frames},
@@ -49,23 +48,24 @@ use crate::{
         reset_bar_at,
         reset_mp_bar_at,
         set_audio_size,
-        update_mp_chunk,
         update_mp_msg,
+        update_mp_task,
         update_progress_bar_estimates,
     },
-    read_chunk_queue,
-    save_chunk_queue,
+    read_task_queue,
+    save_task_queue,
     scene_detect::av_scenechange_detect,
     scenes::{Scene, ZoneOptions},
     settings::{EncodeArgs, InputPixelFormat},
     split::{extra_splits, segment, write_scenes_to_file},
+    task::Task,
     vapoursynth::create_vs_file,
-    ChunkMethod,
-    ChunkOrdering,
     DashMap,
     DoneJson,
     Input,
     SplitMethod,
+    TaskMethod,
+    TaskOrdering,
     Verbosity,
 };
 
@@ -120,12 +120,12 @@ impl Av1anContext {
 
         let done_path = Path::new(&self.args.temp).join("done.json");
         let done_json_exists = done_path.exists();
-        let chunks_json_exists = Path::new(&self.args.temp)
-            .join("chunks.json")
+        let tasks_json_exists = Path::new(&self.args.temp)
+            .join("tasks.json")
             .exists();
 
         if self.args.resume {
-            match (done_json_exists, chunks_json_exists) {
+            match (done_json_exists, tasks_json_exists) {
                 // both files exist, so there is no problem
                 (true, true) => {},
                 (false, true) => {
@@ -138,7 +138,7 @@ impl Av1anContext {
                 },
                 (true, false) => {
                     info!(
-                        "resume was set but chunks.json does not exist in \
+                        "resume was set but tasks.json does not exist in \
                          temporary directory {:?}",
                         &self.args.temp
                     );
@@ -146,7 +146,7 @@ impl Av1anContext {
                 },
                 (false, false) => {
                     info!(
-                        "resume was set but neither chunks.json nor done.json \
+                        "resume was set but neither tasks.json nor done.json \
                          exist in temporary directory {:?}",
                         &self.args.temp
                     );
@@ -199,12 +199,12 @@ impl Av1anContext {
         // generated when vspipe is first called), so it's not worth adding all the extra complexity.
         if (self.args.input.is_vapoursynth()
             || (self.args.input.is_video()
-            && matches!(self.args.chunk_method, ChunkMethod::LSMASH | ChunkMethod::FFMS2 | ChunkMethod::DGDECNV | ChunkMethod::BESTSOURCE)))
+            && matches!(self.args.task_method, TaskMethod::LSMASH | TaskMethod::FFMS2 | TaskMethod::DGDECNV | TaskMethod::BESTSOURCE)))
             && !self.args.resume
         {
           self.vs_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => path.clone(),
-            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
+            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.task_method)?,
           });
 
           let vs_script = self.vs_script.clone().unwrap();
@@ -260,16 +260,15 @@ impl Av1anContext {
             exit(0);
         }
 
-        let (chunk_queue, total_chunks) =
-            self.load_or_gen_chunk_queue(&splits)?;
+        let (task_queue, total_tasks) = self.load_or_gen_task_queue(&splits)?;
 
         if self.args.resume {
-            let chunks_done = get_done().done.len();
+            let tasks_done = get_done().done.len();
             info!(
-                "encoding resumed with {}/{} chunks completed ({} remaining)",
-                chunks_done,
-                chunk_queue.len() + chunks_done,
-                chunk_queue.len()
+                "encoding resumed with {}/{} tasks completed ({} remaining)",
+                tasks_done,
+                task_queue.len() + tasks_done,
+                task_queue.len()
             );
         }
 
@@ -321,7 +320,7 @@ impl Av1anContext {
                 self.args.workers =
                     determine_workers(self.args.encoder) as usize;
             }
-            self.args.workers = cmp::min(self.args.workers, chunk_queue.len());
+            self.args.workers = cmp::min(self.args.workers, task_queue.len());
 
             if std::io::stderr().is_terminal() {
                 eprintln!(
@@ -330,7 +329,7 @@ impl Av1anContext {
                     Color::Green.paint("ueue"),
                     Color::Green
                         .bold()
-                        .paint(format!("{}", chunk_queue.len())),
+                        .paint(format!("{}", task_queue.len())),
                     Color::Blue.bold().paint("W"),
                     Color::Blue.paint("orkers"),
                     Color::Blue
@@ -349,7 +348,7 @@ impl Av1anContext {
             } else {
                 eprintln!(
                     "Queue {} Workers {} Passes {}\nParams: {}",
-                    chunk_queue.len(),
+                    task_queue.len(),
                     self.args.workers,
                     self.args.passes,
                     self.args.video_params.join(" ")
@@ -363,7 +362,7 @@ impl Av1anContext {
                 init_multi_progress_bar(
                     self.frames as u64,
                     self.args.workers,
-                    total_chunks,
+                    total_tasks,
                     initial_frames as u64,
                 );
                 reset_mp_bar_at(initial_frames as u64);
@@ -379,7 +378,7 @@ impl Av1anContext {
             }
 
             let broker = Broker {
-                chunk_queue,
+                task_queue,
                 project: self,
             };
 
@@ -389,7 +388,7 @@ impl Av1anContext {
             });
 
             // Queue::encoding_loop only sends a message if there was an error
-            // (meaning a chunk crashed) more than MAX_TRIES. So, we
+            // (meaning a task crashed) more than MAX_TRIES. So, we
             // have to explicitly exit the program if that happens.
             if rx.recv().is_ok() {
                 exit(1);
@@ -421,7 +420,7 @@ impl Av1anContext {
                         self.args.temp.as_ref(),
                         self.args.output_file.as_ref(),
                         self.args.encoder.into(),
-                        total_chunks,
+                        total_tasks,
                     )?;
                 },
                 ConcatMethod::FFmpeg => {
@@ -479,37 +478,37 @@ impl Av1anContext {
     /// bar.
     pub fn create_pipes(
         &self,
-        chunk: &Chunk,
+        task: &Task,
         current_pass: u8,
         worker_id: usize,
         padding: usize,
     ) -> Result<(), (Box<EncoderCrash>, u64)> {
-        update_mp_chunk(worker_id, chunk.index, padding);
+        update_mp_task(worker_id, task.index, padding);
 
-        let fpf_file = Path::new(&chunk.temp)
+        let fpf_file = Path::new(&task.temp)
             .join("split")
-            .join(format!("{}_fpf", chunk.name()));
+            .join(format!("{}_fpf", task.name()));
 
-        let video_params = chunk.video_params.clone();
+        let video_params = task.video_params.clone();
 
-        let enc_cmd = if chunk.passes == 1 {
-            chunk.encoder.compose_1_1_pass(
+        let enc_cmd = if task.passes == 1 {
+            task.encoder.compose_1_1_pass(
                 video_params,
-                chunk.output(),
-                chunk.frames(),
+                task.output(),
+                task.frames(),
             )
         } else if current_pass == 1 {
-            chunk.encoder.compose_1_2_pass(
+            task.encoder.compose_1_2_pass(
                 video_params,
                 fpf_file.to_str().unwrap(),
-                chunk.frames(),
+                task.frames(),
             )
         } else {
-            chunk.encoder.compose_2_2_pass(
+            task.encoder.compose_2_2_pass(
                 video_params,
                 fpf_file.to_str().unwrap(),
-                chunk.output(),
-                chunk.frames(),
+                task.output(),
+                task.frames(),
             )
         };
 
@@ -525,21 +524,21 @@ impl Av1anContext {
             enc_stderr,
             frame,
         ) = rt.block_on(async {
-            let mut source_pipe =
-                if let [source, args @ ..] = &*chunk.source_cmd {
-                    let mut command = tokio::process::Command::new(source);
-                    for arg in chunk.input.as_vspipe_args_vec().unwrap() {
-                        command.args(["-a", &arg]);
-                    }
-                    command
-                        .args(args)
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .spawn()
-                        .unwrap()
-                } else {
-                    unreachable!()
-                };
+            let mut source_pipe = if let [source, args @ ..] = &*task.source_cmd
+            {
+                let mut command = tokio::process::Command::new(source);
+                for arg in task.input.as_vspipe_args_vec().unwrap() {
+                    command.args(["-a", &arg]);
+                }
+                command
+                    .args(args)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .unwrap()
+            } else {
+                unreachable!()
+            };
 
             let source_pipe_stdout: Stdio = source_pipe
                 .stdout
@@ -692,9 +691,9 @@ impl Av1anContext {
                     enc_stderr.push_str(line);
                     enc_stderr.push('\n');
 
-                    if current_pass == chunk.passes {
+                    if current_pass == task.passes {
                         if let Some(new) =
-                            chunk.encoder.parse_encoded_frames(line)
+                            task.encoder.parse_encoded_frames(line)
                         {
                             if new > frame {
                                 if self.args.verbosity == Verbosity::Normal {
@@ -739,24 +738,24 @@ impl Av1anContext {
             ));
         }
 
-        if current_pass == chunk.passes {
-            let encoded_frames = num_frames(chunk.output().as_ref());
+        if current_pass == task.passes {
+            let encoded_frames = num_frames(task.output().as_ref());
 
             let err_str = match encoded_frames {
                 Ok(encoded_frames)
-                    if !chunk.ignore_frame_mismatch
-                        && encoded_frames != chunk.frames() =>
+                    if !task.ignore_frame_mismatch
+                        && encoded_frames != task.frames() =>
                 {
                     Some(format!(
-                        "FRAME MISMATCH: chunk {}: {encoded_frames}/{} \
+                        "FRAME MISMATCH: task {}: {encoded_frames}/{} \
                          (actual/expected frames)",
-                        chunk.index,
-                        chunk.frames()
+                        task.index,
+                        task.frames()
                     ))
                 },
                 Err(error) => Some(format!(
-                    "FAILED TO COUNT FRAMES: chunk {}: {error}",
-                    chunk.index
+                    "FAILED TO COUNT FRAMES: task {}: {error}",
+                    task.index
                 )),
                 _ => None,
             };
@@ -781,23 +780,21 @@ impl Av1anContext {
     fn create_encoding_queue(
         &self,
         scenes: &[Scene],
-    ) -> anyhow::Result<Vec<Chunk>> {
-        let mut chunks = match &self.args.input {
+    ) -> anyhow::Result<Vec<Task>> {
+        let mut tasks = match &self.args.input {
             Input::Video {
                 ..
-            } => match self.args.chunk_method {
-                ChunkMethod::FFMS2
-                | ChunkMethod::LSMASH
-                | ChunkMethod::DGDECNV
-                | ChunkMethod::BESTSOURCE => {
+            } => match self.args.task_method {
+                TaskMethod::FFMS2
+                | TaskMethod::LSMASH
+                | TaskMethod::DGDECNV
+                | TaskMethod::BESTSOURCE => {
                     let vs_script = self.vs_script.as_ref().unwrap().as_path();
                     self.create_video_queue_vs(scenes, vs_script)
                 },
-                ChunkMethod::Hybrid => {
-                    self.create_video_queue_hybrid(scenes)?
-                },
-                ChunkMethod::Select => self.create_video_queue_select(scenes),
-                ChunkMethod::Segment => {
+                TaskMethod::Hybrid => self.create_video_queue_hybrid(scenes)?,
+                TaskMethod::Select => self.create_video_queue_select(scenes),
+                TaskMethod::Segment => {
                     self.create_video_queue_segment(scenes)?
                 },
             },
@@ -806,20 +803,20 @@ impl Av1anContext {
             } => self.create_video_queue_vs(scenes, path.as_path()),
         };
 
-        match self.args.chunk_order {
-            ChunkOrdering::LongestFirst => {
-                chunks.sort_unstable_by_key(|chunk| Reverse(chunk.frames()));
+        match self.args.task_order {
+            TaskOrdering::LongestFirst => {
+                tasks.sort_unstable_by_key(|task| Reverse(task.frames()));
             },
-            ChunkOrdering::ShortestFirst => {
-                chunks.sort_unstable_by_key(Chunk::frames);
+            TaskOrdering::ShortestFirst => {
+                tasks.sort_unstable_by_key(Task::frames);
             },
-            ChunkOrdering::Sequential => {},
-            ChunkOrdering::Random => {
-                chunks.shuffle(&mut thread_rng());
+            TaskOrdering::Sequential => {},
+            TaskOrdering::Random => {
+                tasks.shuffle(&mut thread_rng());
             },
         }
 
-        Ok(chunks)
+        Ok(tasks)
     }
 
     fn calc_split_locations(&self) -> anyhow::Result<(Vec<Scene>, usize)> {
@@ -960,7 +957,7 @@ impl Av1anContext {
         Ok(scenes)
     }
 
-    fn create_select_chunk(
+    fn create_select_task(
         &self,
         index: usize,
         src_path: &Path,
@@ -968,11 +965,8 @@ impl Av1anContext {
         end_frame: usize,
         frame_rate: f64,
         overrides: Option<ZoneOptions>,
-    ) -> anyhow::Result<Chunk> {
-        assert!(
-            start_frame < end_frame,
-            "Can't make a chunk with <= 0 frames!"
-        );
+    ) -> anyhow::Result<Task> {
+        assert!(start_frame < end_frame, "Can't make a task with <= 0 frames!");
 
         let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
             "ffmpeg",
@@ -1000,7 +994,7 @@ impl Av1anContext {
 
         let output_ext = self.args.encoder.output_extension();
 
-        let chunk = Chunk {
+        let task = Task {
             temp: self.args.temp.clone(),
             index,
             input: Input::Video {
@@ -1019,18 +1013,18 @@ impl Av1anContext {
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        Ok(chunk)
+        Ok(task)
     }
 
-    fn create_vs_chunk(
+    fn create_vs_task(
         &self,
         index: usize,
         vs_script: &Path,
         scene: &Scene,
         frame_rate: f64,
-    ) -> anyhow::Result<Chunk> {
+    ) -> anyhow::Result<Task> {
         // the frame end boundary is actually a frame that should be included in
-        // the next chunk
+        // the next task
         let frame_end = scene.end_frame - 1;
 
         let vspipe_cmd_gen: Vec<OsString> = into_vec![
@@ -1047,7 +1041,7 @@ impl Av1anContext {
 
         let output_ext = self.args.encoder.output_extension();
 
-        let chunk = Chunk {
+        let task = Task {
             temp: self.args.temp.clone(),
             index,
             input: Input::VapourSynth {
@@ -1067,36 +1061,36 @@ impl Av1anContext {
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        Ok(chunk)
+        Ok(task)
     }
 
     fn create_video_queue_vs(
         &self,
         scenes: &[Scene],
         vs_script: &Path,
-    ) -> Vec<Chunk> {
+    ) -> Vec<Task> {
         let frame_rate = self.args.input.frame_rate().unwrap();
-        let chunk_queue: Vec<Chunk> = scenes
+        let task_queue: Vec<Task> = scenes
             .iter()
             .enumerate()
             .map(|(index, scene)| {
-                self.create_vs_chunk(index, vs_script, scene, frame_rate)
+                self.create_vs_task(index, vs_script, scene, frame_rate)
                     .unwrap()
             })
             .collect();
 
-        chunk_queue
+        task_queue
     }
 
-    fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Chunk> {
+    fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Task> {
         let input = self.args.input.as_video_path();
         let frame_rate = self.args.input.frame_rate().unwrap();
 
-        let chunk_queue: Vec<Chunk> = scenes
+        let task_queue: Vec<Task> = scenes
             .iter()
             .enumerate()
             .map(|(index, scene)| {
-                self.create_select_chunk(
+                self.create_select_task(
                     index,
                     input,
                     scene.start_frame,
@@ -1108,13 +1102,13 @@ impl Av1anContext {
             })
             .collect();
 
-        chunk_queue
+        task_queue
     }
 
     fn create_video_queue_segment(
         &self,
         scenes: &[Scene],
-    ) -> anyhow::Result<Vec<Chunk>> {
+    ) -> anyhow::Result<Vec<Task>> {
         let input = self.args.input.as_video_path();
         let frame_rate = self.args.input.frame_rate().unwrap();
 
@@ -1139,11 +1133,11 @@ impl Av1anContext {
              working"
         );
 
-        let chunk_queue: Vec<Chunk> = queue_files
+        let task_queue: Vec<Task> = queue_files
             .iter()
             .enumerate()
             .map(|(index, file)| {
-                self.create_chunk_from_segment(
+                self.create_task_from_segment(
                     index,
                     file.as_path().to_str().unwrap(),
                     frame_rate,
@@ -1153,13 +1147,13 @@ impl Av1anContext {
             })
             .collect();
 
-        Ok(chunk_queue)
+        Ok(task_queue)
     }
 
     fn create_video_queue_hybrid(
         &self,
         scenes: &[Scene],
-    ) -> anyhow::Result<Vec<Chunk>> {
+    ) -> anyhow::Result<Vec<Task>> {
         let input = self.args.input.as_video_path();
         let frame_rate = self.args.input.frame_rate().unwrap();
 
@@ -1199,11 +1193,11 @@ impl Av1anContext {
             }
         }
 
-        let chunk_queue: Vec<Chunk> = segments
+        let task_queue: Vec<Task> = segments
             .iter()
             .enumerate()
             .map(|(index, &(file, (start, end, scene)))| {
-                self.create_select_chunk(
+                self.create_select_task(
                     index,
                     file,
                     start,
@@ -1215,17 +1209,17 @@ impl Av1anContext {
             })
             .collect();
 
-        Ok(chunk_queue)
+        Ok(task_queue)
     }
 
     #[tracing::instrument]
-    fn create_chunk_from_segment(
+    fn create_task_from_segment(
         &self,
         index: usize,
         file: &str,
         frame_rate: f64,
         overrides: Option<ZoneOptions>,
-    ) -> anyhow::Result<Chunk> {
+    ) -> anyhow::Result<Task> {
         let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
             "ffmpeg",
             "-y",
@@ -1252,7 +1246,7 @@ impl Av1anContext {
 
         let num_frames = num_frames(Path::new(file))?;
 
-        let chunk = Chunk {
+        let task = Task {
             temp: self.args.temp.clone(),
             input: Input::Video {
                 path: PathBuf::from(file)
@@ -1271,29 +1265,29 @@ impl Av1anContext {
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
         };
-        Ok(chunk)
+        Ok(task)
     }
 
-    /// Returns unfinished chunks and number of total chunks
-    fn load_or_gen_chunk_queue(
+    /// Returns unfinished tasks and number of total tasks
+    fn load_or_gen_task_queue(
         &self,
         splits: &[Scene],
-    ) -> anyhow::Result<(Vec<Chunk>, usize)> {
+    ) -> anyhow::Result<(Vec<Task>, usize)> {
         if self.args.resume {
-            let mut chunks = read_chunk_queue(self.args.temp.as_ref())?;
-            let num_chunks = chunks.len();
+            let mut tasks = read_task_queue(self.args.temp.as_ref())?;
+            let num_tasks = tasks.len();
 
             let done = get_done();
 
-            // only keep the chunks that are not done
-            chunks.retain(|chunk| !done.done.contains_key(&chunk.name()));
+            // only keep the tasks that are not done
+            tasks.retain(|task| !done.done.contains_key(&task.name()));
 
-            Ok((chunks, num_chunks))
+            Ok((tasks, num_tasks))
         } else {
-            let chunks = self.create_encoding_queue(splits)?;
-            let num_chunks = chunks.len();
-            save_chunk_queue(&self.args.temp, &chunks)?;
-            Ok((chunks, num_chunks))
+            let tasks = self.create_encoding_queue(splits)?;
+            let num_tasks = tasks.len();
+            save_task_queue(&self.args.temp, &tasks)?;
+            Ok((tasks, num_tasks))
         }
     }
 }

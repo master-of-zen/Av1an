@@ -169,7 +169,7 @@ pub fn mkvmerge(
     temp_dir: &Path,
     output: &Path,
     encoder_extension: &str,
-    num_chunks: usize,
+    num_tasks: usize,
 ) -> Result<(), OutputError> {
     #[cfg(windows)]
     fn fix_path<P: AsRef<Path>>(p: P) -> String {
@@ -206,11 +206,11 @@ pub fn mkvmerge(
 
     let output = PathAbs::new(output)?;
 
-    assert!(num_chunks != 0);
+    assert!(num_tasks != 0);
 
     let options_path = PathBuf::from(&temp_dir).join("options.json");
     let options_json_contents = mkvmerge_options_json(
-        num_chunks,
+        num_tasks,
         encoder_extension,
         &fix_path(output.to_str().unwrap()),
         audio_file.as_deref(),

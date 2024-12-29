@@ -232,7 +232,7 @@ pub fn reset_mp_bar_at(pos: u64) {
 pub fn init_multi_progress_bar(
     len: u64,
     workers: usize,
-    total_chunks: usize,
+    total_tasks: usize,
     resume_frames: u64,
 ) {
     MULTI_PROGRESS_BAR.get_or_init(|| {
@@ -240,7 +240,7 @@ pub fn init_multi_progress_bar(
 
         let mut pbs = Vec::new();
 
-        let digits = printable_base10_digits(total_chunks) as usize;
+        let digits = printable_base10_digits(total_tasks) as usize;
 
         for _ in 1..=workers {
             let pb = ProgressBar::hidden()
@@ -274,9 +274,9 @@ pub fn init_multi_progress_bar(
     });
 }
 
-pub fn update_mp_chunk(worker_idx: usize, chunk: usize, padding: usize) {
+pub fn update_mp_task(worker_idx: usize, task: usize, padding: usize) {
     if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-        pbs[worker_idx].set_prefix(format!("[Chunk {chunk:>padding$}]"));
+        pbs[worker_idx].set_prefix(format!("[Task {task:>padding$}]"));
     }
 }
 

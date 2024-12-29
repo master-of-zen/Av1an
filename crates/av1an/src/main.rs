@@ -17,11 +17,11 @@ use av1an_core::{
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
     util::read_in_dir,
     vapoursynth,
-    ChunkMethod,
-    ChunkOrdering,
     Input,
     ScenecutMethod,
     SplitMethod,
+    TaskMethod,
+    TaskOrdering,
     Verbosity,
 };
 use av1an_logging::init_logging;
@@ -94,7 +94,7 @@ pub struct CliOpts {
     #[clap(short = 'n', conflicts_with = "overwrite")]
     pub never_overwrite: bool,
 
-    /// Maximum number of chunk restarts for an encode
+    /// Maximum number of task restarts for an encode
     #[clap(long, default_value_t = 3, value_parser = value_parser!(u32).range(1..))]
     pub max_tries: u32,
 
@@ -127,7 +127,7 @@ pub struct CliOpts {
     #[clap(long, default_value_t = 10.0, help_heading = "Scene Detection")]
     pub extra_split_sec: f64,
 
-    /// Method used to determine chunk boundaries
+    /// Method used to determine task boundaries
     ///
     /// "av-scenechange" uses an algorithm to analyze which frames of the video
     /// are the start of new scenes, while "none" disables scene detection
@@ -289,7 +289,7 @@ pub struct CliOpts {
     /// files. Decodes from the first frame to the requested frame, without
     /// skipping irrelevant frames (causing quadratic decoding complexity).
     ///
-    /// segment - Create chunks based on keyframes in the source. Not frame
+    /// segment - Create tasks based on keyframes in the source. Not frame
     /// exact, as it can only split on keyframes in the source.
     /// Requires intermediate files (which can be large).
     ///
@@ -297,28 +297,28 @@ pub struct CliOpts {
     /// otherwise DGDecNV (if available), otherwise bestsource (if available),
     /// otherwise hybrid.
     #[clap(short = 'm', long, help_heading = "Encoding")]
-    pub chunk_method: Option<ChunkMethod>,
+    pub task_method: Option<TaskMethod>,
 
-    /// The order in which av1an will encode chunks
+    /// The order in which av1an will encode tasks
     ///
     /// Available methods:
     ///
-    /// long-to-short - The longest chunks will be encoded first. This method
+    /// long-to-short - The longest tasks will be encoded first. This method
     /// results in the smallest amount of time with idle cores,
-    /// as the encode will not be waiting on a very long chunk to finish at the
-    /// end of the encode after all other chunks have finished.
+    /// as the encode will not be waiting on a very long task to finish at the
+    /// end of the encode after all other tasks have finished.
     ///
-    /// short-to-long - The shortest chunks will be encoded first.
+    /// short-to-long - The shortest tasks will be encoded first.
     ///
-    /// sequential - The chunks will be encoded in the order they appear in the
+    /// sequential - The tasks will be encoded in the order they appear in the
     /// video.
     ///
-    /// random - The chunks will be encoded in a random order. This will
+    /// random - The tasks will be encoded in a random order. This will
     /// provide a more accurate estimated filesize sooner in the encode.
-    #[clap(long, default_value_t = ChunkOrdering::LongestFirst, help_heading = "Encoding")]
-    pub chunk_order: ChunkOrdering,
+    #[clap(long, default_value_t = TaskOrdering::LongestFirst, help_heading = "Encoding")]
+    pub task_order: TaskOrdering,
 
-    /// Determines method used for concatenating encoded chunks and audio into
+    /// Determines method used for concatenating encoded tasks and audio into
     /// output file
     ///
     /// ffmpeg - Uses ffmpeg for concatenation. Unfortunately, ffmpeg sometimes
@@ -530,10 +530,10 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             } else {
                 into_vec!["-c:a", "copy"]
             },
-            chunk_method: args
-                .chunk_method
-                .unwrap_or_else(vapoursynth::best_available_chunk_method),
-            chunk_order: args.chunk_order,
+            task_method: args
+                .task_method
+                .unwrap_or_else(vapoursynth::best_available_task_method),
+            task_order: args.task_order,
             concat: args.concat,
             encoder: args.encoder,
             extra_splits_len: match args.extra_split {

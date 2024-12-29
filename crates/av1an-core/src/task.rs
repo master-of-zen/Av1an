@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{encoder::Encoder, Input};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Chunk {
+pub struct Task {
     pub temp:                  String,
     pub index:                 usize,
     pub input:                 Input,
@@ -22,8 +22,8 @@ pub struct Chunk {
     pub ignore_frame_mismatch: bool,
 }
 
-impl Chunk {
-    /// Returns numeric name of chunk `00001`
+impl Task {
+    /// Returns numeric name of task `00001`
     pub fn name(&self) -> String {
         format!("{:05}", self.index)
     }

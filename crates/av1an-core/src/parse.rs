@@ -168,30 +168,30 @@ pub unsafe fn parse_aom_frames_sse41(s: &[u8]) -> Option<u64> {
     // At this point, we have done all the setup and can use the actual SIMD
     // integer parsing algorithm. The description of the algorithm can be
     // found here: https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
-    let mut chunk = _mm_loadu_si128(
+    let mut task = _mm_loadu_si128(
         s.as_ptr()
             .add(AOM_IGNORED_PREFIX.len() + first_space_index - CHUNK_SIZE)
             .cast(),
     );
 
     let zeros = _mm_set1_epi8(b'0' as i8);
-    chunk = _mm_sub_epi8(chunk, zeros);
+    task = _mm_sub_epi8(task, zeros);
 
     // Mask out the irrelevant bits, effectively parsing them as if they were 0.
-    chunk = _mm_and_si128(chunk, dynamic_mask);
+    task = _mm_and_si128(task, dynamic_mask);
 
     let mult =
         _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
-    chunk = _mm_maddubs_epi16(chunk, mult);
+    task = _mm_maddubs_epi16(task, mult);
     let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
-    chunk = _mm_madd_epi16(chunk, mult);
-    chunk = _mm_packus_epi32(chunk, chunk);
+    task = _mm_madd_epi16(task, mult);
+    task = _mm_packus_epi32(task, task);
     let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
-    chunk = _mm_madd_epi16(chunk, mult);
+    task = _mm_madd_epi16(task, mult);
 
-    let chunk = transmute::<__m128i, [u64; 2]>(chunk);
+    let task = transmute::<__m128i, [u64; 2]>(task);
 
-    Some(((chunk[0] & 0xffff_ffff) * 100_000_000) + (chunk[0] >> 32))
+    Some(((task[0] & 0xffff_ffff) * 100_000_000) + (task[0] >> 32))
 }
 
 pub fn parse_rav1e_frames(s: &str) -> Option<u64> {

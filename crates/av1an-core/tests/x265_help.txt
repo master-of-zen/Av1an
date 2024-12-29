@@ -180,8 +180,8 @@ Rate control, Adaptive Quantization:
    --min-vbv-fullness <double>   Minimum VBV fullness percentage to be maintained. Default 50.00
    --max-vbv-fullness <double>   Maximum VBV fullness percentage to be maintained. Default 80.00
    --vbv-end-fr-adj <float>      Frame from which qp has to be adjusted to achieve final decode buffer emptiness. Default 0
-   --chunk-start <integer>       First frame of the chunk. Default 0 (disabled)
-   --chunk-end <integer>         Last frame of the chunk. Default 0 (disabled)
+   --task-start <integer>       First frame of the task. Default 0 (disabled)
+   --task-end <integer>         Last frame of the task. Default 0 (disabled)
    --pass                        Multi pass rate control.
                                    - 1 : First pass, creates stats file
                                    - 2 : Last pass, does not overwrite stats file

@@ -19,15 +19,15 @@ use crate::{
     get_done,
     progress_bar::{dec_bar, update_progress_bar_estimates},
     util::printable_base10_digits,
-    Chunk,
-    DoneChunk,
+    DoneTask,
     Instant,
+    Task,
 };
 
 #[derive(Debug)]
 pub struct Broker<'a> {
-    pub chunk_queue: Vec<Chunk>,
-    pub project:     &'a Av1anContext,
+    pub task_queue: Vec<Task>,
+    pub project:    &'a Av1anContext,
 }
 
 #[derive(Clone)]
@@ -116,12 +116,12 @@ impl Broker<'_> {
         tx: Sender<()>,
         set_thread_affinity: Option<usize>,
     ) {
-        if !self.chunk_queue.is_empty() {
+        if !self.task_queue.is_empty() {
             let (sender, receiver) =
-                crossbeam_channel::bounded(self.chunk_queue.len());
+                crossbeam_channel::bounded(self.task_queue.len());
 
-            for chunk in &self.chunk_queue {
-                sender.send(chunk.clone()).unwrap();
+            for task in &self.task_queue {
+                sender.send(task.clone()).unwrap();
             }
             drop(sender);
 
@@ -159,9 +159,9 @@ impl Broker<'_> {
                 }
               }
 
-              while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
-                  error!("[chunk {}] {}", chunk.index, e);
+              while let Ok(mut task) = rx.recv() {
+                if let Err(e) = queue.encode_task(&mut task, worker_id) {
+                  error!("[task {}] {}", task.index, e);
 
                   tx.send(()).unwrap();
                   return Err(());
@@ -182,25 +182,25 @@ impl Broker<'_> {
     }
 
     #[tracing::instrument(skip(self))]
-    fn encode_chunk(
+    fn encode_task(
         &self,
-        chunk: &mut Chunk,
+        task: &mut Task,
         worker_id: usize,
     ) -> Result<(), Box<EncoderCrash>> {
         let st_time = Instant::now();
 
-        // space padding at the beginning to align with "finished chunk"
-        debug!(" started chunk {:05}: {} frames", chunk.index, chunk.frames());
+        // space padding at the beginning to align with "finished task"
+        debug!(" started task {:05}: {} frames", task.index, task.frames());
 
         // we display the index, so we need to subtract 1 to get the max index
         let padding =
-            printable_base10_digits(self.chunk_queue.len() - 1) as usize;
+            printable_base10_digits(self.task_queue.len() - 1) as usize;
 
-        let passes = chunk.passes;
+        let passes = task.passes;
         for current_pass in 1..=passes {
             for r#try in 1..=self.project.args.max_tries {
                 let res = self.project.create_pipes(
-                    chunk,
+                    task,
                     current_pass,
                     worker_id,
                     padding,
@@ -210,9 +210,9 @@ impl Broker<'_> {
 
                     if r#try == self.project.args.max_tries {
                         error!(
-                            "[chunk {}] encoder failed {} times, shutting \
-                             down worker",
-                            chunk.index, self.project.args.max_tries
+                            "[task {}] encoder failed {} times, shutting down \
+                             worker",
+                            task.index, self.project.args.max_tries
                         );
                         return Err(e);
                     }
@@ -220,7 +220,7 @@ impl Broker<'_> {
                     // and ERROR,
                     // since `Broker::encoding_loop` will print the error
                     // message as well
-                    warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
+                    warn!("Encoder failed (on task {}):\n{}", task.index, e);
                 } else {
                     break;
                 }
@@ -228,15 +228,15 @@ impl Broker<'_> {
         }
 
         let enc_time = st_time.elapsed();
-        let fps = chunk.frames() as f64 / enc_time.as_secs_f64();
+        let fps = task.frames() as f64 / enc_time.as_secs_f64();
 
         let progress_file =
             Path::new(&self.project.args.temp).join("done.json");
-        get_done().done.insert(chunk.name(), DoneChunk {
-            frames:     chunk.frames(),
-            size_bytes: Path::new(&chunk.output())
+        get_done().done.insert(task.name(), DoneTask {
+            frames:     task.frames(),
+            size_bytes: Path::new(&task.output())
                 .metadata()
-                .expect("Unable to get size of finished chunk")
+                .expect("Unable to get size of finished task")
                 .len(),
         });
 
@@ -250,15 +250,15 @@ impl Broker<'_> {
             .unwrap();
 
         update_progress_bar_estimates(
-            chunk.frame_rate,
+            task.frame_rate,
             self.project.frames,
             self.project.args.verbosity,
         );
 
         debug!(
-            "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
-            chunk.index,
-            chunk.frames(),
+            "finished task {:05}: {} frames, {:.2} fps, took {:.2?}",
+            task.index,
+            task.frames(),
             fps,
             enc_time
         );

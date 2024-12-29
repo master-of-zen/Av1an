@@ -38,16 +38,15 @@ use ::ffmpeg::color::TransferCharacteristic;
 use ::vapoursynth::{api::API, map::OwnedMap};
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
-use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
+use task::Task;
 
 use crate::{encoder::Encoder, progress_bar::finish_progress_bar};
 
 pub mod broker;
-pub mod chunk;
 pub mod context;
 pub mod encoder;
 pub mod ffmpeg;
@@ -57,6 +56,7 @@ pub mod scene_detect;
 mod scenes;
 pub mod settings;
 pub mod split;
+pub mod task;
 pub mod util;
 pub mod vapoursynth;
 
@@ -331,17 +331,17 @@ impl<P: AsRef<Path> + Into<PathBuf>> From<(P, Vec<String>)> for Input {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-struct DoneChunk {
+struct DoneTask {
     frames:     usize,
     size_bytes: u64,
 }
 
-/// Concurrent data structure for keeping track of the finished chunks in an
+/// Concurrent data structure for keeping track of the finished tasks in an
 /// encode
 #[derive(Debug, Deserialize, Serialize)]
 struct DoneJson {
     frames:     AtomicUsize,
-    done:       DashMap<String, DoneChunk>,
+    done:       DashMap<String, DoneTask>,
     audio_done: AtomicBool,
 }
 
@@ -411,7 +411,7 @@ pub enum ScenecutMethod {
     EnumString,
     IntoStaticStr,
 )]
-pub enum ChunkMethod {
+pub enum TaskMethod {
     #[strum(serialize = "select")]
     Select,
     #[strum(serialize = "hybrid")]
@@ -440,7 +440,7 @@ pub enum ChunkMethod {
     EnumString,
     IntoStaticStr,
 )]
-pub enum ChunkOrdering {
+pub enum TaskOrdering {
     #[strum(serialize = "long-to-short")]
     LongestFirst,
     #[strum(serialize = "short-to-long")]
@@ -483,14 +483,14 @@ pub fn hash_path(path: &Path) -> String {
     format!("{:x}", s.finish())[..7].to_string()
 }
 
-fn save_chunk_queue(temp: &str, chunk_queue: &[Chunk]) -> anyhow::Result<()> {
-    let mut file = File::create(Path::new(temp).join("chunks.json"))
-        .with_context(|| "Failed to create chunks.json file")?;
+fn save_task_queue(temp: &str, task_queue: &[Task]) -> anyhow::Result<()> {
+    let mut file = File::create(Path::new(temp).join("tasks.json"))
+        .with_context(|| "Failed to create tasks.json file")?;
 
     file
-    // serializing chunk_queue as json should never fail, so unwrap is OK here
-    .write_all(serde_json::to_string(&chunk_queue).unwrap().as_bytes())
-    .with_context(|| format!("Failed to write serialized chunk_queue data to {:?}", &file))?;
+    // serializing task_queue as json should never fail, so unwrap is OK here
+    .write_all(serde_json::to_string(&task_queue).unwrap().as_bytes())
+    .with_context(|| format!("Failed to write serialized task_queue data to {:?}", &file))?;
 
     Ok(())
 }
@@ -502,11 +502,11 @@ pub enum Verbosity {
     Quiet,
 }
 
-fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
-    let file = Path::new(temp).join("chunks.json");
+fn read_task_queue(temp: &Path) -> anyhow::Result<Vec<Task>> {
+    let file = Path::new(temp).join("tasks.json");
 
     let contents = fs::read_to_string(&file).with_context(|| {
-        format!("Failed to read chunk queue file {:?}", &file)
+        format!("Failed to read task queue file {:?}", &file)
     })?;
 
     Ok(serde_json::from_str(&contents)?)

@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use vapoursynth::{prelude::*, video_info::VideoInfo};
 
-use super::ChunkMethod;
+use super::TaskMethod;
 use crate::util::to_absolute_path;
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
@@ -65,17 +65,17 @@ pub fn is_bestsource_installed() -> bool {
     *BESTSOURCE_PRESENT
 }
 
-pub fn best_available_chunk_method() -> ChunkMethod {
+pub fn best_available_task_method() -> TaskMethod {
     if is_lsmash_installed() {
-        ChunkMethod::LSMASH
+        TaskMethod::LSMASH
     } else if is_ffms2_installed() {
-        ChunkMethod::FFMS2
+        TaskMethod::FFMS2
     } else if is_dgdecnv_installed() {
-        ChunkMethod::DGDECNV
+        TaskMethod::DGDECNV
     } else if is_bestsource_installed() {
-        ChunkMethod::BESTSOURCE
+        TaskMethod::BESTSOURCE
     } else {
-        ChunkMethod::Hybrid
+        TaskMethod::Hybrid
     }
 }
 
@@ -202,7 +202,7 @@ fn get_transfer(env: &Environment) -> anyhow::Result<u8> {
 pub fn create_vs_file(
     temp: &str,
     source: &Path,
-    chunk_method: ChunkMethod,
+    task_method: TaskMethod,
 ) -> anyhow::Result<PathBuf> {
     let temp: &Path = temp.as_ref();
     let source = to_absolute_path(source)?;
@@ -213,16 +213,16 @@ pub fn create_vs_file(
 
     let cache_file = PathAbs::new(temp.join("split").join(format!(
         "cache.{}",
-        match chunk_method {
-            ChunkMethod::FFMS2 => "ffindex",
-            ChunkMethod::LSMASH => "lwi",
-            ChunkMethod::DGDECNV => "dgi",
-            ChunkMethod::BESTSOURCE => "bsindex",
-            _ => return Err(anyhow!("invalid chunk method")),
+        match task_method {
+            TaskMethod::FFMS2 => "ffindex",
+            TaskMethod::LSMASH => "lwi",
+            TaskMethod::DGDECNV => "dgi",
+            TaskMethod::BESTSOURCE => "bsindex",
+            _ => return Err(anyhow!("invalid task method")),
         }
     )))?;
 
-    if chunk_method == ChunkMethod::DGDECNV {
+    if task_method == TaskMethod::DGDECNV {
         // Run dgindexnv to generate the .dgi index file
         let dgindexnv_output = temp.join("split").join("index.dgi");
 
@@ -243,7 +243,7 @@ pub fn create_vs_file(
             )
             .as_bytes(),
         )?;
-    } else if chunk_method == ChunkMethod::BESTSOURCE {
+    } else if task_method == TaskMethod::BESTSOURCE {
         load_script.write_all(
             format!(
                 "from vapoursynth import \
@@ -260,9 +260,9 @@ pub fn create_vs_file(
                 "from vapoursynth import \
                  core\ncore.max_cache_size=1024\ncore.{}({:?}, \
                  cachefile={:?}).set_output()",
-                match chunk_method {
-                    ChunkMethod::FFMS2 => "ffms2.Source",
-                    ChunkMethod::LSMASH => "lsmas.LWLibavSource",
+                match task_method {
+                    TaskMethod::FFMS2 => "ffms2.Source",
+                    TaskMethod::LSMASH => "lsmas.LWLibavSource",
                     _ => unreachable!(),
                 },
                 source,

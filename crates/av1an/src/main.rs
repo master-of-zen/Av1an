@@ -6,12 +6,10 @@ use std::{
     process::exit,
 };
 
-use ::ffmpeg::format::Pixel;
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::{
     context::Av1anContext,
     encoder::Encoder,
-    ffmpeg,
     hash_path,
     into_vec,
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
@@ -27,6 +25,7 @@ use av1an_core::{
 use av1an_logging::init_logging;
 use av1an_output::ConcatMethod;
 use clap::{value_parser, Parser};
+use ffmpeg::format::Pixel;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};
 fn main() -> anyhow::Result<()> {
@@ -555,13 +554,13 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
                     Input::Video {
                         path,
                     } => InputPixelFormat::FFmpeg {
-                        format: ffmpeg::get_pixel_format(path.as_ref())
+                        format: av1an_ffmpeg::get_pixel_format(path.as_ref())
                             .with_context(|| {
-                                format!(
-                                    "FFmpeg failed to get pixel format for \
-                                     input video {path:?}"
-                                )
-                            })?,
+                            format!(
+                                "FFmpeg failed to get pixel format for input \
+                                 video {path:?}"
+                            )
+                        })?,
                     },
                     Input::VapourSynth {
                         path, ..

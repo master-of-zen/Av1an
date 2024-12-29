@@ -38,6 +38,7 @@ use ::ffmpeg::color::TransferCharacteristic;
 use ::vapoursynth::{api::API, map::OwnedMap};
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
+use av1an_ffmpeg::{frame_rate, get_pixel_format, num_frames, resolution};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -49,7 +50,6 @@ use crate::{encoder::Encoder, progress_bar::finish_progress_bar};
 pub mod broker;
 pub mod context;
 pub mod encoder;
-pub mod ffmpeg;
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;
@@ -133,7 +133,7 @@ impl Input {
         Ok(match &self {
             Input::Video {
                 path,
-            } => ffmpeg::num_frames(path.as_path())
+            } => num_frames(path.as_path())
                 .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
             Input::VapourSynth {
                 path, ..
@@ -150,7 +150,7 @@ impl Input {
         Ok(match &self {
             Input::Video {
                 path,
-            } => crate::ffmpeg::frame_rate(path.as_path())
+            } => frame_rate(path.as_path())
                 .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
             Input::VapourSynth {
                 path, ..
@@ -173,8 +173,7 @@ impl Input {
             },
             Input::Video {
                 path,
-            } => crate::ffmpeg::resolution(path)
-                .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
+            } => resolution(path).map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
         })
     }
 
@@ -191,7 +190,7 @@ impl Input {
             Input::Video {
                 path,
             } => {
-                let fmt = crate::ffmpeg::get_pixel_format(path)
+                let fmt = get_pixel_format(path)
                     .map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
                 format!("{fmt:?}")
             },
@@ -218,7 +217,7 @@ impl Input {
             Input::Video {
                 path,
             } => {
-                match crate::ffmpeg::transfer_characteristics(path)
+                match av1an_ffmpeg::transfer_characteristics(path)
                     .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
                 {
                     TransferCharacteristic::SMPTE2084 => {

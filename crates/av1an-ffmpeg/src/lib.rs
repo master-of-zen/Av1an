@@ -11,8 +11,27 @@ use ffmpeg::{
     Error::StreamNotFound,
 };
 use path_abs::{PathAbs, PathInfo};
+use tracing::warn;
 
-use crate::{into_array, into_vec};
+macro_rules! into_vec {
+  ($($x:expr),* $(,)?) => {
+    vec![
+      $(
+        $x.into(),
+      )*
+    ]
+  };
+}
+
+macro_rules! into_array {
+  ($($x:expr),* $(,)?) => {
+    [
+      $(
+        $x.into(),
+      )*
+    ]
+  };
+}
 
 pub fn compose_ffmpeg_pipe<S: Into<String>>(
     params: impl IntoIterator<Item = S>,

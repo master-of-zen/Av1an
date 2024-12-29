@@ -22,6 +22,12 @@ use std::{
 use ansi_term::{Color, Style};
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
+use av1an_ffmpeg::{
+    compose_ffmpeg_pipe,
+    encode_audio,
+    get_keyframes,
+    num_frames,
+};
 use crossbeam_utils;
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, thread_rng};
@@ -35,7 +41,6 @@ use crate::{
     broker::{Broker, EncoderCrash},
     create_dir,
     determine_workers,
-    ffmpeg::{compose_ffmpeg_pipe, num_frames},
     get_done,
     init_done,
     into_vec,
@@ -288,8 +293,7 @@ impl Av1anContext {
                 let temp = self.args.temp.as_str();
                 let audio_params = self.args.audio_params.as_slice();
                 Some(s.spawn(move |_| {
-                    let audio_output =
-                        crate::ffmpeg::encode_audio(input, temp, audio_params);
+                    let audio_output = encode_audio(input, temp, audio_params);
                     get_done()
                         .audio_done
                         .store(true, atomic::Ordering::SeqCst);
@@ -1157,7 +1161,7 @@ impl Av1anContext {
         let input = self.args.input.as_video_path();
         let frame_rate = self.args.input.frame_rate().unwrap();
 
-        let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
+        let keyframes = get_keyframes(input).unwrap();
 
         let to_split: Vec<usize> = keyframes
             .iter()

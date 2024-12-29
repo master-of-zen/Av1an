@@ -219,6 +219,7 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "av1an-core",
+ "av1an-ffmpeg",
  "av1an-logging",
  "av1an-output",
  "clap",
@@ -254,6 +255,7 @@ dependencies = [
  "av-ivf",
  "av-scenechange",
  "av1-grain",
+ "av1an-ffmpeg",
  "av1an-logging",
  "av1an-output",
  "cfg-if",
@@ -293,6 +295,17 @@ dependencies = [
 [[package]]
 name = "av1an-encoders"
 version = "0.1.0"
+
+[[package]]
+name = "av1an-ffmpeg"
+version = "0.4.5"
+dependencies = [
+ "ffmpeg-the-third",
+ "path_abs",
+ "serde",
+ "thiserror 1.0.63",
+ "tracing",
+]
 
 [[package]]
 name = "av1an-input"

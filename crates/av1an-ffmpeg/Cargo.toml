@@ -1,0 +1,20 @@
+[package]
+name = "av1an-ffmpeg"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tracing.workspace = true
+path_abs = "0.5.1"
+
+[dependencies.ffmpeg]
+package = "ffmpeg-the-third"
+version = "2.0.1"
+features = ["serialize"]
+
+[features]
+default = []
+ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]

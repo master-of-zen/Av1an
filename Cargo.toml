@@ -1,15 +1,5 @@
 [workspace]
-members = [
-    "av1an-core",
-    "av1an",
-    "av1an-config",
-    "av1an-encoders",
-    "av1an-metrics",
-    "av1an-output",
-    "av1an-input",
-    "av1an-cli",
-    "av1an-logging",
-]
+members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]

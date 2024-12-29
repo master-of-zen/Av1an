@@ -7,11 +7,11 @@ use std::{
 };
 
 use anyhow::{bail, ensure};
+use av1an_output::ConcatMethod;
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    concat::ConcatMethod,
     encoder::Encoder,
     parse::valid_params,
     vapoursynth::{

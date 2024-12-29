@@ -11,6 +11,8 @@ categories = ["command-line-utilities"]
 license = "GPL-3.0"
 
 [dependencies]
+
+av1an-output = { path = "../av1an-output", version = "0.4.5" }
 av1an-logging = { path = "../av1an-logging", version = "0.4.5" }
 log = "0.4.14"
 arrayvec = "0.7.2"

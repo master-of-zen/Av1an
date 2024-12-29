@@ -6,3 +6,10 @@ version.workspace = true
 authors.workspace = true
 
 [dependencies]
+av-format = "0.7.0"
+av-ivf = "0.5.0"
+thiserror = "2"
+strum = { version = "0.26.2", features = ["derive"] }
+path_abs = "0.5.1"
+serde = { version = "1.0", features = ["derive"] }
+tracing.workspace = true

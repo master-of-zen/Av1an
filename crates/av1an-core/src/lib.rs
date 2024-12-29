@@ -48,7 +48,6 @@ use crate::{encoder::Encoder, progress_bar::finish_progress_bar};
 
 pub mod broker;
 pub mod chunk;
-pub mod concat;
 pub mod context;
 pub mod encoder;
 pub mod ffmpeg;

@@ -7,7 +7,6 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, Context};
 use av_format::{
     buffer::AccReader,
     demuxer::{Context as DemuxerContext, Event},
@@ -16,9 +15,9 @@ use av_format::{
 use av_ivf::{demuxer::IvfDemuxer, muxer::IvfMuxer};
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
-use crate::{encoder::Encoder, util::read_in_dir};
+use crate::OutputError;
 
 #[derive(
     PartialEq,
@@ -46,11 +45,8 @@ impl Display for ConcatMethod {
     }
 }
 
-#[tracing::instrument]
 pub fn sort_files_by_filename(files: &mut [PathBuf]) {
     files.sort_unstable_by_key(|x| {
-        // If the temp directory follows the expected format of 00000.ivf,
-        // 00001.ivf, etc., then these unwraps will not fail
         x.file_stem()
             .unwrap()
             .to_str()
@@ -60,25 +56,29 @@ pub fn sort_files_by_filename(files: &mut [PathBuf]) {
     });
 }
 
-#[tracing::instrument]
-pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
-    let mut files: Vec<PathBuf> = read_in_dir(input)?.collect();
+pub fn ivf(input: &Path, out: &Path) -> Result<(), OutputError> {
+    let mut files: Vec<PathBuf> = fs::read_dir(input)?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|e| e.path())
+        .collect();
 
     sort_files_by_filename(&mut files);
 
-    assert!(!files.is_empty());
+    if files.is_empty() {
+        return Err(OutputError::IvfFailed("No input files found".into()));
+    }
 
     let output = File::create(out)?;
-
     let mut muxer = MuxerContext::new(IvfMuxer::new(), Writer::new(output));
 
     let global_info = {
-        let acc = AccReader::new(std::fs::File::open(&files[0]).unwrap());
+        let acc = AccReader::new(std::fs::File::open(&files[0])?);
         let mut demuxer = DemuxerContext::new(IvfDemuxer::new(), acc);
+        demuxer
+            .read_headers()
+            .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
 
-        demuxer.read_headers().unwrap();
-
-        // attempt to set the duration correctly
         let duration = demuxer.info.duration.unwrap_or(0)
             + files
                 .iter()
@@ -88,7 +88,6 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
                         AccReader::new(std::fs::File::open(file).unwrap());
                     let mut demuxer =
                         DemuxerContext::new(IvfDemuxer::new(), acc);
-
                     demuxer.read_headers().unwrap();
                     demuxer.info.duration
                 })
@@ -99,45 +98,57 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
         info
     };
 
-    muxer.set_global_info(global_info)?;
-
-    muxer.configure()?;
-    muxer.write_header()?;
+    muxer
+        .set_global_info(global_info)
+        .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
+    muxer
+        .configure()
+        .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
+    muxer
+        .write_header()
+        .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
 
     let mut pos_offset: usize = 0;
     for file in &files {
         let mut last_pos: usize = 0;
         let input = std::fs::File::open(file)?;
-
         let acc = AccReader::new(input);
-
         let mut demuxer = DemuxerContext::new(IvfDemuxer::new(), acc);
-        demuxer.read_headers()?;
-
-        trace!("global info: {:#?}", demuxer.info);
+        demuxer
+            .read_headers()
+            .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
 
         loop {
             match demuxer.read_event() {
-                Ok(event) => match event {
-                    Event::MoreDataNeeded(sz) => {
-                        panic!("needed more data: {sz} bytes")
-                    },
-                    Event::NewStream(s) => panic!("new stream: {s:?}"),
-                    Event::NewPacket(mut packet) => {
-                        if let Some(p) = packet.pos.as_mut() {
-                            last_pos = *p;
-                            *p += pos_offset;
-                        }
-
-                        trace!("received packet with pos: {:?}", packet.pos);
-                        muxer.write_packet(Arc::new(packet))?;
-                    },
-                    Event::Continue => continue,
-                    Event::Eof => {
-                        trace!("EOF received.");
-                        break;
-                    },
-                    _ => unimplemented!(),
+                Ok(event) => {
+                    match event {
+                        Event::MoreDataNeeded(sz) => {
+                            return Err(OutputError::IvfFailed(format!(
+                                "needed more data: {sz} bytes"
+                            )));
+                        },
+                        Event::NewStream(s) => {
+                            return Err(OutputError::IvfFailed(format!(
+                                "new stream: {s:?}"
+                            )))
+                        },
+                        Event::NewPacket(mut packet) => {
+                            if let Some(p) = packet.pos.as_mut() {
+                                last_pos = *p;
+                                *p += pos_offset;
+                            }
+                            muxer.write_packet(Arc::new(packet)).map_err(
+                                |e| OutputError::IvfFailed(e.to_string()),
+                            )?;
+                        },
+                        Event::Continue => continue,
+                        Event::Eof => break,
+                        _ => {
+                            return Err(OutputError::IvfFailed(
+                                "Unexpected event".into(),
+                            ))
+                        },
+                    }
                 },
                 Err(e) => {
                     error!("{:?}", e);
@@ -148,28 +159,18 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
         pos_offset += last_pos + 1;
     }
 
-    muxer.write_trailer()?;
-
+    muxer
+        .write_trailer()
+        .map_err(|e| OutputError::IvfFailed(e.to_string()))?;
     Ok(())
 }
 
-#[tracing::instrument]
-fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
-    Ok(fs::read_dir(encode_dir)
-        .with_context(|| {
-            format!("Failed to read encoded chunks from {:?}", &encode_dir)
-        })?
-        .collect::<Result<Vec<_>, _>>()?)
-}
-
-#[tracing::instrument]
 pub fn mkvmerge(
     temp_dir: &Path,
     output: &Path,
-    encoder: Encoder,
+    encoder_extension: &str,
     num_chunks: usize,
-) -> anyhow::Result<()> {
-    // mkvmerge does not accept UNC paths on Windows
+) -> Result<(), OutputError> {
     #[cfg(windows)]
     fn fix_path<P: AsRef<Path>>(p: P) -> String {
         const UNC_PREFIX: &str = r#"\\?\"#;
@@ -210,7 +211,7 @@ pub fn mkvmerge(
     let options_path = PathBuf::from(&temp_dir).join("options.json");
     let options_json_contents = mkvmerge_options_json(
         num_chunks,
-        encoder,
+        encoder_extension,
         &fix_path(output.to_str().unwrap()),
         audio_file.as_deref(),
     );
@@ -222,29 +223,24 @@ pub fn mkvmerge(
     cmd.current_dir(&encode_dir);
     cmd.arg("@../options.json");
 
-    let out = cmd.output().with_context(|| {
-        "Failed to execute mkvmerge command for concatenation"
-    })?;
+    let out = cmd.output().map_err(|e| OutputError::Io(e))?;
 
     if !out.status.success() {
-        // TODO: make an EncoderCrash-like struct, but without all the other
-        // fields so it can be used in a more broad scope than just for
-        // the pipe/encoder
         error!(
             "mkvmerge concatenation failed with output: {:#?}\ncommand: {:?}",
             out, cmd
         );
-        return Err(anyhow!("mkvmerge concatenation failed"));
+        return Err(OutputError::MkvMergeFailed(
+            String::from_utf8_lossy(&out.stderr).into(),
+        ));
     }
 
     Ok(())
 }
 
-/// Create mkvmerge options.json
-#[tracing::instrument]
 pub fn mkvmerge_options_json(
     num: usize,
-    encoder: Encoder,
+    ext: &str,
     output: &str,
     audio: Option<&str>,
 ) -> String {
@@ -255,22 +251,20 @@ pub fn mkvmerge_options_json(
     }
     file_string.push_str(", \"[\"");
     for i in 0..num {
-        write!(file_string, ", \"{i:05}.{}\"", encoder.output_extension())
-            .unwrap();
+        write!(file_string, ", \"{i:05}.{ext}\"").unwrap();
     }
     file_string.push_str(",\"]\"]");
 
     file_string
 }
 
-/// Concatenates using ffmpeg (does not work with x265)
-#[tracing::instrument]
-pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
-    fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
+pub fn ffmpeg(temp: &Path, output: &Path) -> Result<(), OutputError> {
+    fn write_concat_file(temp_folder: &Path) -> Result<(), OutputError> {
         let concat_file = temp_folder.join("concat");
         let encode_folder = temp_folder.join("encode");
 
-        let mut files = read_encoded_chunks(&encode_folder)?;
+        let mut files: Vec<DirEntry> =
+            fs::read_dir(&encode_folder)?.collect::<Result<Vec<_>, _>>()?;
 
         files.sort_by_key(DirEntry::path);
 
@@ -351,16 +345,16 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
 
     debug!("FFmpeg concat command: {:?}", cmd);
 
-    let out = cmd.output().with_context(|| {
-        "Failed to execute FFmpeg command for concatenation"
-    })?;
+    let out = cmd.output().map_err(|e| OutputError::Io(e))?;
 
     if !out.status.success() {
         error!(
             "FFmpeg concatenation failed with output: {:#?}\ncommand: {:?}",
             out, cmd
         );
-        return Err(anyhow!("FFmpeg concatenation failed"));
+        return Err(OutputError::FFmpegFailed(
+            String::from_utf8_lossy(&out.stderr).into(),
+        ));
     }
 
     Ok(())

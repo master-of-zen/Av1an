@@ -9,7 +9,6 @@ use std::{
 use ::ffmpeg::format::Pixel;
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::{
-    concat::ConcatMethod,
     context::Av1anContext,
     encoder::Encoder,
     ffmpeg,
@@ -26,10 +25,10 @@ use av1an_core::{
     Verbosity,
 };
 use av1an_logging::init_logging;
+use av1an_output::ConcatMethod;
 use clap::{value_parser, Parser};
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, warn};
-
 fn main() -> anyhow::Result<()> {
     let orig_hook = panic::take_hook();
     // Catch panics in child threads

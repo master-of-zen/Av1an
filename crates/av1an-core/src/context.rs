@@ -34,7 +34,6 @@ use tracing::{debug, error, info, warn};
 use crate::{
     broker::{Broker, EncoderCrash},
     chunk::Chunk,
-    concat::{self, ConcatMethod},
     create_dir,
     determine_workers,
     ffmpeg::{compose_ffmpeg_pipe, num_frames},
@@ -68,6 +67,14 @@ use crate::{
     Input,
     SplitMethod,
     Verbosity,
+};
+
+use av1an_output::{
+    ffmpeg,
+    ivf,
+    mkvmerge,
+    sort_files_by_filename,
+    ConcatMethod,
 };
 
 #[derive(Debug)]
@@ -404,21 +411,21 @@ impl Av1anContext {
 
             match self.args.concat {
                 ConcatMethod::Ivf => {
-                    concat::ivf(
+                    ivf(
                         &Path::new(&self.args.temp).join("encode"),
                         self.args.output_file.as_ref(),
                     )?;
                 },
                 ConcatMethod::MKVMerge => {
-                    concat::mkvmerge(
+                    mkvmerge(
                         self.args.temp.as_ref(),
                         self.args.output_file.as_ref(),
-                        self.args.encoder,
+                        self.args.encoder.into(),
                         total_chunks,
                     )?;
                 },
                 ConcatMethod::FFmpeg => {
-                    concat::ffmpeg(
+                    ffmpeg(
                         self.args.temp.as_ref(),
                         self.args.output_file.as_ref(),
                     )?;
@@ -463,7 +470,7 @@ impl Av1anContext {
                     Some(true)
                 )
         });
-        concat::sort_files_by_filename(&mut queue_files);
+        sort_files_by_filename(&mut queue_files);
 
         Ok(queue_files)
     }

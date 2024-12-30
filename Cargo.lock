@@ -255,6 +255,7 @@ dependencies = [
  "av-ivf",
  "av-scenechange",
  "av1-grain",
+ "av1an-encoders",
  "av1an-ffmpeg",
  "av1an-logging",
  "av1an-output",
@@ -294,7 +295,12 @@ dependencies = [
 
 [[package]]
 name = "av1an-encoders"
-version = "0.1.0"
+version = "0.4.5"
+dependencies = [
+ "serde",
+ "thiserror 1.0.63",
+ "tracing",
+]
 
 [[package]]
 name = "av1an-ffmpeg"

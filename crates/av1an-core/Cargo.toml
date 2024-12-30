@@ -15,6 +15,7 @@ license = "GPL-3.0"
 av1an-output = { path = "../av1an-output", version = "0.4.5" }
 av1an-logging = { path = "../av1an-logging", version = "0.4.5" }
 av1an-ffmpeg = { path = "../av1an-ffmpeg", version = "0.4.5" }
+av1an-encoders = { path = "../av1an-encoders", version = "0.4.5" }
 log = "0.4.14"
 arrayvec = "0.7.2"
 av-format = "0.7.0"

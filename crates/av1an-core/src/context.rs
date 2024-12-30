@@ -60,7 +60,7 @@ use crate::{
     read_task_queue,
     save_task_queue,
     scene_detect::av_scenechange_detect,
-    scenes::{Scene, ZoneOptions},
+    scenes::Scene,
     settings::{EncodeArgs, InputPixelFormat},
     split::{extra_splits, segment, write_scenes_to_file},
     task::Task,
@@ -824,8 +824,6 @@ impl Av1anContext {
     }
 
     fn calc_split_locations(&self) -> anyhow::Result<(Vec<Scene>, usize)> {
-        let zones = self.parse_zones()?;
-
         Ok(match self.args.split_method {
             SplitMethod::AvScenechange => av_scenechange_detect(
                 &self.args.input,
@@ -836,60 +834,17 @@ impl Av1anContext {
                 self.args.sc_pix_format,
                 self.args.sc_method,
                 self.args.sc_downscale_height,
-                &zones,
             )?,
             SplitMethod::None => {
-                let mut scenes = Vec::with_capacity(2 * zones.len() + 1);
-                let mut frames_processed = 0;
-                for zone in zones {
-                    let end_frame = zone.end_frame;
-
-                    if end_frame > frames_processed {
-                        scenes.push(Scene {
-                            start_frame:    frames_processed,
-                            end_frame:      zone.start_frame,
-                            zone_overrides: None,
-                        });
-                    }
-
-                    scenes.push(zone);
-
-                    frames_processed += end_frame;
-                }
-                if self.frames > frames_processed {
-                    scenes.push(Scene {
-                        start_frame:    frames_processed,
-                        end_frame:      self.frames,
-                        zone_overrides: None,
-                    });
-                }
-
-                (scenes, self.args.input.frames()?)
+                let frames = self.args.input.frames()?;
+                (
+                    vec![Scene {
+                        start_frame: 0, end_frame: frames
+                    }],
+                    frames,
+                )
             },
         })
-    }
-
-    fn parse_zones(&self) -> anyhow::Result<Vec<Scene>> {
-        let mut zones = Vec::new();
-        if let Some(ref zones_file) = self.args.zones {
-            let input = fs::read_to_string(zones_file)?;
-            for zone_line in input
-                .lines()
-                .map(str::trim)
-                .filter(|line| !line.is_empty())
-            {
-                zones.push(Scene::parse_from_zone(zone_line, self)?);
-            }
-            zones.sort_unstable_by_key(|zone| zone.start_frame);
-            let mut segments = BTreeSet::new();
-            for zone in &zones {
-                if segments.contains(&zone.start_frame) {
-                    bail!("Zones file contains overlapping zones");
-                }
-                segments.extend(zone.start_frame..zone.end_frame);
-            }
-        }
-        Ok(zones)
     }
 
     // If we are not resuming, then do scene detection. Otherwise: get scenes
@@ -968,7 +923,6 @@ impl Av1anContext {
         start_frame: usize,
         end_frame: usize,
         frame_rate: f64,
-        overrides: Option<ZoneOptions>,
     ) -> anyhow::Result<Task> {
         assert!(start_frame < end_frame, "Can't make a task with <= 0 frames!");
 
@@ -1009,10 +963,7 @@ impl Av1anContext {
             start_frame,
             end_frame,
             frame_rate,
-            video_params: overrides.as_ref().map_or_else(
-                || self.args.video_params.clone(),
-                |ovr| ovr.video_params.clone(),
-            ),
+            video_params: self.args.video_params.clone(),
             passes: self.args.passes,
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -1057,10 +1008,7 @@ impl Av1anContext {
             start_frame: scene.start_frame,
             end_frame: scene.end_frame,
             frame_rate,
-            video_params: scene.zone_overrides.as_ref().map_or_else(
-                || self.args.video_params.clone(),
-                |ovr| ovr.video_params.clone(),
-            ),
+            video_params: self.args.video_params.clone(),
             passes: self.args.passes,
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -1100,7 +1048,6 @@ impl Av1anContext {
                     scene.start_frame,
                     scene.end_frame,
                     frame_rate,
-                    scene.zone_overrides.clone(),
                 )
                 .unwrap()
             })
@@ -1145,7 +1092,6 @@ impl Av1anContext {
                     index,
                     file.as_path().to_str().unwrap(),
                     frame_rate,
-                    scenes[index].zone_overrides.clone(),
                 )
                 .unwrap()
             })
@@ -1201,15 +1147,8 @@ impl Av1anContext {
             .iter()
             .enumerate()
             .map(|(index, &(file, (start, end, scene)))| {
-                self.create_select_task(
-                    index,
-                    file,
-                    start,
-                    end,
-                    frame_rate,
-                    scene.zone_overrides.clone(),
-                )
-                .unwrap()
+                self.create_select_task(index, file, start, end, frame_rate)
+                    .unwrap()
             })
             .collect();
 
@@ -1222,7 +1161,6 @@ impl Av1anContext {
         index: usize,
         file: &str,
         frame_rate: f64,
-        overrides: Option<ZoneOptions>,
     ) -> anyhow::Result<Task> {
         let ffmpeg_gen_cmd: Vec<OsString> = into_vec![
             "ffmpeg",
@@ -1261,10 +1199,7 @@ impl Av1anContext {
             start_frame: 0,
             end_frame: num_frames,
             frame_rate,
-            video_params: overrides.as_ref().map_or_else(
-                || self.args.video_params.clone(),
-                |ovr| ovr.video_params.clone(),
-            ),
+            video_params: self.args.video_params.clone(),
             passes: self.args.passes,
             encoder: self.args.encoder,
             ignore_frame_mismatch: self.args.ignore_frame_mismatch,

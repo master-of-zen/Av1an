@@ -67,7 +67,6 @@ pub struct EncodeArgs {
     pub encoder:             Encoder,
     pub workers:             usize,
     pub set_thread_affinity: Option<usize>,
-    pub zones:               Option<PathBuf>,
 
     // FFmpeg params
     pub ffmpeg_filter_args: Vec<String>,

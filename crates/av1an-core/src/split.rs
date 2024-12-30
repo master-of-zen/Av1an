@@ -74,12 +74,7 @@ pub fn extra_splits(
 
     for scene in scenes {
         let distance = scene.end_frame - scene.start_frame;
-        let split_size = scene
-            .zone_overrides
-            .as_ref()
-            .map_or(split_size, |ovr| {
-                ovr.extra_splits_len.unwrap_or(usize::MAX)
-            });
+
         if distance > split_size {
             let additional_splits = (distance / split_size) + 1;
             for n in 1..additional_splits {
@@ -87,12 +82,12 @@ pub fn extra_splits(
                     * (n as f64 / additional_splits as f64))
                     as usize
                     + scene.start_frame;
+
                 new_scenes.push(Scene {
                     start_frame: new_scenes
                         .last()
                         .map_or(scene.start_frame, |scene| scene.end_frame),
-                    end_frame: new_split,
-                    ..scene.clone()
+                    end_frame:   new_split,
                 });
             }
         }
@@ -100,8 +95,7 @@ pub fn extra_splits(
             start_frame: new_scenes
                 .last()
                 .map_or(scene.start_frame, |scene| scene.end_frame),
-            end_frame: scene.end_frame,
-            ..scene.clone()
+            end_frame:   scene.end_frame,
         });
     }
 

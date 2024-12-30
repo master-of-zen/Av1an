@@ -5,7 +5,6 @@ use std::{
 };
 
 use ansi_term::Style;
-use anyhow::bail;
 use av_scenechange::{
     decoder::Decoder,
     detect_scene_changes,

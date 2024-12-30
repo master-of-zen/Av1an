@@ -2,7 +2,6 @@ use std::{
     borrow::Cow,
     cmp,
     cmp::Reverse,
-    collections::BTreeSet,
     convert::TryInto,
     ffi::OsString,
     fs,
@@ -20,7 +19,7 @@ use std::{
 };
 
 use ansi_term::{Color, Style};
-use anyhow::{bail, Context};
+use anyhow::Context;
 use av1_grain::TransferFunction;
 use av1an_ffmpeg::{
     compose_ffmpeg_pipe,

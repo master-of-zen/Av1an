@@ -1,6 +1,14 @@
+
 pull_request_rules:
-  - name: automatic squash-merge for master when CI passes and approved
-    conditions:
+  - name: automatic merge for stable when CI passes and approved + automatic squash-merge
+      for master when CI passes and approved
+    conditions: []
+    actions:
+      queue:
+queue_rules:
+  - name: duplicated default from automatic squash-merge for master when CI passes
+      and approved
+    queue_conditions:
       - "#approved-reviews-by>=1"
       - and:
           # Unfortunately, we cannot just say "all CI must pass".
@@ -9,13 +17,17 @@ pull_request_rules:
           - check-success=docker
           - check-success=SonarCloud Code Analysis
       - base=master
-    actions:
-      queue:
-        name: default
-        method: squash
-        update_method: rebase
-  - name: automatic merge for stable when CI passes and approved
-    conditions:
+    merge_conditions:
+      - and:
+          # Unfortunately, we cannot just say "all CI must pass".
+          # This is not a bot limitation, but a limitation in Github itself.
+          - check-success=all-tests
+          - check-success=docker
+          - check-success=SonarCloud Code Analysis
+    update_method: rebase
+    merge_method: squash
+  - name: duplicated default from automatic merge for stable when CI passes and approved
+    queue_conditions:
       - "#approved-reviews-by>=1"
       - and:
           # Unfortunately, we cannot just say "all CI must pass".
@@ -24,18 +36,12 @@ pull_request_rules:
           - check-success=docker
           - check-success=SonarCloud Code Analysis
       - base=stable
-    actions:
-      queue:
-        name: default
-        method: rebase
-        update_method: rebase
-
-queue_rules:
-  - name: default
-    conditions:
+    merge_conditions:
       - and:
           # Unfortunately, we cannot just say "all CI must pass".
           # This is not a bot limitation, but a limitation in Github itself.
           - check-success=all-tests
           - check-success=docker
           - check-success=SonarCloud Code Analysis
+    update_method: rebase
+    merge_method: rebase

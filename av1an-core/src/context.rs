@@ -18,7 +18,7 @@ use av1_grain::TransferFunction;
 use crossbeam_utils;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
 use tracing::{debug, error, info, warn};
@@ -331,7 +331,7 @@ impl Av1anContext {
 
       // TODO add explicit parameter to concatenation functions to control whether audio is also muxed in
       let _audio_output_exists =
-        audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
+        audio_thread.is_some_and(|audio_thread| audio_thread.join().unwrap());
 
       debug!("encoding finished, concatenating with {}", self.args.concat);
 
@@ -722,7 +722,7 @@ impl Av1anContext {
         // Already in order
       }
       ChunkOrdering::Random => {
-        chunks.shuffle(&mut thread_rng());
+        chunks.shuffle(&mut rng());
       }
     }
 

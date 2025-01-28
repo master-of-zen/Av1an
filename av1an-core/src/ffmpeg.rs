@@ -42,7 +42,7 @@ pub fn compose_ffmpeg_pipe<S: Into<String>>(
 /// Get frame count using FFmpeg
 #[tracing::instrument]
 pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
-  let mut ictx = input(&source)?;
+  let mut ictx = input(source)?;
   let input = ictx
     .streams()
     .best(MediaType::Video)
@@ -60,7 +60,7 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
 
 #[tracing::instrument]
 pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
-  let ictx = input(&source)?;
+  let ictx = input(source)?;
   let input = ictx
     .streams()
     .best(MediaType::Video)
@@ -71,7 +71,7 @@ pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
 
 #[tracing::instrument]
 pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg::Error> {
-  let ictx = ffmpeg::format::input(&source)?;
+  let ictx = ffmpeg::format::input(source)?;
 
   let input = ictx
     .streams()
@@ -87,7 +87,7 @@ pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg::Error> {
 
 #[tracing::instrument]
 pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg::Error> {
-  let ictx = ffmpeg::format::input(&source)?;
+  let ictx = ffmpeg::format::input(source)?;
 
   let input = ictx
     .streams()
@@ -103,7 +103,7 @@ pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg::Error> {
 
 #[tracing::instrument]
 pub fn transfer_characteristics(source: &Path) -> Result<TransferCharacteristic, ffmpeg::Error> {
-  let ictx = ffmpeg::format::input(&source)?;
+  let ictx = ffmpeg::format::input(source)?;
 
   let input = ictx
     .streams()
@@ -120,7 +120,7 @@ pub fn transfer_characteristics(source: &Path) -> Result<TransferCharacteristic,
 /// Returns vec of all keyframes
 #[tracing::instrument]
 pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
-  let mut ictx = input(&source)?;
+  let mut ictx = input(source)?;
   let input = ictx
     .streams()
     .best(MediaType::Video)
@@ -146,7 +146,7 @@ pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
 
 /// Returns true if input file have audio in it
 pub fn has_audio(file: &Path) -> bool {
-  let ictx = input(&file).unwrap();
+  let ictx = input(file).unwrap();
   ictx.streams().best(MediaType::Audio).is_some()
 }
 

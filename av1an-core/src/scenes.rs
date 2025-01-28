@@ -206,7 +206,7 @@ impl Scene {
 
     for arg in raw_zone_args {
       if arg.starts_with("--")
-        || (arg.starts_with('-') && arg.chars().nth(1).map_or(false, char::is_alphabetic))
+        || (arg.starts_with('-') && arg.chars().nth(1).is_some_and(char::is_alphabetic))
       {
         let key = arg.split_once('=').map_or(arg.as_str(), |split| split.0);
         if let Some(pos) = video_params
@@ -217,7 +217,7 @@ impl Scene {
           if let Some(next) = video_params.get(pos) {
             if !([Encoder::aom, Encoder::vpx].contains(&encoder)
               || next.starts_with("--")
-              || (next.starts_with('-') && next.chars().nth(1).map_or(false, char::is_alphabetic)))
+              || (next.starts_with('-') && next.chars().nth(1).is_some_and(char::is_alphabetic)))
             {
               video_params.remove(pos);
             }

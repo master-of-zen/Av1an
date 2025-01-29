@@ -916,14 +916,12 @@ impl Av1anContext {
         || self.args.video_params.clone(),
         |ovr| ovr.video_params.clone(),
       ),
-      passes: overrides.as_ref().map_or(
-        self.args.passes, 
-        |ovr| ovr.passes,
-      ),
-      encoder: overrides.as_ref().map_or(
-        self.args.encoder.clone(),
-        |ovr| ovr.encoder.clone(),
-      ),
+      passes: overrides
+        .as_ref()
+        .map_or(self.args.passes, |ovr| ovr.passes),
+      encoder: overrides
+        .as_ref()
+        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -978,14 +976,14 @@ impl Av1anContext {
         || self.args.video_params.clone(),
         |ovr| ovr.video_params.clone(),
       ),
-      passes: scene.zone_overrides.as_ref().map_or(
-        self.args.passes, 
-        |ovr| ovr.passes,
-      ),
-      encoder: scene.zone_overrides.as_ref().map_or(
-        self.args.encoder.clone(),
-        |ovr| ovr.encoder.clone(),
-      ),
+      passes: scene
+        .zone_overrides
+        .as_ref()
+        .map_or(self.args.passes, |ovr| ovr.passes),
+      encoder: scene
+        .zone_overrides
+        .as_ref()
+        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -1187,14 +1185,12 @@ impl Av1anContext {
         || self.args.video_params.clone(),
         |ovr| ovr.video_params.clone(),
       ),
-      passes: overrides.as_ref().map_or(
-        self.args.passes, 
-        |ovr| ovr.passes,
-      ),
-      encoder: overrides.as_ref().map_or(
-        self.args.encoder.clone(),
-        |ovr| ovr.encoder.clone(),
-      ),
+      passes: overrides
+        .as_ref()
+        .map_or(self.args.passes, |ovr| ovr.passes),
+      encoder: overrides
+        .as_ref()
+        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,

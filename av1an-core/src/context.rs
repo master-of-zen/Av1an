@@ -921,7 +921,7 @@ impl Av1anContext {
         .map_or(self.args.passes, |ovr| ovr.passes),
       encoder: overrides
         .as_ref()
-        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
+        .map_or(self.args.encoder, |ovr| ovr.encoder),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -983,7 +983,7 @@ impl Av1anContext {
       encoder: scene
         .zone_overrides
         .as_ref()
-        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
+        .map_or(self.args.encoder, |ovr| ovr.encoder),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,
@@ -1190,7 +1190,7 @@ impl Av1anContext {
         .map_or(self.args.passes, |ovr| ovr.passes),
       encoder: overrides
         .as_ref()
-        .map_or(self.args.encoder.clone(), |ovr| ovr.encoder.clone()),
+        .map_or(self.args.encoder, |ovr| ovr.encoder),
       noise_size: self.args.photon_noise_size,
       tq_cq: None,
       ignore_frame_mismatch: self.args.ignore_frame_mismatch,

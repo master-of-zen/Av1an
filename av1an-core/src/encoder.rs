@@ -762,6 +762,8 @@ impl Encoder {
         "fast",
         "--crf",
         q.to_string(),
+        "--input",
+        "-",
       ],
     }
   }
@@ -799,6 +801,8 @@ impl Encoder {
         "--y4m",
         "--crf",
         q.to_string(),
+        "--input",
+        "-",
       ],
     }
   }

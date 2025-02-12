@@ -247,13 +247,13 @@ pub fn create_vs_file(
       format!(
         "from vapoursynth import core\n\
             core.max_cache_size=1024\n\
-      core.{}({:?}, cachefile={:?}).set_output()",
+      core.{}(r\"{}\", cachefile={:?}).set_output()",
         match chunk_method {
           ChunkMethod::FFMS2 => "ffms2.Source",
           ChunkMethod::LSMASH => "lsmas.LWLibavSource",
           _ => unreachable!(),
         },
-        source,
+        source.display(),
         cache_file
       )
       .as_bytes(),

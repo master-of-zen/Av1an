@@ -18,9 +18,10 @@ use av1_grain::TransferFunction;
 use crossbeam_utils;
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::ChildStderr;
+use tracing::{debug, error, info, warn};
 
 use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
@@ -41,6 +42,7 @@ use crate::{
   vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
 
+#[derive(Debug)]
 pub struct Av1anContext {
   pub frames: usize,
   pub vs_script: Option<PathBuf>,
@@ -48,6 +50,7 @@ pub struct Av1anContext {
 }
 
 impl Av1anContext {
+  #[tracing::instrument]
   pub fn new(mut args: EncodeArgs) -> anyhow::Result<Self> {
     args.validate()?;
     let mut this = Self {
@@ -60,6 +63,7 @@ impl Av1anContext {
   }
 
   /// Initialize logging routines and create temporary directories
+  #[tracing::instrument]
   fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg::init()?;
     ffmpeg::util::log::set_level(ffmpeg::util::log::level::Level::Fatal);
@@ -135,6 +139,7 @@ impl Av1anContext {
     Ok(())
   }
 
+  #[tracing::instrument]
   pub fn encode_file(&mut self) -> anyhow::Result<()> {
     let initial_frames = get_done()
       .done
@@ -326,7 +331,7 @@ impl Av1anContext {
 
       // TODO add explicit parameter to concatenation functions to control whether audio is also muxed in
       let _audio_output_exists =
-        audio_thread.map_or(false, |audio_thread| audio_thread.join().unwrap());
+        audio_thread.is_some_and(|audio_thread| audio_thread.join().unwrap());
 
       debug!("encoding finished, concatenating with {}", self.args.concat);
 
@@ -414,6 +419,7 @@ impl Av1anContext {
     Ok(())
   }
 
+  #[tracing::instrument]
   fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     let mut queue_files = fs::read_dir(source_path)
       .with_context(|| format!("Failed to read queue files from source path {source_path:?}"))?
@@ -716,7 +722,7 @@ impl Av1anContext {
         // Already in order
       }
       ChunkOrdering::Random => {
-        chunks.shuffle(&mut thread_rng());
+        chunks.shuffle(&mut rng());
       }
     }
 
@@ -1119,6 +1125,7 @@ impl Av1anContext {
     Ok(chunk_queue)
   }
 
+  #[tracing::instrument]
   fn create_chunk_from_segment(
     &self,
     index: usize,

@@ -32,6 +32,7 @@ pub enum InputPixelFormat {
 }
 
 #[allow(clippy::struct_excessive_bools)]
+#[derive(Debug)]
 pub struct EncodeArgs {
   pub input: Input,
   pub temp: String,

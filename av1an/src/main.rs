@@ -10,6 +10,7 @@ use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
+use av1an_core::logging::init_logging;
 use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
@@ -20,9 +21,10 @@ use av1an_core::{
 };
 use clap::{value_parser, Parser};
 use flexi_logger::writers::LogWriter;
-use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
+use flexi_logger::{Level, LevelFilter};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
+use tracing::{instrument, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();
@@ -545,6 +547,7 @@ pub struct CliOpts {
 }
 
 impl CliOpts {
+  #[tracing::instrument]
   pub fn target_quality_params(
     &self,
     temp_dir: String,
@@ -622,6 +625,7 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
+#[tracing::instrument]
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 
@@ -814,6 +818,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   Ok(valid_args)
 }
 
+#[derive(Debug)]
 pub struct StderrLogger {
   level: Level,
 }
@@ -869,51 +874,16 @@ impl LogWriter for StderrLogger {
   }
 }
 
+#[instrument]
 pub fn run() -> anyhow::Result<()> {
+  init_logging();
+
   let cli_args = CliOpts::parse();
-  let log_level = cli_args.log_level;
+
+  //let log_level = cli_args.log_level;
   let args = parse_cli(cli_args)?;
 
-  let log = LogSpecBuilder::new()
-    .default(LevelFilter::Error)
-    .module("av1an", log_level)
-    .module("av1an_cli", log_level)
-    .module("av1an_core", log_level)
-    .module(
-      "rav1e::scenechange",
-      match log_level {
-        LevelFilter::Trace => LevelFilter::Debug,
-        LevelFilter::Debug => LevelFilter::Info,
-        other => other,
-      },
-    )
-    .build();
-
-  // Note that with all write modes except WriteMode::Direct (which is the default)
-  // you should keep the LoggerHandle alive up to the very end of your program,
-  // because it will, in its Drop implementation, flush all writers to ensure that
-  // all buffered log lines are flushed before the program terminates,
-  // and then it calls their shutdown method.
-  let logger = Logger::with(log)
-    .log_to_file_and_writer(
-      // UGLY: take first or the files for log path
-      FileSpec::try_from(PathAbs::new(&args[0].log_file)?)?,
-      Box::new(StderrLogger {
-        // UGLY: take first or the files for verbosity
-        level: match args[0].verbosity {
-          Verbosity::Quiet => Level::Warn,
-          Verbosity::Normal | Verbosity::Verbose => Level::Info,
-        },
-      }),
-    )
-    .start()?;
-
   for arg in args {
-    // Change log file
-    let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
-    let _ =
-      &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file).append())?;
-
     Av1anContext::new(arg)?.encode_file()?;
   }
 

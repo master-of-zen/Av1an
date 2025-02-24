@@ -32,6 +32,7 @@ pub enum Encoder {
   x265,
 }
 
+#[tracing::instrument]
 pub(crate) fn parse_svt_av1_version(version: &[u8]) -> Option<(u32, u32, u32)> {
   let v_idx = memchr::memchr(b'v', version)?;
   let s = version.get(v_idx + 1..)?;
@@ -149,7 +150,7 @@ impl Encoder {
       Self::x265 => chain!(
         into_array!["x265", "--y4m", "--frames", frame_count.to_string()],
         params,
-        into_array!["-", "-o", output]
+        into_array!["--input", "-", "-o", output]
       )
       .collect(),
     }
@@ -232,6 +233,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           NULL
@@ -331,6 +333,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           output

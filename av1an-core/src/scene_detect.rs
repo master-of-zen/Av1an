@@ -47,6 +47,7 @@ pub fn av_scenechange_detect(
     frames
   });
 
+  let frames = frame_thread.join().unwrap();
   let scenes = scene_detect(
     input,
     encoder,
@@ -65,8 +66,6 @@ pub fn av_scenechange_detect(
     sc_downscale_height,
     zones,
   )?;
-
-  let frames = frame_thread.join().unwrap();
 
   progress_bar::finish_progress_bar();
 

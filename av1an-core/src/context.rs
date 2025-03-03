@@ -120,7 +120,7 @@ impl Av1anContext {
 
       // frames need to be recalculated in this case
       if self.frames == 0 {
-        self.frames = self.args.input.frames()?;
+        self.frames = self.args.input.frames(self.vs_script.clone())?;
         done.frames.store(self.frames, atomic::Ordering::Relaxed);
       }
 
@@ -732,9 +732,19 @@ impl Av1anContext {
   fn calc_split_locations(&self) -> anyhow::Result<(Vec<Scene>, usize)> {
     let zones = self.parse_zones()?;
 
+    // Create a new input with the generated VapourSynth script for Scene Detection
+    let input = if let Some(ref vs_script) = self.vs_script {
+      Input::VapourSynth {
+        path: vs_script.clone(),
+        vspipe_args: Vec::new(),
+      }
+    } else {
+      self.args.input.clone()
+    };
+
     Ok(match self.args.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(
-        &self.args.input,
+        &input,
         self.args.encoder,
         self.frames,
         self.args.min_scene_len,
@@ -770,8 +780,7 @@ impl Av1anContext {
             zone_overrides: None,
           });
         }
-
-        (scenes, self.args.input.frames()?)
+        (scenes, self.args.input.frames(self.vs_script.clone())?)
       }
     })
   }
@@ -810,7 +819,7 @@ impl Av1anContext {
         crate::split::read_scenes_from_file(scene_file.as_ref())?
       } else {
         used_existing_cuts = false;
-        self.frames = self.args.input.frames()?;
+        self.frames = self.args.input.frames(self.vs_script.clone())?;
         self.calc_split_locations()?
       };
     self.frames = frames;

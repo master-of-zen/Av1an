@@ -116,16 +116,20 @@ impl Input {
     matches!(&self, Input::VapourSynth { .. })
   }
 
-  pub fn frames(&self) -> anyhow::Result<usize> {
+  pub fn frames(&self, vs_script_path: Option<PathBuf>) -> anyhow::Result<usize> {
     const FAIL_MSG: &str = "Failed to get number of frames for input video";
     Ok(match &self {
-      Input::Video { path } => {
+      Input::Video { path } if vs_script_path.is_none() => {
         ffmpeg::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
       }
-      Input::VapourSynth { path, .. } => {
-        vapoursynth::num_frames(path.as_path(), self.as_vspipe_args_map()?)
-          .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
-      }
+      path => vapoursynth::num_frames(
+        vs_script_path
+          .as_ref()
+          .map(|p| p.as_path())
+          .unwrap_or(path.as_path()),
+        self.as_vspipe_args_map()?,
+      )
+      .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
     })
   }
 

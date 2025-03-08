@@ -16,6 +16,7 @@ use crate::scenes::Scene;
 use crate::{into_smallvec, progress_bar, Encoder, Input, ScenecutMethod, Verbosity};
 
 #[tracing::instrument]
+#[allow(clippy::too_many_arguments)]
 pub fn av_scenechange_detect(
   input: &Input,
   encoder: Encoder,
@@ -73,7 +74,7 @@ pub fn av_scenechange_detect(
 }
 
 /// Detect scene changes using rav1e scene detector.
-#[allow(clippy::option_if_let_else)]
+#[allow(clippy::too_many_arguments)]
 pub fn scene_detect(
   input: &Input,
   encoder: Encoder,

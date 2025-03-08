@@ -820,6 +820,7 @@ impl Encoder {
     }
   }
 
+  #[allow(clippy::too_many_arguments)]
   /// Constructs tuple of commands for target quality probing
   pub fn probe_cmd(
     self,

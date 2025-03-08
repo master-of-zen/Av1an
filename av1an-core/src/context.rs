@@ -733,14 +733,13 @@ impl Av1anContext {
     let zones = self.parse_zones()?;
 
     // Create a new input with the generated VapourSynth script for Scene Detection
-    let input = if let Some(ref vs_script) = self.vs_script {
-      Input::VapourSynth {
+    let input = self.vs_script.as_ref().map_or_else(
+      || self.args.input.clone(),
+      |vs_script| Input::VapourSynth {
         path: vs_script.clone(),
         vspipe_args: Vec::new(),
-      }
-    } else {
-      self.args.input.clone()
-    };
+      },
+    );
 
     Ok(match self.args.split_method {
       SplitMethod::AvScenechange => av_scenechange_detect(

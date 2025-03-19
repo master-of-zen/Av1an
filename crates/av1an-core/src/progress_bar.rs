@@ -1,3 +1,4 @@
+// crates/av1an-core/src/progress_bar.rs
 use std::{fmt::Write, time::Duration};
 
 use indicatif::{

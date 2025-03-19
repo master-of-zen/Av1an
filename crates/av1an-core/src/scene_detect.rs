@@ -1,3 +1,4 @@
+// crates/av1an-core/src/scene_detect.rs
 use std::{
     io::{IsTerminal, Read},
     process::{Command, Stdio},

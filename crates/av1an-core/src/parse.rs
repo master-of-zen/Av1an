@@ -1,3 +1,4 @@
+// crates/av1an-core/src/parse.rs
 //! Functions for parsing frames from encoder output.
 //!
 //! Some functions are optimized with SIMD, and need

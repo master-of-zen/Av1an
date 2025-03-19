@@ -1,3 +1,4 @@
+// crates/av1an-core/src/scenes.rs
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

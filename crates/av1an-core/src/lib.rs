@@ -1,3 +1,4 @@
+// crates/av1an-core/src/lib.rs
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]

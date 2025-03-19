@@ -1,0 +1,19 @@
+syntax = "proto3";
+package video_encoding;
+
+service VideoEncodingService {
+  rpc EncodeChunk (EncodeChunkRequest) returns (EncodeChunkResponse);
+}
+
+message EncodeChunkRequest {
+  bytes chunk_data = 1;
+  int32 chunk_index = 2;
+  repeated string encoder_parameters = 3;
+}
+
+message EncodeChunkResponse {
+  bytes encoded_chunk_data = 1;
+  int32 chunk_index = 2;
+  bool success = 3;
+  string error_message = 4;
+}

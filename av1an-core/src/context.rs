@@ -160,7 +160,7 @@ impl Av1anContext {
         {
           self.vs_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => path.clone(),
-            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method, self.args.sc_downscale_height, self.args.sc_pix_format.clone(), self.args.scaler.clone())?,
+            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method, self.args.sc_downscale_height, self.args.sc_pix_format, self.args.scaler.clone())?,
           });
           self.vs_scd_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => copy_vs_file(&self.args.temp, path, self.args.sc_downscale_height)?,

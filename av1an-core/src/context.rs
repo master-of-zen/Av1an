@@ -36,7 +36,7 @@ use crate::scene_detect::av_scenechange_detect;
 use crate::scenes::{Scene, ZoneOptions};
 use crate::settings::{EncodeArgs, InputPixelFormat};
 use crate::split::{extra_splits, segment, write_scenes_to_file};
-use crate::vapoursynth::create_vs_file;
+use crate::vapoursynth::{copy_vs_file, create_vs_file};
 use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
   vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
@@ -46,6 +46,7 @@ use crate::{
 pub struct Av1anContext {
   pub frames: usize,
   pub vs_script: Option<PathBuf>,
+  pub vs_scd_script: Option<PathBuf>,
   pub args: EncodeArgs,
 }
 
@@ -56,6 +57,7 @@ impl Av1anContext {
     let mut this = Self {
       frames: 0,
       vs_script: None,
+      vs_scd_script: None,
       args,
     };
     this.initialize()?;
@@ -158,7 +160,11 @@ impl Av1anContext {
         {
           self.vs_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => path.clone(),
-            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method)?,
+            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method, self.args.sc_downscale_height, self.args.sc_pix_format.clone(), self.args.scaler.clone())?,
+          });
+          self.vs_scd_script = Some(match &self.args.input {
+            Input::VapourSynth { path, .. } => copy_vs_file(&self.args.temp, path, self.args.sc_downscale_height)?,
+            Input::Video { path: _ } => self.vs_script.clone().unwrap(),
           });
 
           let vs_script = self.vs_script.clone().unwrap();
@@ -733,7 +739,7 @@ impl Av1anContext {
     let zones = self.parse_zones()?;
 
     // Create a new input with the generated VapourSynth script for Scene Detection
-    let input = self.vs_script.as_ref().map_or_else(
+    let input = self.vs_scd_script.as_ref().map_or_else(
       || self.args.input.clone(),
       |vs_script| Input::VapourSynth {
         path: vs_script.clone(),

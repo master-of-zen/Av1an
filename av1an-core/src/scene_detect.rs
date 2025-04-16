@@ -242,6 +242,7 @@ fn build_decoder(
           .arg("y4m")
           .arg(path)
           .arg("-")
+          .env("AV1AN_PERFORM_SCENE_DETECTION", "true")
           .stdin(Stdio::null())
           .stdout(Stdio::piped())
           .stderr(Stdio::null());
@@ -249,19 +250,8 @@ fn build_decoder(
         for arg in vspipe_args {
           command.args(["-a", &arg]);
         }
-        let vspipe = command.spawn()?.stdout.unwrap();
-        Decoder::Y4m(y4m::Decoder::new(
-          Command::new("ffmpeg")
-            .stdin(vspipe)
-            .args(["-i", "pipe:", "-f", "yuv4mpegpipe", "-strict", "-1"])
-            .args(filters)
-            .arg("-")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()?
-            .stdout
-            .unwrap(),
-        )?)
+
+        Decoder::Y4m(y4m::Decoder::new(command.spawn()?.stdout.unwrap())?)
       } else {
         Decoder::Vapoursynth(VapoursynthDecoder::new(path.as_ref())?)
       }

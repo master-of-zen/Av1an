@@ -7,6 +7,7 @@ use std::process::Command;
 use anyhow::{anyhow, bail};
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
+use regex::Regex;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
@@ -192,6 +193,9 @@ pub fn create_vs_file(
   temp: &str,
   source: &Path,
   chunk_method: ChunkMethod,
+  scene_detection_downscale_height: Option<usize>,
+  scene_detection_pixel_format: Option<ffmpeg::format::Pixel>,
+  scene_detection_scaler: String,
 ) -> anyhow::Result<PathBuf> {
   let temp: &Path = temp.as_ref();
   let source = to_absolute_path(source)?;
@@ -233,7 +237,7 @@ pub fn create_vs_file(
   }
 
   // Include rich loadscript.vpy and specify source, chunk_method, and cache_file
-  let load_script_text = include_str!("loadscript.vpy")
+  let mut load_script_text = include_str!("loadscript.vpy")
     .replace(
       "source = os.environ.get('AV1AN_SOURCE', None)",
       &format!(
@@ -253,9 +257,53 @@ pub fn create_vs_file(
       &format!("cache_file = {:?}", to_absolute_path(cache_file.as_path())?),
     );
 
+  if let Some(scene_detection_downscale_height) = scene_detection_downscale_height {
+    load_script_text = load_script_text.replace(
+      "downscale_height = os.environ.get('AV1AN_DOWNSCALE_HEIGHT', None)",
+      &format!("downscale_height = {scene_detection_downscale_height}"),
+    );
+  }
+  if let Some(scene_detection_pixel_format) = scene_detection_pixel_format {
+    load_script_text = load_script_text.replace(
+      "sc_pix_format = os.environ.get('AV1AN_PIXEL_FORMAT', None)",
+      &format!("pixel_format = \"{scene_detection_pixel_format:?}\""),
+    );
+  }
+  load_script_text = load_script_text.replace(
+    "scaler = os.environ.get('AV1AN_SCALER', None)",
+    &format!("scaler = {scene_detection_scaler:?}"),
+  );
+
   load_script.write_all(load_script_text.as_bytes())?;
 
   Ok(load_script_path)
+}
+
+pub fn copy_vs_file(
+  temp: &str,
+  source: &Path,
+  downscale_height: Option<usize>,
+) -> anyhow::Result<PathBuf> {
+  let temp: &Path = temp.as_ref();
+  let scd_script_path = temp.join("split").join("scene_detection.vpy");
+  let mut scd_script = File::create(&scd_script_path)?;
+
+  let source_script = std::fs::read_to_string(source)?;
+  if let Some(downscale_height) = downscale_height {
+    let regex = Regex::new(r"(\w+).set_output\(").unwrap();
+    if let Some(captures) = regex.captures(&source_script) {
+      let output_variable_name = captures.get(1).unwrap().as_str();
+      let injected_script = regex
+        .replace(
+          &source_script,
+          format!("{output_variable_name}.resize.Bicubic(width=int((({output_variable_name}.width / {output_variable_name}.height) * int({downscale_height})) // 2 * 2), height={downscale_height}).set_output(").as_str(),
+        )
+        .to_string();
+      scd_script.write_all(injected_script.as_bytes())?;
+    }
+  }
+
+  Ok(scd_script_path)
 }
 
 pub fn num_frames(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {

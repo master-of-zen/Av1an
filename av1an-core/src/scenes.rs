@@ -307,6 +307,7 @@ fn get_test_args() -> Av1anContext {
   };
   Av1anContext {
     vs_script: None,
+    vs_scd_script: None,
     frames: 6900,
     args,
   }

@@ -1,7 +1,10 @@
 name: tests
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - "master"
+      - "fix-ci"
+  pull_request:
 
 env:
   DEBIAN_FRONTEND: noninteractive
@@ -45,6 +48,10 @@ jobs:
 
       # The baseline tests should not include the faster default params, because we want to also test that
       # it works without params passed
+      - name: Testing baseline av1an
+        run: |
+          target/ci/av1an --version
+
       - name: Testing baseline aom
         run: |
           target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv"

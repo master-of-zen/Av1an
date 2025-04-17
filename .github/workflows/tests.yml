@@ -23,6 +23,8 @@ jobs:
           which vpxenc
           which x265
           which x264
+          which vspipe
+          which ffmpeg
 
       - name: Validate formatting
         run: |

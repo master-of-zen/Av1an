@@ -404,7 +404,7 @@ fn lagrange_interpolate(p: &[(u32, f64)], x: u32) -> f64 {
     .sum()
 }
 
-#[allow(unused, clippy::manual_div_ceil)]
+#[allow(unused)]
 fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
   assert!(p.len() >= 2);
 

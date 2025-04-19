@@ -203,10 +203,6 @@ pub fn create_vs_file(
   let load_script_path = temp.join("split").join("loadscript.vpy");
   let mut load_script = File::create(&load_script_path)?;
 
-  // Only used for DGDECNV
-  let dgindexnv_output = temp.join("split").join("index.dgi");
-  let dgindex_path = to_absolute_path(&dgindexnv_output)?;
-
   let cache_file = PathAbs::new(temp.join("split").join(format!(
     "cache.{}",
     match chunk_method {
@@ -225,18 +221,27 @@ pub fn create_vs_file(
     _ => return Err(anyhow!("invalid chunk method")),
   };
 
-  if chunk_method == ChunkMethod::DGDECNV {
-    // Run dgindexnv to generate the .dgi index file
-    Command::new("dgindexnv")
-      .arg("-h")
-      .arg("-i")
-      .arg(&source)
-      .arg("-o")
-      .arg(&dgindexnv_output)
-      .output()?;
-  }
+  // Only used for DGDECNV
+  let dgindex_path = match chunk_method {
+    ChunkMethod::DGDECNV => {
+      let dgindexnv_output = temp.join("split").join("index.dgi");
+
+      // Run dgindexnv to generate the .dgi index file
+      Command::new("dgindexnv")
+        .arg("-h")
+        .arg("-i")
+        .arg(&source)
+        .arg("-o")
+        .arg(&dgindexnv_output)
+        .output()?;
+
+      &to_absolute_path(&dgindexnv_output)?
+    }
+    _ => &source,
+  };
 
   // Include rich loadscript.vpy and specify source, chunk_method, and cache_file
+  // Also specify downscale_height, pixel_format, and scaler for Scene Detection
   let mut load_script_text = include_str!("loadscript.vpy")
     .replace(
       "source = os.environ.get('AV1AN_SOURCE', None)",
@@ -254,7 +259,7 @@ pub fn create_vs_file(
     )
     .replace(
       "cache_file = os.environ.get('AV1AN_CACHE_FILE', None)",
-      &format!("cache_file = {:?}", to_absolute_path(cache_file.as_path())?),
+      &format!("cache_file = {:?}", cache_file),
     );
 
   if let Some(scene_detection_downscale_height) = scene_detection_downscale_height {

@@ -423,7 +423,7 @@ fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
   let (mut xa, mut ya) = sorted.iter().find(|&&v| v.1 * yb < 0.).unwrap_or(&(xb, yb));
 
   loop {
-    let x0 = (xa + xb + 1) / 2;
+    let x0 = (xa + xb + 1).div_ceil(2);
     if x0 == xb || x0 == xa {
       break;
     }

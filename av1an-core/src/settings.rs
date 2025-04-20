@@ -6,7 +6,7 @@ use std::process::{exit, Command};
 
 use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
-use itertools::{Itertools, chain};
+use itertools::{chain, Itertools};
 use serde::{Deserialize, Serialize};
 
 use crate::concat::ConcatMethod;
@@ -180,7 +180,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
     }
 
     if self.tile_auto {
-        self.tiles = self.input.calculate_tiles();
+      self.tiles = self.input.calculate_tiles();
     }
 
     if !self.force {
@@ -196,8 +196,12 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           if skip && !(param.starts_with("-") && param != "-1") {
             skip = false;
             continue;
-          } else { skip = false; }
-          if (param.starts_with("-") && param != "-1") && self.video_params.iter().any(|x| *x == param){
+          } else {
+            skip = false;
+          }
+          if (param.starts_with("-") && param != "-1")
+            && self.video_params.iter().any(|x| *x == param)
+          {
             skip = true;
             continue;
           } else {

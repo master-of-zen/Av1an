@@ -26,8 +26,8 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
 
 use crate::encoder::Encoder;
-use crate::settings::{EncodeArgs};
 use crate::progress_bar::finish_progress_bar;
+use crate::settings::EncodeArgs;
 
 pub mod broker;
 pub mod chunk;

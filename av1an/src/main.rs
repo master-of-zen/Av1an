@@ -774,7 +774,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Verbosity::Normal
       },
       workers: args.workers,
-      tiles: (1, 1),  // default value; will be adjusted if tile_auto set
+      tiles: (1, 1), // default value; will be adjusted if tile_auto set
       tile_auto: args.tile_auto,
       set_thread_affinity: args.set_thread_affinity,
       zones: args.zones.clone(),

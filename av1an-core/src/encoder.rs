@@ -101,11 +101,7 @@ impl Display for Encoder {
 
 impl Encoder {
   /// Composes 1st pass command for 1 pass encoding
-  pub fn compose_1_1_pass(
-    self,
-    params: Vec<String>,
-    output: String,
-  ) -> Vec<String> {
+  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=1"],
@@ -163,12 +159,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--first-pass", format!("{fpf}.stat"), "--output", NULL]
       )
@@ -235,12 +226,7 @@ impl Encoder {
   }
 
   /// Composes 2st pass command for 2 pass encoding
-  pub fn compose_2_2_pass(
-    self,
-    params: Vec<String>,
-    fpf: &str,
-    output: String,
-  ) -> Vec<String> {
+  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=2"],
@@ -249,12 +235,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--second-pass", format!("{fpf}.stat"), "--output", output]
       )
@@ -369,9 +350,12 @@ impl Encoder {
       }
       Encoder::rav1e => {
         let defaults: Vec<String> = into_vec![
-          "--speed", "6",
-          "--quantizer", "100",
-          "--keyint", "0",
+          "--speed",
+          "6",
+          "--quantizer",
+          "100",
+          "--keyint",
+          "0",
           "--no-scene-detection",
         ];
 
@@ -413,13 +397,8 @@ impl Encoder {
         }
       }
       Encoder::svt_av1 => {
-        let defaults = into_vec![
-          "--preset", "4",
-          "--keyint", "0",
-          "--scd", "0",
-          "--rc", "0",
-          "--crf", "25",
-        ];
+        let defaults =
+          into_vec!["--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25",];
         if cols > 1 || rows > 1 {
           let columns = ilog2(cols);
           let rows = ilog2(rows);
@@ -436,18 +415,28 @@ impl Encoder {
         }
       }
       Encoder::x264 => into_vec![
-        "--preset", "slow",
-        "--crf", "25",
-        "--keyint", "infinite",
-        "--scenecut", "0",
+        "--preset",
+        "slow",
+        "--crf",
+        "25",
+        "--keyint",
+        "infinite",
+        "--scenecut",
+        "0",
       ],
       Encoder::x265 => into_vec![
-        "--preset", "slow",
-        "--crf", "25",
-        "-D", "10",
-        "--level-idc", "5.0",
-        "--keyint", "-1",
-        "--scenecut", "0",
+        "--preset",
+        "slow",
+        "--crf",
+        "25",
+        "-D",
+        "10",
+        "--level-idc",
+        "5.0",
+        "--keyint",
+        "-1",
+        "--scenecut",
+        "0",
       ],
     }
   }

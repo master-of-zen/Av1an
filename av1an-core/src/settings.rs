@@ -6,7 +6,7 @@ use std::process::{exit, Command};
 
 use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use serde::{Deserialize, Serialize};
 
 use crate::concat::ConcatMethod;
@@ -56,6 +56,7 @@ pub struct EncodeArgs {
 
   pub passes: u8,
   pub video_params: Vec<String>,
+  pub tiles: (u32, u32), // tile (cols, rows) count; log2 will be applied later for specific encoders
   pub encoder: Encoder,
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
@@ -75,6 +76,8 @@ pub struct EncodeArgs {
   pub resume: bool,
   pub keep: bool,
   pub force: bool,
+  pub no_defaults: bool,
+  pub tile_auto: bool,
 
   pub concat: ConcatMethod,
   pub target_quality: Option<TargetQuality>,
@@ -177,10 +180,37 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       );
     }
 
-    if self.video_params.is_empty() {
-      self.video_params = self
-        .encoder
-        .get_default_arguments(self.input.calculate_tiles());
+    if self.tile_auto {
+      self.tiles = self.input.calculate_tiles();
+    }
+
+    if !self.no_defaults {
+      if self.video_params.is_empty() {
+        self.video_params = self.encoder.get_default_arguments(self.tiles);
+      } else {
+        // merge video_params with defaults, overriding defaults
+        // TODO: consider using hashmap to store program arguments instead of string vector
+        let default_video_params = self.encoder.get_default_arguments(self.tiles);
+        let mut skip = false;
+        let mut _default_params: Vec<String> = Vec::new();
+        for param in default_video_params {
+          if skip && !(param.starts_with("-") && param != "-1") {
+            skip = false;
+            continue;
+          } else {
+            skip = false;
+          }
+          if (param.starts_with("-") && param != "-1")
+            && self.video_params.iter().any(|x| *x == param)
+          {
+            skip = true;
+            continue;
+          } else {
+            _default_params.push(param);
+          }
+        }
+        self.video_params = chain!(_default_params, self.video_params.clone()).collect();
+      }
     }
 
     if let Some(strength) = self.photon_noise {

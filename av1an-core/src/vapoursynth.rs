@@ -242,14 +242,15 @@ pub fn create_vs_file(
 
   // Include rich loadscript.vpy and specify source, chunk_method, and cache_file
   // Also specify downscale_height, pixel_format, and scaler for Scene Detection
+  // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
   let mut load_script_text = include_str!("loadscript.vpy")
     .replace(
       "source = os.environ.get('AV1AN_SOURCE', None)",
       &format!(
-        "source = {:?}",
+        "source = r\"{}\"",
         match chunk_method {
           ChunkMethod::DGDECNV => &dgindex_path,
-          _ => &source,
+          _ => source.display(),
         }
       ),
     )

@@ -14,6 +14,7 @@ use std::thread::available_parallelism;
 use std::time::Instant;
 
 use ::ffmpeg::color::TransferCharacteristic;
+use ::ffmpeg::format::Pixel;
 use ::vapoursynth::api::API;
 use ::vapoursynth::map::OwnedMap;
 use anyhow::{bail, Context};
@@ -26,6 +27,7 @@ use strum::{Display, EnumString, IntoStaticStr};
 
 use crate::encoder::Encoder;
 use crate::progress_bar::finish_progress_bar;
+use crate::settings::EncodeArgs;
 
 pub mod broker;
 pub mod chunk;
@@ -347,24 +349,59 @@ pub enum ChunkOrdering {
 
 /// Determine the optimal number of workers for an encoder
 #[must_use]
-pub fn determine_workers(encoder: Encoder) -> u64 {
+pub fn determine_workers(args: &EncodeArgs) -> u64 {
+  let res = args.input.resolution().unwrap();
+  let tiles = args.tiles;
+  let megapixels = (res.0 * res.1) as f64 / 1e6;
+  // encoder memory and chunk_method memory usage scales with resolution (megapixels),
+  // approximately linearly. Expressed as GB/Megapixel
+  let cm_ram = match args.chunk_method {
+    ChunkMethod::FFMS2 | ChunkMethod::LSMASH | ChunkMethod::BESTSOURCE => 0.3,
+    ChunkMethod::DGDECNV => 0.3,
+    ChunkMethod::Hybrid | ChunkMethod::Select | ChunkMethod::Segment => 0.1,
+  };
+  let enc_ram = match args.encoder {
+    Encoder::aom => 0.4,
+    Encoder::rav1e => 0.7,
+    Encoder::svt_av1 => 1.2,
+    Encoder::vpx => 0.3,
+    Encoder::x264 => 0.7,
+    Encoder::x265 => 0.6,
+  };
+  // This is a rough estimate of how many cpu cores will be fully loaded by an encoder
+  // worker. With rav1e, CPU usage scales with tiles, but not 1:1.
+  // Other encoders don't seem to significantly scale CPU usage with tiles.
+  // CPU threads/worker here is relative to default threading parameters, e.g. aom
+  // will use 1 thread/worker if --threads=1 is set.
+  let cpu_threads = match args.encoder {
+    Encoder::aom => 4,
+    Encoder::rav1e => ((tiles.0 * tiles.1) as f32 * 0.7).ceil() as u64,
+    Encoder::svt_av1 => 6,
+    Encoder::vpx => 3,
+    Encoder::x264 | Encoder::x265 => 8,
+  };
+  // memory usage scales with pixel format, expressed as a multiplier of memory usage.
+  // Roughly the same behavior was observed accross all encoders.
+  let pix_mult = match args.output_pix_format.format {
+    Pixel::YUV444P | Pixel::YUV444P10LE | Pixel::YUV444P12LE => 1.5,
+    Pixel::YUV422P | Pixel::YUV422P10LE | Pixel::YUV422P12LE => 1.25,
+    _ => 1.0,
+  };
+
   let mut system = sysinfo::System::new();
   system.refresh_memory();
-
   let cpu = available_parallelism()
     .expect("Unrecoverable: Failed to get thread count")
     .get() as u64;
-  // available_memory returns kb, convert to gb
-  let ram_gb = system.available_memory() / 10_u64.pow(6);
+  // sysinfo returns Bytes, convert to GB
+  // use total instead of available, because av1an does not resize worker pool
+  let ram_gb = system.total_memory() as f64 / 1e9;
 
   std::cmp::max(
-    match encoder {
-      Encoder::aom | Encoder::rav1e | Encoder::vpx => std::cmp::min(
-        (cpu as f64 / 3.0).round() as u64,
-        (ram_gb as f64 / 1.5).round() as u64,
-      ),
-      Encoder::svt_av1 | Encoder::x264 | Encoder::x265 => std::cmp::min(cpu, ram_gb) / 8,
-    },
+    std::cmp::min(
+      cpu / cpu_threads,
+      (ram_gb / (megapixels * (enc_ram + cm_ram) * pix_mult)).round() as u64,
+    ),
     1,
   )
 }

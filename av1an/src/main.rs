@@ -169,9 +169,12 @@ pub struct CliOpts {
   pub keep: bool,
 
   /// Do not check if the encoder arguments specified by -v/--video-params are valid.
-  /// And do not include Av1an's default set of encoder parameters.
   #[clap(long)]
   pub force: bool,
+
+  /// Do not include Av1an's default set of encoder parameters.
+  #[clap(long)]
+  pub no_defaults: bool,
 
   /// Overwrite output file, without confirmation
   #[clap(short = 'y')]
@@ -287,7 +290,7 @@ pub struct CliOpts {
   /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
   /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
   /// a list of valid options. This list of parameters will be merged into Av1an's default set
-  /// of encoder parameters, except if --force is set.
+  /// of encoder parameters.
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub video_params: Option<String>,
 
@@ -677,6 +680,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       },
       temp: temp.clone(),
       force: args.force,
+      no_defaults: args.no_defaults,
       passes: if let Some(passes) = args.passes {
         passes
       } else {

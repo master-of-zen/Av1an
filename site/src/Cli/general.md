@@ -49,7 +49,9 @@
 
 	--force
 		Do not check if the encoder arguments specified by -v/--video-params are valid.
-		And do not include Av1an's default set of encoder parameters.
+
+	--no-defaults
+		Do not include Av1an's default set of encoder parameters.
 
 -y
 		Overwrite output file, without confirmation

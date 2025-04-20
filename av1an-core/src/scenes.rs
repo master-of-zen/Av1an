@@ -259,6 +259,7 @@ fn get_test_args() -> Av1anContext {
     ffmpeg_filter_args: Vec::new(),
     temp: String::new(),
     force: false,
+    no_defaults: false,
     passes: 2,
     video_params: into_vec!["--cq-level=40", "--cpu-used=0", "--aq-mode=1"],
     output_file: String::new(),

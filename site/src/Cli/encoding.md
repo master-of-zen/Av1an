@@ -14,7 +14,7 @@
 		used. For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary
 		takes this value with double dashes, as in "--crf <crf>". See the --help output of each
 		encoder for a list of valid options. This list of parameters will be merged into
-		Av1an's default set of encoder parameters, except if --force is set.
+		Av1an's default set of encoder parameters.
 
 -p, --passes <PASSES>
 		Number of encoder passes

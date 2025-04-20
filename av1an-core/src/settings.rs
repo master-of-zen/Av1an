@@ -76,6 +76,7 @@ pub struct EncodeArgs {
   pub resume: bool,
   pub keep: bool,
   pub force: bool,
+  pub no_defaults: bool,
   pub tile_auto: bool,
 
   pub concat: ConcatMethod,
@@ -183,7 +184,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       self.tiles = self.input.calculate_tiles();
     }
 
-    if !self.force {
+    if !self.no_defaults {
       if self.video_params.is_empty() {
         self.video_params = self.encoder.get_default_arguments(self.tiles);
       } else {

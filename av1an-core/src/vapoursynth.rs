@@ -249,7 +249,7 @@ pub fn create_vs_file(
       &format!(
         "source = r\"{}\"",
         match chunk_method {
-          ChunkMethod::DGDECNV => &dgindex_path,
+          ChunkMethod::DGDECNV => dgindex_path.display(),
           _ => source.display(),
         }
       ),

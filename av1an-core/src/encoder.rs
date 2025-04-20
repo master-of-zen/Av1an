@@ -398,7 +398,7 @@ impl Encoder {
       }
       Encoder::svt_av1 => {
         let defaults =
-          into_vec!["--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25",];
+          into_vec!["--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25"];
         if cols > 1 || rows > 1 {
           let columns = ilog2(cols);
           let rows = ilog2(rows);

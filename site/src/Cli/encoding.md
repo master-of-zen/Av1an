@@ -13,7 +13,8 @@
 		These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be
 		used. For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary
 		takes this value with double dashes, as in "--crf <crf>". See the --help output of each
-		encoder for a list of valid options.
+		encoder for a list of valid options. This list of parameters will be merged into
+		Av1an's default set of encoder parameters.
 
 -p, --passes <PASSES>
 		Number of encoder passes
@@ -27,6 +28,9 @@
 		encoding).
 
 		[possible values: 1, 2]
+
+--tile-auto
+		Estimate tile count based on resolution, and set encoder parameters, if applicable.
 
 -a, --audio-params <AUDIO_PARAMS>
 		Audio encoding parameters (ffmpeg syntax)

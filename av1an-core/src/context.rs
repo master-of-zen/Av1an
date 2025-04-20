@@ -260,19 +260,22 @@ impl Av1anContext {
       };
 
       if self.args.workers == 0 {
-        self.args.workers = determine_workers(self.args.encoder) as usize;
+        self.args.workers = determine_workers(&self.args) as usize;
       }
       self.args.workers = cmp::min(self.args.workers, chunk_queue.len());
 
       if std::io::stderr().is_terminal() {
         eprintln!(
-          "{}{} {} {}{} {} {}{} {}\n{}: {}",
+          "{}{} {} {}{} {} {}{} {} {}{} {}\n{}: {}",
           Color::Green.bold().paint("Q"),
           Color::Green.paint("ueue"),
           Color::Green.bold().paint(format!("{}", chunk_queue.len())),
           Color::Blue.bold().paint("W"),
           Color::Blue.paint("orkers"),
           Color::Blue.bold().paint(format!("{}", self.args.workers)),
+          Color::Purple.bold().paint("E"),
+          Color::Purple.paint("ncoder"),
+          Color::Purple.bold().paint(format!("{}", self.args.encoder)),
           Color::Purple.bold().paint("P"),
           Color::Purple.paint("asses"),
           Color::Purple.bold().paint(format!("{}", self.args.passes)),
@@ -283,9 +286,10 @@ impl Av1anContext {
         );
       } else {
         eprintln!(
-          "Queue {} Workers {} Passes {}\nParams: {}",
+          "Queue {} Workers {} Encoder {} Passes {}\nParams: {}",
           chunk_queue.len(),
           self.args.workers,
+          self.args.encoder,
           self.args.passes,
           self.args.video_params.join(" ")
         );
@@ -451,20 +455,15 @@ impl Av1anContext {
     let video_params = chunk.video_params.clone();
 
     let mut enc_cmd = if chunk.passes == 1 {
-      chunk
-        .encoder
-        .compose_1_1_pass(video_params, chunk.output(), chunk.frames())
+      chunk.encoder.compose_1_1_pass(video_params, chunk.output())
     } else if current_pass == 1 {
       chunk
         .encoder
-        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.frames())
+        .compose_1_2_pass(video_params, fpf_file.to_str().unwrap())
     } else {
-      chunk.encoder.compose_2_2_pass(
-        video_params,
-        fpf_file.to_str().unwrap(),
-        chunk.output(),
-        chunk.frames(),
-      )
+      chunk
+        .encoder
+        .compose_2_2_pass(video_params, fpf_file.to_str().unwrap(), chunk.output())
     };
 
     if let Some(per_shot_target_quality_cq) = chunk.tq_cq {

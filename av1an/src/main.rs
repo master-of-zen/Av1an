@@ -168,9 +168,13 @@ pub struct CliOpts {
   #[clap(short, long)]
   pub keep: bool,
 
-  /// Do not check if the encoder arguments specified by -v/--video-params are valid
+  /// Do not check if the encoder arguments specified by -v/--video-params are valid.
   #[clap(long)]
   pub force: bool,
+
+  /// Do not include Av1an's default set of encoder parameters.
+  #[clap(long)]
+  pub no_defaults: bool,
 
   /// Overwrite output file, without confirmation
   #[clap(short = 'y')]
@@ -285,7 +289,8 @@ pub struct CliOpts {
   /// These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be used.
   /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
   /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
-  /// a list of valid options.
+  /// a list of valid options. This list of parameters will be merged into Av1an's default set
+  /// of encoder parameters.
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub video_params: Option<String>,
 
@@ -299,6 +304,12 @@ pub struct CliOpts {
   /// value specified by this flag (as RT mode in aom and vpx only supports one-pass encoding).
   #[clap(short, long, value_parser = value_parser!(u8).range(1..=2), help_heading = "Encoding")]
   pub passes: Option<u8>,
+
+  /// Estimate tile count from source
+  ///
+  /// Worker estimation will consider tile count accordingly.
+  #[clap(long, help_heading = "Encoding")]
+  pub tile_auto: bool,
 
   /// Audio encoding parameters (ffmpeg syntax)
   ///
@@ -597,8 +608,8 @@ fn confirm(prompt: &str) -> io::Result<bool> {
 
     match buf.as_str().trim() {
       // allows enter to continue
-      "y" | "Y" | "" => break Ok(true),
-      "n" | "N" => break Ok(false),
+      "y" | "Y" => break Ok(true),
+      "n" | "N" | "" => break Ok(false),
       other => {
         println!("Sorry, response {other:?} is not understood.");
         buf.clear();
@@ -669,6 +680,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       },
       temp: temp.clone(),
       force: args.force,
+      no_defaults: args.no_defaults,
       passes: if let Some(passes) = args.passes {
         passes
       } else {
@@ -766,6 +778,8 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Verbosity::Normal
       },
       workers: args.workers,
+      tiles: (1, 1), // default value; will be adjusted if tile_auto set
+      tile_auto: args.tile_auto,
       set_thread_affinity: args.set_thread_affinity,
       zones: args.zones.clone(),
       scaler: {
@@ -791,7 +805,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");
@@ -803,7 +817,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Default output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");

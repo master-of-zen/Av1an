@@ -101,12 +101,7 @@ impl Display for Encoder {
 
 impl Encoder {
   /// Composes 1st pass command for 1 pass encoding
-  pub fn compose_1_1_pass(
-    self,
-    params: Vec<String>,
-    output: String,
-    frame_count: usize,
-  ) -> Vec<String> {
+  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=1"],
@@ -115,7 +110,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "--limit", frame_count.to_string()],
+        into_array!["rav1e", "-", "-y"],
         params,
         into_array!["--output", output]
       )
@@ -140,15 +135,13 @@ impl Encoder {
           "error",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
-        into_array!["x265", "--y4m", "--frames", frame_count.to_string()],
+        into_array!["x265", "--y4m"],
         params,
         into_array!["--input", "-", "-o", output]
       )
@@ -157,7 +150,7 @@ impl Encoder {
   }
 
   /// Composes 1st pass command for 2 pass encoding
-  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str, frame_count: usize) -> Vec<String> {
+  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=1"],
@@ -166,14 +159,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-          "--limit",
-          frame_count.to_string()
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--first-pass", format!("{fpf}.stat"), "--output", NULL]
       )
@@ -208,8 +194,6 @@ impl Encoder {
           "1",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{fpf}.log"), "-", "-o", NULL]
@@ -224,8 +208,6 @@ impl Encoder {
           "--pass",
           "1",
           "--y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array![
@@ -244,13 +226,7 @@ impl Encoder {
   }
 
   /// Composes 2st pass command for 2 pass encoding
-  pub fn compose_2_2_pass(
-    self,
-    params: Vec<String>,
-    fpf: &str,
-    output: String,
-    frame_count: usize,
-  ) -> Vec<String> {
+  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=2"],
@@ -259,14 +235,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-          "--limit",
-          frame_count.to_string()
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--second-pass", format!("{fpf}.stat"), "--output", output]
       )
@@ -308,8 +277,6 @@ impl Encoder {
           "2",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{fpf}.log"), "-", "-o", output]
@@ -324,8 +291,6 @@ impl Encoder {
           "--pass",
           "2",
           "--y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array![
@@ -367,6 +332,7 @@ impl Encoder {
           "--cpu-used=6",
           "--end-usage=q",
           "--cq-level=30",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -383,8 +349,15 @@ impl Encoder {
         }
       }
       Encoder::rav1e => {
-        let defaults: Vec<String> =
-          into_vec!["--speed", "6", "--quantizer", "100", "--no-scene-detection"];
+        let defaults: Vec<String> = into_vec![
+          "--speed",
+          "6",
+          "--quantizer",
+          "100",
+          "--keyint",
+          "0",
+          "--no-scene-detection",
+        ];
 
         if cols > 1 || rows > 1 {
           let tiles: Vec<String> = into_vec!["--tiles", format!("{}", cols * rows)];
@@ -407,6 +380,7 @@ impl Encoder {
           "--cq-level=30",
           "--row-mt=1",
           "--auto-alt-ref=6",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -423,7 +397,8 @@ impl Encoder {
         }
       }
       Encoder::svt_av1 => {
-        let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
+        let defaults =
+          into_vec!["--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25"];
         if cols > 1 || rows > 1 {
           let columns = ilog2(cols);
           let rows = ilog2(rows);
@@ -439,16 +414,29 @@ impl Encoder {
           defaults
         }
       }
-      Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
+      Encoder::x264 => into_vec![
+        "--preset",
+        "slow",
+        "--crf",
+        "25",
+        "--keyint",
+        "infinite",
+        "--scenecut",
+        "0",
+      ],
       Encoder::x265 => into_vec![
-        "-p",
+        "--preset",
         "slow",
         "--crf",
         "25",
         "-D",
         "10",
         "--level-idc",
-        "5.0"
+        "5.0",
+        "--keyint",
+        "-1",
+        "--scenecut",
+        "0",
       ],
     }
   }
@@ -475,7 +463,7 @@ impl Encoder {
   pub const fn help_command(self) -> [&'static str; 2] {
     match self {
       Self::aom => ["aomenc", "--help"],
-      Self::rav1e => ["rav1e", "--fullhelp"],
+      Self::rav1e => ["rav1e", "--help"],
       Self::vpx => ["vpxenc", "--help"],
       Self::svt_av1 => ["SvtAv1EncApp", "--help"],
       Self::x264 => ["x264", "--fullhelp"],

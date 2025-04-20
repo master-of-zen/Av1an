@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{IsTerminal, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
 use std::sync::atomic::{self, AtomicBool, AtomicUsize};

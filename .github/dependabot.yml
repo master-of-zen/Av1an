@@ -11,3 +11,10 @@ updates:
     labels:
       - "dependencies"
       - "rust"
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

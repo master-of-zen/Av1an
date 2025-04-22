@@ -296,7 +296,7 @@ pub fn copy_vs_file(
 
   let source_script = std::fs::read_to_string(source)?;
   if let Some(downscale_height) = downscale_height {
-    let regex = Regex::new(r"(\w+).set_output\(").unwrap();
+    let regex = Regex::new(r"(\w+).set_output\(")?;
     if let Some(captures) = regex.captures(&source_script) {
       let output_variable_name = captures.get(1).unwrap().as_str();
       let injected_script = regex
@@ -306,9 +306,11 @@ pub fn copy_vs_file(
         )
         .to_string();
       scd_script.write_all(injected_script.as_bytes())?;
+      return Ok(scd_script_path);
     }
   }
 
+  scd_script.write_all(source_script.as_bytes())?;
   Ok(scd_script_path)
 }
 

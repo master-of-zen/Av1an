@@ -64,7 +64,7 @@ regex = "1.11.1"
 affinity = "0.1.2"
 
 [dependencies.smallvec]
-version = "1.7.0"
+version = "1.15.0"
 default-features = false
 features = ["const_generics", "const_new", "union"]
 

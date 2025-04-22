@@ -37,7 +37,8 @@ jobs:
           cargo clippy --profile ci -- -D warnings
           cargo build --profile ci
 
-      - uses: taiki-e/install-action@v2
+      - name: Install cargo-msrv
+        uses: taiki-e/install-action@v2
         with:
           tool: cargo-msrv
 
@@ -251,6 +252,21 @@ jobs:
           target/ci/av1an -i tt_sif.y4m --sc-only --sc-method fast -s "tt_sif_scenes.json"
           du -h tt_sif_scenes.json
         continue-on-error: true
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Generate code coverage
+        run: cargo llvm-cov --profile ci --workspace --codecov --output-path codecov.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: codecov.json
+          fail_ci_if_error: true
 
   docker:
     runs-on: ubuntu-latest

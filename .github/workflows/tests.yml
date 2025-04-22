@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
 
       - name: Validate encoders
@@ -34,6 +36,15 @@ jobs:
         run: |
           cargo clippy --profile ci -- -D warnings
           cargo build --profile ci
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-msrv
+
+      - name: Validate minimum Rust version
+        run: |
+          cargo msrv verify --path av1an
+          cargo msrv verify --path av1an-core
 
       # 352x240 112 frames test video
       - name: Download test video
@@ -296,7 +307,7 @@ jobs:
           fi
 
   docker-publish:
-    needs: [all-tests, docker, publish-check]
+    needs: [ all-tests, docker, publish-check ]
     runs-on: ubuntu-latest
     if: needs.publish-check.outputs.should_publish == 'true'
     steps:

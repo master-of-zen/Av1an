@@ -1,7 +1,7 @@
 [package]
 name = "av1an-core"
 version = "0.4.4"
-rust-version = "1.79"
+rust-version = "1.81"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
@@ -11,6 +11,7 @@ repository = "https://github.com/master-of-zen/Av1an"
 keywords = ["video"]
 categories = ["command-line-utilities"]
 license = "GPL-3.0"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,7 +21,7 @@ arrayvec = "0.7.2"
 av-format = "0.7.0"
 av-ivf = "0.5.0"
 av1-grain = { version = "0.2.1", default-features = false, features = [
-  "create",
+    "create",
 ] }
 memchr = "2.4.1"
 anyhow = "1.0.42"
@@ -40,8 +41,8 @@ crossbeam-utils = "0.8.5"
 textwrap = "0.16.0"
 path_abs = "0.5.1"
 av-scenechange = { version = "0.13.0", default-features = false, features = [
-  "ffmpeg",
-  "vapoursynth",
+    "ffmpeg",
+    "vapoursynth",
 ] }
 y4m = "0.8.0"
 thiserror = "2.0.11"
@@ -94,6 +95,6 @@ quickcheck_macros = "1"
 default = ["vapoursynth_new_api"]
 ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]
 vapoursynth_new_api = [
-  "vapoursynth/vapoursynth-api-32",
-  "vapoursynth/vsscript-api-31",
+    "vapoursynth/vapoursynth-api-32",
+    "vapoursynth/vsscript-api-31",
 ]

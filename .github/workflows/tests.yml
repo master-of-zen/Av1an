@@ -1,7 +1,11 @@
 name: tests
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 env:
   DEBIAN_FRONTEND: noninteractive

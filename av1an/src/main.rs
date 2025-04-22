@@ -55,6 +55,43 @@ fn version() -> &'static str {
     )
   }
 
+  fn get_encoder_info() -> String {
+    format!(
+      "\
+* Available Encoders
+  aomenc  : {}
+  SVT-AV1 : {}
+  rav1e   : {}
+  x264    : {}
+  x265    : {}
+  vpxenc  : {}",
+      Encoder::aom
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::svt_av1
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::rav1e
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::x264
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::x265
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::vpx
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found")
+    )
+  }
+
   static INSTANCE: OnceCell<String> = OnceCell::new();
   INSTANCE.get_or_init(|| {
     match (
@@ -85,6 +122,8 @@ fn version() -> &'static str {
 * Date Info
   Commit Date:  {}
 
+{}
+
 {}",
           env!("CARGO_PKG_VERSION"),
           git_hash,
@@ -98,16 +137,20 @@ fn version() -> &'static str {
           target_triple,
           commit_date,
           get_vs_info(),
+          get_encoder_info()
         )
       }
       _ => format!(
         "\
 {}
 
+{}
+
 {}",
         // only include the semver on a release (when git information isn't available)
         env!("CARGO_PKG_VERSION"),
-        get_vs_info()
+        get_vs_info(),
+        get_encoder_info()
       ),
     }
   })

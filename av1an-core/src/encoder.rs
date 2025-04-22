@@ -471,6 +471,67 @@ impl Encoder {
     }
   }
 
+  /// Returns version text for encoder, or None if encoder is not available in PATH
+  pub fn version_text(self) -> Option<String> {
+    match self {
+      Self::aom => {
+        let result = Command::new("aomenc").arg("--help").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("    av1"))?;
+        Some(
+          version_line
+            .split_once('-')
+            .unwrap()
+            .1
+            .replace("(default)", "")
+            .trim()
+            .to_string(),
+        )
+      }
+      Self::rav1e => {
+        let result = Command::new("rav1e").arg("--version").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("rav1e"))?;
+        Some(version_line.to_string())
+      }
+      Self::vpx => {
+        let result = Command::new("vpxenc").arg("--help").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("    vp9"))?;
+        Some(
+          version_line
+            .split_once('-')
+            .unwrap()
+            .1
+            .replace("(default)", "")
+            .trim()
+            .to_string(),
+        )
+      }
+      Self::svt_av1 => {
+        let result = Command::new("SvtAv1EncApp")
+          .arg("--version")
+          .output()
+          .ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("SVT-AV1"))?;
+        Some(version_line.to_string())
+      }
+      Self::x264 => {
+        let result = Command::new("x264").arg("--version").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("x264"))?;
+        Some(version_line.to_string())
+      }
+      Self::x265 => {
+        let result = Command::new("x265").arg("--version").output().ok()?;
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        let version_line = stderr.lines().find(|line| line.starts_with("x265"))?;
+        Some(version_line.split_once(':').unwrap().1.trim().to_string())
+      }
+    }
+  }
+
   /// Get the name of the executable/binary for the encoder
   pub const fn bin(self) -> &'static str {
     match self {

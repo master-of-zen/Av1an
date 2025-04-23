@@ -263,13 +263,13 @@ jobs:
           tool: cargo-llvm-cov
 
       - name: Generate code coverage
-        run: cargo llvm-cov --profile ci --workspace --codecov --output-path codecov.json
+        run: cargo llvm-cov --profile ci --workspace --lcov --output-path lcov.log
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: codecov.json
+          files: lcov.log
           fail_ci_if_error: true
 
   docker:

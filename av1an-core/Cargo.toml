@@ -87,6 +87,9 @@ features = ["vsscript-functions", "vapoursynth-functions"]
 version = "6.0.0"
 features = ["serde"]
 
+[dev-dependencies]
+tempfile = "3.19.1"
+
 [features]
 default = ["vapoursynth_new_api"]
 ffmpeg_static = ["ffmpeg/static", "ffmpeg/build"]

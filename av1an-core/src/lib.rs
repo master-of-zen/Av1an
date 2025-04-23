@@ -140,7 +140,7 @@ impl Input {
   }
 
   pub fn pixel_format(&self) -> anyhow::Result<String> {
-    const FAIL_MSG: &str = "Failed to get resolution for input video";
+    const FAIL_MSG: &str = "Failed to get pixel format for input video";
     Ok(match self {
       Input::VapourSynth { path, .. } => {
         crate::vapoursynth::pixel_format(path, self.as_vspipe_args_map()?)

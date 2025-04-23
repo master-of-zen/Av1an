@@ -48,8 +48,13 @@ jobs:
 
       - name: Validate minimum Rust version
         run: |
-          cargo msrv verify --path av1an
           cargo msrv verify --path av1an-core
+          cargo msrv verify --path av1an
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
 
       # 352x240 112 frames test video
       - name: Download test video
@@ -57,9 +62,8 @@ jobs:
           curl -LO https://media.xiph.org/video/derf/y4m/tt_sif.y4m
 
       - name: Testing unit tests
-        working-directory: ./av1an-core
         run: |
-          cargo test --profile ci
+          cargo nextest run --profile ci
 
       # The baseline tests should not include the faster default params, because we want to also test that
       # it works without params passed
@@ -256,6 +260,13 @@ jobs:
           target/ci/av1an -i tt_sif.y4m --sc-only --sc-method fast -s "tt_sif_scenes.json"
           du -h tt_sif_scenes.json
         continue-on-error: true
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/nextest/ci/junit.xml
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

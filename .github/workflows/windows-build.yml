@@ -19,7 +19,7 @@ jobs:
       - name: NASM setup
         uses: ilammy/setup-nasm@v1
         with:
-          version: 2.16.03
+          # version: 2.16.03
           from-source: false
 
       - name: FFmpeg installation

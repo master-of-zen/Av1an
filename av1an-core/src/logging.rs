@@ -104,7 +104,9 @@ pub fn init_logging(log_path: Option<PathBuf>, console_log_level: LevelFilter) {
 
   // Set up file appender
   let file_appender = match log_path {
-    Some(path) if path.parent().is_none() && path.file_name().unwrap() == "av1an.log" => {
+    Some(path)
+      if path.parent().unwrap() == Path::new("") && path.file_name().unwrap() == "av1an.log" =>
+    {
       RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log")
     }
     Some(path) => RollingFileAppender::new(

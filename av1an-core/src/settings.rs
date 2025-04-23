@@ -375,7 +375,7 @@ pub(crate) fn insert_noise_table_params(
   encoder: Encoder,
   video_params: &mut Vec<String>,
   table: &Path,
-) {
+) -> anyhow::Result<()> {
   match encoder {
     Encoder::aom => {
       video_params.retain(|param| !param.starts_with("--denoise-noise-level="));
@@ -403,6 +403,8 @@ pub(crate) fn insert_noise_table_params(
       video_params.push("--photon-noise-table".to_string());
       video_params.push(table.to_str().unwrap().to_string());
     }
-    _ => unimplemented!("This encoder does not support grain synth through av1an"),
+    _ => bail!("This encoder does not support grain synth through av1an"),
   }
+
+  Ok(())
 }

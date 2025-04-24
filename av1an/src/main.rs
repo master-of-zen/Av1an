@@ -9,7 +9,7 @@ use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
-use av1an_core::logging::{init_logging, DEFAULT_CONSOLE_LEVEL};
+use av1an_core::logging::{init_logging, DEFAULT_CONSOLE_LEVEL, DEFAULT_LOG_LEVEL};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
@@ -152,7 +152,7 @@ pub struct CliOpts {
   /// debug: Designates lower priority information.
   ///
   /// trace: Designates very low priority, often extremely verbose, information. Includes rav1e scenechange decision info.
-  #[clap(long, default_value_t = DEFAULT_CONSOLE_LEVEL, ignore_case = true)]
+  #[clap(long, default_value_t = DEFAULT_LOG_LEVEL, ignore_case = true)]
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
@@ -691,11 +691,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       } else {
         Path::new("av1an.log").to_owned()
       },
-      log_level: match verbosity {
-        Verbosity::Quiet => LevelFilter::OFF,
-        Verbosity::Normal => args.log_level,
-        Verbosity::Verbose => LevelFilter::TRACE,
-      },
+      log_level: args.log_level,
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
         shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
@@ -855,7 +851,15 @@ pub fn run() -> anyhow::Result<()> {
   let args = parse_cli(cli_options)?;
   let first_arg = args.first().unwrap();
 
-  init_logging(first_arg.log_file.clone(), first_arg.log_level);
+  init_logging(
+    match first_arg.verbosity {
+      Verbosity::Quiet => LevelFilter::OFF,
+      Verbosity::Normal => DEFAULT_CONSOLE_LEVEL,
+      Verbosity::Verbose => LevelFilter::INFO,
+    },
+    first_arg.log_file.clone(),
+    first_arg.log_level,
+  );
 
   for arg in args {
     Av1anContext::new(arg)?.encode_file()?;

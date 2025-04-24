@@ -249,7 +249,7 @@ fn get_test_args() -> Av1anContext {
   use ffmpeg::format::Pixel;
 
   use crate::concat::ConcatMethod;
-  use crate::logging::DEFAULT_CONSOLE_LEVEL;
+  use crate::logging::DEFAULT_LOG_LEVEL;
   use crate::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
   use crate::{
     into_vec, ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity,
@@ -257,7 +257,7 @@ fn get_test_args() -> Av1anContext {
 
   let args = EncodeArgs {
     log_file: PathBuf::new(),
-    log_level: DEFAULT_CONSOLE_LEVEL,
+    log_level: DEFAULT_LOG_LEVEL,
     ffmpeg_filter_args: Vec::new(),
     temp: String::new(),
     force: false,

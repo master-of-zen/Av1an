@@ -13,6 +13,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 // Store the worker guard globally
 static WORKER_GUARD: OnceCell<WorkerGuard> = OnceCell::new();
 pub const DEFAULT_CONSOLE_LEVEL: LevelFilter = LevelFilter::ERROR;
+pub const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::DEBUG;
 
 // Define our module configuration structure
 #[derive(Debug, Clone)]
@@ -35,7 +36,7 @@ impl Default for ModuleConfig {
 }
 
 /// Initialize logging with per-module configuration
-pub fn init_logging(log_path: PathBuf, console_log_level: LevelFilter) {
+pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: LevelFilter) {
   // Set up our module configurations
   let mut module_configs = HashMap::new();
 
@@ -43,8 +44,8 @@ pub fn init_logging(log_path: PathBuf, console_log_level: LevelFilter) {
   module_configs.insert(
     "av1an_core",
     ModuleConfig {
-      console_level: console_log_level, // Less verbose for console
-      file_level: LevelFilter::DEBUG,   // Full debug info in files
+      console_level,
+      file_level,
       console_enabled: true,
       file_enabled: true,
     },
@@ -54,8 +55,8 @@ pub fn init_logging(log_path: PathBuf, console_log_level: LevelFilter) {
   module_configs.insert(
     "av1an_core::scene_detect",
     ModuleConfig {
-      console_level: console_log_level, // Show progress in console
-      file_level: LevelFilter::TRACE,   // Detailed analysis in files
+      console_level,
+      file_level,
       console_enabled: true,
       file_enabled: true,
     },

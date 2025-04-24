@@ -1,17 +1,15 @@
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::thread::available_parallelism;
 use std::{panic, process};
 
 use ::ffmpeg::format::Pixel;
-use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
-use av1an_core::logging::init_logging;
-use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
+use av1an_core::logging::{init_logging, DEFAULT_CONSOLE_LEVEL, DEFAULT_LOG_LEVEL};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
@@ -20,11 +18,9 @@ use av1an_core::{
   SplitMethod, Verbosity,
 };
 use clap::{value_parser, Parser};
-use flexi_logger::writers::LogWriter;
-use flexi_logger::{Level, LevelFilter};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
-use tracing::{instrument, warn};
+use tracing::{instrument, level_filters::LevelFilter, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();
@@ -184,7 +180,7 @@ pub struct CliOpts {
   #[clap(long)]
   pub verbose: bool,
 
-  /// Log file location [default: <temp dir>/log.log]
+  /// Log file location [default: ./logs/av1an.log]
   #[clap(short, long)]
   pub log_file: Option<String>,
 
@@ -199,7 +195,7 @@ pub struct CliOpts {
   /// debug: Designates lower priority information.
   ///
   /// trace: Designates very low priority, often extremely verbose, information. Includes rav1e scenechange decision info.
-  #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true)]
+  #[clap(long, default_value_t = DEFAULT_LOG_LEVEL, ignore_case = true)]
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
@@ -699,6 +695,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
 
     let input = Input::from((input, args.vspipe_args.clone()));
 
+    let verbosity = if args.quiet {
+      Verbosity::Quiet
+    } else if args.verbose {
+      Verbosity::Verbose
+    } else {
+      Verbosity::Normal
+    };
+
     let video_params = if let Some(args) = args.video_params.as_ref() {
       shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
     } else {
@@ -712,10 +716,25 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     // TODO make an actual constructor for this
     let arg = EncodeArgs {
       log_file: if let Some(log_file) = args.log_file.as_ref() {
-        Path::new(&format!("{log_file}.log")).to_owned()
+        let log_path = Path::new(log_file);
+        if log_path.starts_with("/") || log_path.is_absolute() {
+          Err(anyhow!("Log file path must be relative"))?
+        }
+        let absolute_path = std::path::absolute(log_path).unwrap();
+        let log_path = absolute_path
+          .strip_prefix(std::env::current_dir().unwrap())
+          .unwrap()
+          .strip_prefix("logs")
+          .unwrap_or(
+            absolute_path
+              .strip_prefix(std::env::current_dir().unwrap())
+              .unwrap(),
+          );
+        log_path.to_path_buf()
       } else {
-        Path::new(&temp).join("log.log")
+        Path::new("av1an.log").to_owned()
       },
+      log_level: args.log_level,
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
         shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
@@ -813,13 +832,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       vmaf_res: args.vmaf_res.clone(),
       vmaf_threads: args.vmaf_threads,
       vmaf_filter: args.vmaf_filter.clone(),
-      verbosity: if args.quiet {
-        Verbosity::Quiet
-      } else if args.verbose {
-        Verbosity::Verbose
-      } else {
-        Verbosity::Normal
-      },
+      verbosity,
       workers: args.workers,
       tiles: (1, 1), // default value; will be adjusted if tile_auto set
       tile_auto: args.tile_auto,
@@ -875,70 +888,21 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   Ok(valid_args)
 }
 
-#[derive(Debug)]
-pub struct StderrLogger {
-  level: Level,
-}
-
-impl LogWriter for StderrLogger {
-  fn write(
-    &self,
-    _now: &mut flexi_logger::DeferredNow,
-    record: &flexi_logger::Record,
-  ) -> std::io::Result<()> {
-    if record.level() > self.level {
-      return Ok(());
-    }
-
-    let style = if io::stderr().is_terminal() {
-      match record.level() {
-        Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
-        Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
-        Level::Info => Style::default().bold(),
-        Level::Debug => Style::default().dimmed(),
-        _ => Style::default(),
-      }
-    } else {
-      Style::default()
-    };
-
-    let msg = style.paint(format!("{}", record.args()));
-
-    macro_rules! create_format_args {
-      () => {
-        format_args!(
-          "{} [{}] {}",
-          style.paint(format!("{}", record.level())),
-          record.module_path().unwrap_or("<unnamed>"),
-          msg
-        )
-      };
-    }
-
-    if let Some(pbar) = get_first_multi_progress_bar() {
-      pbar.println(std::fmt::format(create_format_args!()));
-    } else if let Some(pbar) = get_progress_bar() {
-      pbar.println(std::fmt::format(create_format_args!()));
-    } else {
-      eprintln!("{}", create_format_args!());
-    }
-
-    Ok(())
-  }
-
-  fn flush(&self) -> std::io::Result<()> {
-    Ok(())
-  }
-}
-
 #[instrument]
 pub fn run() -> anyhow::Result<()> {
-  init_logging();
+  let cli_options = CliOpts::parse();
+  let args = parse_cli(cli_options)?;
+  let first_arg = args.first().unwrap();
 
-  let cli_args = CliOpts::parse();
-
-  //let log_level = cli_args.log_level;
-  let args = parse_cli(cli_args)?;
+  init_logging(
+    match first_arg.verbosity {
+      Verbosity::Quiet => LevelFilter::OFF,
+      Verbosity::Normal => DEFAULT_CONSOLE_LEVEL,
+      Verbosity::Verbose => LevelFilter::INFO,
+    },
+    first_arg.log_file.clone(),
+    first_arg.log_level,
+  );
 
   for arg in args {
     Av1anContext::new(arg)?.encode_file()?;

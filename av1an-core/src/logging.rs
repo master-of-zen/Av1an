@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::io::IsTerminal;
+use std::path::{Path, PathBuf};
 
 use once_cell::sync::OnceCell;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -11,6 +12,8 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 // Store the worker guard globally
 static WORKER_GUARD: OnceCell<WorkerGuard> = OnceCell::new();
+pub const DEFAULT_CONSOLE_LEVEL: LevelFilter = LevelFilter::ERROR;
+pub const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::DEBUG;
 
 // Define our module configuration structure
 #[derive(Debug, Clone)]
@@ -33,7 +36,7 @@ impl Default for ModuleConfig {
 }
 
 /// Initialize logging with per-module configuration
-pub fn init_logging() {
+pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: LevelFilter) {
   // Set up our module configurations
   let mut module_configs = HashMap::new();
 
@@ -41,8 +44,8 @@ pub fn init_logging() {
   module_configs.insert(
     "av1an_core",
     ModuleConfig {
-      console_level: LevelFilter::ERROR, // Less verbose for console
-      file_level: LevelFilter::DEBUG,    // Full debug info in files
+      console_level,
+      file_level,
       console_enabled: true,
       file_enabled: true,
     },
@@ -52,8 +55,8 @@ pub fn init_logging() {
   module_configs.insert(
     "av1an_core::scene_detect",
     ModuleConfig {
-      console_level: LevelFilter::ERROR, // Show progress in console
-      file_level: LevelFilter::TRACE,    // Detailed analysis in files
+      console_level,
+      file_level,
       console_enabled: true,
       file_enabled: true,
     },
@@ -101,7 +104,17 @@ pub fn init_logging() {
   };
 
   // Set up file appender
-  let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log");
+  let file_appender = if log_path.parent().unwrap_or_else(|| Path::new("")) == Path::new("")
+    && log_path.file_name().unwrap() == "av1an.log"
+  {
+    RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log")
+  } else {
+    RollingFileAppender::new(
+      Rotation::NEVER,
+      Path::new("logs").join(log_path.parent().unwrap_or_else(|| Path::new(""))),
+      log_path.file_name().unwrap(),
+    )
+  };
 
   let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
   WORKER_GUARD

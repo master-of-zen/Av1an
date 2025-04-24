@@ -8,6 +8,7 @@ use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
 use itertools::{chain, Itertools};
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::filter::LevelFilter;
 
 use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
@@ -73,6 +74,7 @@ pub struct EncodeArgs {
 
   pub verbosity: Verbosity,
   pub log_file: PathBuf,
+  pub log_level: LevelFilter,
   pub resume: bool,
   pub keep: bool,
   pub force: bool,

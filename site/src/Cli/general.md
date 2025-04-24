@@ -22,7 +22,7 @@
 		Print extra progress info and stats to terminal
 
 -l, --log-file <LOG_FILE>
-		Log file location [default: <temp dir>/log.log]
+		Log file location [default: ./logs/av1an.log]
 
 	--log-level <LOG_LEVEL>
 		Set log level for log file (does not affect command-line log level)

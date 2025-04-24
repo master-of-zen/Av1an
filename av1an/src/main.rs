@@ -5,12 +5,11 @@ use std::thread::available_parallelism;
 use std::{panic, process};
 
 use ::ffmpeg::format::Pixel;
-use ansi_term::{Color, Style};
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
-use av1an_core::progress_bar::{get_first_multi_progress_bar, get_progress_bar};
+use av1an_core::logging::{init_logging, DEFAULT_CONSOLE_LEVEL, DEFAULT_LOG_LEVEL};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
@@ -19,10 +18,9 @@ use av1an_core::{
   SplitMethod, Verbosity,
 };
 use clap::{value_parser, Parser};
-use flexi_logger::writers::LogWriter;
-use flexi_logger::{FileSpec, Level, LevelFilter, LogSpecBuilder, Logger};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
+use tracing::{instrument, level_filters::LevelFilter, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();
@@ -50,6 +48,43 @@ fn version() -> &'static str {
       isfound(vapoursynth::is_ffms2_installed()),
       isfound(vapoursynth::is_dgdecnv_installed()),
       isfound(vapoursynth::is_bestsource_installed())
+    )
+  }
+
+  fn get_encoder_info() -> String {
+    format!(
+      "\
+* Available Encoders
+  aomenc  : {}
+  SVT-AV1 : {}
+  rav1e   : {}
+  x264    : {}
+  x265    : {}
+  vpxenc  : {}",
+      Encoder::aom
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::svt_av1
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::rav1e
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::x264
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::x265
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found"),
+      Encoder::vpx
+        .version_text()
+        .as_deref()
+        .unwrap_or("Not found")
     )
   }
 
@@ -83,6 +118,8 @@ fn version() -> &'static str {
 * Date Info
   Commit Date:  {}
 
+{}
+
 {}",
           env!("CARGO_PKG_VERSION"),
           git_hash,
@@ -96,16 +133,20 @@ fn version() -> &'static str {
           target_triple,
           commit_date,
           get_vs_info(),
+          get_encoder_info()
         )
       }
       _ => format!(
         "\
 {}
 
+{}
+
 {}",
         // only include the semver on a release (when git information isn't available)
         env!("CARGO_PKG_VERSION"),
-        get_vs_info()
+        get_vs_info(),
+        get_encoder_info()
       ),
     }
   })
@@ -139,7 +180,7 @@ pub struct CliOpts {
   #[clap(long)]
   pub verbose: bool,
 
-  /// Log file location [default: <temp dir>/log.log]
+  /// Log file location [default: ./logs/av1an.log]
   #[clap(short, long)]
   pub log_file: Option<String>,
 
@@ -154,7 +195,7 @@ pub struct CliOpts {
   /// debug: Designates lower priority information.
   ///
   /// trace: Designates very low priority, often extremely verbose, information. Includes rav1e scenechange decision info.
-  #[clap(long, default_value_t = LevelFilter::Debug, ignore_case = true)]
+  #[clap(long, default_value_t = DEFAULT_LOG_LEVEL, ignore_case = true)]
   // "off" is also an allowed value for LevelFilter but we just disable the user from setting it
   pub log_level: LevelFilter,
 
@@ -166,9 +207,13 @@ pub struct CliOpts {
   #[clap(short, long)]
   pub keep: bool,
 
-  /// Do not check if the encoder arguments specified by -v/--video-params are valid
+  /// Do not check if the encoder arguments specified by -v/--video-params are valid.
   #[clap(long)]
   pub force: bool,
+
+  /// Do not include Av1an's default set of encoder parameters.
+  #[clap(long)]
+  pub no_defaults: bool,
 
   /// Overwrite output file, without confirmation
   #[clap(short = 'y')]
@@ -283,7 +328,8 @@ pub struct CliOpts {
   /// These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be used.
   /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
   /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
-  /// a list of valid options.
+  /// a list of valid options. This list of parameters will be merged into Av1an's default set
+  /// of encoder parameters.
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub video_params: Option<String>,
 
@@ -297,6 +343,12 @@ pub struct CliOpts {
   /// value specified by this flag (as RT mode in aom and vpx only supports one-pass encoding).
   #[clap(short, long, value_parser = value_parser!(u8).range(1..=2), help_heading = "Encoding")]
   pub passes: Option<u8>,
+
+  /// Estimate tile count from source
+  ///
+  /// Worker estimation will consider tile count accordingly.
+  #[clap(long, help_heading = "Encoding")]
+  pub tile_auto: bool,
 
   /// Audio encoding parameters (ffmpeg syntax)
   ///
@@ -492,7 +544,7 @@ pub struct CliOpts {
   #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
   pub vmaf_res: String,
 
-  /// Number of threads to use for VMAF calculation
+  /// Number of threads to use for target quality VMAF calculation
   #[clap(long, help_heading = "VMAF")]
   pub vmaf_threads: Option<usize>,
 
@@ -545,6 +597,7 @@ pub struct CliOpts {
 }
 
 impl CliOpts {
+  #[tracing::instrument]
   pub fn target_quality_params(
     &self,
     temp_dir: String,
@@ -594,8 +647,8 @@ fn confirm(prompt: &str) -> io::Result<bool> {
 
     match buf.as_str().trim() {
       // allows enter to continue
-      "y" | "Y" | "" => break Ok(true),
-      "n" | "N" => break Ok(false),
+      "y" | "Y" => break Ok(true),
+      "n" | "N" | "" => break Ok(false),
       other => {
         println!("Sorry, response {other:?} is not understood.");
         buf.clear();
@@ -622,6 +675,7 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
+#[tracing::instrument]
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 
@@ -641,6 +695,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
 
     let input = Input::from((input, args.vspipe_args.clone()));
 
+    let verbosity = if args.quiet {
+      Verbosity::Quiet
+    } else if args.verbose {
+      Verbosity::Verbose
+    } else {
+      Verbosity::Normal
+    };
+
     let video_params = if let Some(args) = args.video_params.as_ref() {
       shlex::split(args).ok_or_else(|| anyhow!("Failed to split video encoder arguments"))?
     } else {
@@ -654,10 +716,25 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     // TODO make an actual constructor for this
     let arg = EncodeArgs {
       log_file: if let Some(log_file) = args.log_file.as_ref() {
-        Path::new(&format!("{log_file}.log")).to_owned()
+        let log_path = Path::new(log_file);
+        if log_path.starts_with("/") || log_path.is_absolute() {
+          Err(anyhow!("Log file path must be relative"))?
+        }
+        let absolute_path = std::path::absolute(log_path).unwrap();
+        let log_path = absolute_path
+          .strip_prefix(std::env::current_dir().unwrap())
+          .unwrap()
+          .strip_prefix("logs")
+          .unwrap_or(
+            absolute_path
+              .strip_prefix(std::env::current_dir().unwrap())
+              .unwrap(),
+          );
+        log_path.to_path_buf()
       } else {
-        Path::new(&temp).join("log.log")
+        Path::new("av1an.log").to_owned()
       },
+      log_level: args.log_level,
       ffmpeg_filter_args: if let Some(args) = args.ffmpeg_filter_args.as_ref() {
         shlex::split(args).ok_or_else(|| anyhow!("Failed to split ffmpeg filter arguments"))?
       } else {
@@ -665,6 +742,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       },
       temp: temp.clone(),
       force: args.force,
+      no_defaults: args.no_defaults,
       passes: if let Some(passes) = args.passes {
         passes
       } else {
@@ -750,14 +828,14 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       )?,
       target_quality: args.target_quality_params(temp, video_params, output_pix_format.format),
       vmaf: args.vmaf,
-      verbosity: if args.quiet {
-        Verbosity::Quiet
-      } else if args.verbose {
-        Verbosity::Verbose
-      } else {
-        Verbosity::Normal
-      },
+      vmaf_path: args.vmaf_path.clone(),
+      vmaf_res: args.vmaf_res.clone(),
+      vmaf_threads: args.vmaf_threads,
+      vmaf_filter: args.vmaf_filter.clone(),
+      verbosity,
       workers: args.workers,
+      tiles: (1, 1), // default value; will be adjusted if tile_auto set
+      tile_auto: args.tile_auto,
       set_thread_affinity: args.set_thread_affinity,
       zones: args.zones.clone(),
       scaler: {
@@ -783,7 +861,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");
@@ -795,7 +873,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         if path.exists()
           && (args.never_overwrite
             || !confirm(&format!(
-              "Default output file {path:?} exists. Do you want to overwrite it? [Y/n]: "
+              "Default output file {path:?} exists. Do you want to overwrite it? [y/N]: "
             ))?)
         {
           println!("Not overwriting, aborting.");
@@ -810,106 +888,23 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   Ok(valid_args)
 }
 
-pub struct StderrLogger {
-  level: Level,
-}
-
-impl LogWriter for StderrLogger {
-  fn write(
-    &self,
-    _now: &mut flexi_logger::DeferredNow,
-    record: &flexi_logger::Record,
-  ) -> std::io::Result<()> {
-    if record.level() > self.level {
-      return Ok(());
-    }
-
-    let style = if atty::is(atty::Stream::Stderr) {
-      match record.level() {
-        Level::Error => Style::default().fg(Color::Fixed(196)).bold(),
-        Level::Warn => Style::default().fg(Color::Fixed(208)).bold(),
-        Level::Info => Style::default().bold(),
-        Level::Debug => Style::default().dimmed(),
-        _ => Style::default(),
-      }
-    } else {
-      Style::default()
-    };
-
-    let msg = style.paint(format!("{}", record.args()));
-
-    macro_rules! create_format_args {
-      () => {
-        format_args!(
-          "{} [{}] {}",
-          style.paint(format!("{}", record.level())),
-          record.module_path().unwrap_or("<unnamed>"),
-          msg
-        )
-      };
-    }
-
-    if let Some(pbar) = get_first_multi_progress_bar() {
-      pbar.println(std::fmt::format(create_format_args!()));
-    } else if let Some(pbar) = get_progress_bar() {
-      pbar.println(std::fmt::format(create_format_args!()));
-    } else {
-      eprintln!("{}", create_format_args!());
-    }
-
-    Ok(())
-  }
-
-  fn flush(&self) -> std::io::Result<()> {
-    Ok(())
-  }
-}
-
+#[instrument]
 pub fn run() -> anyhow::Result<()> {
-  let cli_args = CliOpts::parse();
-  let log_level = cli_args.log_level;
-  let args = parse_cli(cli_args)?;
+  let cli_options = CliOpts::parse();
+  let args = parse_cli(cli_options)?;
+  let first_arg = args.first().unwrap();
 
-  let log = LogSpecBuilder::new()
-    .default(LevelFilter::Error)
-    .module("av1an", log_level)
-    .module("av1an_cli", log_level)
-    .module("av1an_core", log_level)
-    .module(
-      "rav1e::scenechange",
-      match log_level {
-        LevelFilter::Trace => LevelFilter::Debug,
-        LevelFilter::Debug => LevelFilter::Info,
-        other => other,
-      },
-    )
-    .build();
-
-  // Note that with all write modes except WriteMode::Direct (which is the default)
-  // you should keep the LoggerHandle alive up to the very end of your program,
-  // because it will, in its Drop implementation, flush all writers to ensure that
-  // all buffered log lines are flushed before the program terminates,
-  // and then it calls their shutdown method.
-  let logger = Logger::with(log)
-    .log_to_file_and_writer(
-      // UGLY: take first or the files for log path
-      FileSpec::try_from(PathAbs::new(&args[0].log_file)?)?,
-      Box::new(StderrLogger {
-        // UGLY: take first or the files for verbosity
-        level: match args[0].verbosity {
-          Verbosity::Quiet => Level::Warn,
-          Verbosity::Normal | Verbosity::Verbose => Level::Info,
-        },
-      }),
-    )
-    .start()?;
+  init_logging(
+    match first_arg.verbosity {
+      Verbosity::Quiet => LevelFilter::OFF,
+      Verbosity::Normal => DEFAULT_CONSOLE_LEVEL,
+      Verbosity::Verbose => LevelFilter::INFO,
+    },
+    first_arg.log_file.clone(),
+    first_arg.log_level,
+  );
 
   for arg in args {
-    // Change log file
-    let new_log_file = FileSpec::try_from(PathAbs::new(&arg.log_file)?)?;
-    let _ =
-      &logger.reset_flw(&flexi_logger::writers::FileLogWriter::builder(new_log_file).append())?;
-
     Av1anContext::new(arg)?.encode_file()?;
   }
 

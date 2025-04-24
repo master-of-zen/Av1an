@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::process::{exit, Command};
 use std::str::FromStr;
 
-use crate::context::Av1anContext;
 use anyhow::{anyhow, bail, Result};
 use itertools::Itertools;
 use nom::branch::alt;
@@ -13,6 +12,7 @@ use nom::multi::{many1, separated_list0};
 use nom::sequence::{preceded, tuple};
 use serde::{Deserialize, Serialize};
 
+use crate::context::Av1anContext;
 use crate::parse::valid_params;
 use crate::settings::{invalid_params, suggest_fix};
 use crate::Encoder;
@@ -206,7 +206,7 @@ impl Scene {
 
     for arg in raw_zone_args {
       if arg.starts_with("--")
-        || (arg.starts_with('-') && arg.chars().nth(1).map_or(false, char::is_alphabetic))
+        || (arg.starts_with('-') && arg.chars().nth(1).is_some_and(char::is_alphabetic))
       {
         let key = arg.split_once('=').map_or(arg.as_str(), |split| split.0);
         if let Some(pos) = video_params
@@ -217,7 +217,7 @@ impl Scene {
           if let Some(next) = video_params.get(pos) {
             if !([Encoder::aom, Encoder::vpx].contains(&encoder)
               || next.starts_with("--")
-              || (next.starts_with('-') && next.chars().nth(1).map_or(false, char::is_alphabetic)))
+              || (next.starts_with('-') && next.chars().nth(1).is_some_and(char::is_alphabetic)))
             {
               video_params.remove(pos);
             }
@@ -249,6 +249,7 @@ fn get_test_args() -> Av1anContext {
   use ffmpeg::format::Pixel;
 
   use crate::concat::ConcatMethod;
+  use crate::logging::DEFAULT_LOG_LEVEL;
   use crate::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
   use crate::{
     into_vec, ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity,
@@ -256,9 +257,11 @@ fn get_test_args() -> Av1anContext {
 
   let args = EncodeArgs {
     log_file: PathBuf::new(),
+    log_level: DEFAULT_LOG_LEVEL,
     ffmpeg_filter_args: Vec::new(),
     temp: String::new(),
     force: false,
+    no_defaults: false,
     passes: 2,
     video_params: into_vec!["--cq-level=40", "--cpu-used=0", "--aq-mode=1"],
     output_file: String::new(),
@@ -296,13 +299,20 @@ fn get_test_args() -> Av1anContext {
     vmaf: false,
     verbosity: Verbosity::Normal,
     workers: 1,
+    tiles: (1, 1),
+    tile_auto: false,
     set_thread_affinity: None,
     zones: None,
     scaler: String::new(),
     ignore_frame_mismatch: false,
+    vmaf_path: None,
+    vmaf_res: "1920x1080".to_string(),
+    vmaf_threads: None,
+    vmaf_filter: None,
   };
   Av1anContext {
     vs_script: None,
+    vs_scd_script: None,
     frames: 6900,
     args,
   }

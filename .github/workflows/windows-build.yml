@@ -10,17 +10,16 @@ jobs:
 
     env:
       CARGO_INCREMENTAL: 0
-
-      ffmpeg_ver: "7.0"
+      ffmpeg_ver: "7.1"
       ffmpeg_path: "C:/ffmpeg"
-      vsynth_ver: "R69"
+      vsynth_ver: "R70"
       vsynth_path: "C:/Program Files/Vapoursynth"
 
     steps:
       - name: NASM setup
         uses: ilammy/setup-nasm@v1
         with:
-          version: 2.16.03
+          # version: 2.16.03
           from-source: false
 
       - name: FFmpeg installation
@@ -42,16 +41,35 @@ jobs:
           Expand-Archive "$tempFile" "$env:vsynth_path"
 
       - uses: actions/checkout@v4
+
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v${{ env.ffmpeg_ver }}-rust"
+
+      - name: Get latest commit
+        id: get_commit
+        shell: pwsh
+        run: |
+          $commit = git log -1 --pretty=format:"%h: %s (%an)"
+          echo "message=$commit" >> $env:GITHUB_OUTPUT
 
       - name: Av1an build
         run: cargo build --release
+
+      - name: Delete existing release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag
 
       - name: Create prerelease
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: latest
+          body: |
+            Commit:
+            ${{ steps.get_commit.outputs.message }}
           files: target/release/av1an.exe
           fail_on_unmatched_files: true
-

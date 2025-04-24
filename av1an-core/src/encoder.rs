@@ -32,6 +32,7 @@ pub enum Encoder {
   x265,
 }
 
+#[tracing::instrument]
 pub(crate) fn parse_svt_av1_version(version: &[u8]) -> Option<(u32, u32, u32)> {
   let v_idx = memchr::memchr(b'v', version)?;
   let s = version.get(v_idx + 1..)?;
@@ -100,12 +101,7 @@ impl Display for Encoder {
 
 impl Encoder {
   /// Composes 1st pass command for 1 pass encoding
-  pub fn compose_1_1_pass(
-    self,
-    params: Vec<String>,
-    output: String,
-    frame_count: usize,
-  ) -> Vec<String> {
+  pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=1"],
@@ -114,7 +110,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array!["rav1e", "-", "-y", "--limit", frame_count.to_string()],
+        into_array!["rav1e", "-", "-y"],
         params,
         into_array!["--output", output]
       )
@@ -139,24 +135,22 @@ impl Encoder {
           "error",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["-", "-o", output]
       )
       .collect(),
       Self::x265 => chain!(
-        into_array!["x265", "--y4m", "--frames", frame_count.to_string()],
+        into_array!["x265", "--y4m"],
         params,
-        into_array!["-", "-o", output]
+        into_array!["--input", "-", "-o", output]
       )
       .collect(),
     }
   }
 
   /// Composes 1st pass command for 2 pass encoding
-  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str, frame_count: usize) -> Vec<String> {
+  pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=1"],
@@ -165,14 +159,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-          "--limit",
-          frame_count.to_string()
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--first-pass", format!("{fpf}.stat"), "--output", NULL]
       )
@@ -207,8 +194,6 @@ impl Encoder {
           "1",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{fpf}.log"), "-", "-o", NULL]
@@ -223,8 +208,6 @@ impl Encoder {
           "--pass",
           "1",
           "--y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array![
@@ -232,6 +215,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           NULL
@@ -242,13 +226,7 @@ impl Encoder {
   }
 
   /// Composes 2st pass command for 2 pass encoding
-  pub fn compose_2_2_pass(
-    self,
-    params: Vec<String>,
-    fpf: &str,
-    output: String,
-    frame_count: usize,
-  ) -> Vec<String> {
+  pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
     match self {
       Self::aom => chain!(
         into_array!["aomenc", "--passes=2", "--pass=2"],
@@ -257,14 +235,7 @@ impl Encoder {
       )
       .collect(),
       Self::rav1e => chain!(
-        into_array![
-          "rav1e",
-          "-",
-          "-y",
-          "--quiet",
-          "--limit",
-          frame_count.to_string()
-        ],
+        into_array!["rav1e", "-", "-y", "--quiet",],
         params,
         into_array!["--second-pass", format!("{fpf}.stat"), "--output", output]
       )
@@ -306,8 +277,6 @@ impl Encoder {
           "2",
           "--demuxer",
           "y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array!["--stats", format!("{fpf}.log"), "-", "-o", output]
@@ -322,8 +291,6 @@ impl Encoder {
           "--pass",
           "2",
           "--y4m",
-          "--frames",
-          frame_count.to_string()
         ],
         params,
         into_array![
@@ -331,6 +298,7 @@ impl Encoder {
           format!("{fpf}.log"),
           "--analysis-reuse-file",
           format!("{fpf}_analysis.dat"),
+          "--input",
           "-",
           "-o",
           output
@@ -364,6 +332,7 @@ impl Encoder {
           "--cpu-used=6",
           "--end-usage=q",
           "--cq-level=30",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -380,8 +349,15 @@ impl Encoder {
         }
       }
       Encoder::rav1e => {
-        let defaults: Vec<String> =
-          into_vec!["--speed", "6", "--quantizer", "100", "--no-scene-detection"];
+        let defaults: Vec<String> = into_vec![
+          "--speed",
+          "6",
+          "--quantizer",
+          "100",
+          "--keyint",
+          "0",
+          "--no-scene-detection",
+        ];
 
         if cols > 1 || rows > 1 {
           let tiles: Vec<String> = into_vec!["--tiles", format!("{}", cols * rows)];
@@ -404,6 +380,7 @@ impl Encoder {
           "--cq-level=30",
           "--row-mt=1",
           "--auto-alt-ref=6",
+          "--disable-kf",
         ];
 
         if cols > 1 || rows > 1 {
@@ -420,7 +397,8 @@ impl Encoder {
         }
       }
       Encoder::svt_av1 => {
-        let defaults = into_vec!["--preset", "4", "--keyint", "240", "--rc", "0", "--crf", "25"];
+        let defaults =
+          into_vec!["--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25"];
         if cols > 1 || rows > 1 {
           let columns = ilog2(cols);
           let rows = ilog2(rows);
@@ -436,16 +414,29 @@ impl Encoder {
           defaults
         }
       }
-      Encoder::x264 => into_vec!["--preset", "slow", "--crf", "25"],
+      Encoder::x264 => into_vec![
+        "--preset",
+        "slow",
+        "--crf",
+        "25",
+        "--keyint",
+        "infinite",
+        "--scenecut",
+        "0",
+      ],
       Encoder::x265 => into_vec![
-        "-p",
+        "--preset",
         "slow",
         "--crf",
         "25",
         "-D",
         "10",
         "--level-idc",
-        "5.0"
+        "5.0",
+        "--keyint",
+        "-1",
+        "--scenecut",
+        "0",
       ],
     }
   }
@@ -472,11 +463,72 @@ impl Encoder {
   pub const fn help_command(self) -> [&'static str; 2] {
     match self {
       Self::aom => ["aomenc", "--help"],
-      Self::rav1e => ["rav1e", "--fullhelp"],
+      Self::rav1e => ["rav1e", "--help"],
       Self::vpx => ["vpxenc", "--help"],
       Self::svt_av1 => ["SvtAv1EncApp", "--help"],
       Self::x264 => ["x264", "--fullhelp"],
       Self::x265 => ["x265", "--fullhelp"],
+    }
+  }
+
+  /// Returns version text for encoder, or None if encoder is not available in PATH
+  pub fn version_text(self) -> Option<String> {
+    match self {
+      Self::aom => {
+        let result = Command::new("aomenc").arg("--help").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("    av1"))?;
+        Some(
+          version_line
+            .split_once('-')
+            .unwrap()
+            .1
+            .replace("(default)", "")
+            .trim()
+            .to_string(),
+        )
+      }
+      Self::rav1e => {
+        let result = Command::new("rav1e").arg("--version").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("rav1e"))?;
+        Some(version_line.to_string())
+      }
+      Self::vpx => {
+        let result = Command::new("vpxenc").arg("--help").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("    vp9"))?;
+        Some(
+          version_line
+            .split_once('-')
+            .unwrap()
+            .1
+            .replace("(default)", "")
+            .trim()
+            .to_string(),
+        )
+      }
+      Self::svt_av1 => {
+        let result = Command::new("SvtAv1EncApp")
+          .arg("--version")
+          .output()
+          .ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("SVT-AV1"))?;
+        Some(version_line.to_string())
+      }
+      Self::x264 => {
+        let result = Command::new("x264").arg("--version").output().ok()?;
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let version_line = stdout.lines().find(|line| line.starts_with("x264"))?;
+        Some(version_line.to_string())
+      }
+      Self::x265 => {
+        let result = Command::new("x265").arg("--version").output().ok()?;
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        let version_line = stderr.lines().find(|line| line.starts_with("x265"))?;
+        Some(version_line.split_once(':').unwrap().1.trim().to_string())
+      }
     }
   }
 
@@ -759,6 +811,8 @@ impl Encoder {
         "fast",
         "--crf",
         q.to_string(),
+        "--input",
+        "-",
       ],
     }
   }
@@ -796,6 +850,8 @@ impl Encoder {
         "--y4m",
         "--crf",
         q.to_string(),
+        "--input",
+        "-",
       ],
     }
   }
@@ -813,6 +869,7 @@ impl Encoder {
     }
   }
 
+  #[allow(clippy::too_many_arguments)]
   /// Constructs tuple of commands for target quality probing
   pub fn probe_cmd(
     self,
@@ -864,9 +921,10 @@ impl Encoder {
 
     let output: Vec<Cow<str>> = match self {
       Self::svt_av1 => chain!(params, into_array!["-b", probe_path]).collect(),
-      Self::aom | Self::rav1e | Self::vpx | Self::x264 | Self::x265 => {
+      Self::aom | Self::rav1e | Self::vpx | Self::x264 => {
         chain!(params, into_array!["-o", probe_path, "-"]).collect()
       }
+      Self::x265 => chain!(params, into_array!["-o", probe_path]).collect(),
     };
 
     (pipe, output)

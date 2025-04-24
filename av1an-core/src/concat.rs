@@ -13,6 +13,7 @@ use av_ivf::demuxer::IvfDemuxer;
 use av_ivf::muxer::IvfMuxer;
 use path_abs::{PathAbs, PathInfo};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, warn};
 
 use crate::encoder::Encoder;
 use crate::util::read_in_dir;
@@ -35,6 +36,7 @@ impl Display for ConcatMethod {
   }
 }
 
+#[tracing::instrument]
 pub fn sort_files_by_filename(files: &mut [PathBuf]) {
   files.sort_unstable_by_key(|x| {
     // If the temp directory follows the expected format of 00000.ivf, 00001.ivf, etc.,
@@ -48,6 +50,7 @@ pub fn sort_files_by_filename(files: &mut [PathBuf]) {
   });
 }
 
+#[tracing::instrument]
 pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   let mut files: Vec<PathBuf> = read_in_dir(input)?.collect();
 
@@ -136,6 +139,7 @@ pub fn ivf(input: &Path, out: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
+#[tracing::instrument]
 fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
   Ok(
     fs::read_dir(encode_dir)
@@ -144,6 +148,7 @@ fn read_encoded_chunks(encode_dir: &Path) -> anyhow::Result<Vec<DirEntry>> {
   )
 }
 
+#[tracing::instrument]
 pub fn mkvmerge(
   temp_dir: &Path,
   output: &Path,
@@ -221,6 +226,7 @@ pub fn mkvmerge(
 }
 
 /// Create mkvmerge options.json
+#[tracing::instrument]
 pub fn mkvmerge_options_json(
   num: usize,
   encoder: Encoder,
@@ -242,6 +248,7 @@ pub fn mkvmerge_options_json(
 }
 
 /// Concatenates using ffmpeg (does not work with x265)
+#[tracing::instrument]
 pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
   fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
     let concat_file = temp_folder.join("concat");

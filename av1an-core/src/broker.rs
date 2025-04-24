@@ -9,12 +9,14 @@ use std::thread::available_parallelism;
 use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
+use tracing::{debug, error, warn};
 
 use crate::context::Av1anContext;
 use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
+#[derive(Debug)]
 pub struct Broker<'a> {
   pub chunk_queue: Vec<Chunk>,
   pub project: &'a Av1anContext,
@@ -94,11 +96,10 @@ impl Display for EncoderCrash {
   }
 }
 
-impl<'a> Broker<'a> {
+impl Broker<'_> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
-  pub fn encoding_loop(self, tx: Sender<()>, mut set_thread_affinity: Option<usize>) {
-    assert!(!self.chunk_queue.is_empty());
-
+  #[tracing::instrument(skip(self))]
+  pub fn encoding_loop(self, tx: Sender<()>, set_thread_affinity: Option<usize>) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -106,26 +107,6 @@ impl<'a> Broker<'a> {
         sender.send(chunk.clone()).unwrap();
       }
       drop(sender);
-
-      cfg_if! {
-        if #[cfg(any(target_os = "linux", target_os = "windows"))] {
-          if let Some(threads) = set_thread_affinity {
-            let available_threads = available_parallelism().expect("Unrecoverable: Failed to get thread count").get();
-            let requested_threads = threads.saturating_mul(self.project.args.workers);
-            if requested_threads > available_threads {
-              warn!(
-                "ignoring set_thread_affinity: requested more threads than available ({}/{})",
-                requested_threads, available_threads
-              );
-              set_thread_affinity = None;
-            } else if requested_threads == 0 {
-              warn!("ignoring set_thread_affinity: requested 0 threads");
-
-              set_thread_affinity = None;
-            }
-          }
-        }
-      }
 
       crossbeam_utils::thread::scope(|s| {
         let consumers: Vec<_> = (0..self.project.args.workers)
@@ -136,13 +117,26 @@ impl<'a> Broker<'a> {
               cfg_if! {
                 if #[cfg(any(target_os = "linux", target_os = "windows"))] {
                   if let Some(threads) = set_thread_affinity {
-                    let mut cpu_set = SmallVec::<[usize; 16]>::new();
-                    cpu_set.extend((threads * worker_id..).take(threads));
-                    if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
-                      warn!(
-                        "failed to set thread affinity for worker {}: {}",
-                        worker_id, e
-                      );
+                    if threads == 0 {
+                      warn!("Ignoring set_thread_affinity: Requested 0 threads");
+                    } else {
+                      match available_parallelism() {
+                        Ok(parallelism) => {
+                          let available_threads = parallelism.get();
+                          let mut cpu_set = SmallVec::<[usize; 16]>::new();
+                          let start_thread = (threads * worker_id) % available_threads;
+                          cpu_set.extend((start_thread..start_thread + threads).map(|t| t % available_threads));
+                          if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
+                            warn!(
+                              "Failed to set thread affinity for worker {}: {}",
+                              worker_id, e
+                            );
+                          }
+                        },
+                        Err(e) => {
+                          warn!("Failed to get thread count: {}. Thread affinity will not be set", e);
+                        }
+                      }
                     }
                   }
                 }
@@ -170,6 +164,7 @@ impl<'a> Broker<'a> {
     }
   }
 
+  #[tracing::instrument(skip(self))]
   fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 

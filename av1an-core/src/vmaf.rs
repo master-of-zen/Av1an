@@ -114,6 +114,7 @@ pub fn validate_libvmaf() -> anyhow::Result<()> {
   Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn plot(
   encoded: &Path,
   reference: &Input,
@@ -174,6 +175,7 @@ pub fn plot(
   Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_vmaf(
   encoded: &Path,
   reference_pipe_cmd: &[impl AsRef<OsStr>],
@@ -204,7 +206,7 @@ pub fn run_vmaf(
 
   let vmaf = if let Some(model) = model {
     format!(
-      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model_path={}:n_threads={}",
+      "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='path={}':n_threads={}",
       ffmpeg::escape_path_in_filter(stat_file),
       ffmpeg::escape_path_in_filter(&model),
       threads

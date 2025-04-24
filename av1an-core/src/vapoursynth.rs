@@ -2,17 +2,17 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use anyhow::{anyhow, bail};
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
-use std::process::Command;
+use regex::Regex;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::VideoInfo;
 
-use crate::util::to_absolute_path;
-
 use super::ChunkMethod;
+use crate::util::to_absolute_path;
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
   let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
@@ -193,12 +193,14 @@ pub fn create_vs_file(
   temp: &str,
   source: &Path,
   chunk_method: ChunkMethod,
+  scene_detection_downscale_height: Option<usize>,
+  scene_detection_pixel_format: Option<ffmpeg::format::Pixel>,
+  scene_detection_scaler: String,
 ) -> anyhow::Result<PathBuf> {
   let temp: &Path = temp.as_ref();
   let source = to_absolute_path(source)?;
 
   let load_script_path = temp.join("split").join("loadscript.vpy");
-
   let mut load_script = File::create(&load_script_path)?;
 
   let cache_file = PathAbs::new(temp.join("split").join(format!(
@@ -211,57 +213,105 @@ pub fn create_vs_file(
       _ => return Err(anyhow!("invalid chunk method")),
     }
   )))?;
+  let chunk_method_lower = match chunk_method {
+    ChunkMethod::FFMS2 => "ffms2",
+    ChunkMethod::LSMASH => "lsmash",
+    ChunkMethod::DGDECNV => "dgdecnv",
+    ChunkMethod::BESTSOURCE => "bestsource",
+    _ => return Err(anyhow!("invalid chunk method")),
+  };
 
-  if chunk_method == ChunkMethod::DGDECNV {
-    // Run dgindexnv to generate the .dgi index file
-    let dgindexnv_output = temp.join("split").join("index.dgi");
+  // Only used for DGDECNV
+  let dgindex_path = match chunk_method {
+    ChunkMethod::DGDECNV => {
+      let dgindexnv_output = temp.join("split").join("index.dgi");
 
-    Command::new("dgindexnv")
-      .arg("-h")
-      .arg("-i")
-      .arg(source)
-      .arg("-o")
-      .arg(&dgindexnv_output)
-      .output()?;
+      // Run dgindexnv to generate the .dgi index file
+      Command::new("dgindexnv")
+        .arg("-h")
+        .arg("-i")
+        .arg(&source)
+        .arg("-o")
+        .arg(&dgindexnv_output)
+        .output()?;
 
-    let dgindex_path = to_absolute_path(&dgindexnv_output)?;
-    load_script.write_all(
-      format!(
-        "from vapoursynth import core\n\
-              core.max_cache_size=1024\n\
-            core.dgdecodenv.DGSource(source={dgindex_path:?}).set_output()"
-      )
-      .as_bytes(),
-    )?;
-  } else if chunk_method == ChunkMethod::BESTSOURCE {
-    load_script.write_all(
-      format!(
-        "from vapoursynth import core\n\
-          core.max_cache_size=1024\n\
-        core.bs.VideoSource({source:?}, cachepath={cache_file:?}).set_output()"
-      )
-      .as_bytes(),
-    )?;
-  } else {
-    load_script.write_all(
-      // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
-      format!(
-        "from vapoursynth import core\n\
-            core.max_cache_size=1024\n\
-      core.{}({:?}, cachefile={:?}).set_output()",
+      &to_absolute_path(&dgindexnv_output)?
+    }
+    _ => &source,
+  };
+
+  // Include rich loadscript.vpy and specify source, chunk_method, and cache_file
+  // Also specify downscale_height, pixel_format, and scaler for Scene Detection
+  // TODO should probably check if the syntax for rust strings and escaping utf and stuff like that is the same as in python
+  let mut load_script_text = include_str!("loadscript.vpy")
+    .replace(
+      "source = os.environ.get('AV1AN_SOURCE', None)",
+      &format!(
+        "source = r\"{}\"",
         match chunk_method {
-          ChunkMethod::FFMS2 => "ffms2.Source",
-          ChunkMethod::LSMASH => "lsmas.LWLibavSource",
-          _ => unreachable!(),
-        },
-        source,
-        cache_file
-      )
-      .as_bytes(),
-    )?;
+          ChunkMethod::DGDECNV => dgindex_path.display(),
+          _ => source.display(),
+        }
+      ),
+    )
+    .replace(
+      "chunk_method = os.environ.get('AV1AN_CHUNK_METHOD', None)",
+      &format!("chunk_method = {chunk_method_lower:?}"),
+    )
+    .replace(
+      "cache_file = os.environ.get('AV1AN_CACHE_FILE', None)",
+      &format!("cache_file = {:?}", cache_file),
+    );
+
+  if let Some(scene_detection_downscale_height) = scene_detection_downscale_height {
+    load_script_text = load_script_text.replace(
+      "downscale_height = os.environ.get('AV1AN_DOWNSCALE_HEIGHT', None)",
+      &format!("downscale_height = {scene_detection_downscale_height}"),
+    );
   }
+  if let Some(scene_detection_pixel_format) = scene_detection_pixel_format {
+    load_script_text = load_script_text.replace(
+      "sc_pix_format = os.environ.get('AV1AN_PIXEL_FORMAT', None)",
+      &format!("pixel_format = \"{scene_detection_pixel_format:?}\""),
+    );
+  }
+  load_script_text = load_script_text.replace(
+    "scaler = os.environ.get('AV1AN_SCALER', None)",
+    &format!("scaler = {scene_detection_scaler:?}"),
+  );
+
+  load_script.write_all(load_script_text.as_bytes())?;
 
   Ok(load_script_path)
+}
+
+pub fn copy_vs_file(
+  temp: &str,
+  source: &Path,
+  downscale_height: Option<usize>,
+) -> anyhow::Result<PathBuf> {
+  let temp: &Path = temp.as_ref();
+  let scd_script_path = temp.join("split").join("scene_detection.vpy");
+  let mut scd_script = File::create(&scd_script_path)?;
+
+  let source_script = std::fs::read_to_string(source)?;
+  if let Some(downscale_height) = downscale_height {
+    let regex = Regex::new(r"(\w+).set_output\(")?;
+    if let Some(captures) = regex.captures(&source_script) {
+      let output_variable_name = captures.get(1).unwrap().as_str();
+      let injected_script = regex
+        .replace(
+          &source_script,
+          format!("{output_variable_name}.resize.Bicubic(width=int((({output_variable_name}.width / {output_variable_name}.height) * int({downscale_height})) // 2 * 2), height={downscale_height}).set_output(").as_str(),
+        )
+        .to_string();
+      scd_script.write_all(injected_script.as_bytes())?;
+      return Ok(scd_script_path);
+    }
+  }
+
+  scd_script.write_all(source_script.as_bytes())?;
+  Ok(scd_script_path)
 }
 
 pub fn num_frames(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {

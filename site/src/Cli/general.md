@@ -22,7 +22,7 @@
 		Print extra progress info and stats to terminal
 
 -l, --log-file <LOG_FILE>
-		Log file location [default: <temp dir>/log.log]
+		Log file location [default: ./logs/av1an.log]
 
 	--log-level <LOG_LEVEL>
 		Set log level for log file (does not affect command-line log level)
@@ -48,7 +48,10 @@
 		Do not delete the temporary folder after encoding has finished
 
 	--force
-		Do not check if the encoder arguments specified by -v/--video-params are valid
+		Do not check if the encoder arguments specified by -v/--video-params are valid.
+
+	--no-defaults
+		Do not include Av1an's default set of encoder parameters.
 
 -y
 		Overwrite output file, without confirmation

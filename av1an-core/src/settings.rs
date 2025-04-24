@@ -6,8 +6,9 @@ use std::process::{exit, Command};
 
 use anyhow::{bail, ensure};
 use ffmpeg::format::Pixel;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::filter::LevelFilter;
 
 use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
@@ -32,6 +33,7 @@ pub enum InputPixelFormat {
 }
 
 #[allow(clippy::struct_excessive_bools)]
+#[derive(Debug)]
 pub struct EncodeArgs {
   pub input: Input,
   pub temp: String,
@@ -55,6 +57,7 @@ pub struct EncodeArgs {
 
   pub passes: u8,
   pub video_params: Vec<String>,
+  pub tiles: (u32, u32), // tile (cols, rows) count; log2 will be applied later for specific encoders
   pub encoder: Encoder,
   pub workers: usize,
   pub set_thread_affinity: Option<usize>,
@@ -71,13 +74,20 @@ pub struct EncodeArgs {
 
   pub verbosity: Verbosity,
   pub log_file: PathBuf,
+  pub log_level: LevelFilter,
   pub resume: bool,
   pub keep: bool,
   pub force: bool,
+  pub no_defaults: bool,
+  pub tile_auto: bool,
 
   pub concat: ConcatMethod,
   pub target_quality: Option<TargetQuality>,
   pub vmaf: bool,
+  pub vmaf_path: Option<PathBuf>,
+  pub vmaf_res: String,
+  pub vmaf_threads: Option<usize>,
+  pub vmaf_filter: Option<String>,
 }
 
 impl EncodeArgs {
@@ -172,10 +182,37 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       );
     }
 
-    if self.video_params.is_empty() {
-      self.video_params = self
-        .encoder
-        .get_default_arguments(self.input.calculate_tiles());
+    if self.tile_auto {
+      self.tiles = self.input.calculate_tiles();
+    }
+
+    if !self.no_defaults {
+      if self.video_params.is_empty() {
+        self.video_params = self.encoder.get_default_arguments(self.tiles);
+      } else {
+        // merge video_params with defaults, overriding defaults
+        // TODO: consider using hashmap to store program arguments instead of string vector
+        let default_video_params = self.encoder.get_default_arguments(self.tiles);
+        let mut skip = false;
+        let mut _default_params: Vec<String> = Vec::new();
+        for param in default_video_params {
+          if skip && !(param.starts_with("-") && param != "-1") {
+            skip = false;
+            continue;
+          } else {
+            skip = false;
+          }
+          if (param.starts_with("-") && param != "-1")
+            && self.video_params.iter().any(|x| *x == param)
+          {
+            skip = true;
+            continue;
+          } else {
+            _default_params.push(param);
+          }
+        }
+        self.video_params = chain!(_default_params, self.video_params.clone()).collect();
+      }
     }
 
     if let Some(strength) = self.photon_noise {
@@ -340,7 +377,7 @@ pub(crate) fn insert_noise_table_params(
   encoder: Encoder,
   video_params: &mut Vec<String>,
   table: &Path,
-) {
+) -> anyhow::Result<()> {
   match encoder {
     Encoder::aom => {
       video_params.retain(|param| !param.starts_with("--denoise-noise-level="));
@@ -368,6 +405,8 @@ pub(crate) fn insert_noise_table_params(
       video_params.push("--photon-noise-table".to_string());
       video_params.push(table.to_str().unwrap().to_string());
     }
-    _ => unimplemented!("This encoder does not support grain synth through av1an"),
+    _ => bail!("This encoder does not support grain synth through av1an"),
   }
+
+  Ok(())
 }

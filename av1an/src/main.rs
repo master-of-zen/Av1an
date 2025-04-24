@@ -137,7 +137,7 @@ pub struct CliOpts {
   #[clap(long)]
   pub verbose: bool,
 
-  /// Log file location [default: <temp dir>/log.log]
+  /// Log file location [default: ./logs/av1an.log]
   #[clap(short, long)]
   pub log_file: Option<String>,
 

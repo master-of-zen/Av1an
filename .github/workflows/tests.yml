@@ -11,14 +11,16 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  all-tests:
+  unit-tests:
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
         with:
-          components: clippy, rustfmt
+          toolchain: stable
+          override: true
       - uses: Swatinem/rust-cache@v2
 
       - name: Validate encoders
@@ -39,7 +41,6 @@ jobs:
       - name: Build Av1an
         run: |
           cargo clippy --profile ci -- -D warnings
-          cargo build --profile ci
 
       - name: Install cargo-msrv
         uses: taiki-e/install-action@v2
@@ -51,15 +52,43 @@ jobs:
           cargo msrv verify --path av1an
           cargo msrv verify --path av1an-core
 
+      - name: Testing unit tests
+        working-directory: ./av1an-core
+        run: |
+          cargo test --profile ci
+
+  encode-tests:
+    needs: [ unit-tests ]
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate encoders
+        run: |
+          which aomenc
+          which SvtAv1EncApp
+          which rav1e
+          which vpxenc
+          which x265
+          which x264
+          which vspipe
+          which ffmpeg
+
       # 352x240 112 frames test video
       - name: Download test video
         run: |
           curl -LO https://media.xiph.org/video/derf/y4m/tt_sif.y4m
 
-      - name: Testing unit tests
-        working-directory: ./av1an-core
+      - name: Build Av1an
         run: |
-          cargo test --profile ci
+          cargo build --profile ci
 
       # The baseline tests should not include the faster default params, because we want to also test that
       # it works without params passed
@@ -257,6 +286,30 @@ jobs:
           du -h tt_sif_scenes.json
         continue-on-error: true
 
+  code-coverage:
+    needs: [ unit-tests, encode-tests ]
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate encoders
+        run: |
+          which aomenc
+          which SvtAv1EncApp
+          which rav1e
+          which vpxenc
+          which x265
+          which x264
+          which vspipe
+          which ffmpeg
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
@@ -273,6 +326,7 @@ jobs:
           fail_ci_if_error: true
 
   docker:
+    needs: [ unit-tests ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -327,7 +381,7 @@ jobs:
           fi
 
   docker-publish:
-    needs: [ all-tests, docker, publish-check ]
+    needs: [ unit-tests, encode-tests, docker, publish-check ]
     runs-on: ubuntu-latest
     if: needs.publish-check.outputs.should_publish == 'true'
     steps:

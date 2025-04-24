@@ -35,7 +35,7 @@ impl Default for ModuleConfig {
 }
 
 /// Initialize logging with per-module configuration
-pub fn init_logging(log_path: Option<PathBuf>, console_log_level: LevelFilter) {
+pub fn init_logging(log_path: PathBuf, console_log_level: LevelFilter) {
   // Set up our module configurations
   let mut module_configs = HashMap::new();
 
@@ -103,18 +103,16 @@ pub fn init_logging(log_path: Option<PathBuf>, console_log_level: LevelFilter) {
   };
 
   // Set up file appender
-  let file_appender = match log_path {
-    Some(path)
-      if path.parent().unwrap() == Path::new("") && path.file_name().unwrap() == "av1an.log" =>
-    {
-      RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log")
-    }
-    Some(path) => RollingFileAppender::new(
+  let file_appender = if log_path.parent().unwrap_or_else(|| Path::new("")) == Path::new("")
+    && log_path.file_name().unwrap() == "av1an.log"
+  {
+    RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log")
+  } else {
+    RollingFileAppender::new(
       Rotation::NEVER,
-      Path::new("logs").join(path.parent().unwrap_or_else(|| Path::new(""))),
-      path.file_name().unwrap(),
-    ),
-    None => RollingFileAppender::new(Rotation::DAILY, "logs", "av1an.log"),
+      Path::new("logs").join(log_path.parent().unwrap_or_else(|| Path::new(""))),
+      log_path.file_name().unwrap(),
+    )
   };
 
   let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);

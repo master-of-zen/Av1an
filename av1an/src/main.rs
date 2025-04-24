@@ -673,7 +673,21 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
     // TODO make an actual constructor for this
     let arg = EncodeArgs {
       log_file: if let Some(log_file) = args.log_file.as_ref() {
-        Path::new(log_file).to_owned()
+        let log_path = Path::new(log_file);
+        if log_path.starts_with("/") || log_path.is_absolute() {
+          Err(anyhow!("Log file path must be relative"))?
+        }
+        let absolute_path = std::path::absolute(log_path).unwrap();
+        let log_path = absolute_path
+          .strip_prefix(std::env::current_dir().unwrap())
+          .unwrap()
+          .strip_prefix("logs")
+          .unwrap_or(
+            absolute_path
+              .strip_prefix(std::env::current_dir().unwrap())
+              .unwrap(),
+          );
+        log_path.to_path_buf()
       } else {
         Path::new("av1an.log").to_owned()
       },
@@ -837,19 +851,11 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
 
 #[instrument]
 pub fn run() -> anyhow::Result<()> {
-  let cli_options = match CliOpts::try_parse() {
-    Ok(args) => args,
-    Err(e) => {
-      // Failed to parse CLI arguments, use default logging parameters
-      init_logging(None, DEFAULT_CONSOLE_LEVEL);
-      tracing::error!("Failed to parse CLI arguments: {}", e);
-      exit(1);
-    }
-  };
+  let cli_options = CliOpts::parse();
   let args = parse_cli(cli_options)?;
   let first_arg = args.first().unwrap();
 
-  init_logging(Some(first_arg.log_file.clone()), first_arg.log_level);
+  init_logging(first_arg.log_file.clone(), first_arg.log_level);
 
   for arg in args {
     Av1anContext::new(arg)?.encode_file()?;

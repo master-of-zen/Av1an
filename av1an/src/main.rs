@@ -158,7 +158,7 @@ fn version() -> &'static str {
 pub struct CliOpts {
   /// Input file to encode
   ///
-  /// Can be a video or vapoursynth (.py, .vpy) script.
+  /// Can be a video or VapourSynth (.py, .vpy) script.
   #[clap(short, required = true)]
   pub input: Vec<PathBuf>,
 
@@ -180,7 +180,9 @@ pub struct CliOpts {
   #[clap(long)]
   pub verbose: bool,
 
-  /// Log file location [default: ./logs/av1an.log]
+  /// Log file location under ./logs [default: ./logs/av1an.log]
+  ///
+  /// Must be a relative path. Prepending with ./logs is optional.
   #[clap(short, long)]
   pub log_file: Option<String>,
 
@@ -254,11 +256,11 @@ pub struct CliOpts {
   #[clap(short, long, help_heading = "Scene Detection")]
   pub scenes: Option<PathBuf>,
 
-  /// Maximum scene length, in seconds
+  /// Run the scene detection only before exiting
   ///
-  /// If both frames and seconds are specified, then the number of frames will take priority.
-  #[clap(long, default_value_t = 10.0, help_heading = "Scene Detection")]
-  pub extra_split_sec: f64,
+  /// Requires a scene file with --scenes.
+  #[clap(long, requires("scenes"), help_heading = "Scene Detection")]
+  pub sc_only: bool,
 
   /// Method used to determine chunk boundaries
   ///
@@ -276,16 +278,6 @@ pub struct CliOpts {
   #[clap(long, default_value_t = ScenecutMethod::Standard, help_heading = "Scene Detection")]
   pub sc_method: ScenecutMethod,
 
-  /// Run the scene detection only before exiting
-  ///
-  /// Requires a scene file with --scenes.
-  #[clap(long, requires("scenes"), help_heading = "Scene Detection")]
-  pub sc_only: bool,
-
-  /// Perform scene detection with this pixel format
-  #[clap(long, help_heading = "Scene Detection")]
-  pub sc_pix_format: Option<Pixel>,
-
   /// Optional downscaling for scene detection
   ///
   /// Specify as the desired maximum height to scale to (e.g. "720" to downscale to
@@ -296,6 +288,10 @@ pub struct CliOpts {
   #[clap(long, help_heading = "Scene Detection")]
   pub sc_downscale_height: Option<usize>,
 
+  /// Perform scene detection with this pixel format
+  #[clap(long, help_heading = "Scene Detection")]
+  pub sc_pix_format: Option<Pixel>,
+
   /// Maximum scene length
   ///
   /// When a scenecut is found whose distance to the previous scenecut is greater than the value
@@ -303,6 +299,12 @@ pub struct CliOpts {
   /// to 0 to disable adding extra splits.
   #[clap(short = 'x', long, help_heading = "Scene Detection")]
   pub extra_split: Option<usize>,
+  
+  /// Maximum scene length, in seconds
+  ///
+  /// If both frames and seconds are specified, then the number of frames will take priority.
+  #[clap(long, default_value_t = 10.0, help_heading = "Scene Detection")]
+  pub extra_split_sec: f64,
 
   /// Minimum number of frames for a scenecut
   #[clap(long, default_value_t = 24, help_heading = "Scene Detection")]
@@ -315,10 +317,6 @@ pub struct CliOpts {
   #[clap(long, help_heading = "Scene Detection")]
   pub force_keyframes: Option<String>,
 
-  /// Ignore any detected mismatch between scene frame count and encoder frame count
-  #[clap(long, help_heading = "Encoding")]
-  pub ignore_frame_mismatch: bool,
-
   /// Video encoder to use
   #[clap(short, long, default_value_t = Encoder::aom, help_heading = "Encoding")]
   pub encoder: Encoder,
@@ -326,8 +324,8 @@ pub struct CliOpts {
   /// Parameters for video encoder
   ///
   /// These parameters are for the encoder binary directly, so the ffmpeg syntax cannot be used.
-  /// For example, CRF is specified in ffmpeg via "-crf <crf>", but the x264 binary takes this
-  /// value with double dashes, as in "--crf <crf>". See the --help output of each encoder for
+  /// For example, CRF is specified in ffmpeg via "-crf <CRF>", but the x264 binary takes this
+  /// value with double dashes, as in "--crf <CRF>". See the --help output of each encoder for
   /// a list of valid options. This list of parameters will be merged into Av1an's default set
   /// of encoder parameters.
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
@@ -350,6 +348,15 @@ pub struct CliOpts {
   #[clap(long, help_heading = "Encoding")]
   pub tile_auto: bool,
 
+  /// FFmpeg filter options
+  #[clap(
+    short = 'f',
+    long = "ffmpeg",
+    allow_hyphen_values = true,
+    help_heading = "Encoding"
+  )]
+  pub ffmpeg_filter_args: Option<String>,
+
   /// Audio encoding parameters (ffmpeg syntax)
   ///
   /// If not specified, "-c:a copy" is used.
@@ -371,14 +378,9 @@ pub struct CliOpts {
   #[clap(short, long, allow_hyphen_values = true, help_heading = "Encoding")]
   pub audio_params: Option<String>,
 
-  /// FFmpeg filter options
-  #[clap(
-    short = 'f',
-    long = "ffmpeg",
-    allow_hyphen_values = true,
-    help_heading = "Encoding"
-  )]
-  pub ffmpeg_filter_args: Option<String>,
+  /// Ignore any detected mismatch between scene frame count and encoder frame count
+  #[clap(long, help_heading = "Encoding")]
+  pub ignore_frame_mismatch: bool,
 
   /// Method used for piping exact ranges of frames to the encoder
   ///
@@ -444,6 +446,10 @@ pub struct CliOpts {
   #[clap(long, help_heading = "Encoding")]
   pub photon_noise: Option<u8>,
 
+  /// Adds chroma grain synthesis to the grain table generated by `--photon-noise`. (Default: false)
+  #[clap(long, help_heading = "Encoding", requires = "photon_noise")]
+  pub chroma_noise: bool,
+
   /// Manually set the width for the photon noise table.
   #[clap(long, help_heading = "Encoding")]
   pub photon_noise_width: Option<u32>,
@@ -451,10 +457,6 @@ pub struct CliOpts {
   /// Manually set the height for the photon noise table.
   #[clap(long, help_heading = "Encoding")]
   pub photon_noise_height: Option<u32>,
-
-  /// Adds chroma grain synthesis to the grain table generated by `--photon-noise`. (Default: false)
-  #[clap(long, help_heading = "Encoding", requires = "photon_noise")]
-  pub chroma_noise: bool,
 
   /// Determines method used for concatenating encoded chunks and audio into output file
   ///

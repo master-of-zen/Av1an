@@ -3,7 +3,11 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
-use std::sync::mpsc::Sender;
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  mpsc::Sender,
+  Arc,
+};
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
@@ -142,9 +146,25 @@ impl Broker<'_> {
                 }
               }
 
+              let termination_requested = Arc::new(AtomicBool::new(false));
+              let termination_requested_clone = termination_requested.clone();
+
+              ctrlc::set_handler(move || {
+                termination_requested_clone.store(true, Ordering::SeqCst);
+              })
+              .unwrap();
+
+
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
-                  error!("[chunk {}] {}", chunk.index, e);
+                if termination_requested.load(Ordering::SeqCst) {
+                  error!("Termination requested. Skipping chunk {}", chunk.index);
+                  tx.send(()).unwrap();
+                  return Err(());
+                }
+                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &termination_requested) {
+                  if let Some(e) = e {
+                    error!("[chunk {}] {}", chunk.index, e);
+                  }
 
                   tx.send(()).unwrap();
                   return Err(());
@@ -165,11 +185,21 @@ impl Broker<'_> {
   }
 
   #[tracing::instrument(skip(self))]
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
+  fn encode_chunk(
+    &self,
+    chunk: &mut Chunk,
+    worker_id: usize,
+    termination_requested: &Arc<AtomicBool>,
+  ) -> Result<(), Option<Box<EncoderCrash>>> {
     let st_time = Instant::now();
 
     if let Some(ref tq) = self.project.args.target_quality {
       tq.per_shot_target_quality_routine(chunk).unwrap();
+    }
+
+    if termination_requested.load(Ordering::SeqCst) {
+      error!("Termination requested. Skipping chunk {}", chunk.index);
+      return Err(None);
     }
 
     // space padding at the beginning to align with "finished chunk"
@@ -191,12 +221,17 @@ impl Broker<'_> {
         if let Err((e, frames)) = res {
           dec_bar(frames);
 
+          if termination_requested.load(Ordering::SeqCst) {
+            error!("Termination requested. Skipping chunk {}", chunk.index);
+            return Err(None);
+          }
+
           if r#try == self.project.args.max_tries {
             error!(
               "[chunk {}] encoder failed {} times, shutting down worker",
               chunk.index, self.project.args.max_tries
             );
-            return Err(e);
+            return Err(Some(e));
           }
           // avoids double-print of the error message as both a WARN and ERROR,
           // since `Broker::encoding_loop` will print the error message as well

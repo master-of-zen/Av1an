@@ -115,7 +115,6 @@ impl Broker<'_> {
       crossbeam_utils::thread::scope(|s| {
         let terminations_requested = Arc::new(AtomicU8::new(0));
         let terminations_requested_clone = terminations_requested.clone();
-        // let active_workers = Arc::new(Mutex::new(Vec::new()));
         ctrlc::set_handler(move || {
           let count = terminations_requested_clone.fetch_add(1, Ordering::SeqCst) + 1;
           if count == 1 {

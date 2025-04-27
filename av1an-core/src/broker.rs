@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
 use std::sync::{
-  atomic::{AtomicBool, Ordering},
+  atomic::{AtomicU8, Ordering},
   mpsc::Sender,
   Arc,
 };
@@ -113,9 +113,22 @@ impl Broker<'_> {
       drop(sender);
 
       crossbeam_utils::thread::scope(|s| {
+        let terminations_requested = Arc::new(AtomicU8::new(0));
+        let terminations_requested_clone = terminations_requested.clone();
+        // let active_workers = Arc::new(Mutex::new(Vec::new()));
+        ctrlc::set_handler(move || {
+          let count = terminations_requested_clone.fetch_add(1, Ordering::SeqCst) + 1;
+          if count == 1 {
+            error!("Shutting down. Waiting for current workers to finish...");
+          } else {
+            error!("Shutting down all workers...");
+          }
+        })
+        .unwrap();
+
         let consumers: Vec<_> = (0..self.project.args.workers)
-          .map(|idx| (receiver.clone(), &self, idx))
-          .map(|(rx, queue, worker_id)| {
+          .map(|idx| (receiver.clone(), &self, idx, terminations_requested.clone()))
+          .map(|(rx, queue, worker_id, terminations_requested)| {
             let tx = tx.clone();
             s.spawn(move |_| {
               cfg_if! {
@@ -146,28 +159,15 @@ impl Broker<'_> {
                 }
               }
 
-              let termination_requested = Arc::new(AtomicBool::new(false));
-              let termination_requested_clone = termination_requested.clone();
-
-              ctrlc::set_handler(move || {
-                termination_requested_clone.store(true, Ordering::SeqCst);
-              })
-              .unwrap();
-
-
               while let Ok(mut chunk) = rx.recv() {
-                if termination_requested.load(Ordering::SeqCst) {
-                  error!("Termination requested. Skipping chunk {}", chunk.index);
-                  tx.send(()).unwrap();
-                  return Err(());
-                }
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &termination_requested) {
-                  if let Some(e) = e {
-                    error!("[chunk {}] {}", chunk.index, e);
+                if terminations_requested.load(Ordering::SeqCst) == 0 {
+                  if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested) {
+                    if let Some(e) = e {
+                      error!("[chunk {}] {}", chunk.index, e);
+                    }
+                    tx.send(()).unwrap();
+                    return Err(());
                   }
-
-                  tx.send(()).unwrap();
-                  return Err(());
                 }
               }
               Ok(())
@@ -176,6 +176,10 @@ impl Broker<'_> {
           .collect();
         for consumer in consumers {
           consumer.join().unwrap().ok();
+        }
+
+        if terminations_requested.load(Ordering::SeqCst) > 0 {
+          tx.send(()).unwrap();
         }
       })
       .unwrap();
@@ -189,7 +193,7 @@ impl Broker<'_> {
     &self,
     chunk: &mut Chunk,
     worker_id: usize,
-    termination_requested: &Arc<AtomicBool>,
+    terminations_requested: &Arc<AtomicU8>,
   ) -> Result<(), Option<Box<EncoderCrash>>> {
     let st_time = Instant::now();
 
@@ -197,8 +201,11 @@ impl Broker<'_> {
       tq.per_shot_target_quality_routine(chunk).unwrap();
     }
 
-    if termination_requested.load(Ordering::SeqCst) {
-      error!("Termination requested. Skipping chunk {}", chunk.index);
+    if terminations_requested.load(Ordering::SeqCst) > 0 {
+      trace!(
+        "Termination requested after Target Quality. Skipping chunk {}",
+        chunk.index
+      );
       return Err(None);
     }
 
@@ -221,8 +228,12 @@ impl Broker<'_> {
         if let Err((e, frames)) = res {
           dec_bar(frames);
 
-          if termination_requested.load(Ordering::SeqCst) {
-            error!("Termination requested. Skipping chunk {}", chunk.index);
+          // If user presses CTRL+C more than once, do not let the worker finish
+          if terminations_requested.load(Ordering::SeqCst) > 1 {
+            trace!(
+              "Termination requested after Worker restart. Skipping chunk {}",
+              chunk.index
+            );
             return Err(None);
           }
 

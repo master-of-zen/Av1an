@@ -13,6 +13,7 @@ use tracing::{debug, error};
 
 use crate::broker::EncoderCrash;
 use crate::chunk::Chunk;
+use crate::progress_bar::update_mp_msg;
 use crate::vmaf::{self, read_weighted_vmaf};
 use crate::Encoder;
 
@@ -40,13 +41,28 @@ pub struct TargetQuality {
 }
 
 impl TargetQuality {
-  fn per_shot_target_quality(&self, chunk: &Chunk) -> Result<u32, Box<EncoderCrash>> {
+  fn per_shot_target_quality(
+    &self,
+    chunk: &Chunk,
+    worker_id: Option<usize>,
+  ) -> Result<u32, Box<EncoderCrash>> {
     let mut vmaf_cq = vec![];
     let frames = chunk.frames();
 
     // Make middle probe
     let middle_point = (self.min_q + self.max_q) / 2;
     let last_q = middle_point;
+
+    let update_progress_bar = |last_q: u32| {
+      if let Some(worker_id) = worker_id {
+        update_mp_msg(
+          worker_id,
+          format!("Targeting Quality {} - Testing {}", self.target, last_q),
+        );
+      }
+    };
+
+    update_progress_bar(last_q);
 
     let mut score =
       read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize)?, VMAF_PERCENTILE).unwrap();
@@ -64,6 +80,7 @@ impl TargetQuality {
     } else {
       self.max_q
     };
+    update_progress_bar(next_q);
 
     // Edge case check
     score = read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize)?, VMAF_PERCENTILE).unwrap();
@@ -114,6 +131,8 @@ impl TargetQuality {
       {
         break;
       }
+
+      update_progress_bar(new_point as u32);
 
       score = read_weighted_vmaf(self.vmaf_probe(chunk, new_point)?, VMAF_PERCENTILE).unwrap();
       vmaf_cq.push((score, new_point as u32));
@@ -265,8 +284,9 @@ impl TargetQuality {
   pub fn per_shot_target_quality_routine(
     &self,
     chunk: &mut Chunk,
+    worker_id: Option<usize>,
   ) -> Result<(), Box<EncoderCrash>> {
-    chunk.tq_cq = Some(self.per_shot_target_quality(chunk)?);
+    chunk.tq_cq = Some(self.per_shot_target_quality(chunk, worker_id)?);
     Ok(())
   }
 }

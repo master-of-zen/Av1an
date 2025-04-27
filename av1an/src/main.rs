@@ -299,7 +299,7 @@ pub struct CliOpts {
   /// to 0 to disable adding extra splits.
   #[clap(short = 'x', long, help_heading = "Scene Detection")]
   pub extra_split: Option<usize>,
-  
+
   /// Maximum scene length, in seconds
   ///
   /// If both frames and seconds are specified, then the number of frames will take priority.

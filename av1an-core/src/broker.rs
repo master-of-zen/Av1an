@@ -164,7 +164,7 @@ impl Broker<'_> {
     }
   }
 
-  #[tracing::instrument(skip(self))]
+  #[tracing::instrument(skip(self, chunk), fields(chunk_index = format!("{:>05}", chunk.index)))]
   fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
     let st_time = Instant::now();
 

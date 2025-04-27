@@ -3,7 +3,11 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
-use std::sync::mpsc::Sender;
+use std::sync::{
+  atomic::{AtomicU8, Ordering},
+  mpsc::Sender,
+  Arc,
+};
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;
@@ -109,9 +113,22 @@ impl Broker<'_> {
       drop(sender);
 
       crossbeam_utils::thread::scope(|s| {
+        let terminations_requested = Arc::new(AtomicU8::new(0));
+        let terminations_requested_clone = terminations_requested.clone();
+        // let active_workers = Arc::new(Mutex::new(Vec::new()));
+        ctrlc::set_handler(move || {
+          let count = terminations_requested_clone.fetch_add(1, Ordering::SeqCst) + 1;
+          if count == 1 {
+            error!("Shutting down. Waiting for current workers to finish...");
+          } else {
+            error!("Shutting down all workers...");
+          }
+        })
+        .unwrap();
+
         let consumers: Vec<_> = (0..self.project.args.workers)
-          .map(|idx| (receiver.clone(), &self, idx))
-          .map(|(rx, queue, worker_id)| {
+          .map(|idx| (receiver.clone(), &self, idx, terminations_requested.clone()))
+          .map(|(rx, queue, worker_id, terminations_requested)| {
             let tx = tx.clone();
             s.spawn(move |_| {
               cfg_if! {
@@ -143,11 +160,14 @@ impl Broker<'_> {
               }
 
               while let Ok(mut chunk) = rx.recv() {
-                if let Err(e) = queue.encode_chunk(&mut chunk, worker_id) {
-                  error!("[chunk {}] {}", chunk.index, e);
-
-                  tx.send(()).unwrap();
-                  return Err(());
+                if terminations_requested.load(Ordering::SeqCst) == 0 {
+                  if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested) {
+                    if let Some(e) = e {
+                      error!("[chunk {}] {}", chunk.index, e);
+                    }
+                    tx.send(()).unwrap();
+                    return Err(());
+                  }
                 }
               }
               Ok(())
@@ -157,6 +177,10 @@ impl Broker<'_> {
         for consumer in consumers {
           consumer.join().unwrap().ok();
         }
+
+        if terminations_requested.load(Ordering::SeqCst) > 0 {
+          tx.send(()).unwrap();
+        }
       })
       .unwrap();
 
@@ -164,8 +188,13 @@ impl Broker<'_> {
     }
   }
 
-  #[tracing::instrument(skip(self, chunk), fields(chunk_index = format!("{:>05}", chunk.index)))]
-  fn encode_chunk(&self, chunk: &mut Chunk, worker_id: usize) -> Result<(), Box<EncoderCrash>> {
+  #[tracing::instrument(skip(self, chunk, terminations_requested), fields(chunk_index = format!("{:>05}", chunk.index)))]
+  fn encode_chunk(
+    &self,
+    chunk: &mut Chunk,
+    worker_id: usize,
+    terminations_requested: &Arc<AtomicU8>,
+  ) -> Result<(), Option<Box<EncoderCrash>>> {
     let st_time = Instant::now();
 
     // we display the index, so we need to subtract 1 to get the max index
@@ -175,6 +204,14 @@ impl Broker<'_> {
     if let Some(ref tq) = self.project.args.target_quality {
       update_mp_msg(worker_id, format!("Targeting Quality: {}", tq.target));
       tq.per_shot_target_quality_routine(chunk).unwrap();
+    }
+
+    if terminations_requested.load(Ordering::SeqCst) > 0 {
+      trace!(
+        "Termination requested after Target Quality. Skipping chunk {}",
+        chunk.index
+      );
+      return Err(None);
     }
 
     // space padding at the beginning to align with "finished chunk"
@@ -193,12 +230,21 @@ impl Broker<'_> {
         if let Err((e, frames)) = res {
           dec_bar(frames);
 
+          // If user presses CTRL+C more than once, do not let the worker finish
+          if terminations_requested.load(Ordering::SeqCst) > 1 {
+            trace!(
+              "Termination requested after Worker restart. Skipping chunk {}",
+              chunk.index
+            );
+            return Err(None);
+          }
+
           if r#try == self.project.args.max_tries {
             error!(
               "[chunk {}] encoder failed {} times, shutting down worker",
               chunk.index, self.project.args.max_tries
             );
-            return Err(e);
+            return Err(Some(e));
           }
           // avoids double-print of the error message as both a WARN and ERROR,
           // since `Broker::encoding_loop` will print the error message as well

@@ -123,21 +123,6 @@ pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: L
 
   // Create our subscriber with correctly ordered layers
   let subscriber = tracing_subscriber::registry()
-    // Console output layer
-    .with(
-      fmt::Layer::new()
-        // First configure all formatting
-        .with_ansi(std::io::stderr().is_terminal())
-        .with_target(true)
-        .with_thread_ids(false)
-        .with_file(false)
-        .with_line_number(false)
-        .with_level(true)
-        // Set the writer
-        .with_writer(std::io::stdout)
-        // Apply the filter last
-        .with_filter(console_filter),
-    )
     // File output layer
     .with(
       fmt::Layer::new()
@@ -153,6 +138,21 @@ pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: L
         .with_writer(non_blocking)
         // Apply the filter last
         .with_filter(file_filter),
+    )
+    // Console output layer
+    .with(
+      fmt::Layer::new()
+        // First configure all formatting
+        .with_ansi(std::io::stderr().is_terminal())
+        .with_target(true)
+        .with_thread_ids(false)
+        .with_file(false)
+        .with_line_number(false)
+        .with_level(true)
+        // Set the writer
+        .with_writer(std::io::stdout)
+        // Apply the filter last
+        .with_filter(console_filter),
     );
 
   // Set as global default

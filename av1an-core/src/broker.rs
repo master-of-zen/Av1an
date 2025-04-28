@@ -16,7 +16,7 @@ use thiserror::Error;
 use tracing::{debug, error, warn};
 
 use crate::context::Av1anContext;
-use crate::progress_bar::{dec_bar, update_mp_chunk, update_progress_bar_estimates};
+use crate::progress_bar::{dec_bar, update_mp_chunk, update_mp_msg, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
@@ -201,6 +201,7 @@ impl Broker<'_> {
     update_mp_chunk(worker_id, chunk.index, padding);
 
     if let Some(ref tq) = self.project.args.target_quality {
+      update_mp_msg(worker_id, format!("Targeting Quality: {}", tq.target));
       tq.per_shot_target_quality_routine(chunk, Some(worker_id))
         .unwrap();
     }

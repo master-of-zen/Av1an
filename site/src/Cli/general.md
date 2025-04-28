@@ -16,6 +16,7 @@ Name | Flag | Type | Default
 [Overwrite](#overwrite--y) | `-y` | 
 [Never Overwrite](#never-overwrite--n) | `-n` | 
 [Max Tries](#max-tries---max-tries) | `--max-tries` | Integer | 3
+[Workers](#workers---workers) | `--workers` | Integer | `0` (Automatic)
 [Thread Affinity](#thread-affinity---set-thread-affinity) | `--set-thread-affinity` | Integer | 
 [Scaler](#scaler---scaler) | `--scaler` | `SCALER` | `bicubic`
 [VSPipe Arguments](#vspipe-arguments---vspipe-args) | `--vspipe-args` | String List | 

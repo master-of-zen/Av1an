@@ -51,7 +51,7 @@ pub struct Av1anContext {
 }
 
 impl Av1anContext {
-  #[tracing::instrument]
+  #[tracing::instrument(level = "debug")]
   pub fn new(mut args: EncodeArgs) -> anyhow::Result<Self> {
     args.validate()?;
     let mut this = Self {
@@ -65,14 +65,14 @@ impl Av1anContext {
   }
 
   /// Initialize logging routines and create temporary directories
-  #[tracing::instrument]
+  #[tracing::instrument(level = "debug")]
   fn initialize(&mut self) -> anyhow::Result<()> {
     ffmpeg::init()?;
     ffmpeg::util::log::set_level(ffmpeg::util::log::level::Level::Fatal);
 
     if !self.args.resume && Path::new(&self.args.temp).is_dir() {
       fs::remove_dir_all(&self.args.temp)
-        .with_context(|| format!("Failed to remove temporary directory {:?}", &self.args.temp))?;
+        .with_context(|| format!("Failed to remove temporary directory {}", self.args.temp))?;
     }
 
     create_dir!(Path::new(&self.args.temp))?;
@@ -91,22 +91,22 @@ impl Av1anContext {
         (true, true) => {}
         (false, true) => {
           info!(
-            "resume was set but done.json does not exist in temporary directory {:?}",
-            &self.args.temp
+            "resume was set but done.json does not exist in temporary directory {}",
+            self.args.temp
           );
           self.args.resume = false;
         }
         (true, false) => {
           info!(
-            "resume was set but chunks.json does not exist in temporary directory {:?}",
-            &self.args.temp
+            "resume was set but chunks.json does not exist in temporary directory {}",
+            self.args.temp
           );
           self.args.resume = false;
         }
         (false, false) => {
           info!(
-            "resume was set but neither chunks.json nor done.json exist in temporary directory {:?}",
-            &self.args.temp
+            "resume was set but neither chunks.json nor done.json exist in temporary directory {}",
+            self.args.temp
           );
           self.args.resume = false;
         }
@@ -428,7 +428,7 @@ impl Av1anContext {
     Ok(())
   }
 
-  #[tracing::instrument]
+  #[tracing::instrument(level = "debug")]
   fn read_queue_files(source_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     let mut queue_files = fs::read_dir(source_path)
       .with_context(|| format!("Failed to read queue files from source path {source_path:?}"))?
@@ -1147,7 +1147,7 @@ impl Av1anContext {
     Ok(chunk_queue)
   }
 
-  #[tracing::instrument]
+  #[tracing::instrument(level = "debug")]
   fn create_chunk_from_segment(
     &self,
     index: usize,

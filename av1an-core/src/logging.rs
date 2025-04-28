@@ -122,34 +122,35 @@ pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: L
     .set(guard)
     .expect("Failed to store worker guard");
 
+  let file_layer = fmt::layer()
+    .with_ansi(false)
+    .with_target(true)
+    .with_thread_ids(false)
+    .with_thread_names(false)
+    .with_file(false)
+    .with_line_number(false)
+    .with_level(true)
+    .with_writer(non_blocking)
+    // Apply the filter last
+    .with_filter(file_filter);
+  let console_layer = fmt::layer()
+    .compact()
+    .with_ansi(std::io::stderr().is_terminal())
+    .with_target(false)
+    .with_file(false)
+    .with_thread_ids(false)
+    .with_thread_names(false)
+    .with_file(false)
+    .with_line_number(false)
+    .without_time()
+    .with_writer(std::io::stderr)
+    // Apply the filter last
+    .with_filter(console_filter);
+
   // Create our subscriber with correctly ordered layers
   let subscriber = tracing_subscriber::registry()
-    // File output layer
-    .with(
-      fmt::layer()
-        .with_ansi(false)
-        .with_target(true)
-        .with_thread_ids(false)
-        .with_thread_names(false)
-        .with_file(false)
-        .with_line_number(false)
-        .with_level(true)
-        .with_writer(non_blocking)
-        // Apply the filter last
-        .with_filter(file_filter),
-    )
-    // Console output layer
-    .with(
-      fmt::layer()
-        .compact()
-        .with_ansi(std::io::stderr().is_terminal())
-        .with_target(false)
-        .with_file(false)
-        .without_time()
-        .with_writer(std::io::stderr)
-        // Apply the filter last
-        .with_filter(console_filter),
-    );
+    .with(file_layer)
+    .with(console_layer);
 
   // Set as global default
   tracing::subscriber::set_global_default(subscriber)

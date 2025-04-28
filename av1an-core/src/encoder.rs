@@ -333,6 +333,7 @@ impl Encoder {
           "--end-usage=q",
           "--cq-level=30",
           "--disable-kf",
+          "--kf-max-dist=9999"
         ];
 
         if cols > 1 || rows > 1 {
@@ -381,6 +382,7 @@ impl Encoder {
           "--row-mt=1",
           "--auto-alt-ref=6",
           "--disable-kf",
+          "--kf-max-dist=9999"
         ];
 
         if cols > 1 || rows > 1 {
@@ -668,6 +670,7 @@ impl Encoder {
         "--sb-size=64",
         "--min-partition-size=32",
         "--disable-kf",
+        "--kf-max-dist=9999"
       ],
       Self::rav1e => inplace_vec![
         "rav1e",
@@ -698,6 +701,8 @@ impl Encoder {
         "--end-usage=q",
         format!("--cq-level={q}"),
         "--row-mt=1",
+        "--disable-kf",
+        "--kf-max-dist=9999"
       ],
       Self::svt_av1 => {
         if *USE_OLD_SVT_AV1 {

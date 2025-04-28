@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Debug;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
@@ -12,7 +13,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 // Store the worker guard globally
 static WORKER_GUARD: OnceCell<WorkerGuard> = OnceCell::new();
-pub const DEFAULT_CONSOLE_LEVEL: LevelFilter = LevelFilter::ERROR;
+pub const DEFAULT_CONSOLE_LEVEL: LevelFilter = LevelFilter::INFO;
 pub const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::DEBUG;
 
 // Define our module configuration structure
@@ -27,8 +28,8 @@ struct ModuleConfig {
 impl Default for ModuleConfig {
   fn default() -> Self {
     Self {
-      console_level: LevelFilter::ERROR,
-      file_level: LevelFilter::DEBUG,
+      console_level: DEFAULT_CONSOLE_LEVEL,
+      file_level: DEFAULT_LOG_LEVEL,
       console_enabled: true,
       file_enabled: true,
     }
@@ -125,32 +126,27 @@ pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: L
   let subscriber = tracing_subscriber::registry()
     // File output layer
     .with(
-      fmt::Layer::new()
-        // First configure all formatting
+      fmt::layer()
         .with_ansi(false)
         .with_target(true)
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_file(true)
-        .with_line_number(true)
+        .with_thread_ids(false)
+        .with_thread_names(false)
+        .with_file(false)
+        .with_line_number(false)
         .with_level(true)
-        // Set the writer
         .with_writer(non_blocking)
         // Apply the filter last
         .with_filter(file_filter),
     )
     // Console output layer
     .with(
-      fmt::Layer::new()
-        // First configure all formatting
+      fmt::layer()
+        .compact()
         .with_ansi(std::io::stderr().is_terminal())
-        .with_target(true)
-        .with_thread_ids(false)
+        .with_target(false)
         .with_file(false)
-        .with_line_number(false)
-        .with_level(true)
-        // Set the writer
-        .with_writer(std::io::stdout)
+        .without_time()
+        .with_writer(std::io::stderr)
         // Apply the filter last
         .with_filter(console_filter),
     );
@@ -160,6 +156,6 @@ pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: L
     .expect("Failed to set global default subscriber");
 
   // Log initialization
-  tracing::info!("Logging system initialized");
+  tracing::debug!("Logging system initialized");
   tracing::debug!("Module-specific logging enabled");
 }

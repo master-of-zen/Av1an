@@ -16,21 +16,10 @@ const PROGRESS_CHARS: &str = if cfg!(windows) {
   "█▉▊▋▌▍▎▏  "
 };
 
-const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
-  // Do not use a spinner on Windows since the default console cannot display
-  // the characters used for the spinner
-  "{elapsed_precise:.bold} ▐{wide_bar:.blue/white.dim}▌ {percent:.bold} {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
-} else {
-  "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
-};
+const INDICATIF_PROGRESS_TEMPLATE: &str = "{elapsed_precise:.bold} {prefix}▐{wide_bar:.blue/white.dim}▌ {percent:.bold} {pos} ({fps:.bold}, eta {fixed_eta}{msg})";
 
-const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
-  // Do not use a spinner on Windows since the default console cannot display
-  // the characters used for the spinner
-  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
-} else {
-  "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
-};
+const INDICATIF_SC_SPINNER_TEMPLATE: &str =
+  "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})";
 
 static PROGRESS_BAR: OnceCell<ProgressBar> = OnceCell::new();
 static AUDIO_BYTES: OnceCell<u64> = OnceCell::new();
@@ -93,7 +82,7 @@ fn pretty_progress_style(resume_frames: u64) -> ProgressStyle {
 
 fn spinner_style(resume_frames: u64) -> ProgressStyle {
   ProgressStyle::default_spinner()
-    .template(INDICATIF_SPINNER_TEMPLATE)
+    .template(INDICATIF_SC_SPINNER_TEMPLATE)
     .unwrap()
     .with_key("fps", move |state: &ProgressState, w: &mut dyn Write| {
       let resume_pos = state.pos() - resume_frames;
@@ -116,7 +105,7 @@ fn spinner_style(resume_frames: u64) -> ProgressStyle {
 
 /// Initialize progress bar
 /// Enables steady 100 ms tick
-pub fn init_progress_bar(len: u64, resume_frames: u64) {
+pub fn init_progress_bar(len: u64, resume_frames: u64, chunks: Option<(u32, u32)>) {
   let pb = if len > 0 {
     PROGRESS_BAR
       .get_or_init(|| ProgressBar::new(len).with_style(pretty_progress_style(resume_frames)))
@@ -131,6 +120,9 @@ pub fn init_progress_bar(len: u64, resume_frames: u64) {
   pb.reset_eta();
   pb.reset_elapsed();
   pb.set_position(0);
+  if let Some((done, chunks)) = chunks {
+    pb.set_prefix(format!("[{}/{} Chunks] ", done, chunks));
+  }
 }
 
 pub fn convert_to_progress(resume_frames: u64) {
@@ -156,9 +148,12 @@ pub fn dec_bar(dec: u64) {
   }
 }
 
-pub fn update_bar_info(kbps: f64, est_size: HumanBytes) {
+pub fn update_bar_info(kbps: f64, est_size: HumanBytes, chunks: Option<(u32, u32)>) {
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
+    if let Some((done, chunks)) = chunks {
+      pb.set_prefix(format!("[{}/{} Chunks] ", done, chunks));
+    }
   }
 }
 
@@ -215,26 +210,20 @@ pub fn reset_mp_bar_at(pos: u64) {
   }
 }
 
-pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize, resume_frames: u64) {
+pub fn init_multi_progress_bar(len: u64, workers: usize, resume_frames: u64, chunks: (u32, u32)) {
   MULTI_PROGRESS_BAR.get_or_init(|| {
     let mpb = MultiProgress::new();
 
     let mut pbs = Vec::new();
 
-    let digits = printable_base10_digits(total_chunks) as usize;
+    let digits = printable_base10_digits(chunks.1 as usize) as usize;
 
     for _ in 1..=workers {
-      let pb = ProgressBar::hidden()
-        // no spinner on windows, so we remove the prefix to line up with the progress bar
-        .with_style(
-          ProgressStyle::default_spinner()
-            .template(if cfg!(windows) {
-              "{prefix:.dim} {msg}"
-            } else {
-              "  {prefix:.dim} {msg}"
-            })
-            .unwrap(),
-        );
+      let pb = ProgressBar::hidden().with_style(
+        ProgressStyle::default_spinner()
+          .template("{prefix:.dim} {msg}")
+          .unwrap(),
+      );
       pb.set_prefix(format!("[Idle  {digits:digits$}]"));
       pbs.push(mpb.add(pb));
     }
@@ -247,6 +236,7 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, total_chunks: usize, re
     pb.set_position(0);
     pb.set_length(len);
     pb.reset();
+    pb.set_prefix(format!("[{}/{} Chunks] ", chunks.0, chunks.1));
     pbs.push(mpb.add(pb));
 
     mpb.set_draw_target(ProgressDrawTarget::stderr());
@@ -273,16 +263,20 @@ pub fn inc_mp_bar(inc: u64) {
   }
 }
 
-pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes) {
+pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes, chunks: (u32, u32)) {
   if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
-    pbs
-      .last()
-      .unwrap()
-      .set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
+    let pb = pbs.last().unwrap();
+    pb.set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
+    pb.set_prefix(format!("[{}/{} Chunks] ", chunks.0, chunks.1));
   }
 }
 
-pub fn update_progress_bar_estimates(frame_rate: f64, total_frames: usize, verbosity: Verbosity) {
+pub fn update_progress_bar_estimates(
+  frame_rate: f64,
+  total_frames: usize,
+  verbosity: Verbosity,
+  chunks: (u32, u32),
+) {
   let completed_frames: usize = get_done()
     .done
     .iter()
@@ -301,8 +295,8 @@ pub fn update_progress_bar_estimates(frame_rate: f64, total_frames: usize, verbo
 
   let est_size = total_size as f64 / progress + audio_size_byte as f64;
   if verbosity == Verbosity::Normal {
-    update_bar_info(kbps, HumanBytes(est_size as u64));
+    update_bar_info(kbps, HumanBytes(est_size as u64), Some(chunks));
   } else if verbosity == Verbosity::Verbose {
-    update_mp_bar_info(kbps, HumanBytes(est_size as u64));
+    update_mp_bar_info(kbps, HumanBytes(est_size as u64), chunks);
   }
 }

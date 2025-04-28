@@ -279,6 +279,7 @@ impl Broker<'_> {
       chunk.frame_rate,
       self.project.frames,
       self.project.args.verbosity,
+      (get_done().done.len() as u32, self.chunk_queue.len() as u32),
     );
 
     debug!(

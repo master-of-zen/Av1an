@@ -9,7 +9,7 @@ use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::concat::ConcatMethod;
 use av1an_core::context::Av1anContext;
 use av1an_core::encoder::Encoder;
-use av1an_core::logging::{init_logging, DEFAULT_CONSOLE_LEVEL, DEFAULT_LOG_LEVEL};
+use av1an_core::logging::{init_logging, DEFAULT_LOG_LEVEL};
 use av1an_core::settings::{EncodeArgs, InputPixelFormat, PixelFormat};
 use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
@@ -898,8 +898,8 @@ pub fn run() -> anyhow::Result<()> {
 
   init_logging(
     match first_arg.verbosity {
-      Verbosity::Quiet => LevelFilter::OFF,
-      Verbosity::Normal => DEFAULT_CONSOLE_LEVEL,
+      Verbosity::Quiet => LevelFilter::WARN,
+      Verbosity::Normal => LevelFilter::INFO,
       Verbosity::Verbose => LevelFilter::INFO,
     },
     first_arg.log_file.clone(),

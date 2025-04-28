@@ -35,7 +35,7 @@ pub fn av_scenechange_detect(
     } else {
       eprintln!("Scene detection");
     }
-    progress_bar::init_progress_bar(total_frames as u64, 0);
+    progress_bar::init_progress_bar(total_frames as u64, 0, None);
   }
 
   let input2 = input.clone();

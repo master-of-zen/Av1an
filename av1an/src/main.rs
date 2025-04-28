@@ -599,7 +599,7 @@ pub struct CliOpts {
 }
 
 impl CliOpts {
-  #[tracing::instrument]
+  #[tracing::instrument(level = "debug")]
   pub fn target_quality_params(
     &self,
     temp_dir: String,
@@ -677,7 +677,7 @@ pub(crate) fn resolve_file_paths(path: &Path) -> anyhow::Result<Box<dyn Iterator
 }
 
 /// Returns vector of Encode args ready to be fed to encoder
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
   let input_paths = &*args.input;
 

@@ -40,7 +40,7 @@ pub fn compose_ffmpeg_pipe<S: Into<String>>(
 }
 
 /// Get frame count using FFmpeg
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
   let mut ictx = input(source)?;
   let input = ictx
@@ -58,7 +58,7 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
   )
 }
 
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
   let ictx = input(source)?;
   let input = ictx
@@ -69,7 +69,7 @@ pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
   Ok(f64::from(rate.numerator()) / f64::from(rate.denominator()))
 }
 
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg::Error> {
   let ictx = ffmpeg::format::input(source)?;
 
@@ -85,7 +85,7 @@ pub fn get_pixel_format(source: &Path) -> Result<Pixel, ffmpeg::Error> {
   Ok(decoder.format())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg::Error> {
   let ictx = ffmpeg::format::input(source)?;
 
@@ -101,7 +101,7 @@ pub fn resolution(source: &Path) -> Result<(u32, u32), ffmpeg::Error> {
   Ok((decoder.width(), decoder.height()))
 }
 
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn transfer_characteristics(source: &Path) -> Result<TransferCharacteristic, ffmpeg::Error> {
   let ictx = ffmpeg::format::input(source)?;
 
@@ -118,7 +118,7 @@ pub fn transfer_characteristics(source: &Path) -> Result<TransferCharacteristic,
 }
 
 /// Returns vec of all keyframes
-#[tracing::instrument]
+#[tracing::instrument(level = "debug")]
 pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
   let mut ictx = input(source)?;
   let input = ictx

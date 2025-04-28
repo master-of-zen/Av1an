@@ -9,6 +9,7 @@ use std::thread::available_parallelism;
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
 use splines::{Interpolation, Key, Spline};
+use tracing::{debug, error};
 
 use crate::broker::EncoderCrash;
 use crate::chunk::Chunk;

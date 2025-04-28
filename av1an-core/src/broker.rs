@@ -16,7 +16,7 @@ use thiserror::Error;
 use tracing::{debug, error, warn};
 
 use crate::context::Av1anContext;
-use crate::progress_bar::{dec_bar, update_progress_bar_estimates};
+use crate::progress_bar::{dec_bar, update_mp_chunk, update_mp_msg, update_progress_bar_estimates};
 use crate::util::printable_base10_digits;
 use crate::{finish_progress_bar, get_done, Chunk, DoneChunk, Instant};
 
@@ -188,7 +188,7 @@ impl Broker<'_> {
     }
   }
 
-  #[tracing::instrument(skip(self))]
+  #[tracing::instrument(skip(self, chunk, terminations_requested), fields(chunk_index = format!("{:>05}", chunk.index)))]
   fn encode_chunk(
     &self,
     chunk: &mut Chunk,
@@ -197,7 +197,12 @@ impl Broker<'_> {
   ) -> Result<(), Option<Box<EncoderCrash>>> {
     let st_time = Instant::now();
 
+    // we display the index, so we need to subtract 1 to get the max index
+    let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
+    update_mp_chunk(worker_id, chunk.index, padding);
+
     if let Some(ref tq) = self.project.args.target_quality {
+      update_mp_msg(worker_id, format!("Targeting Quality: {}", tq.target));
       tq.per_shot_target_quality_routine(chunk).unwrap();
     }
 
@@ -215,9 +220,6 @@ impl Broker<'_> {
       chunk.index,
       chunk.frames()
     );
-
-    // we display the index, so we need to subtract 1 to get the max index
-    let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
 
     let passes = chunk.passes;
     for current_pass in 1..=passes {

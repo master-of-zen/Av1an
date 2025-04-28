@@ -933,7 +933,7 @@ impl Av1anContext {
       self.args.chroma_noise,
     )?;
     if let Some(ref tq) = self.args.target_quality {
-      tq.per_shot_target_quality_routine(&mut chunk)?;
+      tq.per_shot_target_quality_routine(&mut chunk, None)?;
     }
     Ok(chunk)
   }

@@ -150,3 +150,5 @@ Upload.sh
 
 *.png
 *.json
+
+logs/

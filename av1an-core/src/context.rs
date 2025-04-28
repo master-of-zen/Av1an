@@ -222,13 +222,14 @@ impl Av1anContext {
 
     let (chunk_queue, total_chunks) = self.load_or_gen_chunk_queue(&splits)?;
 
+    let mut chunks_done = 0;
     if self.args.resume {
-      let chunks_done = get_done().done.len();
+      chunks_done = get_done().done.len();
       info!(
         "encoding resumed with {}/{} chunks completed ({} remaining)",
         chunks_done,
-        chunk_queue.len() + chunks_done,
-        chunk_queue.len()
+        total_chunks + chunks_done,
+        total_chunks
       );
     }
 
@@ -291,21 +292,30 @@ impl Av1anContext {
       );
 
       if self.args.verbosity == Verbosity::Normal {
-        init_progress_bar(self.frames as u64, initial_frames as u64);
+        init_progress_bar(
+          self.frames as u64,
+          initial_frames as u64,
+          Some((chunks_done as u32, total_chunks as u32)),
+        );
         reset_bar_at(initial_frames as u64);
       } else if self.args.verbosity == Verbosity::Verbose {
         init_multi_progress_bar(
           self.frames as u64,
           self.args.workers,
-          total_chunks,
           initial_frames as u64,
+          (chunks_done as u32, total_chunks as u32),
         );
         reset_mp_bar_at(initial_frames as u64);
       }
 
-      if !get_done().done.is_empty() {
+      if chunks_done > 0 {
         let frame_rate = self.args.input.frame_rate()?;
-        update_progress_bar_estimates(frame_rate, self.frames, self.args.verbosity);
+        update_progress_bar_estimates(
+          frame_rate,
+          self.frames,
+          self.args.verbosity,
+          (chunks_done as u32, total_chunks as u32),
+        );
       }
 
       let broker = Broker {

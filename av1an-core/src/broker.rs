@@ -103,7 +103,12 @@ impl Display for EncoderCrash {
 impl Broker<'_> {
   /// Main encoding loop. set_thread_affinity may be ignored if the value is invalid.
   #[tracing::instrument(skip(self))]
-  pub fn encoding_loop(self, tx: Sender<()>, set_thread_affinity: Option<usize>) {
+  pub fn encoding_loop(
+    self,
+    tx: Sender<()>,
+    set_thread_affinity: Option<usize>,
+    total_chunks: u32,
+  ) {
     if !self.chunk_queue.is_empty() {
       let (sender, receiver) = crossbeam_channel::bounded(self.chunk_queue.len());
 
@@ -160,7 +165,7 @@ impl Broker<'_> {
 
               while let Ok(mut chunk) = rx.recv() {
                 if terminations_requested.load(Ordering::SeqCst) == 0 {
-                  if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested) {
+                  if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested, total_chunks) {
                     if let Some(e) = e {
                       error!("[chunk {}] {}", chunk.index, e);
                     }
@@ -193,6 +198,7 @@ impl Broker<'_> {
     chunk: &mut Chunk,
     worker_id: usize,
     terminations_requested: &Arc<AtomicU8>,
+    total_chunks: u32,
   ) -> Result<(), Option<Box<EncoderCrash>>> {
     let st_time = Instant::now();
 
@@ -279,7 +285,7 @@ impl Broker<'_> {
       chunk.frame_rate,
       self.project.frames,
       self.project.args.verbosity,
-      (get_done().done.len() as u32, self.chunk_queue.len() as u32),
+      (get_done().done.len() as u32, total_chunks),
     );
 
     debug!(

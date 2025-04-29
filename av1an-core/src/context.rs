@@ -17,6 +17,7 @@ use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
 use crossbeam_utils;
 use itertools::Itertools;
+use num_traits::cast::ToPrimitive;
 use rand::prelude::SliceRandom;
 use rand::rng;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -190,7 +191,8 @@ impl Av1anContext {
         };
 
     let res = self.args.input.resolution()?;
-    let fps = self.args.input.frame_rate()?;
+    let fps_ratio = self.args.input.frame_rate()?;
+    let fps = fps_ratio.to_f64().unwrap();
     let format = self.args.input.pixel_format()?;
     let tfc = self
       .args
@@ -309,9 +311,8 @@ impl Av1anContext {
       }
 
       if chunks_done > 0 {
-        let frame_rate = self.args.input.frame_rate()?;
         update_progress_bar_estimates(
-          frame_rate,
+          fps,
           self.frames,
           self.args.verbosity,
           (chunks_done as u32, total_chunks as u32),
@@ -357,6 +358,7 @@ impl Av1anContext {
             self.args.output_file.as_ref(),
             self.args.encoder,
             total_chunks,
+            fps_ratio,
           )?;
         }
         ConcatMethod::FFmpeg => {
@@ -1011,7 +1013,7 @@ impl Av1anContext {
   }
 
   fn create_video_queue_vs(&self, scenes: &[Scene], vs_script: &Path) -> Vec<Chunk> {
-    let frame_rate = self.args.input.frame_rate().unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap().to_f64().unwrap();
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
       .enumerate()
@@ -1027,7 +1029,7 @@ impl Av1anContext {
 
   fn create_video_queue_select(&self, scenes: &[Scene]) -> Vec<Chunk> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate().unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap().to_f64().unwrap();
 
     let chunk_queue: Vec<Chunk> = scenes
       .iter()
@@ -1051,7 +1053,7 @@ impl Av1anContext {
 
   fn create_video_queue_segment(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate().unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap().to_f64().unwrap();
 
     debug!("Splitting video");
     segment(
@@ -1093,7 +1095,7 @@ impl Av1anContext {
 
   fn create_video_queue_hybrid(&self, scenes: &[Scene]) -> anyhow::Result<Vec<Chunk>> {
     let input = self.args.input.as_video_path();
-    let frame_rate = self.args.input.frame_rate().unwrap();
+    let frame_rate = self.args.input.frame_rate().unwrap().to_f64().unwrap();
 
     let keyframes = crate::ffmpeg::get_keyframes(input).unwrap();
 

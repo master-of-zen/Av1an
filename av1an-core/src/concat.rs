@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context};
 use av_format::buffer::AccReader;
 use av_format::demuxer::{Context as DemuxerContext, Event};
 use av_format::muxer::{Context as MuxerContext, Writer};
+use av_format::rational::Rational64;
 use av_ivf::demuxer::IvfDemuxer;
 use av_ivf::muxer::IvfMuxer;
 use path_abs::{PathAbs, PathInfo};
@@ -154,6 +155,7 @@ pub fn mkvmerge(
   output: &Path,
   encoder: Encoder,
   num_chunks: usize,
+  output_fps: Rational64,
 ) -> anyhow::Result<()> {
   // mkvmerge does not accept UNC paths on Windows
   #[cfg(windows)]
@@ -199,6 +201,7 @@ pub fn mkvmerge(
     encoder,
     &fix_path(output.to_str().unwrap()),
     audio_file.as_deref(),
+    output_fps,
   );
 
   let mut options_json = File::create(options_path)?;
@@ -232,13 +235,20 @@ pub fn mkvmerge_options_json(
   encoder: Encoder,
   output: &str,
   audio: Option<&str>,
+  output_fps: Rational64,
 ) -> String {
   let mut file_string = String::with_capacity(64 + 12 * num);
   write!(file_string, "[\"-o\", {output:?}").unwrap();
   if let Some(audio) = audio {
     write!(file_string, ", {audio:?}").unwrap();
   }
-  file_string.push_str(", \"[\"");
+  write!(
+    file_string,
+    ", \"--default-duration\", \"0:{}/{}fps\", \"[\"",
+    output_fps.numer(),
+    output_fps.denom()
+  )
+  .unwrap();
   for i in 0..num {
     write!(file_string, ", \"{i:05}.{}\"", encoder.output_extension()).unwrap();
   }
@@ -247,7 +257,7 @@ pub fn mkvmerge_options_json(
   file_string
 }
 
-/// Concatenates using ffmpeg (does not work with x265)
+/// Concatenates using ffmpeg (does not work with x265, and may have incorrect FPS with vpx)
 #[tracing::instrument(level = "debug")]
 pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
   fn write_concat_file(temp_folder: &Path) -> anyhow::Result<()> {
@@ -350,4 +360,34 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use av_format::rational::Rational64;
+
+  #[test]
+  fn test_mkvmerge_options_json_no_audio() {
+    let result = mkvmerge_options_json(2, Encoder::aom, "output.mkv", None, Rational64::new(30, 1));
+    assert_eq!(
+      result,
+      r#"["-o", "output.mkv", "--default-duration", "0:30/1fps", "[", "00000.ivf", "00001.ivf","]"]"#
+    );
+  }
+
+  #[test]
+  fn test_mkvmerge_options_json_with_audio() {
+    let result = mkvmerge_options_json(
+      2,
+      Encoder::aom,
+      "output.mkv",
+      Some("audio.mkv"),
+      Rational64::new(30, 1),
+    );
+    assert_eq!(
+      result,
+      r#"["-o", "output.mkv", "audio.mkv", "--default-duration", "0:30/1fps", "[", "00000.ivf", "00001.ivf","]"]"#
+    );
+  }
 }

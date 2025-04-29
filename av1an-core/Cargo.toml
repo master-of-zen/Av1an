@@ -59,6 +59,7 @@ tokio = { version = "1.43", features = ["full"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 regex = "1.11.1"
 ctrlc = "3.4.6"
+num-traits = "0.2.19"
 
 # TODO: https://github.com/elast0ny/affinity/issues/2
 # update this when macos support is implemented

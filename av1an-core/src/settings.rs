@@ -126,6 +126,10 @@ impl EncodeArgs {
 properly into a mkv file. Specify mkvmerge as the concatenation method by setting `--concat mkvmerge`.");
     }
 
+    if self.encoder == Encoder::vpx && self.concat != ConcatMethod::MKVMerge {
+      warn!("mkvmerge is recommended for concatenating vpx, as vpx outputs with incorrect frame rates, which we can only resolve using mkvmerge. Specify mkvmerge as the concatenation method by setting `--concat mkvmerge`.");
+    }
+
     if self.chunk_method == ChunkMethod::LSMASH {
       ensure!(
         is_lsmash_installed(),

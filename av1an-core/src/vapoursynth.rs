@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{anyhow, bail};
+use av_format::rational::Rational64;
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use regex::Regex;
@@ -125,12 +126,15 @@ fn get_num_frames(env: &Environment) -> anyhow::Result<usize> {
   Ok(num_frames)
 }
 
-fn get_frame_rate(env: &Environment) -> anyhow::Result<f64> {
+fn get_frame_rate(env: &Environment) -> anyhow::Result<Rational64> {
   let info = get_clip_info(env);
 
   match info.framerate {
     Property::Variable => bail!("Cannot output clips with varying framerate"),
-    Property::Constant(fps) => Ok(fps.numerator as f64 / fps.denominator as f64),
+    Property::Constant(fps) => Ok(Rational64::new(
+      fps.numerator as i64,
+      fps.denominator as i64,
+    )),
   }
 }
 
@@ -346,7 +350,7 @@ pub fn bit_depth(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usi
   get_bit_depth(&environment)
 }
 
-pub fn frame_rate(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<f64> {
+pub fn frame_rate(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<Rational64> {
   // Create a new VSScript environment.
   let mut environment = Environment::new().unwrap();
 

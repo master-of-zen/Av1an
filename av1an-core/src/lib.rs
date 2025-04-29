@@ -19,6 +19,7 @@ use ::vapoursynth::api::API;
 use ::vapoursynth::map::OwnedMap;
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
+use av_format::rational::Rational64;
 use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
@@ -113,7 +114,7 @@ impl Input {
     })
   }
 
-  pub fn frame_rate(&self) -> anyhow::Result<f64> {
+  pub fn frame_rate(&self) -> anyhow::Result<Rational64> {
     const FAIL_MSG: &str = "Failed to get frame rate for input video";
     Ok(match &self {
       Input::Video { path } => {

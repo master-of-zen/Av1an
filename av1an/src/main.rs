@@ -18,6 +18,7 @@ use av1an_core::{
   SplitMethod, Verbosity,
 };
 use clap::{value_parser, Parser};
+use num_traits::cast::ToPrimitive;
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, level_filters::LevelFilter, warn};
@@ -472,7 +473,7 @@ pub struct CliOpts {
   ///
   /// ivf - Experimental concatenation method implemented in av1an itself to concatenate to an ivf
   /// file (which only supports VP8, VP9, and AV1, and does not support audio).
-  #[clap(short, long, default_value_t = ConcatMethod::FFmpeg, help_heading = "Encoding")]
+  #[clap(short, long, default_value_t = ConcatMethod::MKVMerge, help_heading = "Encoding")]
   pub concat: ConcatMethod,
 
   /// FFmpeg pixel format
@@ -789,7 +790,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
         Some(x) => Some(x),
         // Make sure it's at least 10 seconds, unless specified by user
         None => match input.frame_rate() {
-          Ok(fps) => Some((fps * args.extra_split_sec) as usize),
+          Ok(fps) => Some((fps.to_f64().unwrap() * args.extra_split_sec) as usize),
           Err(_) => Some(240_usize),
         },
       },

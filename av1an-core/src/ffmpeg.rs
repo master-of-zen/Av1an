@@ -1,12 +1,12 @@
-use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-
+use av_format::rational::Rational64;
 use ffmpeg::color::TransferCharacteristic;
 use ffmpeg::format::{input, Pixel};
 use ffmpeg::media::Type as MediaType;
 use ffmpeg::Error::StreamNotFound;
 use path_abs::{PathAbs, PathInfo};
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use crate::{into_array, into_vec};
 
@@ -59,14 +59,17 @@ pub fn num_frames(source: &Path) -> Result<usize, ffmpeg::Error> {
 }
 
 #[tracing::instrument(level = "debug")]
-pub fn frame_rate(source: &Path) -> Result<f64, ffmpeg::Error> {
+pub fn frame_rate(source: &Path) -> Result<Rational64, ffmpeg::Error> {
   let ictx = input(source)?;
   let input = ictx
     .streams()
     .best(MediaType::Video)
     .ok_or(StreamNotFound)?;
   let rate = input.avg_frame_rate();
-  Ok(f64::from(rate.numerator()) / f64::from(rate.denominator()))
+  Ok(Rational64::new(
+    rate.numerator() as i64,
+    rate.denominator() as i64,
+  ))
 }
 
 #[tracing::instrument(level = "debug")]

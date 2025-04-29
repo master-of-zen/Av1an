@@ -228,8 +228,8 @@ impl Av1anContext {
       info!(
         "encoding resumed with {}/{} chunks completed ({} remaining)",
         chunks_done,
-        total_chunks + chunks_done,
-        total_chunks
+        total_chunks,
+        chunk_queue.len()
       );
     }
 
@@ -325,7 +325,7 @@ impl Av1anContext {
 
       let (tx, rx) = mpsc::channel();
       let handle = s.spawn(|_| {
-        broker.encoding_loop(tx, self.args.set_thread_affinity);
+        broker.encoding_loop(tx, self.args.set_thread_affinity, total_chunks as u32);
       });
 
       // Queue::encoding_loop only sends a message if there was an error (meaning a chunk crashed)

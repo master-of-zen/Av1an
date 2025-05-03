@@ -744,7 +744,6 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       },
       temp: temp.clone(),
       force: args.force,
-      no_defaults: args.no_defaults,
       passes: if let Some(passes) = args.passes {
         passes
       } else {

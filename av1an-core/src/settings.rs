@@ -78,6 +78,7 @@ pub struct EncodeArgs {
   pub resume: bool,
   pub keep: bool,
   pub force: bool,
+  pub no_defaults: bool,
   pub tile_auto: bool,
 
   pub concat: ConcatMethod,
@@ -185,31 +186,34 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
       self.tiles = self.input.calculate_tiles();
     }
 
-    if self.video_params.is_empty() {
-      self.video_params = self.encoder.get_default_arguments(self.tiles);
-    }
+    if !self.no_defaults {
+      if self.video_params.is_empty() {
+        self.video_params = self.encoder.get_default_arguments(self.tiles);
+      }
 
-    // merge video_params with additional params
-    // TODO: consider using hashmap to store program arguments instead of string vector
-    let additional_video_params = self.encoder.get_additional_arguments();
-    let mut skip = false;
-    let mut additional_params: Vec<String> = Vec::new();
-    for param in additional_video_params {
-      if skip && !(param.starts_with("-") && param != "-1") {
-        skip = false;
-        continue;
-      } else {
-        skip = false;
+      // merge video_params with additional params
+      // TODO: consider using hashmap to store program arguments instead of string vector
+      let additional_video_params = self.encoder.get_additional_arguments();
+      let mut skip = false;
+      let mut additional_params: Vec<String> = Vec::new();
+      for param in additional_video_params {
+        if skip && !(param.starts_with("-") && param != "-1") {
+          skip = false;
+          continue;
+        } else {
+          skip = false;
+        }
+        if (param.starts_with("-") && param != "-1")
+          && self.video_params.iter().any(|x| *x == param)
+        {
+          skip = true;
+          continue;
+        } else {
+          additional_params.push(param);
+        }
       }
-      if (param.starts_with("-") && param != "-1") && self.video_params.iter().any(|x| *x == param)
-      {
-        skip = true;
-        continue;
-      } else {
-        additional_params.push(param);
-      }
+      self.video_params = chain!(additional_params, self.video_params.clone()).collect();
     }
-    self.video_params = chain!(additional_params, self.video_params.clone()).collect();
 
     if let Some(strength) = self.photon_noise {
       if strength > 64 {

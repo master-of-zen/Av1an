@@ -316,7 +316,7 @@ jobs:
           tool: cargo-llvm-cov
 
       - name: Generate code coverage
-        run: cargo llvm-cov --profile ci --workspace --lcov --output-path lcov.log
+        run: cargo llvm-cov --profile ci --workspace --lcov --output-path lcov.log --ignore-filename-regex tests\.rs
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::cmp;
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -464,24 +467,4 @@ fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
   }
 
   (xb, yb + y)
-}
-
-#[cfg(test)]
-mod tests {
-  use crate::target_quality::lagrange_bisect;
-
-  #[test]
-  fn test_bisect() {
-    let sorted = vec![(0, 0.0), (1, 1.0), (256, 256.0 * 256.0)];
-
-    assert!(lagrange_bisect(&sorted, 0.0).0 == 0);
-    assert!(lagrange_bisect(&sorted, 1.0).0 == 1);
-    assert!(lagrange_bisect(&sorted, 256.0 * 256.0).0 == 256);
-
-    assert!(lagrange_bisect(&sorted, 8.0).0 == 3);
-    assert!(lagrange_bisect(&sorted, 9.0).0 == 3);
-
-    assert!(lagrange_bisect(&sorted, -1.0).0 == 0);
-    assert!(lagrange_bisect(&sorted, 2.0 * 256.0 * 256.0).0 == 256);
-  }
 }

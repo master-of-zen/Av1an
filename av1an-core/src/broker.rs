@@ -3,11 +3,9 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::ExitStatus;
-use std::sync::{
-  atomic::{AtomicU8, Ordering},
-  mpsc::Sender,
-  Arc,
-};
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use cfg_if::cfg_if;

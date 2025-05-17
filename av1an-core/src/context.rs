@@ -27,6 +27,7 @@ use crate::broker::{Broker, EncoderCrash};
 use crate::chunk::Chunk;
 use crate::concat::{self, ConcatMethod};
 use crate::ffmpeg::{compose_ffmpeg_pipe, num_frames};
+use crate::metrics::vmaf;
 use crate::progress_bar::{
   finish_progress_bar, inc_bar, inc_mp_bar, init_multi_progress_bar, init_progress_bar,
   reset_bar_at, reset_mp_bar_at, set_audio_size, update_mp_chunk, update_mp_msg,
@@ -39,7 +40,7 @@ use crate::split::{extra_splits, segment, write_scenes_to_file};
 use crate::vapoursynth::{copy_vs_file, create_vs_file};
 use crate::{
   create_dir, determine_workers, get_done, init_done, into_vec, read_chunk_queue, save_chunk_queue,
-  vmaf, ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
+  ChunkMethod, ChunkOrdering, DashMap, DoneJson, Input, SplitMethod, Verbosity,
 };
 
 #[derive(Debug)]

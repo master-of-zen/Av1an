@@ -15,12 +15,13 @@ use av1an_core::target_quality::{adapt_probing_rate, TargetQuality};
 use av1an_core::util::read_in_dir;
 use av1an_core::{
   ffmpeg, hash_path, into_vec, vapoursynth, ChunkMethod, ChunkOrdering, Input, ScenecutMethod,
-  SplitMethod, Verbosity,
+  SplitMethod, TargetMetric, Verbosity,
 };
 use clap::{value_parser, Parser};
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
-use tracing::{instrument, level_filters::LevelFilter, warn};
+use tracing::level_filters::LevelFilter;
+use tracing::{instrument, warn};
 
 fn main() -> anyhow::Result<()> {
   let orig_hook = panic::take_hook();
@@ -43,11 +44,17 @@ fn version() -> &'static str {
   systems.innocent.lsmas : {}
   com.vapoursynth.ffms2  : {}
   com.vapoursynth.dgdecodenv : {}
-  com.vapoursynth.bestsource : {}",
+  com.vapoursynth.bestsource : {}
+  com.julek.plugin : {}
+  com.julek.vszip : {}
+  com.lumen.vship : {}",
       isfound(vapoursynth::is_lsmash_installed()),
       isfound(vapoursynth::is_ffms2_installed()),
       isfound(vapoursynth::is_dgdecnv_installed()),
-      isfound(vapoursynth::is_bestsource_installed())
+      isfound(vapoursynth::is_bestsource_installed()),
+      isfound(vapoursynth::is_julek_installed()),
+      isfound(vapoursynth::is_vszip_installed()),
+      isfound(vapoursynth::is_vship_installed())
     )
   }
 
@@ -556,14 +563,19 @@ pub struct CliOpts {
   #[clap(long, help_heading = "VMAF")]
   pub vmaf_filter: Option<String>,
 
-  /// Target a VMAF score for encoding (disabled by default)
+  /// Target a metric score for encoding (disabled by default)
   ///
-  /// For each chunk, target quality uses an algorithm to find the quantizer/crf needed to achieve a certain VMAF score.
+  /// For each chunk, target quality uses an algorithm to find the quantizer/crf needed to achieve a certain metric score.
   /// Target quality mode is much slower than normal encoding, but can improve the consistency of quality in some cases.
   ///
-  /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is the best). Floating-point values are allowed.
+  /// The VMAF and SSIMULACRA2 score ranges are 0-100 (where 0 is the worst quality, and 100 is the best). Floating-point values are allowed.
+  /// The Butteraugli score minimum is 0 as the best quality and increases as quality decreases. Floating-point values are allowed.
   #[clap(long, help_heading = "Target Quality")]
   pub target_quality: Option<f64>,
+
+  /// The metric used for Target Quality mode
+  #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality")]
+  pub target_metric: TargetMetric,
 
   /// Maximum number of probes allowed for target quality
   #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
@@ -623,6 +635,7 @@ impl CliOpts {
         model: self.vmaf_path.clone(),
         probes: self.probes,
         target: tq,
+        metric: self.target_metric,
         min_q,
         max_q,
         encoder: self.encoder,

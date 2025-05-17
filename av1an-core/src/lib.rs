@@ -36,6 +36,10 @@ pub mod context;
 pub mod encoder;
 pub mod ffmpeg;
 pub mod logging;
+mod metrics {
+  pub mod ssimulacra2;
+  pub mod vmaf;
+}
 pub(crate) mod parse;
 pub mod progress_bar;
 pub mod scene_detect;
@@ -45,7 +49,6 @@ pub mod split;
 pub mod target_quality;
 pub mod util;
 pub mod vapoursynth;
-pub mod vmaf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {
@@ -345,6 +348,20 @@ pub enum ChunkOrdering {
   Sequential,
   #[strum(serialize = "random")]
   Random,
+}
+
+#[derive(
+  PartialEq, Eq, Copy, Clone, Serialize, Deserialize, Debug, Display, EnumString, IntoStaticStr,
+)]
+pub enum TargetMetric {
+  #[strum(serialize = "vmaf")]
+  VMAF,
+  #[strum(serialize = "ssimulacra2")]
+  SSIMULACRA2,
+  #[strum(serialize = "butteraugli")]
+  BUTTERAUGLI,
+  #[strum(serialize = "xpsnr")]
+  XPSNR,
 }
 
 /// Determine the optimal number of workers for an encoder

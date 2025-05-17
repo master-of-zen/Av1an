@@ -121,7 +121,7 @@ pub fn init_progress_bar(len: u64, resume_frames: u64, chunks: Option<(u32, u32)
   pb.reset_elapsed();
   pb.set_position(0);
   if let Some((done, chunks)) = chunks {
-    pb.set_prefix(format!("[{}/{} Chunks] ", done, chunks));
+    pb.set_prefix(format!("[{done}/{chunks} Chunks] "));
   }
 }
 
@@ -152,7 +152,7 @@ pub fn update_bar_info(kbps: f64, est_size: HumanBytes, chunks: Option<(u32, u32
   if let Some(pb) = PROGRESS_BAR.get() {
     pb.set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
     if let Some((done, chunks)) = chunks {
-      pb.set_prefix(format!("[{}/{} Chunks] ", done, chunks));
+      pb.set_prefix(format!("[{done}/{chunks} Chunks] "));
     }
   }
 }

@@ -12,12 +12,12 @@ use tracing_subscriber::filter::LevelFilter;
 
 use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
+use crate::metrics::vmaf::validate_libvmaf;
 use crate::parse::valid_params;
 use crate::target_quality::TargetQuality;
 use crate::vapoursynth::{
   is_bestsource_installed, is_dgdecnv_installed, is_ffms2_installed, is_lsmash_installed,
 };
-use crate::vmaf::validate_libvmaf;
 use crate::{ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -202,9 +202,7 @@ properly into a mkv file. Specify mkvmerge as the concatenation method by settin
           } else {
             skip = false;
           }
-          if (param.starts_with("-") && param != "-1")
-            && self.video_params.iter().any(|x| *x == param)
-          {
+          if (param.starts_with("-") && param != "-1") && self.video_params.contains(&param) {
             skip = true;
             continue;
           } else {

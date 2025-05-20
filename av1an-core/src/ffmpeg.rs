@@ -162,10 +162,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
         let output = encode_audio.output().unwrap();
 
         if !output.status.success() {
-            warn!(
-                "FFmpeg failed to encode audio!\n{:#?}\nParams: {:?}",
-                output, encode_audio
-            );
+            warn!("FFmpeg failed to encode audio!\n{output:#?}\nParams: {encode_audio:?}");
             return None;
         }
 

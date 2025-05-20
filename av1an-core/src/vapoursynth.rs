@@ -261,7 +261,7 @@ pub fn create_vs_file(
         )
         .replace(
             "cache_file = os.environ.get('AV1AN_CACHE_FILE', None)",
-            &format!("cache_file = {:?}", cache_file),
+            &format!("cache_file = {cache_file:?}"),
         );
 
     if let Some(scene_detection_downscale_height) = scene_detection_downscale_height {

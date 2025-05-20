@@ -233,7 +233,7 @@ impl EncodeArgs {
                         skip = false;
                     }
                     if (param.starts_with("-") && param != "-1")
-                        && self.video_params.iter().any(|x| *x == param)
+                        && self.video_params.contains(&param)
                     {
                         skip = true;
                         continue;

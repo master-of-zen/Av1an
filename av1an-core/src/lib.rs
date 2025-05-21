@@ -39,6 +39,7 @@ pub mod logging;
 mod metrics {
   pub mod ssimulacra2;
   pub mod vmaf;
+  pub mod xpsnr;
 }
 pub(crate) mod parse;
 pub mod progress_bar;

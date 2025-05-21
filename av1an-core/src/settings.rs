@@ -13,10 +13,12 @@ use tracing_subscriber::filter::LevelFilter;
 use crate::concat::ConcatMethod;
 use crate::encoder::Encoder;
 use crate::metrics::vmaf::validate_libvmaf;
+use crate::metrics::xpsnr::validate_libxpsnr;
 use crate::parse::valid_params;
 use crate::target_quality::TargetQuality;
 use crate::vapoursynth::{
-  is_bestsource_installed, is_dgdecnv_installed, is_ffms2_installed, is_lsmash_installed,
+  is_bestsource_installed, is_dgdecnv_installed, is_ffms2_installed, is_julek_installed,
+  is_lsmash_installed, is_vship_installed, is_vszip_installed,
 };
 use crate::{ChunkMethod, ChunkOrdering, Input, ScenecutMethod, SplitMethod, Verbosity};
 
@@ -88,6 +90,7 @@ pub struct EncodeArgs {
   pub vmaf_res: String,
   pub vmaf_threads: Option<usize>,
   pub vmaf_filter: Option<String>,
+  pub xpsnr_res: String,
 }
 
 impl EncodeArgs {
@@ -109,12 +112,23 @@ impl EncodeArgs {
       self.input
     );
 
-    if self.target_quality.is_some() {
-      validate_libvmaf()?;
-    }
-
     if which::which("ffmpeg").is_err() {
       bail!("FFmpeg not found. Is it installed in system path?");
+    }
+
+    if self.target_quality.is_some() {
+      match self.target_quality.as_ref().unwrap().metric {
+        crate::TargetMetric::VMAF => validate_libvmaf()?,
+        crate::TargetMetric::SSIMULACRA2 => {
+          ensure!(is_vship_installed() || is_vszip_installed(), "SSIMULACRA2 metric requires either Vapoursynth-HIP or VapourSynth Zig Image Process to be installed");
+        }
+        crate::TargetMetric::BUTTERAUGLI => {
+          ensure!(is_vship_installed() || is_julek_installed(), "Butteraugli metric requires either Vapoursynth-HIP or vapoursynth-julek-plugin to be installed");
+        }
+        crate::TargetMetric::XPSNR => {
+          validate_libxpsnr()?;
+        }
+      }
     }
 
     if self.concat == ConcatMethod::MKVMerge && which::which("mkvmerge").is_err() {

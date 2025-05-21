@@ -563,6 +563,12 @@ pub struct CliOpts {
   #[clap(long, help_heading = "VMAF")]
   pub vmaf_filter: Option<String>,
 
+  /// Resolution used for XPSNR calculation
+  ///
+  /// If set to inputres, the output video will be scaled to the resolution of the input video.
+  #[clap(long, default_value = "1920x1080", help_heading = "XPSNR")]
+  pub xpsnr_res: String,
+
   /// Target a metric score for encoding (disabled by default)
   ///
   /// For each chunk, target quality uses an algorithm to find the quantizer/crf needed to achieve a certain metric score.
@@ -633,6 +639,7 @@ impl CliOpts {
             .get()
         }),
         model: self.vmaf_path.clone(),
+        xpsnr_res: self.xpsnr_res.clone(),
         probes: self.probes,
         target: tq,
         metric: self.target_metric,
@@ -847,6 +854,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
       vmaf_res: args.vmaf_res.clone(),
       vmaf_threads: args.vmaf_threads,
       vmaf_filter: args.vmaf_filter.clone(),
+      xpsnr_res: args.xpsnr_res.clone(),
       verbosity,
       workers: args.workers,
       tiles: (1, 1), // default value; will be adjusted if tile_auto set

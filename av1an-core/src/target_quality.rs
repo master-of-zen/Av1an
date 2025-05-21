@@ -14,6 +14,7 @@ use tracing::{debug, error};
 use crate::broker::EncoderCrash;
 use crate::chunk::Chunk;
 use crate::metrics::vmaf::{self, read_weighted_vmaf};
+use crate::metrics::xpsnr::{self, read_weighted_xpsnr};
 use crate::progress_bar::update_mp_msg;
 use crate::vapoursynth::{measure_butteraugli, measure_ssimulacra2};
 use crate::{Encoder, TargetMetric};
@@ -27,6 +28,7 @@ pub struct TargetQuality {
   pub vmaf_filter: Option<String>,
   pub vmaf_threads: usize,
   pub model: Option<PathBuf>,
+  pub xpsnr_res: String,
   pub probing_rate: usize,
   pub probes: u32,
   pub target: f64,
@@ -88,7 +90,10 @@ impl TargetQuality {
           let scores = tq.butteraugli_probe(chunk, target).unwrap();
           scores.iter().sum::<f64>() / scores.len() as f64
         }
-        TargetMetric::XPSNR => todo!(),
+        TargetMetric::XPSNR => {
+          let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
+          read_weighted_xpsnr(fl_path, VMAF_PERCENTILE).unwrap()
+        }
       }
     }
 
@@ -371,6 +376,25 @@ impl TargetQuality {
     .unwrap();
 
     Ok(scores)
+  }
+
+  fn xpsnr_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
+    let probe_name = self.probe(chunk, q)?;
+    let fl_path = Path::new(&chunk.temp)
+      .join("split")
+      .join(format!("{}.json", chunk.index));
+
+    xpsnr::run_xpsnr(
+      &probe_name,
+      chunk.source_cmd.as_slice(),
+      self.vspipe_args.clone(),
+      &fl_path,
+      &self.xpsnr_res,
+      &self.vmaf_scaler,
+      self.probing_rate,
+    )?;
+
+    Ok(fl_path)
   }
 
   pub fn per_shot_target_quality_routine(

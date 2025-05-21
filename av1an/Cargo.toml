@@ -1,7 +1,7 @@
 [package]
 name = "av1an"
 version = "0.4.4"
-rust-version = "1.81"
+rust-version = "1.82"
 edition = "2021"
 authors = ["Zen <master_of_zen@protonmail.com>"]
 description = """
@@ -18,12 +18,13 @@ name = "av1an"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.0.32", features = ["derive"] }
-shlex = "1.3.0"
-path_abs = "0.5.1"
 anyhow = "1.0.42"
 av1an-core = { path = "../av1an-core", version = "0.4.1" }
+clap = { version = "4.5.38", features = ["derive"] }
+num-traits = "0.2.19"
 once_cell = "1.8.0"
+path_abs = "0.5.1"
+shlex = "1.3.0"
 tracing = "0.1"
 
 [build-dependencies.vergen-git2]

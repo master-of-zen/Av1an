@@ -45,6 +45,7 @@ pub enum ConcatMethod {
 }
 
 impl Display for ConcatMethod {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(<&'static str>::from(self))
     }

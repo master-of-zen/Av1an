@@ -26,25 +26,34 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
 
-use crate::{encoder::Encoder, progress_bar::finish_progress_bar, settings::EncodeArgs};
+use crate::progress_bar::finish_progress_bar;
+pub use crate::{
+    concat::ConcatMethod,
+    context::Av1anContext,
+    encoder::Encoder,
+    logging::{init_logging, DEFAULT_LOG_LEVEL},
+    settings::{EncodeArgs, InputPixelFormat, PixelFormat},
+    target_quality::{adapt_probing_rate, TargetQuality},
+    util::read_in_dir,
+};
 
-pub mod broker;
-pub mod chunk;
-pub mod concat;
-pub mod context;
-pub mod encoder;
+mod broker;
+mod chunk;
+mod concat;
+mod context;
+mod encoder;
 pub mod ffmpeg;
-pub mod logging;
-pub(crate) mod parse;
-pub mod progress_bar;
-pub mod scene_detect;
+mod logging;
+mod parse;
+mod progress_bar;
+mod scene_detect;
 mod scenes;
-pub mod settings;
-pub mod split;
-pub mod target_quality;
-pub mod util;
+mod settings;
+mod split;
+mod target_quality;
+mod util;
 pub mod vapoursynth;
-pub mod vmaf;
+mod vmaf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {
@@ -60,6 +69,7 @@ pub enum Input {
 impl Input {
     /// Returns a reference to the inner path, panicking if the input is not an
     /// `Input::Video`.
+    #[inline]
     pub fn as_video_path(&self) -> &Path {
         match &self {
             Input::Video {
@@ -75,6 +85,7 @@ impl Input {
 
     /// Returns a reference to the inner path, panicking if the input is not an
     /// `Input::VapourSynth`.
+    #[inline]
     pub fn as_vapoursynth_path(&self) -> &Path {
         match &self {
             Input::VapourSynth {
@@ -94,6 +105,7 @@ impl Input {
     /// The caller must ensure that the input type is being properly handled.
     /// This method should not be used unless the code is TRULY agnostic of the
     /// input type!
+    #[inline]
     pub fn as_path(&self) -> &Path {
         match &self {
             Input::Video {
@@ -105,14 +117,17 @@ impl Input {
         }
     }
 
+    #[inline]
     pub const fn is_video(&self) -> bool {
         matches!(&self, Input::Video { .. })
     }
 
+    #[inline]
     pub const fn is_vapoursynth(&self) -> bool {
         matches!(&self, Input::VapourSynth { .. })
     }
 
+    #[inline]
     pub fn frames(&self, vs_script_path: Option<PathBuf>) -> anyhow::Result<usize> {
         const FAIL_MSG: &str = "Failed to get number of frames for input video";
         Ok(match &self {
@@ -129,6 +144,7 @@ impl Input {
         })
     }
 
+    #[inline]
     pub fn frame_rate(&self) -> anyhow::Result<Rational64> {
         const FAIL_MSG: &str = "Failed to get frame rate for input video";
         Ok(match &self {
@@ -144,6 +160,7 @@ impl Input {
         })
     }
 
+    #[inline]
     pub fn resolution(&self) -> anyhow::Result<(u32, u32)> {
         const FAIL_MSG: &str = "Failed to get resolution for input video";
         Ok(match self {
@@ -157,6 +174,7 @@ impl Input {
         })
     }
 
+    #[inline]
     pub fn pixel_format(&self) -> anyhow::Result<String> {
         const FAIL_MSG: &str = "Failed to get pixel format for input video";
         Ok(match self {
@@ -200,6 +218,7 @@ impl Input {
         })
     }
 
+    #[inline]
     pub fn transfer_function_params_adjusted(
         &self,
         enc_params: &[String],
@@ -230,6 +249,7 @@ impl Input {
     /// Don't convert tiles to encoder specific representation
     /// Default video without tiling is 1,1
     /// Return number of horizontal and vertical tiles
+    #[inline]
     pub fn calculate_tiles(&self) -> (u32, u32) {
         match self.resolution() {
             Ok((h, v)) => {
@@ -245,6 +265,7 @@ impl Input {
 
     /// Returns the vector of arguments passed to the vspipe python environment
     /// If the input is not a vapoursynth script, the vector will be empty.
+    #[inline]
     pub fn as_vspipe_args_vec(&self) -> Result<Vec<String>, anyhow::Error> {
         match self {
             Input::VapourSynth {
@@ -259,6 +280,7 @@ impl Input {
     /// Creates and returns an OwnedMap of the arguments passed to the vspipe
     /// python environment If the input is not a vapoursynth script, the map
     /// will be empty.
+    #[inline]
     pub fn as_vspipe_args_map(&self) -> Result<OwnedMap<'static>, anyhow::Error> {
         let mut args_map = OwnedMap::new(API::get().unwrap());
 
@@ -274,7 +296,7 @@ impl Input {
 }
 
 impl<P: AsRef<Path> + Into<PathBuf>> From<(P, Vec<String>)> for Input {
-    #[allow(clippy::option_if_let_else)]
+    #[inline]
     fn from((path, vspipe_args): (P, Vec<String>)) -> Self {
         if let Some(ext) = path.as_ref().extension() {
             if ext == "py" || ext == "vpy" {
@@ -323,6 +345,7 @@ fn init_done(done: DoneJson) -> &'static DoneJson {
     DONE_JSON.get_or_init(|| done)
 }
 
+#[inline]
 pub fn list_index(params: &[impl AsRef<str>], is_match: fn(&str) -> bool) -> Option<usize> {
     assert!(!params.is_empty(), "received empty list of parameters");
 
@@ -385,6 +408,7 @@ pub enum ChunkOrdering {
 
 /// Determine the optimal number of workers for an encoder
 #[must_use]
+#[inline]
 pub fn determine_workers(args: &EncodeArgs) -> u64 {
     let res = args.input.resolution().unwrap();
     let tiles = args.tiles;
@@ -442,6 +466,7 @@ pub fn determine_workers(args: &EncodeArgs) -> u64 {
     )
 }
 
+#[inline]
 pub fn hash_path(path: &Path) -> String {
     let mut s = DefaultHasher::new();
     path.hash(&mut s);

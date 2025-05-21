@@ -23,7 +23,6 @@ use std::{
 use ansi_term::{Color, Style};
 use anyhow::{bail, Context};
 use av1_grain::TransferFunction;
-use crossbeam_utils;
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
 use rand::{prelude::SliceRandom, rng};
@@ -175,6 +174,7 @@ impl Av1anContext {
     }
 
     #[tracing::instrument(skip(self))]
+    #[inline]
     pub fn encode_file(&mut self) -> anyhow::Result<()> {
         let initial_frames =
             get_done().done.iter().map(|ref_multi| ref_multi.frames).sum::<usize>();
@@ -467,6 +467,7 @@ impl Av1anContext {
 
     /// Returns the number of frames encoded if crashed, to reset the progress
     /// bar.
+    #[inline]
     pub fn create_pipes(
         &self,
         chunk: &Chunk,

@@ -280,6 +280,7 @@ impl TargetQuality {
         Ok(fl_path)
     }
 
+    #[inline]
     pub fn per_shot_target_quality_routine(
         &self,
         chunk: &mut Chunk,
@@ -392,6 +393,7 @@ pub fn log_probes(
     );
 }
 
+#[inline]
 pub const fn adapt_probing_rate(rate: usize) -> usize {
     match rate {
         1..=4 => rate,

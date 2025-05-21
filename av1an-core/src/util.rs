@@ -126,6 +126,7 @@ pub(crate) fn printable_base10_digits(x: usize) -> u32 {
 
 /// Reads dir and returns all files
 /// Depth 1
+#[inline]
 pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>> {
     let dir = std::fs::read_dir(path)?;
     Ok(dir.into_iter().filter_map(Result::ok).filter_map(|d| {

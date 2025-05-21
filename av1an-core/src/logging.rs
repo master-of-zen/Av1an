@@ -39,6 +39,7 @@ impl Default for ModuleConfig {
 }
 
 /// Initialize logging with per-module configuration
+#[inline]
 pub fn init_logging(console_level: LevelFilter, log_path: PathBuf, file_level: LevelFilter) {
     // Set up our module configurations
     let mut module_configs = HashMap::new();

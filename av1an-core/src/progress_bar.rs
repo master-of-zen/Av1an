@@ -37,10 +37,6 @@ pub fn get_audio_size() -> u64 {
     *AUDIO_BYTES.get().unwrap_or(&0u64)
 }
 
-pub fn get_progress_bar() -> Option<&'static ProgressBar> {
-    PROGRESS_BAR.get()
-}
-
 fn pretty_progress_style(resume_frames: u64) -> ProgressStyle {
     ProgressStyle::default_bar()
         .template(INDICATIF_PROGRESS_TEMPLATE)
@@ -181,14 +177,6 @@ pub fn finish_progress_bar() {
 }
 
 static MULTI_PROGRESS_BAR: OnceCell<(MultiProgress, Vec<ProgressBar>)> = OnceCell::new();
-
-pub fn get_first_multi_progress_bar() -> Option<&'static ProgressBar> {
-    if let Some((_, pbars)) = MULTI_PROGRESS_BAR.get() {
-        pbars.first()
-    } else {
-        None
-    }
-}
 
 pub fn set_len(len: u64) {
     let pb = PROGRESS_BAR.get().unwrap();

@@ -99,3 +99,7 @@ vapoursynth_new_api = [
     "vapoursynth/vapoursynth-api-32",
     "vapoursynth/vsscript-api-31",
 ]
+
+[lints.clippy]
+inline_always = "warn"
+missing_inline_in_public_items = "warn"

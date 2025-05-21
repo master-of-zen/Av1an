@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::io;
-use std::path::{absolute, Path, PathBuf};
+use std::{
+    io,
+    path::{absolute, Path, PathBuf},
+};
 
 /// Count the number of elements passed to this macro.
 ///
@@ -103,45 +105,45 @@ macro_rules! into_smallvec {
 /// and error if creating the directory failed.
 #[macro_export]
 macro_rules! create_dir {
-  ($loc:expr) => {
-    match std::fs::create_dir(&$loc) {
-      Ok(()) => Ok(()),
-      Err(e) => match e.kind() {
-        std::io::ErrorKind::AlreadyExists => Ok(()),
-        _ => {
-          error!("Error while creating directory {:?}: {}", &$loc, e);
-          Err(e)
+    ($loc:expr) => {
+        match std::fs::create_dir(&$loc) {
+            Ok(()) => Ok(()),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::AlreadyExists => Ok(()),
+                _ => {
+                    error!("Error while creating directory {:?}: {}", &$loc, e);
+                    Err(e)
+                },
+            },
         }
-      },
-    }
-  };
+    };
 }
 
 #[inline]
 pub(crate) fn printable_base10_digits(x: usize) -> u32 {
-  (((x as f64).log10() + 1.0).floor() as u32).max(1)
+    (((x as f64).log10() + 1.0).floor() as u32).max(1)
 }
 
 /// Reads dir and returns all files
 /// Depth 1
 pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>> {
-  let dir = std::fs::read_dir(path)?;
-  Ok(dir.into_iter().filter_map(Result::ok).filter_map(|d| {
-    d.file_type().map_or(None, |file_type| {
-      if file_type.is_file() {
-        Some(d.path())
-      } else {
-        None
-      }
-    })
-  }))
+    let dir = std::fs::read_dir(path)?;
+    Ok(dir.into_iter().filter_map(Result::ok).filter_map(|d| {
+        d.file_type().map_or(None, |file_type| {
+            if file_type.is_file() {
+                Some(d.path())
+            } else {
+                None
+            }
+        })
+    }))
 }
 
 #[inline]
 pub(crate) fn to_absolute_path(path: &Path) -> io::Result<PathBuf> {
-  if cfg!(target_os = "windows") {
-    absolute(path)
-  } else {
-    path.canonicalize()
-  }
+    if cfg!(target_os = "windows") {
+        absolute(path)
+    } else {
+        path.canonicalize()
+    }
 }

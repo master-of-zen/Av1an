@@ -11,6 +11,22 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Validate formatting
+        run: |
+          cargo fmt --all -- --check
+
   unit-tests:
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
@@ -34,10 +50,6 @@ jobs:
           which vspipe
           which ffmpeg
 
-      - name: Validate formatting
-        run: |
-          cargo fmt --all -- --check
-
       - name: Build Av1an
         run: |
           cargo clippy --profile ci -- -D warnings
@@ -58,7 +70,7 @@ jobs:
           cargo test --profile ci
 
   encode-tests:
-    needs: [ unit-tests ]
+    needs: [ formatting, unit-tests ]
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
@@ -287,7 +299,7 @@ jobs:
         continue-on-error: true
 
   code-coverage:
-    needs: [ unit-tests, encode-tests ]
+    needs: [ formatting, unit-tests, encode-tests ]
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
@@ -326,7 +338,7 @@ jobs:
           fail_ci_if_error: true
 
   docker:
-    needs: [ unit-tests ]
+    needs: [ formatting, unit-tests ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

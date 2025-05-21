@@ -34,6 +34,7 @@ static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
         .collect()
 });
 
+#[inline]
 pub fn is_lsmash_installed() -> bool {
     static LSMASH_PRESENT: Lazy<bool> =
         Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas"));
@@ -41,6 +42,7 @@ pub fn is_lsmash_installed() -> bool {
     *LSMASH_PRESENT
 }
 
+#[inline]
 pub fn is_ffms2_installed() -> bool {
     static FFMS2_PRESENT: Lazy<bool> =
         Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2"));
@@ -48,6 +50,7 @@ pub fn is_ffms2_installed() -> bool {
     *FFMS2_PRESENT
 }
 
+#[inline]
 pub fn is_dgdecnv_installed() -> bool {
     static DGDECNV_PRESENT: Lazy<bool> =
         Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.dgdecodenv"));
@@ -55,6 +58,7 @@ pub fn is_dgdecnv_installed() -> bool {
     *DGDECNV_PRESENT
 }
 
+#[inline]
 pub fn is_bestsource_installed() -> bool {
     static BESTSOURCE_PRESENT: Lazy<bool> =
         Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.bestsource"));
@@ -62,6 +66,7 @@ pub fn is_bestsource_installed() -> bool {
     *BESTSOURCE_PRESENT
 }
 
+#[inline]
 pub fn best_available_chunk_method() -> ChunkMethod {
     if is_lsmash_installed() {
         ChunkMethod::LSMASH
@@ -192,6 +197,7 @@ fn get_transfer(env: &Environment) -> anyhow::Result<u8> {
     Ok(transfer)
 }
 
+#[inline]
 pub fn create_vs_file(
     temp: &str,
     source: &Path,
@@ -286,6 +292,7 @@ pub fn create_vs_file(
     Ok(load_script_path)
 }
 
+#[inline]
 pub fn copy_vs_file(
     temp: &str,
     source: &Path,
@@ -320,6 +327,7 @@ pub fn copy_vs_file(
     Ok(scd_script_path)
 }
 
+#[inline]
 pub fn num_frames(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();
@@ -334,6 +342,7 @@ pub fn num_frames(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<us
     get_num_frames(&environment)
 }
 
+#[inline]
 pub fn bit_depth(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usize> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();
@@ -348,6 +357,7 @@ pub fn bit_depth(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<usi
     get_bit_depth(&environment)
 }
 
+#[inline]
 pub fn frame_rate(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<Rational64> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();
@@ -362,6 +372,7 @@ pub fn frame_rate(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<Ra
     get_frame_rate(&environment)
 }
 
+#[inline]
 pub fn resolution(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<(u32, u32)> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();
@@ -377,6 +388,7 @@ pub fn resolution(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<(u
 }
 
 /// Transfer characteristics as specified in ITU-T H.265 Table E.4.
+#[inline]
 pub fn transfer_characteristics(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<u8> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();
@@ -391,6 +403,7 @@ pub fn transfer_characteristics(source: &Path, vspipe_args_map: OwnedMap) -> any
     get_transfer(&environment)
 }
 
+#[inline]
 pub fn pixel_format(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<String> {
     // Create a new VSScript environment.
     let mut environment = Environment::new().unwrap();

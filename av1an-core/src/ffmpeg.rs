@@ -15,6 +15,7 @@ use path_abs::{PathAbs, PathInfo};
 
 use crate::{into_array, into_vec};
 
+#[inline]
 pub fn compose_ffmpeg_pipe<S: Into<String>>(
     params: impl IntoIterator<Item = S>,
     pix_format: Pixel,
@@ -126,6 +127,8 @@ pub fn get_keyframes(source: &Path) -> Result<Vec<usize>, ffmpeg::Error> {
 }
 
 /// Returns true if input file have audio in it
+#[must_use]
+#[inline]
 pub fn has_audio(file: &Path) -> bool {
     let ictx = input(file).unwrap();
     ictx.streams().best(MediaType::Audio).is_some()
@@ -136,6 +139,7 @@ pub fn has_audio(file: &Path) -> bool {
 /// This function returns `Some(output)` if the audio exists and the audio
 /// successfully encoded, or `None` otherwise.
 #[must_use]
+#[inline]
 pub fn encode_audio<S: AsRef<OsStr>>(
     input: impl AsRef<Path> + std::fmt::Debug,
     temp: impl AsRef<Path> + std::fmt::Debug,
@@ -173,6 +177,7 @@ pub fn encode_audio<S: AsRef<OsStr>>(
 }
 
 /// Escapes paths in ffmpeg filters if on windows
+#[inline]
 pub fn escape_path_in_filter(path: impl AsRef<Path>) -> String {
     if cfg!(windows) {
         PathAbs::new(path.as_ref())

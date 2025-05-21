@@ -73,6 +73,7 @@ pub static USE_OLD_SVT_AV1: Lazy<bool> = Lazy::new(|| {
 });
 
 impl Display for Encoder {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(<&'static str>::from(self))
     }
@@ -80,6 +81,7 @@ impl Display for Encoder {
 
 impl Encoder {
     /// Composes 1st pass command for 1 pass encoding
+    #[inline]
     pub fn compose_1_1_pass(self, params: Vec<String>, output: String) -> Vec<String> {
         match self {
             Self::aom => chain!(into_array!["aomenc", "--passes=1"], params, into_array![
@@ -114,6 +116,7 @@ impl Encoder {
     }
 
     /// Composes 1st pass command for 2 pass encoding
+    #[inline]
     pub fn compose_1_2_pass(self, params: Vec<String>, fpf: &str) -> Vec<String> {
         match self {
             Self::aom => chain!(
@@ -190,6 +193,7 @@ impl Encoder {
     }
 
     /// Composes 2st pass command for 2 pass encoding
+    #[inline]
     pub fn compose_2_2_pass(self, params: Vec<String>, fpf: &str, output: String) -> Vec<String> {
         match self {
             Self::aom => chain!(
@@ -266,6 +270,7 @@ impl Encoder {
     }
 
     /// Returns default settings for the encoder
+    #[inline]
     pub fn get_default_arguments(self, (cols, rows): (u32, u32)) -> Vec<String> {
         /// Integer log base 2
         pub const fn ilog2(x: u32) -> u32 {
@@ -402,6 +407,7 @@ impl Encoder {
     }
 
     /// Return number of default passes for encoder
+    #[inline]
     pub const fn get_default_pass(self) -> u8 {
         match self {
             Self::aom | Self::vpx => 2,
@@ -410,6 +416,7 @@ impl Encoder {
     }
 
     /// Default quantizer range target quality mode
+    #[inline]
     pub const fn get_default_cq_range(self) -> (usize, usize) {
         match self {
             Self::aom | Self::vpx => (15, 55),
@@ -420,6 +427,7 @@ impl Encoder {
     }
 
     /// Returns help command for encoder
+    #[inline]
     pub const fn help_command(self) -> [&'static str; 2] {
         match self {
             Self::aom => ["aomenc", "--help"],
@@ -433,6 +441,7 @@ impl Encoder {
 
     /// Returns version text for encoder, or None if encoder is not available in
     /// PATH
+    #[inline]
     pub fn version_text(self) -> Option<String> {
         match self {
             Self::aom => {
@@ -491,6 +500,7 @@ impl Encoder {
     }
 
     /// Get the name of the executable/binary for the encoder
+    #[inline]
     pub const fn bin(self) -> &'static str {
         match self {
             Self::aom => "aomenc",
@@ -503,6 +513,7 @@ impl Encoder {
     }
 
     /// Get the name of the video format associated with the encoder
+    #[inline]
     pub const fn format(self) -> &'static str {
         match self {
             Self::aom | Self::rav1e | Self::svt_av1 => "av1",
@@ -513,6 +524,7 @@ impl Encoder {
     }
 
     /// Get the default output extension for the encoder
+    #[inline]
     pub const fn output_extension(&self) -> &'static str {
         match &self {
             Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
@@ -557,6 +569,7 @@ impl Encoder {
     }
 
     /// Returns changed q/crf in command line arguments
+    #[inline]
     pub fn man_command(self, mut params: Vec<String>, q: usize) -> Vec<String> {
         let index = list_index(&params, self.q_match_fn());
         if let Some(index) = index {
@@ -593,6 +606,7 @@ impl Encoder {
     }
 
     /// Returns command used for target quality probing
+    #[inline]
     pub fn construct_target_quality_command(
         self,
         threads: usize,
@@ -781,6 +795,7 @@ impl Encoder {
 
     /// Returns command used for target quality probing (slow, correctness
     /// focused version)
+    #[inline]
     pub fn construct_target_quality_command_probe_slow(self, q: usize) -> Vec<Cow<'static, str>> {
         match &self {
             Self::aom => inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}")],
@@ -821,6 +836,7 @@ impl Encoder {
 
     /// Function `remove_patterns` that takes in args and patterns and removes
     /// all instances of the patterns from the args.
+    #[inline]
     pub fn remove_patterns(args: &mut Vec<String>, patterns: &[&str]) {
         for pattern in patterns {
             if let Some(index) = args.iter().position(|value| value.contains(pattern)) {
@@ -834,6 +850,7 @@ impl Encoder {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[inline]
     /// Constructs tuple of commands for target quality probing
     pub fn probe_cmd(
         self,
@@ -883,6 +900,7 @@ impl Encoder {
         (pipe, output)
     }
 
+    #[inline]
     pub fn get_format_bit_depth(self, format: Pixel) -> Result<usize, UnsupportedPixelFormatError> {
         macro_rules! impl_this_function {
       ($($encoder:ident),*) => {

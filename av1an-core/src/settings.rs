@@ -104,6 +104,7 @@ pub struct EncodeArgs {
 }
 
 impl EncodeArgs {
+    #[inline]
     pub fn validate(&mut self) -> anyhow::Result<()> {
         if self.concat == ConcatMethod::Ivf
             && !matches!(

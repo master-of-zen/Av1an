@@ -221,7 +221,10 @@ impl TargetQuality {
             self.probing_rate as u32,
             &chunk.name(),
             q as u32,
-            q_score,
+            match self.metric {
+                TargetMetric::BUTTERAUGLI => -q_score,
+                _ => q_score,
+            },
             Skip::None,
         );
 

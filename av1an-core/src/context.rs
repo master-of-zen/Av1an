@@ -42,6 +42,7 @@ use crate::{
     get_done,
     init_done,
     into_vec,
+    metrics::vmaf,
     progress_bar::{
         finish_progress_bar,
         inc_bar,
@@ -62,7 +63,6 @@ use crate::{
     settings::{EncodeArgs, InputPixelFormat},
     split::{extra_splits, segment, write_scenes_to_file},
     vapoursynth::{copy_vs_file, create_vs_file},
-    vmaf,
     ChunkMethod,
     ChunkOrdering,
     DashMap,

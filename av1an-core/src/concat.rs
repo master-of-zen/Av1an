@@ -172,7 +172,7 @@ pub fn mkvmerge(
         let p = p.as_ref().display().to_string();
         if let Some(path) = p.strip_prefix(UNC_PREFIX) {
             if let Some(p2) = path.strip_prefix("UNC") {
-                format!("\\{}", p2)
+                format!("\\{p2}")
             } else {
                 path.to_string()
             }

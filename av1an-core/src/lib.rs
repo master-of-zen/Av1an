@@ -500,3 +500,17 @@ fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
 
     Ok(serde_json::from_str(&contents)?)
 }
+
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+pub enum ProbingSpeed {
+    #[strum(serialize = "veryslow")]
+    VerySlow,
+    #[strum(serialize = "slow")]
+    Slow,
+    #[strum(serialize = "medium")]
+    Medium,
+    #[strum(serialize = "fast")]
+    Fast,
+    #[strum(serialize = "veryfast")]
+    VeryFast,
+}

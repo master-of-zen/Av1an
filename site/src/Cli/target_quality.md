@@ -5,6 +5,7 @@ Name | Flag | Type | Default
 [Target Quality](#target-quality---target-quality) | `--target-quality` | Float | 
 [Probes](#probes---probes) | `--probes` | Integer | `4`
 [Probing Rate](#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
+[Probing Speed](#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
 [Probe Slow](#probe-slow---probe-slow) | `--probe-slow` || 
 [Minimum Quantizer](#minimum-quantizer---min-q) | `--min-q` | Integer | Based on Encoder
 [Maximum Quantizer](#maximum-quantizer---max-q) | `--max-q` | Integer | Based on Encoder
@@ -50,6 +51,26 @@ Can be any integer from `1` to `4`.
 ### Default
 
 If not specified, `1` is used.
+
+## Probing Speed `--probing-speed`
+
+Speed for probes.
+
+If used with `--probe-slow`, it overrides the respective speed parameter (eg. `--cpu-used`, `--preset`, etc.)
+
+### Possible Values
+
+Can be any of the following:
+
+* `veryslow`
+* `slow`
+* `medium`
+* `fast`
+* `veryfast`
+
+### Default
+
+If not specified, `veryfast` is used unless `--probe-slow` is specified.
 
 ## Probe Slow `--probe-slow`
 

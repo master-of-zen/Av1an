@@ -17,6 +17,7 @@ use crate::{
     broker::EncoderCrash,
     chunk::Chunk,
     metrics::{
+        ssimulacra2::get_common_statistics,
         vmaf::{self, read_weighted_vmaf},
         xpsnr::{self, read_weighted_xpsnr},
     },
@@ -26,7 +27,7 @@ use crate::{
     TargetMetric,
 };
 
-const VMAF_PERCENTILE: f64 = 0.01;
+const METRIC_PERCENTILE: f64 = 0.01;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
@@ -87,19 +88,21 @@ impl TargetQuality {
             match metric {
                 TargetMetric::VMAF => {
                     let fl_path = tq.vmaf_probe(chunk, target).unwrap();
-                    read_weighted_vmaf(fl_path, VMAF_PERCENTILE).unwrap()
+                    read_weighted_vmaf(fl_path, METRIC_PERCENTILE).unwrap()
                 },
                 TargetMetric::SSIMULACRA2 => {
                     let scores = tq.ssimulacra2_probe(chunk, target).unwrap();
-                    scores.iter().sum::<f64>() / scores.len() as f64
+                    let common_statistics = get_common_statistics(scores);
+                    common_statistics.average
                 },
                 TargetMetric::BUTTERAUGLI => {
                     let scores = tq.butteraugli_probe(chunk, target).unwrap();
-                    scores.iter().sum::<f64>() / scores.len() as f64
+                    let common_statistics = get_common_statistics(scores);
+                    common_statistics.average
                 },
                 TargetMetric::XPSNR => {
                     let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
-                    read_weighted_xpsnr(fl_path, VMAF_PERCENTILE).unwrap()
+                    read_weighted_xpsnr(fl_path, METRIC_PERCENTILE).unwrap()
                 },
             }
         }

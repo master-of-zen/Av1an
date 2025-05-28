@@ -118,16 +118,25 @@ pub fn run_xpsnr(
 
 pub fn read_xpsnr_file(file: impl AsRef<Path>) -> Vec<f64> {
     let log_str = std::fs::read_to_string(file).unwrap();
-    let re =
-        regex::Regex::new(r".*XPSNR y: *([0-9\.]+) *XPSNR u: *([0-9\.]+) *XPSNR v: *([0-9\.]+)")
-            .unwrap();
+    let re = regex::Regex::new(
+        r".*XPSNR y: *([0-9\.]+|inf) *XPSNR u: *([0-9\.]+|inf) *XPSNR v: *([0-9\.]+|inf)",
+    )
+    .unwrap();
     let mut min_psnrs = Vec::new();
     for line in log_str.lines() {
         if let Some(captures) = re.captures(line) {
             let min_psnr = captures
                 .iter()
                 .skip(1)
-                .filter_map(|x| x.unwrap().as_str().parse::<f64>().ok())
+                .filter_map(|x| {
+                    x.unwrap().as_str().parse::<f64>().ok().or_else(|| {
+                        if x.unwrap().as_str() == "inf" {
+                            Some(f64::INFINITY)
+                        } else {
+                            panic!("XPSNR line did not contain a valid float or 'inf'!")
+                        }
+                    })
+                })
                 .fold(f64::INFINITY, f64::min);
             min_psnrs.push(min_psnr);
         }

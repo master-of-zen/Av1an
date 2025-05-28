@@ -345,8 +345,8 @@ fn import_video<'core>(
     encoded: &Path,
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
-    import_lsmash(core, encoded, cache).or_else(|_| {
-        import_ffms2(core, encoded, cache).or_else(|_| import_bestsource(core, encoded, cache))
+    import_ffms2(core, encoded, cache).or_else(|_| {
+        import_bestsource(core, encoded, cache).or_else(|_| import_lsmash(core, encoded, cache))
     })
 }
 

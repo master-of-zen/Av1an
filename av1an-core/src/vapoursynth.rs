@@ -37,7 +37,7 @@ static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
 #[inline]
 pub fn is_lsmash_installed() -> bool {
     static LSMASH_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Lsmash.as_str()));
 
     *LSMASH_PRESENT
 }
@@ -45,7 +45,7 @@ pub fn is_lsmash_installed() -> bool {
 #[inline]
 pub fn is_ffms2_installed() -> bool {
     static FFMS2_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Ffms2.as_str()));
 
     *FFMS2_PRESENT
 }
@@ -53,7 +53,7 @@ pub fn is_ffms2_installed() -> bool {
 #[inline]
 pub fn is_dgdecnv_installed() -> bool {
     static DGDECNV_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.dgdecodenv"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::DGDecNV.as_str()));
 
     *DGDECNV_PRESENT
 }
@@ -61,7 +61,7 @@ pub fn is_dgdecnv_installed() -> bool {
 #[inline]
 pub fn is_bestsource_installed() -> bool {
     static BESTSOURCE_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.bestsource"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::BestSource.as_str()));
 
     *BESTSOURCE_PRESENT
 }
@@ -69,7 +69,7 @@ pub fn is_bestsource_installed() -> bool {
 #[inline]
 pub fn is_julek_installed() -> bool {
     static JULEK_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.julek.plugin"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Julek.as_str()));
 
     *JULEK_PRESENT
 }
@@ -77,7 +77,7 @@ pub fn is_julek_installed() -> bool {
 #[inline]
 pub fn is_vszip_installed() -> bool {
     static VSZIP_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.julek.vszip"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Vszip.as_str()));
 
     *VSZIP_PRESENT
 }
@@ -85,9 +85,49 @@ pub fn is_vszip_installed() -> bool {
 #[inline]
 pub fn is_vship_installed() -> bool {
     static VSHIP_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.lumen.vship"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Vship.as_str()));
 
     *VSHIP_PRESENT
+}
+
+// There is no way to get the version of a plugin
+// so check for a function signature instead
+#[inline]
+pub fn is_vszip_r7_or_newer() -> bool {
+    static VSZIP_R7_OR_NEWER: Lazy<bool> = Lazy::new(|| {
+        if !is_vszip_installed() {
+            return false;
+        }
+        let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
+        let core = environment.get_core().expect("Failed to get VapourSynth core");
+
+        let vszip = get_plugin(core, PluginId::Vszip).expect("Failed to get vszip plugin");
+        let functions_map = vszip.functions();
+        let functions: Vec<(String, Vec<String>)> = functions_map
+            .keys()
+            .filter_map(|name| {
+                functions_map
+                    .get::<&[u8]>(name)
+                    .ok()
+                    .and_then(|slice| simdutf8::basic::from_utf8(slice).ok())
+                    .map(|f| {
+                        let mut split = f.split(';');
+                        (
+                            split.next().expect("Function name is missing").to_string(),
+                            split
+                                .filter(|s| !s.is_empty())
+                                .map(ToOwned::to_owned)
+                                .collect::<Vec<String>>(),
+                        )
+                    })
+            })
+            .collect();
+
+        // R7 adds XPSNR and also introduces breaking changes the API
+        functions.iter().any(|(name, _)| name == "XPSNR")
+    });
+
+    *VSZIP_R7_OR_NEWER
 }
 
 #[inline]
@@ -227,7 +267,8 @@ enum PluginId {
     Resize,
     Lsmash,
     Ffms2,
-    Bestsource,
+    BestSource,
+    DGDecNV,
     Julek,
     Vszip,
     Vship,
@@ -240,7 +281,8 @@ impl PluginId {
             PluginId::Resize => "com.vapoursynth.resize",
             PluginId::Lsmash => "systems.innocent.lsmas",
             PluginId::Ffms2 => "com.vapoursynth.ffms2",
-            PluginId::Bestsource => "com.vapoursynth.bestsource",
+            PluginId::BestSource => "com.vapoursynth.bestsource",
+            PluginId::DGDecNV => "com.vapoursynth.dgdecodenv",
             PluginId::Julek => "com.julek.plugin",
             PluginId::Vszip => "com.julek.vszip",
             PluginId::Vship => "com.lumen.vship",
@@ -315,7 +357,7 @@ fn import_bestsource<'core>(
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
     let api = API::get().expect("Failed to get VapourSynth API");
-    let bestsource = get_plugin(core, PluginId::Bestsource)?;
+    let bestsource = get_plugin(core, PluginId::BestSource)?;
     let absolute_encoded_path = absolute(encoded)?;
 
     let mut arguments = vapoursynth::map::OwnedMap::new(api);
@@ -434,15 +476,27 @@ fn compare_ssimulacra2<'core>(
     } else if is_vszip_installed() {
         let vszip = get_plugin(core, PluginId::Vszip)?;
 
-        let mut arguments = vapoursynth::map::OwnedMap::new(api);
-        arguments.set("reference", source)?;
-        arguments.set("distorted", encoded)?;
-        arguments.set_int("mode", 0)?;
+        // Handle breaking API change in vszip
+        if is_vszip_r7_or_newer() {
+            let mut arguments = vapoursynth::map::OwnedMap::new(api);
+            arguments.set("reference", source)?;
+            arguments.set("distorted", encoded)?;
 
-        Ok((
-            vszip.invoke("Metrics", &arguments)?.get_node("clip")?,
-            "_SSIMULACRA2",
-        ))
+            Ok((
+                vszip.invoke("SSIMULACRA2", &arguments)?.get_node("clip")?,
+                "SSIMULACRA2",
+            ))
+        } else {
+            let mut arguments = vapoursynth::map::OwnedMap::new(api);
+            arguments.set("reference", source)?;
+            arguments.set("distorted", encoded)?;
+            arguments.set_int("mode", 0)?;
+
+            Ok((
+                vszip.invoke("Metrics", &arguments)?.get_node("clip")?,
+                "_SSIMULACRA2",
+            ))
+        }
     } else {
         bail!("SSIMULACRA2 not available");
     }

@@ -22,7 +22,7 @@ use crate::{
         xpsnr::{self, read_weighted_xpsnr},
     },
     progress_bar::update_mp_msg,
-    vapoursynth::{measure_butteraugli, measure_ssimulacra2},
+    vapoursynth::{measure_butteraugli, measure_ssimulacra2, measure_xpsnr},
     Encoder,
     TargetMetric,
 };
@@ -101,8 +101,15 @@ impl TargetQuality {
                     common_statistics.average
                 },
                 TargetMetric::XPSNR => {
+                    if tq.probing_rate > 1 {
+                        let scores = tq.xpsnr_vs_probe(chunk, target).unwrap();
+                        let scores_frame_order = scores.clone();
+                        let common_statistics = get_common_statistics(scores);
+                        common_statistics.percentile_1
+                    } else {
                     let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
                     read_weighted_xpsnr(fl_path, METRIC_PERCENTILE).unwrap()
+                    }
                 },
             }
         }
@@ -396,6 +403,20 @@ impl TargetQuality {
         )?;
 
         Ok(fl_path)
+    }
+
+    fn xpsnr_vs_probe(&self, chunk: &Chunk, q: usize) -> Result<Vec<f64>, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
+
+        let scores = measure_xpsnr(
+            chunk.input.as_path(),
+            &probe_name,
+            (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probing_rate,
+        )
+        .unwrap();
+
+        Ok(scores)
     }
 
     #[inline]

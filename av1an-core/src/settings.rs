@@ -26,6 +26,7 @@ use crate::{
         is_lsmash_installed,
         is_vship_installed,
         is_vszip_installed,
+        is_vszip_r7_or_newer,
     },
     ChunkMethod,
     ChunkOrdering,
@@ -136,6 +137,17 @@ impl EncodeArgs {
                         "SSIMULACRA2 metric requires either Vapoursynth-HIP or VapourSynth Zig \
                          Image Process to be installed"
                     );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         SSIMULACRA2"
+                    );
                 },
                 crate::TargetMetric::BUTTERAUGLI => {
                     ensure!(
@@ -143,9 +155,39 @@ impl EncodeArgs {
                         "Butteraugli metric requires either Vapoursynth-HIP or \
                          vapoursynth-julek-plugin to be installed"
                     );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         Butteraugli"
+                    );
                 },
                 crate::TargetMetric::XPSNR => {
-                    validate_libxpsnr()?;
+                    if self.target_quality.as_ref().unwrap().probing_rate > 1 {
+                        ensure!(
+                            is_vszip_installed() && is_vszip_r7_or_newer(),
+                            "XPSNR metric with probing rate > 1 requires VapourSynth-Zig Image \
+                             Process R7 or newer to be installed"
+                        );
+                        ensure!(
+                            matches!(
+                                self.chunk_method,
+                                ChunkMethod::LSMASH
+                                    | ChunkMethod::FFMS2
+                                    | ChunkMethod::BESTSOURCE
+                                    | ChunkMethod::DGDECNV
+                            ),
+                            "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for XPSNR \
+                             with probing rate > 1"
+                        );
+                    } else {
+                        validate_libxpsnr()?;
+                    }
                 },
             }
         }

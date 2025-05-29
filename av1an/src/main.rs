@@ -626,10 +626,29 @@ pub struct CliOpts {
     /// quality, and 100 is the best). Floating-point values are allowed.
     /// The Butteraugli score minimum is 0 as the best quality and increases as
     /// quality decreases. Floating-point values are allowed.
+    /// The XPSNR score minimum is 0 as the worst quality and increases as
+    /// quality increases. Floating-point values are allowed.
     #[clap(long, help_heading = "Target Quality")]
     pub target_quality: Option<f64>,
 
     /// The metric used for Target Quality mode
+    ///
+    /// Supported metrics:
+    ///
+    /// - `vmaf` - Requires FFmpeg with VMAF enabled
+    /// - `ssimulacra2` - Requires Vapoursynth-HIP or VapourSynth-Zig Image
+    ///   Process plugin. Also requires Chunk method to be set to `lsmash`,
+    ///   `ffms2`, `bestsource`, or `dgdecnv`.
+    /// - `butteraugli` - Requires Vapoursynth-HIP or Julek plugin. Also
+    ///   requires Chunk method to be set to `lsmash`, `ffms2`, `bestsource`, or
+    ///   `dgdecnv`.
+    /// - `xpsnr` - Requires FFmpeg with XPSNR enabled when Probing Rate is
+    ///   unspecified or set to 1. When Probing Rate is specified higher than 1,
+    ///   the VapourSynth-Zig Image Process plugin version R7 or newer is
+    ///   required and the Chunk method must be set to `lsmash`, `ffms2`,
+    ///   `bestsource`, or `dgdecnv`.
+    ///
+    /// If not specified, VMAF is used
     #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality")]
     pub target_metric: TargetMetric,
 

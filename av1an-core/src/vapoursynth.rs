@@ -558,6 +558,26 @@ fn compare_butteraugli<'core>(
     }
 }
 
+fn compare_xpsnr<'core>(
+    core: CoreRef<'core>,
+    source: &Node<'core>,
+    encoded: &Node<'core>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+
+    if !is_vszip_installed() || !is_vszip_r7_or_newer() {
+        bail!("XPSNR not available");
+    }
+
+    let vszip = get_plugin(core, PluginId::Vszip)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("reference", source)?;
+    arguments.set("distorted", encoded)?;
+
+    Ok(vszip.invoke("XPSNR", &arguments)?.get_node("clip")?)
+}
+
 #[inline]
 pub fn create_vs_file(
     temp: &str,
@@ -864,6 +884,57 @@ pub fn measure_ssimulacra2(
     for frame_index in 0..compared_node.info().num_frames {
         let score = compared_node.get_frame(frame_index)?.props().get_float(ssimulacra_key)?;
         scores.push(score);
+    }
+
+    Ok(scores)
+}
+
+#[inline]
+pub fn measure_xpsnr(
+    source: &Path,
+    encoded: &Path,
+    frame_range: (u32, u32),
+    sample_rate: usize,
+) -> anyhow::Result<Vec<f64>> {
+    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
+    let mut environment = Environment::new()?;
+
+    if source_is_vpy {
+        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
+    }
+
+    let core = environment.get_core()?;
+    let source_node = if source_is_vpy {
+        environment.get_output(0)?.0
+    } else {
+        import_video(core, source, Some(true))?
+    };
+
+    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
+    let encoded_node = import_video(core, encoded, Some(false))?;
+    let compared_node = compare_xpsnr(core, &chunk_node, &encoded_node)?;
+
+    let mut scores = Vec::new();
+    for frame_index in 0..compared_node.info().num_frames {
+        let frame = compared_node.get_frame(frame_index)?;
+        let xpsnr_y = frame
+            .props()
+            .get_float("XPSNR_Y")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        let xpsnr_u = frame
+            .props()
+            .get_float("XPSNR_U")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        let xpsnr_v = frame
+            .props()
+            .get_float("XPSNR_V")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        debug!(
+            "Frame {frame_index}: XPSNR_Y: {xpsnr_y}, XPSNR_U: {xpsnr_u}, XPSNR_V:
+        {xpsnr_v}"
+        );
+        let minimum = f64::min(xpsnr_y, f64::min(xpsnr_u, xpsnr_v));
+        scores.push(minimum);
     }
 
     Ok(scores)

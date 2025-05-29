@@ -42,7 +42,11 @@ fn pretty_progress_style(resume_frames: u64) -> ProgressStyle {
         .template(INDICATIF_PROGRESS_TEMPLATE)
         .unwrap()
         .with_key("fps", move |state: &ProgressState, w: &mut dyn Write| {
-            let resume_pos = state.pos() - resume_frames;
+            let resume_pos = if state.pos() < resume_frames {
+                resume_frames
+            } else {
+                state.pos() - resume_frames
+            };
             if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
                 write!(w, "0 fps").unwrap();
             } else {
@@ -57,7 +61,11 @@ fn pretty_progress_style(resume_frames: u64) -> ProgressStyle {
         .with_key(
             "fixed_eta",
             move |state: &ProgressState, w: &mut dyn Write| {
-                let resume_pos = state.pos() - resume_frames;
+                let resume_pos = if state.pos() < resume_frames {
+                    resume_frames
+                } else {
+                    state.pos() - resume_frames
+                };
                 if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
                     write!(w, "unknown").unwrap();
                 } else {
@@ -86,7 +94,11 @@ fn spinner_style(resume_frames: u64) -> ProgressStyle {
         .template(INDICATIF_SC_SPINNER_TEMPLATE)
         .unwrap()
         .with_key("fps", move |state: &ProgressState, w: &mut dyn Write| {
-            let resume_pos = state.pos() - resume_frames;
+            let resume_pos = if state.pos() < resume_frames {
+                resume_frames
+            } else {
+                state.pos() - resume_frames
+            };
             if resume_pos == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
                 write!(w, "0 fps").unwrap();
             } else {

@@ -15,6 +15,15 @@ use crate::{ffmpeg::compose_ffmpeg_pipe, inplace_vec, into_array, into_vec, list
 
 const NULL: &str = if cfg!(windows) { "nul" } else { "/dev/null" };
 
+// Encoder Maximum Speed Values
+const MAXIMUM_SPEED_AOM: u8 = 6;
+const MAXIMUM_SPEED_RAV1E: u8 = 10;
+const MAXIMUM_SPEED_VPX: u8 = 9;
+const MAXIMUM_SPEED_OLD_SVT_AV1: u8 = 8;
+const MAXIMUM_SPEED_SVT_AV1: u8 = 12;
+const MAXIMUM_SPEED_X264: &str = "medium";
+const MAXIMUM_SPEED_X265: &str = "fast";
+
 #[allow(non_camel_case_types)]
 #[derive(
     Clone,
@@ -623,7 +632,10 @@ impl Encoder {
                 "--end-usage=q",
                 "-b",
                 "8",
-                format!("--cpu-used={}", (speed.unwrap_or(4) * 6 / 4)),
+                format!(
+                    "--cpu-used={}",
+                    (speed.unwrap_or(4) * MAXIMUM_SPEED_AOM / 4)
+                ),
                 format!("--cq-level={q}"),
                 "--enable-filter-intra=0",
                 "--enable-smooth-intra=0",
@@ -648,7 +660,7 @@ impl Encoder {
                 "rav1e",
                 "-y",
                 "-s",
-                (speed.unwrap_or(4) * 10 / 4).to_string(),
+                (speed.unwrap_or(4) * MAXIMUM_SPEED_RAV1E / 4).to_string(),
                 "--threads",
                 threads.to_string(),
                 "--tiles",
@@ -669,7 +681,10 @@ impl Encoder {
                 "--pass=1",
                 "--codec=vp9",
                 format!("--threads={threads}"),
-                format!("--cpu-used={}", (speed.unwrap_or(4) * 9 / 4)),
+                format!(
+                    "--cpu-used={}",
+                    (speed.unwrap_or(4) * MAXIMUM_SPEED_VPX / 4)
+                ),
                 "--end-usage=q",
                 format!("--cq-level={q}"),
                 "--row-mt=1",
@@ -685,7 +700,7 @@ impl Encoder {
                         "--lp",
                         threads.to_string(),
                         "--preset",
-                        (speed.unwrap_or(4) * 8 / 4).to_string(),
+                        (speed.unwrap_or(4) * MAXIMUM_SPEED_OLD_SVT_AV1 / 4).to_string(),
                         "--keyint",
                         "240",
                         "--crf",
@@ -749,7 +764,7 @@ impl Encoder {
                         "--lp",
                         threads.to_string(),
                         "--preset",
-                        (speed.unwrap_or(4) * 12 / 4).to_string(),
+                        (speed.unwrap_or(4) * MAXIMUM_SPEED_SVT_AV1 / 4).to_string(),
                         "--keyint",
                         "240",
                         "--crf",
@@ -777,8 +792,8 @@ impl Encoder {
                     1 => "veryslow",
                     2 => "slower",
                     3 => "slow",
-                    4 => "medium",
-                    _ => "medium",
+                    4 => MAXIMUM_SPEED_X264,
+                    _ => MAXIMUM_SPEED_X264,
                 },
                 "--crf",
                 q.to_string(),
@@ -797,8 +812,8 @@ impl Encoder {
                     1 => "slower",
                     2 => "slow",
                     3 => "medium",
-                    4 => "fast",
-                    _ => "fast",
+                    4 => MAXIMUM_SPEED_X265,
+                    _ => MAXIMUM_SPEED_X265,
                 },
                 "--crf",
                 q.to_string(),
@@ -820,14 +835,14 @@ impl Encoder {
             Self::aom => {
                 let mut cmd = inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}"),];
                 if let Some(speed) = speed {
-                    cmd.push(format!("cpu-used={}", (speed * 6 / 4)).into());
+                    cmd.push(format!("cpu-used={}", (speed * MAXIMUM_SPEED_AOM / 4)).into());
                 }
                 cmd
             },
             Self::rav1e => {
                 let mut cmd = inplace_vec!["rav1e", "-y", "--quantizer", q.to_string(),];
                 if let Some(speed) = speed {
-                    cmd.push(format!("--speed={}", (speed * 10 / 4)).into());
+                    cmd.push(format!("--speed={}", (speed * MAXIMUM_SPEED_RAV1E / 4)).into());
                 }
                 cmd
             },
@@ -841,7 +856,7 @@ impl Encoder {
                     format!("--cq-level={q}"),
                 ];
                 if let Some(speed) = speed {
-                    cmd.push(format!("--cpu-used={}", (speed * 9 / 4)).into());
+                    cmd.push(format!("--cpu-used={}", (speed * MAXIMUM_SPEED_VPX / 4)).into());
                 }
                 cmd
             },
@@ -850,7 +865,15 @@ impl Encoder {
                 if let Some(speed) = speed {
                     cmd.push("--preset".into());
                     cmd.push(
-                        (speed * (if *USE_OLD_SVT_AV1 { 8 } else { 12 }) / 4).to_string().into(),
+                        (speed
+                            * (if *USE_OLD_SVT_AV1 {
+                                MAXIMUM_SPEED_OLD_SVT_AV1
+                            } else {
+                                MAXIMUM_SPEED_SVT_AV1
+                            })
+                            / 4)
+                        .to_string()
+                        .into(),
                     );
                 }
                 cmd
@@ -875,8 +898,8 @@ impl Encoder {
                             1 => "veryslow",
                             2 => "slower",
                             3 => "slow",
-                            4 => "medium",
-                            _ => "medium",
+                            4 => MAXIMUM_SPEED_X264,
+                            _ => MAXIMUM_SPEED_X264,
                         })
                         .into(),
                     );
@@ -903,8 +926,8 @@ impl Encoder {
                             1 => "slower",
                             2 => "slow",
                             3 => "medium",
-                            4 => "fast",
-                            _ => "fast",
+                            4 => MAXIMUM_SPEED_X265,
+                            _ => MAXIMUM_SPEED_X265,
                         })
                         .into(),
                     );

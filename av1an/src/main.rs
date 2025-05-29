@@ -28,6 +28,7 @@ use av1an_core::{
     PixelFormat,
     ScenecutMethod,
     SplitMethod,
+    TargetMetric,
     TargetQuality,
     Verbosity,
     DEFAULT_LOG_LEVEL,
@@ -59,11 +60,17 @@ fn version() -> &'static str {
   systems.innocent.lsmas : {}
   com.vapoursynth.ffms2  : {}
   com.vapoursynth.dgdecodenv : {}
-  com.vapoursynth.bestsource : {}",
+  com.vapoursynth.bestsource : {}
+  com.julek.plugin : {}
+  com.julek.vszip : {}
+  com.lumen.vship : {}",
             isfound(vapoursynth::is_lsmash_installed()),
             isfound(vapoursynth::is_ffms2_installed()),
             isfound(vapoursynth::is_dgdecnv_installed()),
-            isfound(vapoursynth::is_bestsource_installed())
+            isfound(vapoursynth::is_bestsource_installed()),
+            isfound(vapoursynth::is_julek_installed()),
+            isfound(vapoursynth::is_vszip_installed()),
+            isfound(vapoursynth::is_vship_installed())
         )
     }
 
@@ -601,17 +608,49 @@ pub struct CliOpts {
     #[clap(long, help_heading = "VMAF")]
     pub vmaf_filter: Option<String>,
 
-    /// Target a VMAF score for encoding (disabled by default)
+    /// Resolution used for XPSNR calculation
+    ///
+    /// If set to inputres, the output video will be scaled to the resolution of
+    /// the input video.
+    #[clap(long, default_value = "1920x1080", help_heading = "XPSNR")]
+    pub xpsnr_res: String,
+
+    /// Target a metric score for encoding (disabled by default)
     ///
     /// For each chunk, target quality uses an algorithm to find the
-    /// quantizer/crf needed to achieve a certain VMAF score. Target quality
-    /// mode is much slower than normal encoding, but can improve the
-    /// consistency of quality in some cases.
+    /// quantizer/crf needed to achieve a certain metric score.
+    /// Target quality mode is much slower than normal encoding, but can improve
+    /// the consistency of quality in some cases.
     ///
-    /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is
-    /// the best). Floating-point values are allowed.
+    /// The VMAF and SSIMULACRA2 score ranges are 0-100 (where 0 is the worst
+    /// quality, and 100 is the best). Floating-point values are allowed.
+    /// The Butteraugli score minimum is 0 as the best quality and increases as
+    /// quality decreases. Floating-point values are allowed.
+    /// The XPSNR score minimum is 0 as the worst quality and increases as
+    /// quality increases. Floating-point values are allowed.
     #[clap(long, help_heading = "Target Quality")]
     pub target_quality: Option<f64>,
+
+    /// The metric used for Target Quality mode
+    ///
+    /// Supported metrics:
+    ///
+    /// - `vmaf` - Requires FFmpeg with VMAF enabled
+    /// - `ssimulacra2` - Requires Vapoursynth-HIP or VapourSynth-Zig Image
+    ///   Process plugin. Also requires Chunk method to be set to `lsmash`,
+    ///   `ffms2`, `bestsource`, or `dgdecnv`.
+    /// - `butteraugli` - Requires Vapoursynth-HIP or Julek plugin. Also
+    ///   requires Chunk method to be set to `lsmash`, `ffms2`, `bestsource`, or
+    ///   `dgdecnv`.
+    /// - `xpsnr` - Requires FFmpeg with XPSNR enabled when Probing Rate is
+    ///   unspecified or set to 1. When Probing Rate is specified higher than 1,
+    ///   the VapourSynth-Zig Image Process plugin version R7 or newer is
+    ///   required and the Chunk method must be set to `lsmash`, `ffms2`,
+    ///   `bestsource`, or `dgdecnv`.
+    ///
+    /// If not specified, VMAF is used
+    #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality")]
+    pub target_metric: TargetMetric,
 
     /// Maximum number of probes allowed for target quality
     #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
@@ -673,8 +712,10 @@ impl CliOpts {
                         .get()
                 }),
                 model: self.vmaf_path.clone(),
+                xpsnr_res: self.xpsnr_res.clone(),
                 probes: self.probes,
                 target: tq,
+                metric: self.target_metric,
                 min_q,
                 max_q,
                 encoder: self.encoder,
@@ -900,6 +941,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             vmaf_res: args.vmaf_res.clone(),
             vmaf_threads: args.vmaf_threads,
             vmaf_filter: args.vmaf_filter.clone(),
+            xpsnr_res: args.xpsnr_res.clone(),
             verbosity,
             workers: args.workers,
             tiles: (1, 1), // default value; will be adjusted if tile_auto set

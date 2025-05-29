@@ -15,15 +15,19 @@ use tracing_subscriber::filter::LevelFilter;
 use crate::{
     concat::ConcatMethod,
     encoder::Encoder,
+    metrics::{vmaf::validate_libvmaf, xpsnr::validate_libxpsnr},
     parse::valid_params,
     target_quality::TargetQuality,
     vapoursynth::{
         is_bestsource_installed,
         is_dgdecnv_installed,
         is_ffms2_installed,
+        is_julek_installed,
         is_lsmash_installed,
+        is_vship_installed,
+        is_vszip_installed,
+        is_vszip_r7_or_newer,
     },
-    vmaf::validate_libvmaf,
     ChunkMethod,
     ChunkOrdering,
     Input,
@@ -101,6 +105,7 @@ pub struct EncodeArgs {
     pub vmaf_res:       String,
     pub vmaf_threads:   Option<usize>,
     pub vmaf_filter:    Option<String>,
+    pub xpsnr_res:      String,
 }
 
 impl EncodeArgs {
@@ -124,7 +129,67 @@ impl EncodeArgs {
         );
 
         if self.target_quality.is_some() {
-            validate_libvmaf()?;
+            match self.target_quality.as_ref().unwrap().metric {
+                crate::TargetMetric::VMAF => validate_libvmaf()?,
+                crate::TargetMetric::SSIMULACRA2 => {
+                    ensure!(
+                        is_vship_installed() || is_vszip_installed(),
+                        "SSIMULACRA2 metric requires either Vapoursynth-HIP or VapourSynth Zig \
+                         Image Process to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         SSIMULACRA2"
+                    );
+                },
+                crate::TargetMetric::BUTTERAUGLI => {
+                    ensure!(
+                        is_vship_installed() || is_julek_installed(),
+                        "Butteraugli metric requires either Vapoursynth-HIP or \
+                         vapoursynth-julek-plugin to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         Butteraugli"
+                    );
+                },
+                crate::TargetMetric::XPSNR => {
+                    if self.target_quality.as_ref().unwrap().probing_rate > 1 {
+                        ensure!(
+                            is_vszip_installed() && is_vszip_r7_or_newer(),
+                            "XPSNR metric with probing rate > 1 requires VapourSynth-Zig Image \
+                             Process R7 or newer to be installed"
+                        );
+                        ensure!(
+                            matches!(
+                                self.chunk_method,
+                                ChunkMethod::LSMASH
+                                    | ChunkMethod::FFMS2
+                                    | ChunkMethod::BESTSOURCE
+                                    | ChunkMethod::DGDECNV
+                            ),
+                            "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for XPSNR \
+                             with probing rate > 1"
+                        );
+                    } else {
+                        validate_libxpsnr()?;
+                    }
+                },
+            }
         }
 
         if which::which("ffmpeg").is_err() {

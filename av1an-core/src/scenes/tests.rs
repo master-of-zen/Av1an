@@ -72,6 +72,7 @@ fn get_test_args() -> Av1anContext {
         vmaf_res:              "1920x1080".to_string(),
         vmaf_threads:          None,
         vmaf_filter:           None,
+        xpsnr_res:             "1920x1080".to_string(),
     };
     Av1anContext {
         vs_script: None,

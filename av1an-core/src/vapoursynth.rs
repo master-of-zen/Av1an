@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::Write,
-    path::{Path, PathBuf},
+    path::{absolute, Path, PathBuf},
     process::Command,
 };
 
@@ -11,7 +11,7 @@ use av_format::rational::Rational64;
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use regex::Regex;
-use vapoursynth::{prelude::*, video_info::VideoInfo};
+use vapoursynth::{core::CoreRef, prelude::*, video_info::VideoInfo};
 
 use super::ChunkMethod;
 use crate::util::to_absolute_path;
@@ -37,7 +37,7 @@ static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
 #[inline]
 pub fn is_lsmash_installed() -> bool {
     static LSMASH_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("systems.innocent.lsmas"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Lsmash.as_str()));
 
     *LSMASH_PRESENT
 }
@@ -45,7 +45,7 @@ pub fn is_lsmash_installed() -> bool {
 #[inline]
 pub fn is_ffms2_installed() -> bool {
     static FFMS2_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.ffms2"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Ffms2.as_str()));
 
     *FFMS2_PRESENT
 }
@@ -53,7 +53,7 @@ pub fn is_ffms2_installed() -> bool {
 #[inline]
 pub fn is_dgdecnv_installed() -> bool {
     static DGDECNV_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.dgdecodenv"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::DGDecNV.as_str()));
 
     *DGDECNV_PRESENT
 }
@@ -61,9 +61,73 @@ pub fn is_dgdecnv_installed() -> bool {
 #[inline]
 pub fn is_bestsource_installed() -> bool {
     static BESTSOURCE_PRESENT: Lazy<bool> =
-        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains("com.vapoursynth.bestsource"));
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::BestSource.as_str()));
 
     *BESTSOURCE_PRESENT
+}
+
+#[inline]
+pub fn is_julek_installed() -> bool {
+    static JULEK_PRESENT: Lazy<bool> =
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Julek.as_str()));
+
+    *JULEK_PRESENT
+}
+
+#[inline]
+pub fn is_vszip_installed() -> bool {
+    static VSZIP_PRESENT: Lazy<bool> =
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Vszip.as_str()));
+
+    *VSZIP_PRESENT
+}
+
+#[inline]
+pub fn is_vship_installed() -> bool {
+    static VSHIP_PRESENT: Lazy<bool> =
+        Lazy::new(|| VAPOURSYNTH_PLUGINS.contains(PluginId::Vship.as_str()));
+
+    *VSHIP_PRESENT
+}
+
+// There is no way to get the version of a plugin
+// so check for a function signature instead
+#[inline]
+pub fn is_vszip_r7_or_newer() -> bool {
+    static VSZIP_R7_OR_NEWER: Lazy<bool> = Lazy::new(|| {
+        if !is_vszip_installed() {
+            return false;
+        }
+        let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
+        let core = environment.get_core().expect("Failed to get VapourSynth core");
+
+        let vszip = get_plugin(core, PluginId::Vszip).expect("Failed to get vszip plugin");
+        let functions_map = vszip.functions();
+        let functions: Vec<(String, Vec<String>)> = functions_map
+            .keys()
+            .filter_map(|name| {
+                functions_map
+                    .get::<&[u8]>(name)
+                    .ok()
+                    .and_then(|slice| simdutf8::basic::from_utf8(slice).ok())
+                    .map(|f| {
+                        let mut split = f.split(';');
+                        (
+                            split.next().expect("Function name is missing").to_string(),
+                            split
+                                .filter(|s| !s.is_empty())
+                                .map(ToOwned::to_owned)
+                                .collect::<Vec<String>>(),
+                        )
+                    })
+            })
+            .collect();
+
+        // R7 adds XPSNR and also introduces breaking changes the API
+        functions.iter().any(|(name, _)| name == "XPSNR")
+    });
+
+    *VSZIP_R7_OR_NEWER
 }
 
 #[inline]
@@ -195,6 +259,323 @@ fn get_transfer(env: &Environment) -> anyhow::Result<u8> {
         as u8;
 
     Ok(transfer)
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum PluginId {
+    Std,
+    Resize,
+    Lsmash,
+    Ffms2,
+    BestSource,
+    DGDecNV,
+    Julek,
+    Vszip,
+    Vship,
+}
+
+impl PluginId {
+    const fn as_str(self) -> &'static str {
+        match self {
+            PluginId::Std => "com.vapoursynth.std",
+            PluginId::Resize => "com.vapoursynth.resize",
+            PluginId::Lsmash => "systems.innocent.lsmas",
+            PluginId::Ffms2 => "com.vapoursynth.ffms2",
+            PluginId::BestSource => "com.vapoursynth.bestsource",
+            PluginId::DGDecNV => "com.vapoursynth.dgdecodenv",
+            PluginId::Julek => "com.julek.plugin",
+            PluginId::Vszip => "com.julek.vszip",
+            PluginId::Vship => "com.lumen.vship",
+        }
+    }
+}
+
+fn get_plugin(core: CoreRef, plugin_id: PluginId) -> anyhow::Result<Plugin> {
+    let plugin = core.get_plugin_by_id(plugin_id.as_str())?;
+
+    match plugin {
+        Some(plugin) => Ok(plugin),
+        None => bail!("Failed to get VapourSynth {} plugin", plugin_id.as_str()),
+    }
+}
+
+fn import_lsmash<'core>(
+    core: CoreRef<'core>,
+    encoded: &Path,
+    cache: Option<bool>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let lsmash = get_plugin(core, PluginId::Lsmash)?;
+    let absolute_encoded_path = absolute(encoded)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set(
+        "source",
+        &absolute_encoded_path.as_os_str().as_encoded_bytes(),
+    )?;
+    // Enable cache by default.
+    if let Some(cache) = cache {
+        arguments.set_int("cache", match cache {
+            true => 1,
+            false => 0,
+        })?;
+    }
+    arguments.set_int("prefer_hw", 3)?;
+
+    Ok(lsmash.invoke("LWLibavSource", &arguments)?.get_node("clip")?)
+}
+
+fn import_ffms2<'core>(
+    core: CoreRef<'core>,
+    encoded: &Path,
+    cache: Option<bool>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let ffms2 = get_plugin(core, PluginId::Ffms2)?;
+    let absolute_encoded_path = absolute(encoded)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set(
+        "source",
+        &absolute_encoded_path.as_os_str().as_encoded_bytes(),
+    )?;
+
+    // Enable cache by default.
+    if let Some(cache) = cache {
+        arguments.set_int("cache", match cache {
+            true => 1,
+            false => 0,
+        })?;
+    }
+
+    Ok(ffms2.invoke("Source", &arguments)?.get_node("clip")?)
+}
+
+fn import_bestsource<'core>(
+    core: CoreRef<'core>,
+    encoded: &Path,
+    cache: Option<bool>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let bestsource = get_plugin(core, PluginId::BestSource)?;
+    let absolute_encoded_path = absolute(encoded)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set(
+        "source",
+        &absolute_encoded_path.as_os_str().as_encoded_bytes(),
+    )?;
+
+    // Enable cache by default.
+    // Always try to read index but only write index to disk when it will make a
+    // noticeable difference on subsequent runs and store index files in the
+    // absolute path in *cachepath* with track number and index extension
+    // appended
+    if let Some(cache) = cache {
+        arguments.set_int("cachemode", match cache {
+            true => 3,
+            false => 0,
+        })?;
+    }
+
+    Ok(bestsource.invoke("VideoSource", &arguments)?.get_node("clip")?)
+}
+
+// Attempts to import video using LSMASH, FFMS2 or BestSource in that order
+fn import_video<'core>(
+    core: CoreRef<'core>,
+    encoded: &Path,
+    cache: Option<bool>,
+) -> anyhow::Result<Node<'core>> {
+    import_ffms2(core, encoded, cache).or_else(|_| {
+        import_bestsource(core, encoded, cache).or_else(|_| import_lsmash(core, encoded, cache))
+    })
+}
+
+fn trim_node<'core>(
+    core: CoreRef<'core>,
+    node: &Node<'core>,
+    start: u32,
+    end: u32,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let std = get_plugin(core, PluginId::Std)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("clip", node)?;
+    arguments.set("first", &(start as i64))?;
+    arguments.set("last", &(end as i64))?;
+
+    Ok(std.invoke("Trim", &arguments)?.get_node("clip")?)
+}
+
+fn resize_node<'core>(
+    core: CoreRef<'core>,
+    node: &Node<'core>,
+    width: Option<u32>,
+    height: Option<u32>,
+    format: Option<PresetFormat>,
+    matrix_in_s: Option<&'static str>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let std = get_plugin(core, PluginId::Resize)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("clip", node)?;
+    if let Some(width) = width {
+        arguments.set_int("width", width as i64)?;
+    }
+    if let Some(height) = height {
+        arguments.set_int("height", height as i64)?;
+    }
+    if let Some(format) = format {
+        arguments.set_int("format", format as i64)?;
+    }
+    if let Some(matrix_in_s) = matrix_in_s {
+        arguments.set("matrix_in_s", &matrix_in_s.as_bytes())?;
+    }
+
+    Ok(std.invoke("Bicubic", &arguments)?.get_node("clip")?)
+}
+
+fn select_every<'core>(
+    core: CoreRef<'core>,
+    node: &Node<'core>,
+    n: usize,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+    let std = get_plugin(core, PluginId::Std)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("clip", node)?;
+    arguments.set_int("cycle", n as i64)?;
+    arguments.set_int_array("offsets", &[0])?;
+
+    Ok(std.invoke("SelectEvery", &arguments)?.get_node("clip")?)
+}
+
+fn compare_ssimulacra2<'core>(
+    core: CoreRef<'core>,
+    source: &Node<'core>,
+    encoded: &Node<'core>,
+) -> anyhow::Result<(Node<'core>, &'static str)> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+
+    if is_vship_installed() {
+        let vship = get_plugin(core, PluginId::Vship)?;
+
+        let mut arguments = vapoursynth::map::OwnedMap::new(api);
+        arguments.set("reference", source)?;
+        arguments.set("distorted", encoded)?;
+        arguments.set_int("numStream", 4)?;
+
+        return Ok((
+            vship.invoke("SSIMULACRA2", &arguments)?.get_node("clip")?,
+            "_SSIMULACRA2",
+        ));
+    } else if is_vszip_installed() {
+        let vszip = get_plugin(core, PluginId::Vszip)?;
+
+        // Handle breaking API change in vszip
+        if is_vszip_r7_or_newer() {
+            let mut arguments = vapoursynth::map::OwnedMap::new(api);
+            arguments.set("reference", source)?;
+            arguments.set("distorted", encoded)?;
+
+            Ok((
+                vszip.invoke("SSIMULACRA2", &arguments)?.get_node("clip")?,
+                "SSIMULACRA2",
+            ))
+        } else {
+            let mut arguments = vapoursynth::map::OwnedMap::new(api);
+            arguments.set("reference", source)?;
+            arguments.set("distorted", encoded)?;
+            arguments.set_int("mode", 0)?;
+
+            Ok((
+                vszip.invoke("Metrics", &arguments)?.get_node("clip")?,
+                "_SSIMULACRA2",
+            ))
+        }
+    } else {
+        bail!("SSIMULACRA2 not available");
+    }
+}
+
+fn compare_butteraugli<'core>(
+    core: CoreRef<'core>,
+    source: &Node<'core>,
+    encoded: &Node<'core>,
+) -> anyhow::Result<(Node<'core>, &'static str)> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+
+    if is_vship_installed() {
+        let vship = get_plugin(core, PluginId::Vship)?;
+
+        let mut arguments = vapoursynth::map::OwnedMap::new(api);
+        arguments.set("reference", source)?;
+        arguments.set("distorted", encoded)?;
+        arguments.set_float("intensity_multiplier", 80.0)?;
+        arguments.set_int("distmap", 1)?;
+        arguments.set_int("numStream", 4)?;
+
+        return Ok((
+            vship.invoke("BUTTERAUGLI", &arguments)?.get_node("clip")?,
+            "_BUTTERAUGLI_INFNorm",
+        ));
+    } else if is_julek_installed() {
+        let julek = get_plugin(core, PluginId::Julek)?;
+
+        let formatted_source = resize_node(
+            core,
+            source,
+            None,
+            None,
+            Some(PresetFormat::RGBS),
+            Some("709"),
+        )?;
+        let formatted_encoded = resize_node(
+            core,
+            encoded,
+            None,
+            None,
+            Some(PresetFormat::RGBS),
+            Some("709"),
+        )?;
+
+        let mut arguments = vapoursynth::map::OwnedMap::new(api);
+        arguments.set("reference", &formatted_source)?;
+        arguments.set("distorted", &formatted_encoded)?;
+        arguments.set_float("intensity_target", 80.0)?;
+        arguments.set_int("distmap", 1)?;
+
+        return Ok((
+            julek.invoke("Butteraugli", &arguments)?.get_node("clip")?,
+            "_FrameButteraugli",
+        ));
+    } else {
+        bail!("Butteraugli not available");
+    }
+}
+
+fn compare_xpsnr<'core>(
+    core: CoreRef<'core>,
+    source: &Node<'core>,
+    encoded: &Node<'core>,
+) -> anyhow::Result<Node<'core>> {
+    let api = API::get().expect("Failed to get VapourSynth API");
+
+    if !is_vszip_installed() || !is_vszip_r7_or_newer() {
+        bail!("XPSNR not available");
+    }
+
+    let vszip = get_plugin(core, PluginId::Vszip)?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("reference", source)?;
+    arguments.set("distorted", encoded)?;
+
+    Ok(vszip.invoke("XPSNR", &arguments)?.get_node("clip")?)
 }
 
 #[inline]
@@ -420,4 +801,141 @@ pub fn pixel_format(source: &Path, vspipe_args_map: OwnedMap) -> anyhow::Result<
         Property::Variable => bail!("Variable pixel format not supported"),
         Property::Constant(x) => Ok(x.name().to_string()),
     }
+}
+
+#[inline]
+pub fn get_source_chunk<'core>(
+    core: CoreRef<'core>,
+    source_node: &Node<'core>,
+    frame_range: (u32, u32),
+    sample_rate: usize,
+) -> anyhow::Result<Node<'core>> {
+    let mut chunk_node = trim_node(core, source_node, frame_range.0, frame_range.1 - 1)?;
+    if sample_rate > 1 {
+        chunk_node = select_every(core, &chunk_node, sample_rate)?;
+    }
+
+    Ok(chunk_node)
+}
+
+#[inline]
+pub fn measure_butteraugli(
+    source: &Path,
+    encoded: &Path,
+    frame_range: (u32, u32),
+    sample_rate: usize,
+) -> anyhow::Result<Vec<f64>> {
+    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
+    let mut environment = Environment::new()?;
+
+    if source_is_vpy {
+        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
+    }
+
+    let core = environment.get_core()?;
+    let source_node = if source_is_vpy {
+        environment.get_output(0)?.0
+    } else {
+        import_video(core, source, Some(true))?
+    };
+
+    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
+    let encoded_node = import_video(core, encoded, Some(false))?;
+
+    let (compared_node, butteraugli_key) = compare_butteraugli(core, &chunk_node, &encoded_node)?;
+
+    let mut scores = Vec::new();
+    for frame_index in 0..compared_node.info().num_frames {
+        let score = compared_node.get_frame(frame_index)?.props().get_float(butteraugli_key)?;
+        scores.push(score);
+    }
+
+    Ok(scores)
+}
+
+#[inline]
+pub fn measure_ssimulacra2(
+    source: &Path,
+    encoded: &Path,
+    frame_range: (u32, u32),
+    sample_rate: usize,
+) -> anyhow::Result<Vec<f64>> {
+    // Create a new VS environment
+    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
+    let mut environment = Environment::new()?;
+
+    // Evaluate if source is a VapourSynth script
+    if source_is_vpy {
+        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
+    }
+
+    let core = environment.get_core()?;
+    let source_node = if source_is_vpy {
+        environment.get_output(0)?.0
+    } else {
+        import_video(core, source, Some(true))?
+    };
+
+    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
+    let encoded_node = import_video(core, encoded, Some(false))?;
+
+    let (compared_node, ssimulacra_key) = compare_ssimulacra2(core, &chunk_node, &encoded_node)?;
+    let mut scores = Vec::new();
+    for frame_index in 0..compared_node.info().num_frames {
+        let score = compared_node.get_frame(frame_index)?.props().get_float(ssimulacra_key)?;
+        scores.push(score);
+    }
+
+    Ok(scores)
+}
+
+#[inline]
+pub fn measure_xpsnr(
+    source: &Path,
+    encoded: &Path,
+    frame_range: (u32, u32),
+    sample_rate: usize,
+) -> anyhow::Result<Vec<f64>> {
+    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
+    let mut environment = Environment::new()?;
+
+    if source_is_vpy {
+        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
+    }
+
+    let core = environment.get_core()?;
+    let source_node = if source_is_vpy {
+        environment.get_output(0)?.0
+    } else {
+        import_video(core, source, Some(true))?
+    };
+
+    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
+    let encoded_node = import_video(core, encoded, Some(false))?;
+    let compared_node = compare_xpsnr(core, &chunk_node, &encoded_node)?;
+
+    let mut scores = Vec::new();
+    for frame_index in 0..compared_node.info().num_frames {
+        let frame = compared_node.get_frame(frame_index)?;
+        let xpsnr_y = frame
+            .props()
+            .get_float("XPSNR_Y")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        let xpsnr_u = frame
+            .props()
+            .get_float("XPSNR_U")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        let xpsnr_v = frame
+            .props()
+            .get_float("XPSNR_V")
+            .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
+        debug!(
+            "Frame {frame_index}: XPSNR_Y: {xpsnr_y}, XPSNR_U: {xpsnr_u}, XPSNR_V:
+        {xpsnr_v}"
+        );
+        let minimum = f64::min(xpsnr_y, f64::min(xpsnr_u, xpsnr_v));
+        scores.push(minimum);
+    }
+
+    Ok(scores)
 }

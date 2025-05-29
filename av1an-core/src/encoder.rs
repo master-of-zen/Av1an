@@ -623,7 +623,7 @@ impl Encoder {
                 "--end-usage=q",
                 "-b",
                 "8",
-                format!("--cpu-used={}", (speed.unwrap_or(4) * 11 / 4)),
+                format!("--cpu-used={}", (speed.unwrap_or(4) * 6 / 4)),
                 format!("--cq-level={q}"),
                 "--enable-filter-intra=0",
                 "--enable-smooth-intra=0",
@@ -820,7 +820,7 @@ impl Encoder {
             Self::aom => {
                 let mut cmd = inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}"),];
                 if let Some(speed) = speed {
-                    cmd.push(format!("cpu-used={}", (speed * 11 / 4)).into());
+                    cmd.push(format!("cpu-used={}", (speed * 6 / 4)).into());
                 }
                 cmd
             },

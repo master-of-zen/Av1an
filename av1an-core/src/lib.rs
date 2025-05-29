@@ -504,13 +504,13 @@ fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
 #[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
 pub enum ProbingSpeed {
     #[strum(serialize = "veryslow")]
-    VerySlow,
+    VerySlow = 0,
     #[strum(serialize = "slow")]
-    Slow,
+    Slow = 1,
     #[strum(serialize = "medium")]
-    Medium,
+    Medium = 2,
     #[strum(serialize = "fast")]
-    Fast,
+    Fast = 3,
     #[strum(serialize = "veryfast")]
-    VeryFast,
+    VeryFast = 4,
 }

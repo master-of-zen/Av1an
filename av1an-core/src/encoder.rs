@@ -835,7 +835,7 @@ impl Encoder {
             Self::aom => {
                 let mut cmd = inplace_vec!["aomenc", "--passes=1", format!("--cq-level={q}"),];
                 if let Some(speed) = speed {
-                    cmd.push(format!("cpu-used={}", (speed * MAXIMUM_SPEED_AOM / 4)).into());
+                    cmd.push(format!("--cpu-used={}", (speed * MAXIMUM_SPEED_AOM / 4)).into());
                 }
                 cmd
             },

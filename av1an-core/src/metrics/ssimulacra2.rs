@@ -1,64 +1,78 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap};
 
-pub struct CommonStatistics {
-    pub average:            f64,
-    pub median:             f64,
-    pub minimum:            f64,
-    pub maximum:            f64,
-    pub standard_deviation: f64,
-    pub variance:           f64,
-    pub percentile_1:       f64,
-    pub percentile_10:      f64,
-    pub percentile_25:      f64,
+pub struct MetricStatistics {
+    scores: Vec<f64>,
+    cache:  HashMap<String, f64>,
 }
 
-/// Return some common statistics from a vector of f64
-pub fn get_common_statistics(mut scores: Vec<f64>) -> CommonStatistics {
-    assert!(!scores.is_empty());
+impl MetricStatistics {
+    pub fn new(scores: Vec<f64>) -> Self {
+        MetricStatistics {
+            scores,
+            cache: HashMap::new(),
+        }
+    }
 
-    let sum: f64 = scores.iter().sum();
-    let average = sum / scores.len() as f64;
+    fn get_or_compute(&mut self, key: &str, compute: impl FnOnce(&[f64]) -> f64) -> f64 {
+        *self.cache.entry(key.to_string()).or_insert_with(|| compute(&self.scores))
+    }
 
-    let mid = scores.len() / 2;
-    scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-    let median = if scores.len() % 2 == 0 {
-        (scores[mid - 1] + scores[mid]) / 2.0
-    } else {
-        scores[mid]
-    };
-
-    let minimum = scores[0];
-    let maximum = scores[scores.len() - 1];
-
-    let variance = scores
-        .iter()
-        .map(|x| {
-            let diff = x - average;
-            diff * diff
+    pub fn average(&mut self) -> f64 {
+        self.get_or_compute("average", |scores| {
+            scores.iter().sum::<f64>() / scores.len() as f64
         })
-        .sum::<f64>()
-        / scores.len() as f64;
+    }
 
-    let stddev = variance.sqrt();
+    pub fn median(&mut self) -> f64 {
+        let mut sorted_scores = self.scores.clone();
+        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+        self.get_or_compute("median", |scores| {
+            let mid = scores.len() / 2;
+            if scores.len() % 2 == 0 {
+                (sorted_scores[mid - 1] + sorted_scores[mid]) / 2.0
+            } else {
+                sorted_scores[mid]
+            }
+        })
+    }
 
-    let percentile_1_index = ((scores.len() - 1) as f64 * 0.01) as usize;
-    let percentile_1 = *scores.get(percentile_1_index).unwrap_or(&scores[0]);
+    pub fn minimum(&mut self) -> f64 {
+        self.get_or_compute("minimum", |scores| {
+            *scores.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
+        })
+    }
 
-    let percentile_10_index = ((scores.len() - 1) as f64 * 0.1) as usize;
-    let percentile_10 = *scores.get(percentile_10_index).unwrap_or(&scores[0]);
+    pub fn maximum(&mut self) -> f64 {
+        self.get_or_compute("maximum", |scores| {
+            *scores.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
+        })
+    }
 
-    let percentile_25_index = ((scores.len() - 1) as f64 * 0.25) as usize;
-    let percentile_25 = *scores.get(percentile_25_index).unwrap_or(&scores[0]);
+    pub fn variance(&mut self) -> f64 {
+        let average = self.average();
+        self.get_or_compute("variance", |scores| {
+            scores
+                .iter()
+                .map(|x| {
+                    let diff = x - average;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / scores.len() as f64
+        })
+    }
 
-    CommonStatistics {
-        average,
-        median,
-        minimum,
-        maximum,
-        standard_deviation: stddev,
-        variance,
-        percentile_1,
-        percentile_10,
-        percentile_25,
+    pub fn standard_deviation(&mut self) -> f64 {
+        let variance = self.variance();
+        self.get_or_compute("standard_deviation", |_| variance.sqrt())
+    }
+
+    pub fn percentile(&mut self, index: usize) -> f64 {
+        let mut sorted_scores = self.scores.clone();
+        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+        self.get_or_compute(&format!("percentile_{index}"), |scores| {
+            let index = (index as f64 / 100.0 * scores.len() as f64) as usize;
+            *sorted_scores.get(index).unwrap_or(&sorted_scores[0])
+        })
     }
 }

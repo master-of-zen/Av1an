@@ -17,7 +17,7 @@ use crate::{
     broker::EncoderCrash,
     chunk::Chunk,
     metrics::{
-        ssimulacra2::get_common_statistics,
+        ssimulacra2::MetricStatistics,
         vmaf::{self, read_weighted_vmaf},
         xpsnr::{self, read_weighted_xpsnr},
     },
@@ -93,20 +93,16 @@ impl TargetQuality {
                 },
                 TargetMetric::SSIMULACRA2 => {
                     let scores = tq.ssimulacra2_probe(chunk, target).unwrap();
-                    let common_statistics = get_common_statistics(scores);
-                    common_statistics.average
+                    MetricStatistics::new(scores).average()
                 },
                 TargetMetric::BUTTERAUGLI => {
                     let scores = tq.butteraugli_probe(chunk, target).unwrap();
-                    let common_statistics = get_common_statistics(scores);
-                    common_statistics.average
+                    MetricStatistics::new(scores).average()
                 },
                 TargetMetric::XPSNR => {
                     if tq.probing_rate > 1 {
                         let scores = tq.xpsnr_vs_probe(chunk, target).unwrap();
-                        let scores_frame_order = scores.clone();
-                        let common_statistics = get_common_statistics(scores);
-                        common_statistics.percentile_1
+                        MetricStatistics::new(scores).percentile(1)
                     } else {
                         let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
                         read_weighted_xpsnr(fl_path, METRIC_PERCENTILE).unwrap()

@@ -88,6 +88,7 @@ Name | Flag | Type | Default
 [Target Quality](./Cli/target_quality.md#target-quality---target-quality) | `--target-quality` | Float | 
 [Probes](./Cli/target_quality.md#probes---probes) | `--probes` | Integer | `4`
 [Probing Rate](./Cli/target_quality.md#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
+[Probing Speed](./Cli/target_quality.md#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
 [Probe Slow](./Cli/target_quality.md#probe-slow---probe-slow) | `--probe-slow` || 
 [Minimum Quantizer](./Cli/target_quality.md#minimum-quantizer---min-q) | `--min-q` | Integer | Based on Encoder
 [Maximum Quantizer](./Cli/target_quality.md#maximum-quantizer---max-q) | `--max-q` | Integer | Based on Encoder

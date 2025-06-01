@@ -14,7 +14,10 @@ use regex::Regex;
 use vapoursynth::{core::CoreRef, prelude::*, video_info::VideoInfo};
 
 use super::ChunkMethod;
-use crate::util::to_absolute_path;
+use crate::{
+    metrics::{butteraugli::ButteraugliSubMetric, xpsnr::XPSNRSubMetric},
+    util::to_absolute_path,
+};
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
     let environment = Environment::new().expect("Failed to initialize VapourSynth environment");
@@ -506,6 +509,7 @@ fn compare_butteraugli<'core>(
     core: CoreRef<'core>,
     source: &Node<'core>,
     encoded: &Node<'core>,
+    submetric: ButteraugliSubMetric,
 ) -> anyhow::Result<(Node<'core>, &'static str)> {
     let api = API::get().expect("Failed to get VapourSynth API");
 
@@ -521,7 +525,11 @@ fn compare_butteraugli<'core>(
 
         return Ok((
             vship.invoke("BUTTERAUGLI", &arguments)?.get_node("clip")?,
-            "_BUTTERAUGLI_INFNorm",
+            if submetric == ButteraugliSubMetric::InfiniteNorm {
+                "_BUTTERAUGLI_INFNorm"
+            } else {
+                "_BUTTERAUGLI_3Norm"
+            },
         ));
     } else if is_julek_installed() {
         let julek = get_plugin(core, PluginId::Julek)?;
@@ -571,9 +579,27 @@ fn compare_xpsnr<'core>(
 
     let vszip = get_plugin(core, PluginId::Vszip)?;
 
+    // XPSNR requires YUV input and a maximum bit depth of 10
+    let formatted_source = resize_node(
+        core,
+        source,
+        None,
+        None,
+        Some(PresetFormat::YUV444P10),
+        None,
+    )?;
+    let formatted_encoded = resize_node(
+        core,
+        encoded,
+        None,
+        None,
+        Some(PresetFormat::YUV444P10),
+        None,
+    )?;
+
     let mut arguments = vapoursynth::map::OwnedMap::new(api);
-    arguments.set("reference", source)?;
-    arguments.set("distorted", encoded)?;
+    arguments.set("reference", &formatted_source)?;
+    arguments.set("distorted", &formatted_encoded)?;
 
     Ok(vszip.invoke("XPSNR", &arguments)?.get_node("clip")?)
 }
@@ -820,6 +846,7 @@ pub fn get_source_chunk<'core>(
 
 #[inline]
 pub fn measure_butteraugli(
+    submetric: ButteraugliSubMetric,
     source: &Path,
     encoded: &Path,
     frame_range: (u32, u32),
@@ -842,7 +869,8 @@ pub fn measure_butteraugli(
     let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
     let encoded_node = import_video(core, encoded, Some(false))?;
 
-    let (compared_node, butteraugli_key) = compare_butteraugli(core, &chunk_node, &encoded_node)?;
+    let (compared_node, butteraugli_key) =
+        compare_butteraugli(core, &chunk_node, &encoded_node, submetric)?;
 
     let mut scores = Vec::new();
     for frame_index in 0..compared_node.info().num_frames {
@@ -891,6 +919,7 @@ pub fn measure_ssimulacra2(
 
 #[inline]
 pub fn measure_xpsnr(
+    submetric: XPSNRSubMetric,
     source: &Path,
     encoded: &Path,
     frame_range: (u32, u32),
@@ -929,12 +958,18 @@ pub fn measure_xpsnr(
             .props()
             .get_float("XPSNR_V")
             .or(Ok::<f64, std::convert::Infallible>(f64::INFINITY))?;
-        debug!(
-            "Frame {frame_index}: XPSNR_Y: {xpsnr_y}, XPSNR_U: {xpsnr_u}, XPSNR_V:
-        {xpsnr_v}"
-        );
-        let minimum = f64::min(xpsnr_y, f64::min(xpsnr_u, xpsnr_v));
-        scores.push(minimum);
+
+        match submetric {
+            XPSNRSubMetric::Minimum => {
+                let minimum = f64::min(xpsnr_y, f64::min(xpsnr_u, xpsnr_v));
+                scores.push(minimum);
+            },
+            XPSNRSubMetric::Weighted => {
+                // Weighted Sum as recommended by https://wiki.x266.mov/docs/metrics/XPSNR
+                let weighted = ((4.0 * xpsnr_y) + xpsnr_u + xpsnr_v) / 6.0;
+                scores.push(weighted);
+            },
+        }
     }
 
     Ok(scores)

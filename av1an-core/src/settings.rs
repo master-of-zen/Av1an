@@ -33,6 +33,7 @@ use crate::{
     Input,
     ScenecutMethod,
     SplitMethod,
+    TargetMetric,
     Verbosity,
 };
 
@@ -130,8 +131,8 @@ impl EncodeArgs {
 
         if self.target_quality.is_some() {
             match self.target_quality.as_ref().unwrap().metric {
-                crate::TargetMetric::VMAF => validate_libvmaf()?,
-                crate::TargetMetric::SSIMULACRA2 => {
+                TargetMetric::VMAF => validate_libvmaf()?,
+                TargetMetric::SSIMULACRA2 => {
                     ensure!(
                         is_vship_installed() || is_vszip_installed(),
                         "SSIMULACRA2 metric requires either Vapoursynth-HIP or VapourSynth Zig \
@@ -149,7 +150,7 @@ impl EncodeArgs {
                          SSIMULACRA2"
                     );
                 },
-                crate::TargetMetric::BUTTERAUGLI => {
+                TargetMetric::ButteraugliInf => {
                     ensure!(
                         is_vship_installed() || is_julek_installed(),
                         "Butteraugli metric requires either Vapoursynth-HIP or \
@@ -167,12 +168,39 @@ impl EncodeArgs {
                          Butteraugli"
                     );
                 },
-                crate::TargetMetric::XPSNR => {
+                TargetMetric::BUTTERAUGLI3 => {
+                    ensure!(
+                        is_vship_installed(),
+                        "Butteraugli 3 Norm metric requires Vapoursynth-HIP plugin to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         Butteraugli 3 Norm"
+                    );
+                },
+                TargetMetric::XPSNR | TargetMetric::XPSNRWeighted => {
+                    let metric_name = if self.target_quality.as_ref().unwrap().metric
+                        == TargetMetric::XPSNRWeighted
+                    {
+                        "Weighted "
+                    } else {
+                        ""
+                    };
                     if self.target_quality.as_ref().unwrap().probing_rate > 1 {
                         ensure!(
                             is_vszip_installed() && is_vszip_r7_or_newer(),
-                            "XPSNR metric with probing rate > 1 requires VapourSynth-Zig Image \
-                             Process R7 or newer to be installed"
+                            format!(
+                                "{metric_name}XPSNR metric with probing rate greater than 1 \
+                                 requires VapourSynth-Zig Image Process R7 or newer to be \
+                                 installed"
+                            )
                         );
                         ensure!(
                             matches!(
@@ -182,8 +210,10 @@ impl EncodeArgs {
                                     | ChunkMethod::BESTSOURCE
                                     | ChunkMethod::DGDECNV
                             ),
-                            "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for XPSNR \
-                             with probing rate > 1"
+                            format!(
+                                "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                                 {metric_name}XPSNR with probing rate greater than 1"
+                            )
                         );
                     } else {
                         validate_libxpsnr()?;

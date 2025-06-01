@@ -17,9 +17,10 @@ use crate::{
     broker::EncoderCrash,
     chunk::Chunk,
     metrics::{
+        butteraugli::ButteraugliSubMetric,
         ssimulacra2::MetricStatistics,
         vmaf::{self, read_weighted_vmaf},
-        xpsnr::{self, read_weighted_xpsnr},
+        xpsnr::{self, read_weighted_xpsnr, XPSNRSubMetric},
     },
     progress_bar::update_mp_msg,
     vapoursynth::{measure_butteraugli, measure_ssimulacra2, measure_xpsnr},
@@ -95,28 +96,43 @@ impl TargetQuality {
                     let scores = tq.ssimulacra2_probe(chunk, target).unwrap();
                     MetricStatistics::new(scores).average()
                 },
-                TargetMetric::BUTTERAUGLI => {
-                    let scores = tq.butteraugli_probe(chunk, target).unwrap();
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => {
+                    let scores = tq
+                        .butteraugli_probe(
+                            chunk,
+                            target,
+                            if tq.metric == TargetMetric::ButteraugliInf {
+                                ButteraugliSubMetric::InfiniteNorm
+                            } else {
+                                ButteraugliSubMetric::ThreeNorm
+                            },
+                        )
+                        .unwrap();
                     MetricStatistics::new(scores).average()
                 },
-                TargetMetric::XPSNR => {
+                TargetMetric::XPSNR | TargetMetric::XPSNRWeighted => {
+                    let submetric = if tq.metric == TargetMetric::XPSNR {
+                        XPSNRSubMetric::Minimum
+                    } else {
+                        XPSNRSubMetric::Weighted
+                    };
                     if tq.probing_rate > 1 {
-                        let scores = tq.xpsnr_vs_probe(chunk, target).unwrap();
+                        let scores = tq.xpsnr_vs_probe(chunk, target, submetric).unwrap();
                         MetricStatistics::new(scores).percentile(1)
                     } else {
                         let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
-                        read_weighted_xpsnr(fl_path, METRIC_PERCENTILE).unwrap()
+                        read_weighted_xpsnr(fl_path, METRIC_PERCENTILE, submetric).unwrap()
                     }
                 },
             }
         }
 
         let mut score = measure_probe(self, chunk, self.metric, last_q as usize);
-        if self.metric == TargetMetric::BUTTERAUGLI {
+        if self.metric == TargetMetric::ButteraugliInf {
             // Butteraugli is inverted, where quality lowers as score increases
             score *= -1.0;
         }
-        let target = if self.metric == TargetMetric::BUTTERAUGLI {
+        let target = if self.metric == TargetMetric::ButteraugliInf {
             -self.target
         } else {
             self.target
@@ -139,7 +155,7 @@ impl TargetQuality {
 
         // Edge case check
         score = measure_probe(self, chunk, self.metric, next_q as usize);
-        if self.metric == TargetMetric::BUTTERAUGLI {
+        if self.metric == TargetMetric::ButteraugliInf {
             // Invert butteraugli score for comparison
             score *= -1.0;
         }
@@ -147,7 +163,7 @@ impl TargetQuality {
 
         if (next_q == self.min_q && score < target) || (next_q == self.max_q && score > target) {
             // Invert butteraugli scores back to positive for logging
-            if self.metric == TargetMetric::BUTTERAUGLI {
+            if self.metric == TargetMetric::ButteraugliInf {
                 for (score, _) in score_quality.iter_mut() {
                     *score *= -1.0;
                 }
@@ -160,7 +176,7 @@ impl TargetQuality {
                 &chunk.name(),
                 next_q,
                 match self.metric {
-                    TargetMetric::BUTTERAUGLI => -score,
+                    TargetMetric::ButteraugliInf => -score,
                     _ => score,
                 },
                 if score < target {
@@ -198,7 +214,7 @@ impl TargetQuality {
             update_progress_bar(new_point as u32);
 
             score = measure_probe(self, chunk, self.metric, new_point as usize);
-            if self.metric == TargetMetric::BUTTERAUGLI {
+            if self.metric == TargetMetric::ButteraugliInf {
                 // Invert butteraugli score for comparison
                 score *= -1.0;
             }
@@ -217,7 +233,7 @@ impl TargetQuality {
         let (q, q_score) = interpolated_target_q(score_quality.clone(), target);
 
         // Invert butteraugli scores back to positive for logging
-        if self.metric == TargetMetric::BUTTERAUGLI {
+        if self.metric == TargetMetric::ButteraugliInf {
             for (score, _) in score_quality.iter_mut() {
                 *score *= -1.0;
             }
@@ -229,7 +245,7 @@ impl TargetQuality {
             &chunk.name(),
             q as u32,
             match self.metric {
-                TargetMetric::BUTTERAUGLI => -q_score,
+                TargetMetric::ButteraugliInf => -q_score,
                 _ => q_score,
             },
             Skip::None,
@@ -372,10 +388,16 @@ impl TargetQuality {
         Ok(scores)
     }
 
-    fn butteraugli_probe(&self, chunk: &Chunk, q: usize) -> Result<Vec<f64>, Box<EncoderCrash>> {
+    fn butteraugli_probe(
+        &self,
+        chunk: &Chunk,
+        q: usize,
+        submetric: ButteraugliSubMetric,
+    ) -> Result<Vec<f64>, Box<EncoderCrash>> {
         let probe_name = self.probe(chunk, q)?;
 
         let scores = measure_butteraugli(
+            submetric,
             chunk.input.as_path(),
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
@@ -403,10 +425,16 @@ impl TargetQuality {
         Ok(fl_path)
     }
 
-    fn xpsnr_vs_probe(&self, chunk: &Chunk, q: usize) -> Result<Vec<f64>, Box<EncoderCrash>> {
+    fn xpsnr_vs_probe(
+        &self,
+        chunk: &Chunk,
+        q: usize,
+        submetric: XPSNRSubMetric,
+    ) -> Result<Vec<f64>, Box<EncoderCrash>> {
         let probe_name = self.probe(chunk, q)?;
 
         let scores = measure_xpsnr(
+            submetric,
             chunk.input.as_path(),
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),

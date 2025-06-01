@@ -45,6 +45,7 @@ mod encoder;
 pub mod ffmpeg;
 mod logging;
 mod metrics {
+    pub mod butteraugli;
     pub mod ssimulacra2;
     pub mod vmaf;
     pub mod xpsnr;
@@ -418,10 +419,14 @@ pub enum TargetMetric {
     VMAF,
     #[strum(serialize = "ssimulacra2")]
     SSIMULACRA2,
-    #[strum(serialize = "butteraugli")]
-    BUTTERAUGLI,
+    #[strum(serialize = "butteraugli-inf")]
+    ButteraugliInf,
+    #[strum(serialize = "butteraugli-3")]
+    BUTTERAUGLI3,
     #[strum(serialize = "xpsnr")]
     XPSNR,
+    #[strum(serialize = "xpsnr-weighted")]
+    XPSNRWeighted,
 }
 
 /// Determine the optimal number of workers for an encoder

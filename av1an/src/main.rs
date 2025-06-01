@@ -640,14 +640,23 @@ pub struct CliOpts {
     /// - `ssimulacra2` - Requires Vapoursynth-HIP or VapourSynth-Zig Image
     ///   Process plugin. Also requires Chunk method to be set to `lsmash`,
     ///   `ffms2`, `bestsource`, or `dgdecnv`.
-    /// - `butteraugli` - Requires Vapoursynth-HIP or Julek plugin. Also
+    /// - `butteraugli-inf` - Requires Vapoursynth-HIP or Julek plugin. Also
     ///   requires Chunk method to be set to `lsmash`, `ffms2`, `bestsource`, or
-    ///   `dgdecnv`.
+    ///   `dgdecnv`. Uses the Infinite-Norm value of Butteraugli.
+    /// - `butteraugli-3` - Requires Vapoursynth-HIP plugin. Also requires Chunk
+    ///   method to be set to `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`.
+    ///   Uses the 3-Norm value of Butteraugli.
     /// - `xpsnr` - Requires FFmpeg with XPSNR enabled when Probing Rate is
     ///   unspecified or set to 1. When Probing Rate is specified higher than 1,
     ///   the VapourSynth-Zig Image Process plugin version R7 or newer is
     ///   required and the Chunk method must be set to `lsmash`, `ffms2`,
-    ///   `bestsource`, or `dgdecnv`.
+    ///   `bestsource`, or `dgdecnv`. Uses the minimum of Y, U, and V.
+    /// - `xpsnr-weighted` - Requires FFmpeg with XPSNR enabled when Probing
+    ///   Rate is unspecified or set to 1. When Probing Rate is specified higher
+    ///   than 1, the VapourSynth-Zig Image Process plugin version R7 or newer
+    ///   is required and the Chunk method must be set to `lsmash`, `ffms2`,
+    ///   `bestsource`, or `dgdecnv`. Uses weighted XPSNR based on this formula:
+    ///   `((4 * Y) + U + V) / 6`
     ///
     /// If not specified, VMAF is used
     #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality")]

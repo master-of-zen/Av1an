@@ -6,8 +6,20 @@ use std::{
 };
 
 use anyhow::anyhow;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString, IntoStaticStr};
 
 use crate::{broker::EncoderCrash, ffmpeg};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString, IntoStaticStr,
+)]
+pub enum XPSNRSubMetric {
+    #[strum(serialize = "xpsnr-minimum")]
+    Minimum,
+    #[strum(serialize = "xpsnr-weighted")]
+    Weighted,
+}
 
 pub fn validate_libxpsnr() -> anyhow::Result<()> {
     let mut cmd = Command::new("ffmpeg");
@@ -116,7 +128,7 @@ pub fn run_xpsnr(
     Ok(())
 }
 
-pub fn read_xpsnr_file(file: impl AsRef<Path>) -> Vec<f64> {
+pub fn read_xpsnr_file(file: impl AsRef<Path>, submetric: XPSNRSubMetric) -> Vec<f64> {
     let log_str = std::fs::read_to_string(file).unwrap();
     let re = regex::Regex::new(
         r".*XPSNR y: *([0-9\.]+|inf) *XPSNR u: *([0-9\.]+|inf) *XPSNR v: *([0-9\.]+|inf)",
@@ -125,20 +137,40 @@ pub fn read_xpsnr_file(file: impl AsRef<Path>) -> Vec<f64> {
     let mut min_psnrs = Vec::new();
     for line in log_str.lines() {
         if let Some(captures) = re.captures(line) {
-            let min_psnr = captures
-                .iter()
-                .skip(1)
-                .filter_map(|x| {
-                    x.unwrap().as_str().parse::<f64>().ok().or_else(|| {
-                        if x.unwrap().as_str() == "inf" {
-                            Some(f64::INFINITY)
-                        } else {
-                            panic!("XPSNR line did not contain a valid float or 'inf'!")
-                        }
+            if submetric == XPSNRSubMetric::Minimum {
+                let min_psnr = captures
+                    .iter()
+                    .skip(1)
+                    .filter_map(|x| {
+                        x.unwrap().as_str().parse::<f64>().ok().or_else(|| {
+                            if x.unwrap().as_str() == "inf" {
+                                Some(f64::INFINITY)
+                            } else {
+                                panic!("XPSNR line did not contain a valid float or 'inf'!")
+                            }
+                        })
                     })
-                })
-                .fold(f64::INFINITY, f64::min);
-            min_psnrs.push(min_psnr);
+                    .fold(f64::INFINITY, f64::min);
+                min_psnrs.push(min_psnr);
+            } else {
+                let parsed_values: Vec<f64> = captures
+                    .iter()
+                    .skip(1)
+                    .map(|x| {
+                        x.unwrap().as_str().parse::<f64>().unwrap_or_else(|_| {
+                            if x.unwrap().as_str() == "inf" {
+                                f64::INFINITY
+                            } else {
+                                panic!("XPSNR line did not contain a valid float or 'inf'!")
+                            }
+                        })
+                    })
+                    .collect();
+
+                let weighted =
+                    ((4.0 * parsed_values[0]) + parsed_values[1] + parsed_values[2]) / 6.0;
+                min_psnrs.push(weighted);
+            }
         }
     }
 
@@ -149,9 +181,14 @@ pub fn read_xpsnr_file(file: impl AsRef<Path>) -> Vec<f64> {
 pub fn read_weighted_xpsnr<P: AsRef<Path>>(
     file: P,
     percentile: f64,
+    submetric: XPSNRSubMetric,
 ) -> Result<f64, serde_json::Error> {
-    fn inner(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
-        let mut scores = read_xpsnr_file(file);
+    fn inner(
+        file: &Path,
+        percentile: f64,
+        submetric: XPSNRSubMetric,
+    ) -> Result<f64, serde_json::Error> {
+        let mut scores = read_xpsnr_file(file, submetric);
 
         assert!(!scores.is_empty());
 
@@ -166,5 +203,5 @@ pub fn read_weighted_xpsnr<P: AsRef<Path>>(
         Ok(*kth_element)
     }
 
-    inner(file.as_ref(), percentile)
+    inner(file.as_ref(), percentile, submetric)
 }

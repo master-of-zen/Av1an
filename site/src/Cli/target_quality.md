@@ -2,6 +2,7 @@
 
 Name | Flag | Type | Default
 --- | --- | --- | ---
+[Target Metric](#target-metric---target-metric) | `--target-metric` | `TARGET_METRIC` | `VMAF`
 [Target Quality](#target-quality---target-quality) | `--target-quality` | Float | 
 [Probes](#probes---probes) | `--probes` | Integer | `4`
 [Probing Rate](#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
@@ -11,22 +12,71 @@ Name | Flag | Type | Default
 [Maximum Quantizer](#maximum-quantizer---max-q) | `--max-q` | Integer | Based on Encoder
 
 
-## Target Quality `--target-quality`
+## Target Metric `--target-metric`
 
-Target a [VMAF](https://github.com/Netflix/vmaf) score for encoding.
-
-For each chunk, Target Quality searches for the quantizer/crf needed to achieve a certain VMAF score. Target Quality mode is much slower than normal encoding, but can improve the consistency of quality in some cases.
-
-The VMAF score range is `0`-`100` where `0` is the worst quality and `100` is the best.
+Metric used for Target Quality.
 
 ### Possible Values
 
-Any float value between `0` and `100`.
+Can be any of the following (case insensitive):
+
+* `VMAF` - [Video Multi-Method Assessment Fusion](https://github.com/Netflix/vmaf)
+    * Requires FFmpeg with [libvmaf](https://ffmpeg.org/ffmpeg-filters.html#libvmaf-1) enabled
+* `SSIMULACRA2` - [Structural SIMilarity Unveiling Local And Compression Related Artifacts](https://github.com/cloudinary/ssimulacra2)
+    * Requires VapourSynth plugin [Vapoursynth-HIP](https://github.com/Line-fr/Vship) for Hardware-accelerated processing (recommended) or [Vapoursynth-Zig Image Process](https://github.com/dnjulek/vapoursynth-zip) for CPU processing
+    * Requires [Chunk Method](./encoding.md#chunk-method--m---chunk-method) to be `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`
+* `Butteraugli-INF` - [butteraugli](https://github.com/google/butteraugli) Infinite-Norm
+    * Requires VapourSynth plugin [Vapoursynth-HIP](https://github.com/Line-fr/Vship) for Hardware-accelerated processing (recommended) or [vapoursynth-julek-plugin](https://github.com/dnjulek/vapoursynth-julek-plugin) for CPU processing
+    * Requires [Chunk Method](./encoding.md#chunk-method--m---chunk-method) to be `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`
+* `Butteraugli-3` - [butteraugli](https://github.com/google/butteraugli) 3-Norm
+    * Requires VapourSynth plugin [Vapoursynth-HIP](https://github.com/Line-fr/Vship) for Hardware-accelerated processing (recommended) or [vapoursynth-julek-plugin](https://github.com/dnjulek/vapoursynth-julek-plugin) for CPU processing
+    * Requires [Chunk Method](./encoding.md#chunk-method--m---chunk-method) to be `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`
+* `XPSNR` - [Extended Perceptually Weighted Peak Signal-to-Noise Ratio](https://github.com/fraunhoferhhi/xpsnr) using the minimum of the `Y`, `U`, and `V` scores
+    * Requires FFmpeg with [libxpsnr](https://ffmpeg.org/ffmpeg-filters.html#xpsnr-1) enabled when [Probing Rate](#probing-rate---probing-rate) is unspecified or `1`
+    * Requires VapourSynth plugin [Vapoursynth-Zig Image Process](https://github.com/dnjulek/vapoursynth-zip) for CPU processing when [Probing Rate](#probing-rate---probing-rate) is greater than `1`
+        * Requires [Chunk Method](./encoding.md#chunk-method--m---chunk-method) to be `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`
+* `XPSNR-Weighted` - Weighted [Extended Perceptually Weighted Peak Signal-to-Noise Ratio](https://github.com/fraunhoferhhi/xpsnr) using the formula: `((4 * Y) + U + V) / 6`
+    * Requires FFmpeg with [libxpsnr](https://ffmpeg.org/ffmpeg-filters.html#xpsnr-1) enabled when [Probing Rate](#probing-rate---probing-rate) is unspecified or `1`
+    * Requires VapourSynth plugin [Vapoursynth-Zig Image Process](https://github.com/dnjulek/vapoursynth-zip) for CPU processing when [Probing Rate](#probing-rate---probing-rate) is greater than `1`
+        * Requires [Chunk Method](./encoding.md#chunk-method--m---chunk-method) to be `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`
+
+### Default
+
+If not specified, `VMAF` is used.
+
+### Examples
+
+* `> av1an -i input.mkv -o output.mkv --target-quality 95` - Target a VMAF score of 95
+* `> av1an -i input.mkv -o output.mkv --target-metric ssimulacra2 --target-quality 80` - Target a SSIMULACRA2 score of 80
+* `> av1an -i input.mkv -o output.mkv --target-metric butteraugli-3 --target-quality 2` - Target a Butteraugli 3-Norm score of 2
+* `> av1an -i input.mkv -o output.mkv --target-metric XPSNR-weighted --target-quality 40` - Target a Weighted XPSNR score of 40
+
+## Target Quality `--target-quality`
+
+Target a metric quality score using the specified [`--target-metric`](#target-metric---target-metric) or [VMAF](https://github.com/Netflix/vmaf) by default. This is the score for encoding.
+
+For each chunk, Target Quality searches for the quantizer/crf needed to achieve a certain metric score. Target Quality mode is much slower than normal encoding, but can improve the consistency of quality in some cases.
+
+Metric score ranges:
+
+
+### Possible Values
+
+Any float value for the specified [`--target-metric`](#target-metric---target-metric):
+
+* [VMAF](https://github.com/Netflix/vmaf) - `0`-`100`, where `0` is the worst quality and `100` is the best
+* [SSIMULACRA2](https://github.com/cloudinary/ssimulacra2) - `0`-`100`, where `0` is the worst quality and `100` is the best
+* [Butteraugli-INF](https://github.com/google/butteraugli) - `0`-`Infinity`, where `0` is the best quality and `Infinity` is the worst
+* [Butteraugli-3](https://github.com/google/butteraugli) - `0`-`Infinity`, where `0` is the best quality and `Infinity` is the worst
+* [XPSNR](https://github.com/fraunhoferhhi/xpsnr) - `0`-`Infinity`, where `0` is the worst quality, and `Infinity` is the best
+* [XPSNR-Weighted](https://github.com/fraunhoferhhi/xpsnr) - `0`-`Infinity`, where `0` is the worst quality, and `Infinity` is the best
 
 ### Examples
 
 * `> av1an -i input.mkv -o output.mkv --target-quality 80` - Target a VMAF score of 80
 * `> av1an -i input.mkv -o output.mkv --target-quality 90.5` - Target a VMAF score of 90.5
+* `> av1an -i input.mkv -o output.mkv --target-metric SSIMULACRA2 --target-quality 75` - Target a SSIMULACRA2 score of 75
+* `> av1an -i input.mkv -o output.mkv --target-metric butteraugli-inf --target-quality 5.4` - Target a Butteraugli Infinite-Norm score of 5.4
 
 ## Probes `--probes`
 
@@ -82,7 +132,7 @@ Note that this always performs encoding in one-pass mode, regardless of `--passe
 
 Lower bound for Target Quality Quantizer-search early exit.
 
-If the minimum quantizer is tested and the probe's VMAF score is lower than the Target Quality (`--target-quality`), the Quantizer-search exits early and the minimum quantizer is used for the chunk.
+If the minimum quantizer is tested and the probe's quality score is lower than the Target Quality ([`--target-quality`](#target-quality---target-quality)), the Quantizer-search exits early and the minimum quantizer is used for the chunk.
 
 ### Possible Values
 
@@ -96,7 +146,7 @@ If not specified, the default value is used (chosen per encoder).
 
 Upper bound for Target Quality Quantizer-search early exit.
 
-If the maximum quantizer is tested and the probe's VMAF score is higher than the Target Quality (`--target-quality`), the Quantizer-search exits early and the maximum quantizer is used for the chunk.
+If the maximum quantizer is tested and the probe's quality score is higher than the Target Quality ([`--target-quality`](#target-quality---target-quality)), the Quantizer-search exits early and the maximum quantizer is used for the chunk.
 
 ### Possible Values
 

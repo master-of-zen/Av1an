@@ -659,7 +659,7 @@ pub struct CliOpts {
     ///   `((4 * Y) + U + V) / 6`
     ///
     /// If not specified, VMAF is used
-    #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality")]
+    #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality", ignore_case = true)]
     pub target_metric: TargetMetric,
 
     /// Maximum number of probes allowed for target quality
@@ -675,7 +675,7 @@ pub struct CliOpts {
     /// Does not override Probe Slow if not specified
     ///
     /// Lower speed for higher quality and accuracy probes
-    #[clap(long, help_heading = "Target Quality")]
+    #[clap(long, help_heading = "Target Quality", ignore_case = true)]
     pub probing_speed: Option<ProbingSpeed>,
 
     /// Use encoding settings for probes specified by --video-params rather than

@@ -15,7 +15,7 @@ __pycache__/
 *.y4m
 
 # Hidden folders
-! .github
+!.github
 .*
 !.mergify.yml
 
@@ -139,7 +139,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 *.avi
-*.mkv
 *.exe
 
 # VS Code
@@ -151,3 +150,5 @@ Upload.sh
 
 *.png
 *.json
+
+logs/

@@ -1,18 +1,42 @@
 name: tests
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  all-tests:
+  formatting:
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Install Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Validate formatting
+        run: |
+          cargo fmt --all -- --check
 
+  unit-tests:
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - uses: Swatinem/rust-cache@v2
 
       - name: Validate encoders
@@ -23,25 +47,60 @@ jobs:
           which vpxenc
           which x265
           which x264
-
-      - name: Validate formatting
-        run: |
-          cargo fmt --all -- --check
+          which vspipe
+          which ffmpeg
 
       - name: Build Av1an
         run: |
           cargo clippy --profile ci -- -D warnings
-          cargo build --profile ci
+
+      - name: Install cargo-msrv
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-msrv
+
+      - name: Validate minimum Rust version
+        run: |
+          cargo msrv verify --path av1an
+          cargo msrv verify --path av1an-core
+
+      - name: Testing unit tests
+        working-directory: ./av1an-core
+        run: |
+          cargo test --profile ci
+
+  encode-tests:
+    needs: [ formatting, unit-tests ]
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate encoders
+        run: |
+          which aomenc
+          which SvtAv1EncApp
+          which rav1e
+          which vpxenc
+          which x265
+          which x264
+          which vspipe
+          which ffmpeg
 
       # 352x240 112 frames test video
       - name: Download test video
         run: |
           curl -LO https://media.xiph.org/video/derf/y4m/tt_sif.y4m
 
-      - name: Testing unit tests
-        working-directory: ./av1an-core
+      - name: Build Av1an
         run: |
-          cargo test --profile ci
+          cargo build --profile ci
 
       # The baseline tests should not include the faster default params, because we want to also test that
       # it works without params passed
@@ -223,14 +282,14 @@ jobs:
           target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" --temp temporary
           du -h tt_sif.mkv
 
-      - name: Testing concat mkvmerge aom
+      - name: Testing concat ffmpeg aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p --sc-method fast -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -c ffmpeg
           du -h tt_sif.mkv
 
       - name: Testing slow scenechange aom
         run: |
-          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4" -c mkvmerge
+          target/ci/av1an -i tt_sif.y4m -e aom --pix-format yuv420p -y -o "tt_sif.mkv" -v " --cpu-used=10 --rt --threads=4"
           du -h tt_sif.mkv
 
       - name: Testing sc-only
@@ -239,20 +298,60 @@ jobs:
           du -h tt_sif_scenes.json
         continue-on-error: true
 
+  code-coverage:
+    needs: [ formatting, unit-tests, encode-tests ]
+    runs-on: ubuntu-latest
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate encoders
+        run: |
+          which aomenc
+          which SvtAv1EncApp
+          which rav1e
+          which vpxenc
+          which x265
+          which x264
+          which vspipe
+          which ffmpeg
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Generate code coverage
+        run: cargo llvm-cov --profile ci --workspace --lcov --output-path lcov.log --ignore-filename-regex tests\.rs
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.log
+          fail_ci_if_error: true
+
   docker:
+    needs: [ formatting, unit-tests ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -261,7 +360,7 @@ jobs:
 
       - name: Build
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -294,17 +393,17 @@ jobs:
           fi
 
   docker-publish:
-    needs: [all-tests, docker, publish-check]
+    needs: [ unit-tests, encode-tests, docker, publish-check ]
     runs-on: ubuntu-latest
     if: needs.publish-check.outputs.should_publish == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Docker meta
         id: docker_meta
 
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/av1an
           tags: |
@@ -316,19 +415,19 @@ jobs:
             type=sha
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -337,7 +436,7 @@ jobs:
 
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile

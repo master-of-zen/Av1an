@@ -1,4 +1,10 @@
-use std::path::{Path, PathBuf};
+#[cfg(test)]
+mod tests;
+
+use std::{
+    io,
+    path::{absolute, Path, PathBuf},
+};
 
 /// Count the number of elements passed to this macro.
 ///
@@ -29,6 +35,7 @@ macro_rules! inplace_vec {
     const SIZE: usize = $crate::count!($($x)*);
     #[allow(unused_assignments)]
     #[allow(clippy::transmute_undefined_repr)]
+    #[allow(clippy::macro_metavars_in_unsafe)]
     unsafe {
       let mut v: Vec<MaybeUninit<Cow<_>>> = Vec::with_capacity(SIZE);
       v.set_len(SIZE);
@@ -39,7 +46,7 @@ macro_rules! inplace_vec {
         idx += 1;
       )*
 
-      mem::transmute::<_, Vec<Cow<_>>>(v)
+      mem::transmute::<Vec<MaybeUninit<Cow<_>>>, Vec<Cow<_>>>(v)
     }
   }};
 }
@@ -98,75 +105,46 @@ macro_rules! into_smallvec {
 /// and error if creating the directory failed.
 #[macro_export]
 macro_rules! create_dir {
-  ($loc:expr) => {
-    match std::fs::create_dir(&$loc) {
-      Ok(()) => Ok(()),
-      Err(e) => match e.kind() {
-        std::io::ErrorKind::AlreadyExists => Ok(()),
-        _ => {
-          error!("Error while creating directory {:?}: {}", &$loc, e);
-          Err(e)
+    ($loc:expr) => {
+        match std::fs::create_dir(&$loc) {
+            Ok(()) => Ok(()),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::AlreadyExists => Ok(()),
+                _ => {
+                    error!("Error while creating directory {:?}: {}", &$loc, e);
+                    Err(e)
+                },
+            },
         }
-      },
-    }
-  };
+    };
 }
 
 #[inline]
 pub(crate) fn printable_base10_digits(x: usize) -> u32 {
-  (((x as f64).log10() + 1.0).floor() as u32).max(1)
+    (((x as f64).log10() + 1.0).floor() as u32).max(1)
 }
 
 /// Reads dir and returns all files
 /// Depth 1
+#[inline]
 pub fn read_in_dir(path: &Path) -> anyhow::Result<impl Iterator<Item = PathBuf>> {
-  let dir = std::fs::read_dir(path)?;
-  Ok(dir.into_iter().filter_map(Result::ok).filter_map(|d| {
-    d.file_type().map_or(None, |file_type| {
-      if file_type.is_file() {
-        Some(d.path())
-      } else {
-        None
-      }
-    })
-  }))
+    let dir = std::fs::read_dir(path)?;
+    Ok(dir.into_iter().filter_map(Result::ok).filter_map(|d| {
+        d.file_type().map_or(None, |file_type| {
+            if file_type.is_file() {
+                Some(d.path())
+            } else {
+                None
+            }
+        })
+    }))
 }
 
-#[cfg(test)]
-mod tests {
-  use std::borrow::Cow;
-
-  #[test]
-  fn count_macro() {
-    assert_eq!(crate::count!["rav1e", "-s", "10",], 3);
-    assert_eq!(crate::count!["rav1e", "-s", "10"], 3);
-    assert_eq!(crate::count!["rav1e" "-s" "10"], 3);
-    assert_eq!(crate::count!["rav1e", "-s", "10", ""], 4);
-    assert_eq!(crate::count!["rav1e" "-s" "10" ""], 4);
-    assert_eq!(crate::count!["rav1e" "-s", "10" ""], 4);
-    assert_eq!(crate::count!["rav1e" "-s" "10" "",], 4);
-    assert_eq!(crate::count!["rav1e", "-s", "10" "",], 4);
-  }
-
-  #[test]
-  fn inplace_vec_capacity() {
-    let v: Vec<Cow<'static, str>> = crate::inplace_vec!["hello", format!("{}", 4), "world"];
-    assert_eq!(v.capacity(), 3);
-
-    // with trailing comma
-    let v: Vec<Cow<'static, str>> = crate::inplace_vec!["hello", format!("{}", 4), "world",];
-    assert_eq!(v.capacity(), 3);
-
-    let v: Vec<Cow<'static, str>> =
-      crate::inplace_vec!["hello", format!("{}", 4), "world", 5.to_string(), "!!!"];
-    assert_eq!(v.capacity(), 5);
-  }
-
-  #[test]
-  fn inplace_vec_is_sound() {
-    let v1: Vec<Cow<'static, str>> = crate::inplace_vec!["hello", format!("{}", 4), "world"];
-    let v2: Vec<Cow<'static, str>> = crate::into_vec!["hello", format!("{}", 4), "world"];
-
-    assert_eq!(v1, v2);
-  }
+#[inline]
+pub(crate) fn to_absolute_path(path: &Path) -> io::Result<PathBuf> {
+    if cfg!(target_os = "windows") {
+        absolute(path)
+    } else {
+        path.canonicalize()
+    }
 }

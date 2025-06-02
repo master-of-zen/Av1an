@@ -27,46 +27,19 @@ jobs:
           override: true
 
       - name: Install tools
-        run: |
-          cargo install cargo-edit
-          cargo install toml-cli
+        run: cargo install cargo-workspaces --locked
 
       - name: update crate versions& inter-dependency
         env:
           TARGET_VERSION: ${{ github.event.inputs.new_version_string }}
         run: |
-          echo "Target Version: $TARGET_VERSION"
-          
-          echo "Setting av1an-core version to $TARGET_VERSION"
-          (cd av1an-core && cargo set-version "$TARGET_VERSION")
-          
-          echo "Setting av1an version to $TARGET_VERSION"
-          (cd av1an && cargo set-version "$TARGET_VERSION")
+          echo "set workspace versions to $TARGET_VERSION"
+          cargo ws version custom "$TARGET_VERSION" --all --exact --yes
 
-          echo "Verify av1an-core dependency version in av1an/Cargo.toml"
-          DEP_VER=$(toml get av1an/Cargo.toml dependencies.av1an-core.version | tr -d '\"')
-          
-          echo "expected dep ver: $TARGET_VERSION. found: $DEP_VER"
-          
-          if [ "$DEP_VER" != "$TARGET_VERSION" ]; then
-            echo "cargo-edit didnt update av1an-core dep in av1an/Cargo.toml to $TARGET_VERSION."
-            echo "explicit update with toml set"
-            toml set av1an/Cargo.toml dependencies.av1an-core.version "$TARGET_VERSION"
-            
-            DEP_VER_AFTER_SET=$(toml get av1an/Cargo.toml dependencies.av1an-core.version | tr -d '\"')
-            if [ "$DEP_VER_AFTER_SET" != "$TARGET_VERSION" ]; then
-                echo "'toml set' failed to update dep to $TARGET_VERSION. Found $DEP_VER_AFTER_SET."
-                exit 1
-            else
-                echo "explicit 'toml set' successful. Path dependency updated."
-            fi
-          else
-            echo "av1an-core dependency version in av1an/Cargo.toml correctly set to $TARGET_VERSION."
-          fi
-
-      - name: Update Cargo.lock
+      - name: verify Cargo.lock is updated
         run: |
-          cargo metadata --manifest-path Cargo.toml --format-version 1
+          cargo check --workspace --all-targets
+          echo "cargo.lock is up-to-date"
 
       - name: Commit/Tag/Push
         uses: EndBug/add-and-commit@v9.1.4

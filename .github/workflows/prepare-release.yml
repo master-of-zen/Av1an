@@ -21,10 +21,9 @@ jobs:
           fetch-depth: 0
 
       - name: set up Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
 
       - name: Install tools
         run: cargo install cargo-workspaces --locked

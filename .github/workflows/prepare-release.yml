@@ -26,7 +26,7 @@ jobs:
           toolchain: stable
 
       - name: Install tools
-        run: cargo install cargo-workspaces --locked
+        run: cargo install cargo-workspaces
 
       - name: update crate versions& inter-dependency and block tag (handled later)
         env:

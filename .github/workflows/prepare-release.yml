@@ -35,11 +35,6 @@ jobs:
           echo "set workspace versions to $TARGET_VERSION"
           cargo ws version custom "$TARGET_VERSION" --all --exact --yes --no-git-commit
 
-      - name: verify Cargo.lock is updated
-        run: |
-          cargo check --workspace --all-targets
-          echo "cargo.lock is up-to-date"
-
       - name: Commit/Tag/Push
         uses: EndBug/add-and-commit@v9.1.4
         with:

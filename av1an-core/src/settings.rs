@@ -104,9 +104,9 @@ pub struct EncodeArgs {
     pub vmaf:           bool,
     pub vmaf_path:      Option<PathBuf>,
     pub vmaf_res:       String,
+    pub probe_res:      Option<String>,
     pub vmaf_threads:   Option<usize>,
     pub vmaf_filter:    Option<String>,
-    pub xpsnr_res:      String,
 }
 
 impl EncodeArgs {
@@ -297,6 +297,18 @@ impl EncodeArgs {
             }
 
             ensure!(target_quality.min_q >= 1);
+
+            if let Some(resolution) = &target_quality.probe_res {
+                match resolution.split('x').collect::<Vec<&str>>().as_slice() {
+                    [width_str, height_str] => {
+                        match (width_str.parse::<u32>(), height_str.parse::<u32>()) {
+                            (Ok(_width), Ok(_height)) => {},
+                            _ => eprintln!("Failed to parse Probe Resolution"),
+                        }
+                    },
+                    _ => eprintln!("Probe Resolution must be in the format widthxheight"),
+                }
+            }
         }
 
         let encoder_bin = self.encoder.bin();

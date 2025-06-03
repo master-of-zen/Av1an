@@ -12,7 +12,11 @@ use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use regex::Regex;
 use tracing::info;
-use vapoursynth::{core::CoreRef, prelude::*, video_info::VideoInfo};
+use vapoursynth::{
+    core::CoreRef,
+    prelude::*,
+    video_info::{Resolution, VideoInfo},
+};
 
 use super::ChunkMethod;
 use crate::{
@@ -867,9 +871,15 @@ pub fn get_source_chunk<'core>(
     core: CoreRef<'core>,
     source_node: &Node<'core>,
     frame_range: (u32, u32),
+    probe_res: Option<(u32, u32)>,
     sample_rate: usize,
 ) -> anyhow::Result<Node<'core>> {
     let mut chunk_node = trim_node(core, source_node, frame_range.0, frame_range.1 - 1)?;
+
+    if let Some((width, height)) = probe_res {
+        chunk_node = resize_node(core, &chunk_node, Some(width), Some(height), None, None)?;
+    }
+
     if sample_rate > 1 {
         chunk_node = select_every(core, &chunk_node, sample_rate)?;
     }
@@ -878,24 +888,77 @@ pub fn get_source_chunk<'core>(
 }
 
 #[inline]
+pub fn get_comparands<'core>(
+    core: CoreRef<'core>,
+    source_node: &Node<'core>,
+    encoded: &Path,
+    frame_range: (u32, u32),
+    probe_res: Option<&String>,
+    sample_rate: usize,
+) -> anyhow::Result<(Node<'core>, Node<'core>)> {
+    let mut probe_resolution: Option<(u32, u32)> = None;
+    if let Some(res) = probe_res {
+        let mut parts = res.split('x');
+        let width = parts
+            .next()
+            .and_then(|x| x.parse::<u32>().ok())
+            .expect("Invalid probe resolution");
+        let height = parts
+            .next()
+            .and_then(|x| x.parse::<u32>().ok())
+            .expect("Invalid probe resolution");
+        probe_resolution = Some((width, height));
+    }
+
+    let chunk_node = get_source_chunk(
+        core,
+        source_node,
+        frame_range,
+        probe_resolution,
+        sample_rate,
+    )?;
+    let encoded_node = import_video(core, encoded, Some(false))?;
+    let resized_encoded_node = if let Some((width, height)) = probe_resolution {
+        resize_node(core, &encoded_node, Some(width), Some(height), None, None)?
+    } else {
+        let chunk_node_resolution = chunk_node.info().resolution;
+        let (width, height) = match chunk_node_resolution {
+            Property::Variable => (0, 0),
+            Property::Constant(Resolution {
+                width,
+                height,
+            }) => (width as u32, height as u32),
+        };
+        resize_node(core, &encoded_node, Some(width), Some(height), None, None)?
+    };
+
+    Ok((chunk_node, resized_encoded_node))
+}
+
+#[inline]
 pub fn measure_butteraugli(
     submetric: ButteraugliSubMetric,
     source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
+    probe_res: Option<&String>,
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
     let mut environment = Environment::new()?;
     let args = source.as_vspipe_args_map()?;
     environment.set_variables(&args)?;
     environment.eval_script(source.as_script_text())?;
-
     let core = environment.get_core()?;
+
     let source_node = environment.get_output(0)?.0;
-
-    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
-    let encoded_node = import_video(core, encoded, Some(false))?;
-
+    let (chunk_node, encoded_node) = get_comparands(
+        core,
+        &source_node,
+        encoded,
+        frame_range,
+        probe_res,
+        sample_rate,
+    )?;
     let (compared_node, butteraugli_key) =
         compare_butteraugli(core, &chunk_node, &encoded_node, submetric)?;
 
@@ -913,20 +976,26 @@ pub fn measure_ssimulacra2(
     source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
+    probe_res: Option<&String>,
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
     let mut environment = Environment::new()?;
     let args = source.as_vspipe_args_map()?;
     environment.set_variables(&args)?;
     environment.eval_script(source.as_script_text())?;
-
     let core = environment.get_core()?;
+
     let source_node = environment.get_output(0)?.0;
-
-    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
-    let encoded_node = import_video(core, encoded, Some(false))?;
-
+    let (chunk_node, encoded_node) = get_comparands(
+        core,
+        &source_node,
+        encoded,
+        frame_range,
+        probe_res,
+        sample_rate,
+    )?;
     let (compared_node, ssimulacra_key) = compare_ssimulacra2(core, &chunk_node, &encoded_node)?;
+
     let mut scores = Vec::new();
     for frame_index in 0..compared_node.info().num_frames {
         let score = compared_node.get_frame(frame_index)?.props().get_float(ssimulacra_key)?;
@@ -942,18 +1011,24 @@ pub fn measure_xpsnr(
     source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
+    probe_res: Option<&String>,
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
     let mut environment = Environment::new()?;
     let args = source.as_vspipe_args_map()?;
     environment.set_variables(&args)?;
     environment.eval_script(source.as_script_text())?;
-
     let core = environment.get_core()?;
-    let source_node = environment.get_output(0)?.0;
 
-    let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
-    let encoded_node = import_video(core, encoded, Some(false))?;
+    let source_node = environment.get_output(0)?.0;
+    let (chunk_node, encoded_node) = get_comparands(
+        core,
+        &source_node,
+        encoded,
+        frame_range,
+        probe_res,
+        sample_rate,
+    )?;
     let compared_node = compare_xpsnr(core, &chunk_node, &encoded_node)?;
 
     let mut scores = Vec::new();

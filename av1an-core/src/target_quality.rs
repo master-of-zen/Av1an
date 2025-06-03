@@ -37,7 +37,7 @@ pub struct TargetQuality {
     pub vmaf_filter:   Option<String>,
     pub vmaf_threads:  usize,
     pub model:         Option<PathBuf>,
-    pub xpsnr_res:     String,
+    pub probe_res:     Option<String>,
     pub probing_rate:  usize,
     pub probing_speed: Option<u8>,
     pub probes:        u32,
@@ -365,7 +365,7 @@ impl TargetQuality {
             self.vspipe_args.clone(),
             &fl_path,
             self.model.as_ref(),
-            &self.vmaf_res,
+            self.probe_res.as_ref().unwrap_or(&self.vmaf_res),
             &self.vmaf_scaler,
             self.probing_rate,
             self.vmaf_filter.as_deref(),
@@ -381,6 +381,7 @@ impl TargetQuality {
             &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
             self.probing_rate,
         )
         .unwrap();
@@ -401,6 +402,7 @@ impl TargetQuality {
             &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
             self.probing_rate,
         )
         .unwrap();
@@ -417,7 +419,7 @@ impl TargetQuality {
             chunk.source_cmd.as_slice(),
             self.vspipe_args.clone(),
             &fl_path,
-            &self.xpsnr_res,
+            self.probe_res.as_ref().unwrap_or(&self.vmaf_res),
             &self.vmaf_scaler,
             self.probing_rate,
         )?;
@@ -438,6 +440,7 @@ impl TargetQuality {
             &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
             self.probing_rate,
         )
         .unwrap();

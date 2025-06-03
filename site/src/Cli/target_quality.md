@@ -5,6 +5,7 @@ Name | Flag | Type | Default
 [Target Metric](#target-metric---target-metric) | `--target-metric` | `TARGET_METRIC` | `VMAF`
 [Target Quality](#target-quality---target-quality) | `--target-quality` | Float | 
 [Probes](#probes---probes) | `--probes` | Integer | `4`
+[Probe Resolution](#probe-resolution---probe-res) | `--probe-res` | String |
 [Probing Rate](#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
 [Probing Speed](#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
 [Probe Slow](#probe-slow---probe-slow) | `--probe-slow` || 
@@ -101,6 +102,18 @@ Can be any integer from `1` to `4`.
 ### Default
 
 If not specified, `1` is used.
+
+## Probe Resolution `--probe-res`
+
+Resolution used for Target Quality probe calculation.
+
+### Possible Values
+
+Can be a string in the format of `widthxheight` where `width` and `height` are positive integers.
+
+### Default
+
+If not specified, the input resolution is used.
 
 ## Probing Speed `--probing-speed`
 

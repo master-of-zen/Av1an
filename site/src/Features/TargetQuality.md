@@ -72,6 +72,8 @@ Alternatively:
 
 - [`--probes INT`](../Cli/target_quality.md#probes---probes) - Overrides maximum amount of probes to make for each segment (Default 4)
 
+- [`--probe-res "INTxINT"`](../Cli//target_quality.md#probe-resolution---probe-res) - Overrides the resolution of the probes during calculation
+
 - [`--probing-rate INT`](../Cli/target_quality.md#probing-rate---probing-rate) - Divides the framerate of the probes by this value (Default 1)
 
 - [`--probing-speed ProbeSpeed`](../Cli/target_quality.md#probing-speed---probing-speed) - Overrides the default or specified preset/cpu-used/speed for that encoder
@@ -94,10 +96,14 @@ More details can be found in the [Target Quality](../Cli/target_quality.md) CLI 
 
 ## Scaling
 
-By default vmaf calculation is done at 1920x1080 with default model.
+By default VMAF calculation is done at 1920x1080 with default model.
 VMAF calculation resolution can be changed
 
 `--vmaf-res 3840x2160`
+
+Calculations with other metrics can be changed as well
+
+`--probe-res 1280x720`
 
 ## Cropping with target quality
 
@@ -107,3 +113,4 @@ Filter with crop should be supplied for both ffmpeg options and vmaf filter
 
 or cropping and resizing could be done with vapoursynth script 
 ` -i 4k_crop.vpy --vmaf-res "3840x1600" --target-quality 90 -o test.mkv `
+` -i 4k_crop.vpy --probe-res "1920x800" --target-quality 3 --target-metric butteraugli-3 -o test.mkv `

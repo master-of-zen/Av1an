@@ -599,6 +599,13 @@ pub struct CliOpts {
     #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
     pub vmaf_res: String,
 
+    /// Resolution used for Target Quality metric calculation
+    ///
+    /// If not specified, the output video will be scaled to the resolution of
+    /// the input video.
+    #[clap(long, help_heading = "Target Quality")]
+    pub probe_res: Option<String>,
+
     /// Number of threads to use for target quality VMAF calculation
     #[clap(long, help_heading = "VMAF")]
     pub vmaf_threads: Option<usize>,
@@ -608,13 +615,6 @@ pub struct CliOpts {
     /// This option should be specified if the source is cropped, for example.
     #[clap(long, help_heading = "VMAF")]
     pub vmaf_filter: Option<String>,
-
-    /// Resolution used for XPSNR calculation
-    ///
-    /// If set to inputres, the output video will be scaled to the resolution of
-    /// the input video.
-    #[clap(long, default_value = "1920x1080", help_heading = "XPSNR")]
-    pub xpsnr_res: String,
 
     /// Target a metric score for encoding (disabled by default)
     ///
@@ -725,6 +725,7 @@ impl CliOpts {
 
             TargetQuality {
                 vmaf_res: self.vmaf_res.clone(),
+                probe_res: self.probe_res.clone(),
                 vmaf_scaler: self.scaler.clone(),
                 vmaf_filter: self.vmaf_filter.clone(),
                 vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
@@ -733,7 +734,6 @@ impl CliOpts {
                         .get()
                 }),
                 model: self.vmaf_path.clone(),
-                xpsnr_res: self.xpsnr_res.clone(),
                 probes: self.probes,
                 target: tq,
                 metric: self.target_metric,
@@ -985,9 +985,9 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             vmaf: args.vmaf,
             vmaf_path: args.vmaf_path.clone(),
             vmaf_res: args.vmaf_res.clone(),
+            probe_res: args.probe_res.clone(),
             vmaf_threads: args.vmaf_threads,
             vmaf_filter: args.vmaf_filter.clone(),
-            xpsnr_res: args.xpsnr_res.clone(),
             verbosity,
             workers: args.workers,
             tiles: (1, 1), // default value; will be adjusted if tile_auto set

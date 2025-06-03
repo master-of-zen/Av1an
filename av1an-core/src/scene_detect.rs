@@ -270,7 +270,7 @@ fn build_decoder(
             }
         },
         Input::Video {
-            path,
+            path, ..
         } => {
             let input_pix_format =
                 crate::ffmpeg::get_pixel_format(path.as_ref()).unwrap_or_else(|e| {

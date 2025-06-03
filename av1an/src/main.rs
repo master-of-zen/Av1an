@@ -816,7 +816,33 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             format!(".{}", hash_path(input.as_path()))
         };
 
-        let input = Input::from((input, args.vspipe_args.clone()));
+        let chunk_method =
+            args.chunk_method.unwrap_or_else(vapoursynth::best_available_chunk_method);
+        let scaler = {
+            let mut scaler = args.scaler.to_string().clone();
+            let mut scaler_ext =
+                "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
+            if scaler.starts_with("lanczos") {
+                for n in 1..=9 {
+                    if scaler.ends_with(&n.to_string()) {
+                        scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
+                        scaler = "lanczos".to_string();
+                    }
+                }
+            }
+            scaler.push_str(&scaler_ext);
+            scaler
+        };
+
+        let input = Input::from((
+            input,
+            args.vspipe_args.clone(),
+            temp.as_str(),
+            chunk_method,
+            args.sc_downscale_height,
+            args.sc_pix_format,
+            scaler.clone(),
+        ));
 
         let verbosity = if args.quiet {
             Verbosity::Quiet
@@ -898,9 +924,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             } else {
                 into_vec!["-c:a", "copy"]
             },
-            chunk_method: args
-                .chunk_method
-                .unwrap_or_else(vapoursynth::best_available_chunk_method),
+            chunk_method,
             chunk_order: args.chunk_order,
             concat: args.concat,
             encoder: args.encoder,
@@ -923,7 +947,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             input_pix_format: {
                 match &input {
                     Input::Video {
-                        path,
+                        path, ..
                     } => InputPixelFormat::FFmpeg {
                         format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
                             format!("FFmpeg failed to get pixel format for input video {path:?}")
@@ -970,21 +994,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             tile_auto: args.tile_auto,
             set_thread_affinity: args.set_thread_affinity,
             zones: args.zones.clone(),
-            scaler: {
-                let mut scaler = args.scaler.to_string().clone();
-                let mut scaler_ext =
-                    "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
-                if scaler.starts_with("lanczos") {
-                    for n in 1..=9 {
-                        if scaler.ends_with(&n.to_string()) {
-                            scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
-                            scaler = "lanczos".to_string();
-                        }
-                    }
-                }
-                scaler.push_str(&scaler_ext);
-                scaler
-            },
+            scaler,
             ignore_frame_mismatch: args.ignore_frame_mismatch,
         };
 

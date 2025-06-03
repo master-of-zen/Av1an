@@ -4,8 +4,7 @@ extern crate log;
 use std::{
     cmp::max,
     collections::hash_map::DefaultHasher,
-    fs,
-    fs::File,
+    fs::{self, read_to_string, File},
     hash::{Hash, Hasher},
     io::Write,
     path::{Path, PathBuf},
@@ -26,7 +25,6 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, IntoStaticStr};
 
-use crate::progress_bar::finish_progress_bar;
 pub use crate::{
     concat::ConcatMethod,
     context::Av1anContext,
@@ -36,6 +34,7 @@ pub use crate::{
     target_quality::{adapt_probing_rate, TargetQuality},
     util::read_in_dir,
 };
+use crate::{progress_bar::finish_progress_bar, vapoursynth::generate_loadscript_text};
 
 mod broker;
 mod chunk;
@@ -65,9 +64,11 @@ pub enum Input {
     VapourSynth {
         path:        PathBuf,
         vspipe_args: Vec<String>,
+        script_text: String,
     },
     Video {
-        path: PathBuf,
+        path:        PathBuf,
+        script_text: Option<String>,
     },
 }
 
@@ -78,7 +79,7 @@ impl Input {
     pub fn as_video_path(&self) -> &Path {
         match &self {
             Input::Video {
-                path,
+                path, ..
             } => path.as_ref(),
             Input::VapourSynth {
                 ..
@@ -114,11 +115,34 @@ impl Input {
     pub fn as_path(&self) -> &Path {
         match &self {
             Input::Video {
-                path,
+                path, ..
             }
             | Input::VapourSynth {
                 path, ..
             } => path.as_ref(),
+        }
+    }
+
+    /// Returns a reference to the inner script text, panicking if the input is
+    /// does not have script text.
+    #[inline]
+    pub fn as_script_text(&self) -> &String {
+        match &self {
+            Input::VapourSynth {
+                script_text, ..
+            } => script_text,
+            Input::Video {
+                script_text, ..
+            } => {
+                if let Some(text) = script_text {
+                    text
+                } else {
+                    panic!(
+                        "called `Input::as_script_text()` on an `Input::Video` variant with no \
+                         script text"
+                    )
+                }
+            },
         }
     }
 
@@ -137,7 +161,7 @@ impl Input {
         const FAIL_MSG: &str = "Failed to get number of frames for input video";
         Ok(match &self {
             Input::Video {
-                path,
+                path, ..
             } if vs_script_path.is_none() => {
                 ffmpeg::num_frames(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
             },
@@ -154,7 +178,7 @@ impl Input {
         const FAIL_MSG: &str = "Failed to get frame rate for input video";
         Ok(match &self {
             Input::Video {
-                path,
+                path, ..
             } => {
                 crate::ffmpeg::frame_rate(path.as_path()).map_err(|_| anyhow::anyhow!(FAIL_MSG))?
             },
@@ -174,7 +198,7 @@ impl Input {
             } => crate::vapoursynth::resolution(path, self.as_vspipe_args_map()?)
                 .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
             Input::Video {
-                path,
+                path, ..
             } => crate::ffmpeg::resolution(path).map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
         })
     }
@@ -188,7 +212,7 @@ impl Input {
             } => crate::vapoursynth::pixel_format(path, self.as_vspipe_args_map()?)
                 .map_err(|_| anyhow::anyhow!(FAIL_MSG))?,
             Input::Video {
-                path,
+                path, ..
             } => {
                 let fmt =
                     crate::ffmpeg::get_pixel_format(path).map_err(|_| anyhow::anyhow!(FAIL_MSG))?;
@@ -211,7 +235,7 @@ impl Input {
                 }
             },
             Input::Video {
-                path,
+                path, ..
             } => {
                 match crate::ffmpeg::transfer_characteristics(path)
                     .map_err(|_| anyhow::anyhow!(FAIL_MSG))?
@@ -300,23 +324,90 @@ impl Input {
     }
 }
 
-impl<P: AsRef<Path> + Into<PathBuf>> From<(P, Vec<String>)> for Input {
+impl<P: AsRef<Path> + Into<PathBuf>>
+    From<(
+        P,
+        Vec<String>,
+        &str,
+        ChunkMethod,
+        Option<usize>,
+        Option<Pixel>,
+        String,
+    )> for Input
+{
     #[inline]
-    fn from((path, vspipe_args): (P, Vec<String>)) -> Self {
+    fn from(
+        (
+            path,
+            vspipe_args,
+            temp,
+            chunk_method,
+            scene_detection_downscale_height,
+            scene_detection_pixel_format,
+            scene_detection_scaler,
+        ): (
+            P,
+            Vec<String>,
+            &str,
+            ChunkMethod,
+            Option<usize>,
+            Option<Pixel>,
+            String,
+        ),
+    ) -> Self {
         if let Some(ext) = path.as_ref().extension() {
             if ext == "py" || ext == "vpy" {
+                let input_path = path.into();
+                let script_text = read_to_string(input_path.clone()).unwrap();
                 Self::VapourSynth {
-                    path: path.into(),
+                    path: input_path.clone(),
                     vspipe_args,
+                    script_text,
                 }
             } else {
+                let input_path = path.into();
                 Self::Video {
-                    path: path.into()
+                    path:        input_path.clone(),
+                    script_text: match chunk_method {
+                        ChunkMethod::LSMASH
+                        | ChunkMethod::FFMS2
+                        | ChunkMethod::DGDECNV
+                        | ChunkMethod::BESTSOURCE => Some(
+                            generate_loadscript_text(
+                                temp,
+                                &input_path,
+                                chunk_method,
+                                scene_detection_downscale_height,
+                                scene_detection_pixel_format,
+                                scene_detection_scaler,
+                            )
+                            .unwrap(),
+                        ),
+                        _ => None,
+                    },
                 }
             }
         } else {
+            let input_path = path.into();
             Self::Video {
-                path: path.into()
+                path:        input_path.clone(),
+                script_text: match chunk_method {
+                    ChunkMethod::LSMASH
+                    | ChunkMethod::FFMS2
+                    | ChunkMethod::DGDECNV
+                    | ChunkMethod::BESTSOURCE => Some(
+                        generate_loadscript_text(
+                            temp,
+                            &input_path,
+                            chunk_method,
+                            scene_detection_downscale_height,
+                            scene_detection_pixel_format,
+                            scene_detection_scaler,
+                        )
+                        .unwrap(),
+                    ),
+                    _ => None,
+                },
             }
         }
     }

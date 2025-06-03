@@ -378,7 +378,7 @@ impl TargetQuality {
         let probe_name = self.probe(chunk, q)?;
 
         let scores = measure_ssimulacra2(
-            chunk.input.as_path(),
+            &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
             self.probing_rate,
@@ -398,7 +398,7 @@ impl TargetQuality {
 
         let scores = measure_butteraugli(
             submetric,
-            chunk.input.as_path(),
+            &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
             self.probing_rate,
@@ -435,7 +435,7 @@ impl TargetQuality {
 
         let scores = measure_xpsnr(
             submetric,
-            chunk.input.as_path(),
+            &chunk.input,
             &probe_name,
             (chunk.start_frame as u32, chunk.end_frame as u32),
             self.probing_rate,

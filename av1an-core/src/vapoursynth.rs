@@ -11,12 +11,14 @@ use av_format::rational::Rational64;
 use once_cell::sync::Lazy;
 use path_abs::PathAbs;
 use regex::Regex;
+use tracing::info;
 use vapoursynth::{core::CoreRef, prelude::*, video_info::VideoInfo};
 
 use super::ChunkMethod;
 use crate::{
     metrics::{butteraugli::ButteraugliSubMetric, xpsnr::XPSNRSubMetric},
     util::to_absolute_path,
+    Input,
 };
 
 static VAPOURSYNTH_PLUGINS: Lazy<HashSet<String>> = Lazy::new(|| {
@@ -613,11 +615,54 @@ pub fn create_vs_file(
     scene_detection_pixel_format: Option<ffmpeg::format::Pixel>,
     scene_detection_scaler: String,
 ) -> anyhow::Result<PathBuf> {
-    let temp: &Path = temp.as_ref();
-    let source = to_absolute_path(source)?;
+    let load_script_text = generate_loadscript_text(
+        temp,
+        source,
+        chunk_method,
+        scene_detection_downscale_height,
+        scene_detection_pixel_format,
+        scene_detection_scaler,
+    )?;
 
+    if chunk_method == ChunkMethod::DGDECNV {
+        let absolute_source = to_absolute_path(source)?;
+        let temp: &Path = temp.as_ref();
+        let dgindexnv_output = temp.join("split").join("index.dgi");
+
+        if !dgindexnv_output.exists() {
+            info!("Indexing input with DGDecNV");
+
+            // Run dgindexnv to generate the .dgi index file
+            Command::new("dgindexnv")
+                .arg("-h")
+                .arg("-i")
+                .arg(&absolute_source)
+                .arg("-o")
+                .arg(&dgindexnv_output)
+                .output()?;
+        }
+    }
+
+    let temp: &Path = temp.as_ref();
     let load_script_path = temp.join("split").join("loadscript.vpy");
     let mut load_script = File::create(&load_script_path)?;
+
+    load_script.write_all(load_script_text.as_bytes())?;
+
+    Ok(load_script_path)
+}
+
+#[inline]
+pub fn generate_loadscript_text(
+    temp: &str,
+    source: &Path,
+    chunk_method: ChunkMethod,
+    scene_detection_downscale_height: Option<usize>,
+    scene_detection_pixel_format: Option<ffmpeg::format::Pixel>,
+    scene_detection_scaler: String,
+) -> anyhow::Result<String> {
+    let temp: &Path = temp.as_ref();
+    let source = to_absolute_path(source)?;
 
     let cache_file = PathAbs::new(temp.join("split").join(format!(
         "cache.{}",
@@ -641,16 +686,6 @@ pub fn create_vs_file(
     let dgindex_path = match chunk_method {
         ChunkMethod::DGDECNV => {
             let dgindexnv_output = temp.join("split").join("index.dgi");
-
-            // Run dgindexnv to generate the .dgi index file
-            Command::new("dgindexnv")
-                .arg("-h")
-                .arg("-i")
-                .arg(&source)
-                .arg("-o")
-                .arg(&dgindexnv_output)
-                .output()?;
-
             &to_absolute_path(&dgindexnv_output)?
         },
         _ => &source,
@@ -694,9 +729,7 @@ pub fn create_vs_file(
         &format!("scaler = {scene_detection_scaler:?}"),
     );
 
-    load_script.write_all(load_script_text.as_bytes())?;
-
-    Ok(load_script_path)
+    Ok(load_script_text)
 }
 
 #[inline]
@@ -847,24 +880,18 @@ pub fn get_source_chunk<'core>(
 #[inline]
 pub fn measure_butteraugli(
     submetric: ButteraugliSubMetric,
-    source: &Path,
+    source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
-    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
     let mut environment = Environment::new()?;
-
-    if source_is_vpy {
-        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
-    }
+    let args = source.as_vspipe_args_map()?;
+    environment.set_variables(&args)?;
+    environment.eval_script(source.as_script_text())?;
 
     let core = environment.get_core()?;
-    let source_node = if source_is_vpy {
-        environment.get_output(0)?.0
-    } else {
-        import_video(core, source, Some(true))?
-    };
+    let source_node = environment.get_output(0)?.0;
 
     let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
     let encoded_node = import_video(core, encoded, Some(false))?;
@@ -883,26 +910,18 @@ pub fn measure_butteraugli(
 
 #[inline]
 pub fn measure_ssimulacra2(
-    source: &Path,
+    source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
-    // Create a new VS environment
-    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
     let mut environment = Environment::new()?;
-
-    // Evaluate if source is a VapourSynth script
-    if source_is_vpy {
-        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
-    }
+    let args = source.as_vspipe_args_map()?;
+    environment.set_variables(&args)?;
+    environment.eval_script(source.as_script_text())?;
 
     let core = environment.get_core()?;
-    let source_node = if source_is_vpy {
-        environment.get_output(0)?.0
-    } else {
-        import_video(core, source, Some(true))?
-    };
+    let source_node = environment.get_output(0)?.0;
 
     let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
     let encoded_node = import_video(core, encoded, Some(false))?;
@@ -920,24 +939,18 @@ pub fn measure_ssimulacra2(
 #[inline]
 pub fn measure_xpsnr(
     submetric: XPSNRSubMetric,
-    source: &Path,
+    source: &Input,
     encoded: &Path,
     frame_range: (u32, u32),
     sample_rate: usize,
 ) -> anyhow::Result<Vec<f64>> {
-    let source_is_vpy = source.extension().unwrap() == "vpy" || source.extension().unwrap() == "py";
     let mut environment = Environment::new()?;
-
-    if source_is_vpy {
-        environment.eval_file(source, EvalFlags::SetWorkingDir)?;
-    }
+    let args = source.as_vspipe_args_map()?;
+    environment.set_variables(&args)?;
+    environment.eval_script(source.as_script_text())?;
 
     let core = environment.get_core()?;
-    let source_node = if source_is_vpy {
-        environment.get_output(0)?.0
-    } else {
-        import_video(core, source, Some(true))?
-    };
+    let source_node = environment.get_output(0)?.0;
 
     let chunk_node = get_source_chunk(core, &source_node, frame_range, sample_rate)?;
     let encoded_node = import_video(core, encoded, Some(false))?;

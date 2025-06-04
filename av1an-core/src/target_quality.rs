@@ -128,11 +128,17 @@ impl TargetQuality {
         }
 
         let mut score = measure_probe(self, chunk, self.metric, last_q as usize);
-        if self.metric == TargetMetric::ButteraugliInf {
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
             // Butteraugli is inverted, where quality lowers as score increases
             score *= -1.0;
         }
-        let target = if self.metric == TargetMetric::ButteraugliInf {
+        let target = if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
             -self.target
         } else {
             self.target
@@ -155,7 +161,10 @@ impl TargetQuality {
 
         // Edge case check
         score = measure_probe(self, chunk, self.metric, next_q as usize);
-        if self.metric == TargetMetric::ButteraugliInf {
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
             // Invert butteraugli score for comparison
             score *= -1.0;
         }
@@ -163,7 +172,10 @@ impl TargetQuality {
 
         if (next_q == self.min_q && score < target) || (next_q == self.max_q && score > target) {
             // Invert butteraugli scores back to positive for logging
-            if self.metric == TargetMetric::ButteraugliInf {
+            if matches!(
+                self.metric,
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+            ) {
                 for (score, _) in score_quality.iter_mut() {
                     *score *= -1.0;
                 }
@@ -176,7 +188,7 @@ impl TargetQuality {
                 &chunk.name(),
                 next_q,
                 match self.metric {
-                    TargetMetric::ButteraugliInf => -score,
+                    TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -score,
                     _ => score,
                 },
                 if score < target {
@@ -214,7 +226,10 @@ impl TargetQuality {
             update_progress_bar(new_point as u32);
 
             score = measure_probe(self, chunk, self.metric, new_point as usize);
-            if self.metric == TargetMetric::ButteraugliInf {
+            if matches!(
+                self.metric,
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+            ) {
                 // Invert butteraugli score for comparison
                 score *= -1.0;
             }
@@ -233,7 +248,10 @@ impl TargetQuality {
         let (q, q_score) = interpolated_target_q(score_quality.clone(), target);
 
         // Invert butteraugli scores back to positive for logging
-        if self.metric == TargetMetric::ButteraugliInf {
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
             for (score, _) in score_quality.iter_mut() {
                 *score *= -1.0;
             }
@@ -245,7 +263,7 @@ impl TargetQuality {
             &chunk.name(),
             q as u32,
             match self.metric {
-                TargetMetric::ButteraugliInf => -q_score,
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -q_score,
                 _ => q_score,
             },
             Skip::None,

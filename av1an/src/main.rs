@@ -660,6 +660,14 @@ pub struct CliOpts {
     /// If not specified, the default value is used (chosen per encoder).
     #[clap(long, help_heading = "Target Quality")]
     pub max_q: Option<u32>,
+    
+    /// Use alternative perceptually weighted VMAF with motion compensation disabled
+    #[clap(long, help_heading = "Target Quality")]
+    pub alt_vmaf: bool,
+
+    /// Percentile to use for quality targeting (0.01 = 1st percentile, 0.10 = 10th percentile)
+    #[clap(long, default_value_t = 0.01, help_heading = "Target Quality")]
+    pub percentile: f64,
 }
 
 impl CliOpts {
@@ -698,6 +706,8 @@ impl CliOpts {
                 probe_slow: self.probe_slow,
                 probing_speed: self.probing_speed.clone().map(|s| s as u8),
                 probing_rate: adapt_probing_rate(self.probing_rate as usize),
+                alt_vmaf: self.alt_vmaf,
+                percentile: self.percentile,
             }
         })
     }

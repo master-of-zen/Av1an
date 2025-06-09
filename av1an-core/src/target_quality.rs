@@ -45,7 +45,7 @@ impl TargetQuality {
         &self,
         chunk: &Chunk,
         worker_id: Option<usize>,
-    ) -> Result<u32, Box<EncoderCrash>> {
+    ) -> anyhow::Result<u32> {
         let mut history: Vec<(u32, f64, PathBuf)> = vec![];
 
         let update_progress_bar = |last_q: u32| {
@@ -71,9 +71,9 @@ impl TargetQuality {
 
             let probe_path = self.vmaf_probe(chunk, predicted_q as usize)?;
             let score = if self.alt_vmaf {
-                read_weighted_vmaf_alt(&probe_path, self.percentile, chunk.frame_rate).unwrap()
+                read_weighted_vmaf_alt(&probe_path, self.percentile, chunk.frame_rate)?
             } else {
-                read_weighted_vmaf(&probe_path, self.percentile).unwrap()
+                read_weighted_vmaf(&probe_path, self.percentile)?
             };
 
             history.push((predicted_q, score, probe_path.clone()));
@@ -272,7 +272,7 @@ impl TargetQuality {
         &self,
         chunk: &mut Chunk,
         worker_id: Option<usize>,
-    ) -> Result<(), Box<EncoderCrash>> {
+    ) -> anyhow::Result<()> {
         chunk.tq_cq = Some(self.per_shot_target_quality(chunk, worker_id)?);
         Ok(())
     }

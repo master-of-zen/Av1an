@@ -103,3 +103,4 @@ vapoursynth_new_api = [
 [lints.clippy]
 inline_always = "warn"
 missing_inline_in_public_items = "warn"
+uninlined_format_args = "allow"

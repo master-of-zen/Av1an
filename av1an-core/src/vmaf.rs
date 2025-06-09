@@ -1,9 +1,9 @@
 use std::{
     cmp::Ordering,
     ffi::OsStr,
+    fs,
     path::Path,
     process::{Command, Stdio},
-    fs,
 };
 
 use anyhow::{anyhow, Context};
@@ -300,9 +300,18 @@ pub fn run_vmaf_alt(
     framerate: f64,
 ) -> Result<(), Box<EncoderCrash>> {
     let temp_dir = encoded.parent().unwrap();
-    let vmaf_y_path = temp_dir.join(format!("vmaf_y_{}.json", encoded.file_stem().unwrap().to_str().unwrap()));
-    let vmaf_u_path = temp_dir.join(format!("vmaf_u_{}.json", encoded.file_stem().unwrap().to_str().unwrap()));
-    let vmaf_v_path = temp_dir.join(format!("vmaf_v_{}.json", encoded.file_stem().unwrap().to_str().unwrap()));
+    let vmaf_y_path = temp_dir.join(format!(
+        "vmaf_y_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
+    let vmaf_u_path = temp_dir.join(format!(
+        "vmaf_u_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
+    let vmaf_v_path = temp_dir.join(format!(
+        "vmaf_v_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
 
     let mut filter = if sample_rate > 1 {
         format!(
@@ -321,7 +330,10 @@ pub fn run_vmaf_alt(
     }
 
     let model_str = if let Some(model) = model {
-        format!("path={}\\:motion.motion_force_zero=true", ffmpeg::escape_path_in_filter(&model))
+        format!(
+            "path={}\\:motion.motion_force_zero=true",
+            ffmpeg::escape_path_in_filter(&model)
+        )
     } else {
         "version=vmaf_v0.6.1\\:motion.motion_force_zero=true".to_string()
     };
@@ -357,14 +369,21 @@ pub fn run_vmaf_alt(
 
     let filter_complex = format!(
         "[1:v]format=yuv420p[ref];[0:v]format=yuv420p[dis];\
-        [dis]extractplanes=y+u+v[dis_y][dis_u][dis_v];\
-        [ref]extractplanes=y+u+v[ref_y][ref_u][ref_v];\
-        [dis_y][ref_y]libvmaf=log_path={}:log_fmt=json:n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_y_out];\
-        [dis_u][ref_u]libvmaf=log_path={}:log_fmt=json:n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_u_out];\
-        [dis_v][ref_v]libvmaf=log_path={}:log_fmt=json:n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_v_out]",
-        ffmpeg::escape_path_in_filter(&vmaf_y_path), threads, model_str,
-        ffmpeg::escape_path_in_filter(&vmaf_u_path), threads, model_str,
-        ffmpeg::escape_path_in_filter(&vmaf_v_path), threads, model_str
+         [dis]extractplanes=y+u+v[dis_y][dis_u][dis_v];\
+         [ref]extractplanes=y+u+v[ref_y][ref_u][ref_v];[dis_y][ref_y]libvmaf=log_path={}:\
+         log_fmt=json:n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_y_out];\
+         [dis_u][ref_u]libvmaf=log_path={}:log_fmt=json:n_threads={}:n_subsample=1:model='{}':\
+         eof_action=endall[vmaf_u_out];[dis_v][ref_v]libvmaf=log_path={}:log_fmt=json:\
+         n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_v_out]",
+        ffmpeg::escape_path_in_filter(&vmaf_y_path),
+        threads,
+        model_str,
+        ffmpeg::escape_path_in_filter(&vmaf_u_path),
+        threads,
+        model_str,
+        ffmpeg::escape_path_in_filter(&vmaf_v_path),
+        threads,
+        model_str
     );
 
     cmd.arg(filter_complex);
@@ -375,7 +394,7 @@ pub fn run_vmaf_alt(
     cmd.stdout(Stdio::null());
 
     let output = cmd.output().unwrap();
-    
+
     if !output.status.success() {
         return Err(Box::new(EncoderCrash {
             exit_status:        output.status,
@@ -385,108 +404,109 @@ pub fn run_vmaf_alt(
             stdout:             String::new().into(),
         }));
     }
-    
+
     if !vmaf_y_path.exists() || !vmaf_u_path.exists() || !vmaf_v_path.exists() {
         return Err(Box::new(EncoderCrash {
-            exit_status: output.status,
+            exit_status:        output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: "Y, U, V VMAF files were not created".to_string().into(),
-            stdout: String::new().into(),
+            stderr:             "Y, U, V VMAF files were not created".to_string().into(),
+            stdout:             String::new().into(),
         }));
     }
 
     let y_scores = read_vmaf_file(&vmaf_y_path).map_err(|e| {
-        let dummy_output = Command::new("false").output().unwrap_or_else(|_| {
-            std::process::Output {
+        let dummy_output =
+            Command::new("false").output().unwrap_or_else(|_| std::process::Output {
                 status: std::process::ExitStatus::default(),
                 stdout: Vec::new(),
                 stderr: Vec::new(),
-            }
-        });
+            });
         Box::new(EncoderCrash {
-            exit_status: dummy_output.status,
+            exit_status:        dummy_output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: format!("Failed to read VMAF Y scores: {}", e).into(),
-            stdout: String::new().into(),
+            stderr:             format!("Failed to read VMAF Y scores: {}", e).into(),
+            stdout:             String::new().into(),
         })
     })?;
     let u_scores = read_vmaf_file(&vmaf_u_path).map_err(|e| {
-        let dummy_output = Command::new("false").output().unwrap_or_else(|_| {
-            std::process::Output {
+        let dummy_output =
+            Command::new("false").output().unwrap_or_else(|_| std::process::Output {
                 status: std::process::ExitStatus::default(),
                 stdout: Vec::new(),
                 stderr: Vec::new(),
-            }
-        });
+            });
         Box::new(EncoderCrash {
-            exit_status: dummy_output.status,
+            exit_status:        dummy_output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: format!("Failed to read VMAF U scores: {}", e).into(),
-            stdout: String::new().into(),
+            stderr:             format!("Failed to read VMAF U scores: {}", e).into(),
+            stdout:             String::new().into(),
         })
     })?;
     let v_scores = read_vmaf_file(&vmaf_v_path).map_err(|e| {
-        let dummy_output = Command::new("false").output().unwrap_or_else(|_| {
-            std::process::Output {
+        let dummy_output =
+            Command::new("false").output().unwrap_or_else(|_| std::process::Output {
                 status: std::process::ExitStatus::default(),
                 stdout: Vec::new(),
                 stderr: Vec::new(),
-            }
-        });
+            });
         Box::new(EncoderCrash {
-            exit_status: dummy_output.status,
+            exit_status:        dummy_output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: format!("Failed to read VMAF V scores: {}", e).into(),
-            stdout: String::new().into(),
+            stderr:             format!("Failed to read VMAF V scores: {}", e).into(),
+            stdout:             String::new().into(),
         })
     })?;
 
-    let weighted_scores: Vec<f64> = y_scores.iter()
+    let weighted_scores: Vec<f64> = y_scores
+        .iter()
         .zip(u_scores.iter())
         .zip(v_scores.iter())
         .map(|((y, u), v)| (4.0 * y + u + v) / 6.0)
         .collect();
 
     let weighted_result = VmafResult {
-        frames: weighted_scores.iter().map(|&score| Metrics {
-            metrics: VmafScore { vmaf: score }
-        }).collect()
+        frames: weighted_scores
+            .iter()
+            .map(|&score| Metrics {
+                metrics: VmafScore {
+                    vmaf: score
+                },
+            })
+            .collect(),
     };
 
     let json_str = serde_json::to_string_pretty(&weighted_result).map_err(|e| {
-        let dummy_output = Command::new("false").output().unwrap_or_else(|_| {
-            std::process::Output {
+        let dummy_output =
+            Command::new("false").output().unwrap_or_else(|_| std::process::Output {
                 status: std::process::ExitStatus::default(),
                 stdout: Vec::new(),
                 stderr: Vec::new(),
-            }
-        });
+            });
         Box::new(EncoderCrash {
-            exit_status: dummy_output.status,
+            exit_status:        dummy_output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: format!("Failed to serialize VMAF results: {}", e).into(),
-            stdout: String::new().into(),
+            stderr:             format!("Failed to serialize VMAF results: {}", e).into(),
+            stdout:             String::new().into(),
         })
     })?;
     fs::write(stat_file, json_str).map_err(|e| {
-        let dummy_output = Command::new("false").output().unwrap_or_else(|_| {
-            std::process::Output {
+        let dummy_output =
+            Command::new("false").output().unwrap_or_else(|_| std::process::Output {
                 status: std::process::ExitStatus::default(),
                 stdout: Vec::new(),
                 stderr: Vec::new(),
-            }
-        });
+            });
         Box::new(EncoderCrash {
-            exit_status: dummy_output.status,
+            exit_status:        dummy_output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
-            stderr: format!("Failed to write VMAF results: {}", e).into(),
-            stdout: String::new().into(),
+            stderr:             format!("Failed to write VMAF results: {}", e).into(),
+            stdout:             String::new().into(),
         })
     })?;
 
@@ -514,7 +534,11 @@ pub fn read_weighted_vmaf<P: AsRef<Path>>(
 
         let percentile_index = (scores.len() as f64 * percentile) as usize;
 
-        let index = if percentile_index == 0 { 0 } else { percentile_index - 1 };
+        let index = if percentile_index == 0 {
+            0
+        } else {
+            percentile_index - 1
+        };
         let index = index.min(scores.len() - 1);
 
         Ok(scores[index])
@@ -536,10 +560,10 @@ pub fn read_weighted_vmaf_alt<P: AsRef<Path>>(
 
         let total_frames = scores.len();
         let percentile_index = (total_frames as f64 * percentile).floor() as usize;
-        
+
         let index = if percentile_index == 0 {
             0
-        } else { 
+        } else {
             (percentile_index - 1).min(scores.len() - 1)
         };
 

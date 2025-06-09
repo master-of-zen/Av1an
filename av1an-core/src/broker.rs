@@ -15,13 +15,19 @@ use std::{
 use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
-use tracing::{debug, error, warn, trace};
+use tracing::{debug, error, trace, warn};
 
 use crate::{
     context::Av1anContext,
     finish_progress_bar,
     get_done,
-    progress_bar::{dec_bar, inc_mp_bar, update_mp_chunk, update_mp_msg, update_progress_bar_estimates},
+    progress_bar::{
+        dec_bar,
+        inc_mp_bar,
+        update_mp_chunk,
+        update_mp_msg,
+        update_progress_bar_estimates,
+    },
     util::printable_base10_digits,
     Chunk,
     DoneChunk,
@@ -214,27 +220,27 @@ impl Broker<'_> {
         if let Some(ref tq) = self.project.args.target_quality {
             update_mp_msg(worker_id, format!("Targeting Quality: {}", tq.target));
             tq.per_shot_target_quality_routine(chunk, Some(worker_id)).unwrap();
-            
+
             if tq.probe_slow && chunk.tq_cq.is_some() {
                 let optimal_q = chunk.tq_cq.unwrap();
                 let probe_file = std::path::Path::new(&self.project.args.temp)
                     .join("split")
                     .join(format!("v_{}_{}.ivf", optimal_q, chunk.index));
-                    
+
                 if probe_file.exists() {
                     let encode_dir = std::path::Path::new(&self.project.args.temp).join("encode");
                     std::fs::create_dir_all(&encode_dir).unwrap();
                     let output_file = encode_dir.join(format!("{:05}.ivf", chunk.index));
                     std::fs::copy(&probe_file, &output_file).unwrap();
-                    
+
                     inc_mp_bar(chunk.frames() as u64);
-                    
+
                     let progress_file = Path::new(&self.project.args.temp).join("done.json");
                     get_done().done.insert(chunk.name(), DoneChunk {
-                        frames: chunk.frames(),
+                        frames:     chunk.frames(),
                         size_bytes: output_file.metadata().unwrap().len(),
                     });
-                    
+
                     let mut progress_file = File::create(progress_file).unwrap();
                     progress_file
                         .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
@@ -246,7 +252,7 @@ impl Broker<'_> {
                         self.project.args.verbosity,
                         (get_done().done.len() as u32, total_chunks),
                     );
-                    
+
                     return Ok(());
                 }
             }

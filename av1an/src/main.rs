@@ -660,12 +660,14 @@ pub struct CliOpts {
     /// If not specified, the default value is used (chosen per encoder).
     #[clap(long, help_heading = "Target Quality")]
     pub max_q: Option<u32>,
-    
-    /// Use alternative perceptually weighted VMAF with motion compensation disabled
+
+    /// Use alternative perceptually weighted VMAF with motion compensation
+    /// disabled
     #[clap(long, help_heading = "Target Quality")]
     pub alt_vmaf: bool,
 
-    /// Percentile to use for quality targeting (0.01 = 1st percentile, 0.10 = 10th percentile)
+    /// Percentile to use for quality targeting (0.01 = 1st percentile, 0.10 =
+    /// 10th percentile)
     #[clap(long, default_value_t = 0.01, help_heading = "Target Quality")]
     pub percentile: f64,
 }

@@ -1219,4 +1219,3 @@ impl Av1anContext {
         }
     }
 }
-

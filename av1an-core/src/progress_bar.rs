@@ -300,4 +300,3 @@ pub fn update_progress_bar_estimates(
         update_mp_bar_info(kbps, HumanBytes(est_size as u64), chunks);
     }
 }
-

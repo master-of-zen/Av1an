@@ -1,13 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    cmp,
-    cmp::Ordering,
-    convert::TryInto,
-    path::PathBuf,
-    thread::available_parallelism,
-};
+use std::{cmp, cmp::Ordering, convert::TryInto, path::PathBuf, thread::available_parallelism};
 
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
@@ -104,7 +98,10 @@ impl TargetQuality {
             .filter(|(_, score, _)| within_tolerance(*score, self.target))
             .collect();
 
-        debug!("Good results: {:?}", good_results.iter().map(|(q, s, _)| (*q, *s)).collect::<Vec<_>>());
+        debug!(
+            "Good results: {:?}",
+            good_results.iter().map(|(q, s, _)| (*q, *s)).collect::<Vec<_>>()
+        );
 
         let best_result = if !good_results.is_empty() {
             good_results.iter().max_by_key(|(q, _, _)| *q).unwrap()
@@ -119,7 +116,10 @@ impl TargetQuality {
                 .unwrap()
         };
 
-        debug!("Best result: Q={}, VMAF={:.2}", best_result.0, best_result.1);
+        debug!(
+            "Best result: Q={}, VMAF={:.2}",
+            best_result.0, best_result.1
+        );
 
         let mut vmaf_cq: Vec<(f64, u32)> = history.iter().map(|(q, s, _)| (*s, *q)).collect();
         log_probes(
@@ -170,7 +170,8 @@ impl TargetQuality {
                 unreachable!()
             };
 
-            let source_pipe_stdout: std::process::Stdio = source.stdout.take().unwrap().try_into().unwrap();
+            let source_pipe_stdout: std::process::Stdio =
+                source.stdout.take().unwrap().try_into().unwrap();
 
             let mut source_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
                 tokio::process::Command::new(ffmpeg)
@@ -188,7 +189,8 @@ impl TargetQuality {
                 unreachable!()
             };
 
-            let source_pipe_stdout: std::process::Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
+            let source_pipe_stdout: std::process::Stdio =
+                source_pipe.stdout.take().unwrap().try_into().unwrap();
 
             let enc_pipe = if let [cmd, args @ ..] = &*cmd.1 {
                 tokio::process::Command::new(cmd.as_ref())
@@ -280,17 +282,13 @@ fn predict_crf(low: u32, high: u32, history: &[(u32, f64, PathBuf)], target: f64
     let mut sorted_history = history.to_vec();
     sorted_history.sort_by_key(|(crf, _, _)| *crf);
 
-    let mut crf_score_map: Vec<(u32, f64)> = sorted_history
-        .iter()
-        .map(|(crf, score, _)| (*crf, *score))
-        .collect();
+    let mut crf_score_map: Vec<(u32, f64)> =
+        sorted_history.iter().map(|(crf, score, _)| (*crf, *score)).collect();
     crf_score_map.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
 
     if crf_score_map.len() >= 3 {
-        let (scores, crfs): (Vec<f64>, Vec<f64>) = crf_score_map
-            .iter()
-            .map(|(crf, score)| (*score, *crf as f64))
-            .unzip();
+        let (scores, crfs): (Vec<f64>, Vec<f64>) =
+            crf_score_map.iter().map(|(crf, score)| (*score, *crf as f64)).unzip();
 
         let keys: Vec<Key<f64, f64>> = scores
             .iter()
@@ -305,10 +303,8 @@ fn predict_crf(low: u32, high: u32, history: &[(u32, f64, PathBuf)], target: f64
     }
 
     if crf_score_map.len() == 2 {
-        let score_crf_pairs: Vec<(f64, u32)> = crf_score_map
-            .iter()
-            .map(|(crf, score)| (*score, *crf))
-            .collect();
+        let score_crf_pairs: Vec<(f64, u32)> =
+            crf_score_map.iter().map(|(crf, score)| (*score, *crf)).collect();
 
         let (score1, crf1) = score_crf_pairs[0];
         let (score2, crf2) = score_crf_pairs[1];

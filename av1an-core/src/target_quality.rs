@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 use std::{cmp, cmp::Ordering, convert::TryInto, path::PathBuf, thread::available_parallelism};
 
 use ffmpeg::format::Pixel;

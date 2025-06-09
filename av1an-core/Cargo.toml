@@ -50,7 +50,7 @@ strum = { version = "0.27.1", features = ["derive"] }
 sysinfo = "0.35.1"
 textwrap = "0.16.0"
 thiserror = "2.0.11"
-which = "7.0.1"
+which = "8.0.0"
 y4m = "0.8.0"
 # TODO: move all of this CLI stuff to av1an-cli
 ansi_term = "0.12.1"

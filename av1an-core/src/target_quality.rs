@@ -1,5 +1,13 @@
-use std::{cmp, cmp::Ordering, convert::TryInto, path::PathBuf, thread::available_parallelism};
+use std::{
+    cmp,
+    cmp::Ordering,
+    collections::HashSet,
+    convert::TryInto,
+    path::PathBuf,
+    thread::available_parallelism,
+};
 
+use clap::ValueEnum;
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
 use splines::{Interpolation, Key, Spline};
@@ -14,32 +22,29 @@ use crate::{
     Encoder,
 };
 
-use clap::ValueEnum;
-use std::collections::HashSet;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
-    pub vmaf_res:      String,
-    pub vmaf_scaler:   String,
-    pub vmaf_filter:   Option<String>,
-    pub vmaf_threads:  usize,
-    pub model:         Option<PathBuf>,
-    pub probing_rate:  usize,
-    pub probing_speed: Option<u8>,
-    pub probes:        u32,
-    pub target:        f64,
-    pub min_q:         u32,
-    pub max_q:         u32,
-    pub encoder:       Encoder,
-    pub pix_format:    Pixel,
-    pub temp:          String,
-    pub workers:       usize,
-    pub video_params:  Vec<String>,
-    pub vspipe_args:   Vec<String>,
-    pub probe_slow:    bool,
+    pub vmaf_res:              String,
+    pub vmaf_scaler:           String,
+    pub vmaf_filter:           Option<String>,
+    pub vmaf_threads:          usize,
+    pub model:                 Option<PathBuf>,
+    pub probing_rate:          usize,
+    pub probing_speed:         Option<u8>,
+    pub probes:                u32,
+    pub target:                f64,
+    pub min_q:                 u32,
+    pub max_q:                 u32,
+    pub encoder:               Encoder,
+    pub pix_format:            Pixel,
+    pub temp:                  String,
+    pub workers:               usize,
+    pub video_params:          Vec<String>,
+    pub vspipe_args:           Vec<String>,
+    pub probe_slow:            bool,
     pub probing_vmaf_features: Vec<VmafFeature>,
-    pub probing_stats: Option<ProbingStats>,
-    pub probing_percent: Option<f64>,
+    pub probing_stats:         Option<ProbingStats>,
+    pub probing_percent:       Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum)]
@@ -66,7 +71,10 @@ impl TargetQuality {
             if let Some(worker_id) = worker_id {
                 update_mp_msg(
                     worker_id,
-                    format!("Targeting Quality {target} - Testing {last_q}", target = self.target),
+                    format!(
+                        "Targeting Quality {target} - Testing {last_q}",
+                        target = self.target
+                    ),
                 );
             }
         };
@@ -138,7 +146,11 @@ impl TargetQuality {
                 .unwrap()
         };
 
-        debug!("Best result: Q={q}, VMAF={vmaf:.2}", q = best_result.0, vmaf = best_result.1);
+        debug!(
+            "Best result: Q={q}, VMAF={vmaf:.2}",
+            q = best_result.0,
+            vmaf = best_result.1
+        );
 
         let mut vmaf_cq: Vec<(f64, u32)> = history.iter().map(|(q, s, _)| (*s, *q)).collect();
         log_probes(
@@ -229,7 +241,7 @@ impl TargetQuality {
 
             let source_pipe_output = source_pipe.wait_with_output().await.unwrap();
 
-	    // TODO: Expand EncoderCrash to handle io errors as well
+            // TODO: Expand EncoderCrash to handle io errors as well
             let enc_output = enc_pipe.wait_with_output().await.unwrap();
 
             if !enc_output.status.success() {
@@ -249,13 +261,13 @@ impl TargetQuality {
         let rt = tokio::runtime::Builder::new_current_thread().enable_io().build().unwrap();
         rt.block_on(future)?;
 
-	let extension = match self.encoder {
-	    crate::encoder::Encoder::x264 => "264",
-	    crate::encoder::Encoder::x265 => "hevc",
-	    _ => "ivf",
-	};
-	
-	let probe_name = std::path::Path::new(&chunk.temp)
+        let extension = match self.encoder {
+            crate::encoder::Encoder::x264 => "264",
+            crate::encoder::Encoder::x265 => "hevc",
+            _ => "ivf",
+        };
+
+        let probe_name = std::path::Path::new(&chunk.temp)
             .join("split")
             .join(format!("v_{q}_{index}.{extension}", index = chunk.index));
         let fl_path = std::path::Path::new(&chunk.temp)
@@ -288,13 +300,16 @@ impl TargetQuality {
                 self.vmaf_threads,
                 chunk.frame_rate,
                 disable_motion,
-            ).map_err(|e| Box::new(EncoderCrash {
-                exit_status: std::process::ExitStatus::default(),
-                source_pipe_stderr: String::new().into(),
-                ffmpeg_pipe_stderr: None,
-                stderr: format!("VMAF calculation failed: {e}").into(),
-                stdout: String::new().into(),
-            }))?;
+            )
+            .map_err(|e| {
+                Box::new(EncoderCrash {
+                    exit_status:        std::process::ExitStatus::default(),
+                    source_pipe_stderr: String::new().into(),
+                    ffmpeg_pipe_stderr: None,
+                    stderr:             format!("VMAF calculation failed: {e}").into(),
+                    stdout:             String::new().into(),
+                })
+            })?;
         } else {
             crate::vmaf::run_vmaf(
                 &probe_name,
@@ -403,8 +418,12 @@ pub fn log_probes(
     vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
 
     debug!("chunk {chunk_idx}: P-Rate={probing_rate}, {frames} frames");
-    debug!("chunk {chunk_idx}: TQ-Probes: {vmaf_cq_scores:.2?}{suffix}",
-	    suffix = match skip { Skip::None => "", });
+    debug!(
+        "chunk {chunk_idx}: TQ-Probes: {vmaf_cq_scores:.2?}{suffix}",
+        suffix = match skip {
+            Skip::None => "",
+        }
+    );
     debug!("chunk {chunk_idx}: Target Q={target_q:.0}, VMAF={target_vmaf:.2}");
 }
 

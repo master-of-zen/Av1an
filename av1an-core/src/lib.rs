@@ -1,9 +1,6 @@
 #[macro_use]
 extern crate log;
 
-pub use target_quality::VmafFeature;
-pub use settings::ProbingStats;
-
 use std::{
     cmp::max,
     collections::hash_map::DefaultHasher,
@@ -27,7 +24,9 @@ use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
+pub use settings::ProbingStats;
 use strum::{Display, EnumString, IntoStaticStr};
+pub use target_quality::VmafFeature;
 
 use crate::progress_bar::finish_progress_bar;
 pub use crate::{

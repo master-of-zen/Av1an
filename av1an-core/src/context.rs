@@ -102,7 +102,10 @@ impl Av1anContext {
 
         if !self.args.resume && Path::new(&self.args.temp).is_dir() {
             fs::remove_dir_all(&self.args.temp).with_context(|| {
-		format!("Failed to remove temporary directory {temp}", temp = self.args.temp)
+                format!(
+                    "Failed to remove temporary directory {temp}",
+                    temp = self.args.temp
+                )
             })?;
         }
 
@@ -110,7 +113,7 @@ impl Av1anContext {
         create_dir!(Path::new(&self.args.temp).join("split"))?;
         create_dir!(Path::new(&self.args.temp).join("encode"))?;
 
-	debug!("temporary directory: {temp}", temp = &self.args.temp);
+        debug!("temporary directory: {temp}", temp = &self.args.temp);
 
         let done_path = Path::new(&self.args.temp).join("done.json");
         let done_json_exists = done_path.exists();
@@ -121,25 +124,26 @@ impl Av1anContext {
                 // both files exist, so there is no problem
                 (true, true) => {},
                 (false, true) => {
-		    info!(
-			"resume was set but done.json does not exist in temporary directory {temp}",
-			temp = self.args.temp
-		    );
+                    info!(
+                        "resume was set but done.json does not exist in temporary directory {temp}",
+                        temp = self.args.temp
+                    );
                     self.args.resume = false;
                 },
                 (true, false) => {
-		info!(
-			"resume was set but chunks.json does not exist in temporary directory {temp}",
-			temp = self.args.temp
-		    );
+                    info!(
+                        "resume was set but chunks.json does not exist in temporary directory \
+                         {temp}",
+                        temp = self.args.temp
+                    );
                     self.args.resume = false;
                 },
                 (false, false) => {
-		    info!(
-			"resume was set but neither chunks.json nor done.json exist in temporary \
-			directory {temp}",
-			temp = self.args.temp
-		    );
+                    info!(
+                        "resume was set but neither chunks.json nor done.json exist in temporary \
+                         directory {temp}",
+                        temp = self.args.temp
+                    );
                     self.args.resume = false;
                 },
             }
@@ -242,7 +246,7 @@ impl Av1anContext {
             debug!("scene detection only");
 
             if let Err(e) = fs::remove_dir_all(&self.args.temp) {
-		warn!("Failed to delete temp directory: {e}");
+                warn!("Failed to delete temp directory: {e}");
             }
 
             exit(0);
@@ -369,7 +373,10 @@ impl Av1anContext {
             let _audio_output_exists =
                 audio_thread.is_some_and(|audio_thread| audio_thread.join().unwrap());
 
-	    debug!("encoding finished, concatenating with {concat}", concat = self.args.concat);
+            debug!(
+                "encoding finished, concatenating with {concat}",
+                concat = self.args.concat
+            );
 
             match self.args.concat {
                 ConcatMethod::Ivf => {
@@ -396,7 +403,7 @@ impl Av1anContext {
                 let vmaf_res = if let Some(ref tq) = self.args.target_quality {
                     if tq.vmaf_res == "inputres" {
                         let inputres = self.args.input.resolution()?;
-			format!("{width}x{height}", width = inputres.0, height = inputres.1)
+                        format!("{width}x{height}", width = inputres.0, height = inputres.1)
                     } else {
                         tq.vmaf_res.clone()
                     }
@@ -431,13 +438,14 @@ impl Av1anContext {
             }
 
             if !Path::new(&self.args.output_file).exists() {
-		warn!(
-		"Concatenation failed for unknown reasons! Temp folder will not be deleted: {temp}",
-		temp = self.args.temp
-	        );
+                warn!(
+                    "Concatenation failed for unknown reasons! Temp folder will not be deleted: \
+                     {temp}",
+                    temp = self.args.temp
+                );
             } else if !self.args.keep {
                 if let Err(e) = fs::remove_dir_all(&self.args.temp) {
-		     warn!("Failed to delete temp directory: {e}");
+                    warn!("Failed to delete temp directory: {e}");
                 }
             }
 
@@ -477,7 +485,9 @@ impl Av1anContext {
     ) -> Result<(), (Box<EncoderCrash>, u64)> {
         update_mp_chunk(worker_id, chunk.index, padding);
 
-        let fpf_file = Path::new(&chunk.temp).join("split").join(format!("{name}_fpf", name = chunk.name()));
+        let fpf_file = Path::new(&chunk.temp)
+            .join("split")
+            .join(format!("{name}_fpf", name = chunk.name()));
 
         let video_params = chunk.video_params.clone();
 
@@ -690,12 +700,17 @@ impl Av1anContext {
                 Ok(encoded_frames)
                     if !chunk.ignore_frame_mismatch && encoded_frames != chunk.frames() =>
                 {
-		    Some(format!("FRAME MISMATCH: chunk {index}: {encoded_frames}/{expected} (actual/expected frames)",
-			index = chunk.index,
-			expected = chunk.frames()
-		    ))
+                    Some(format!(
+                        "FRAME MISMATCH: chunk {index}: {encoded_frames}/{expected} \
+                         (actual/expected frames)",
+                        index = chunk.index,
+                        expected = chunk.frames()
+                    ))
                 },
-                Err(error) => Some(format!("FAILED TO COUNT FRAMES: chunk {index}: {error}", index = chunk.index)),
+                Err(error) => Some(format!(
+                    "FAILED TO COUNT FRAMES: chunk {index}: {error}",
+                    index = chunk.index
+                )),
                 _ => None,
             };
 
@@ -865,7 +880,10 @@ impl Av1anContext {
                 new.start_frame = *kf;
                 scenes.insert(scene_pos + 1, new);
             } else {
-		warn!("scene {kf} was requested as a forced keyframe but video has {frames} frames, ignoring");
+                warn!(
+                    "scene {kf} was requested as a forced keyframe but video has {frames} frames, \
+                     ignoring"
+                );
             }
         }
 
@@ -875,7 +893,8 @@ impl Av1anContext {
                 scenes = extra_splits(&scenes, self.frames, split_len);
                 let scenes_after = scenes.len();
                 info!(
-		    "scenecut: found {scenes_before} scene(s) [with extra_splits ({split_len} frames): {scenes_after} scene(s)]"
+                    "scenecut: found {scenes_before} scene(s) [with extra_splits ({split_len} \
+                     frames): {scenes_after} scene(s)]"
                 );
             } else {
                 info!("scenecut: found {scenes_before} scene(s)");
@@ -910,11 +929,11 @@ impl Av1anContext {
             "-i",
             src_path,
             "-vf",
-	    format!(
-		r"select=between(n\,{start}\,{end})",
-		start = start_frame,
-		end = end_frame - 1
-	    ),
+            format!(
+                r"select=between(n\,{start}\,{end})",
+                start = start_frame,
+                end = end_frame - 1
+            ),
             "-pix_fmt",
             self.args.output_pix_format.format.descriptor().unwrap().name(),
             "-strict",

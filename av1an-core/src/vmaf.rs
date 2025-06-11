@@ -179,8 +179,8 @@ pub fn plot(
         sample_rate,
         filter,
         threads,
-	60.0,
-	false,
+        60.0,
+        false,
     )?;
 
     plot_vmaf_score_file(&json_file, &plot_file).unwrap();
@@ -220,12 +220,20 @@ pub fn run_vmaf(
 
     let vmaf = if let Some(model) = model {
         let model_path = if model.as_ref().as_os_str() == "vmaf_v0.6.1neg.json" {
-            format!("version=vmaf_v0.6.1neg{}", if disable_motion { "\\:motion.motion_force_zero=true" } else { "" })
+            format!(
+                "version=vmaf_v0.6.1neg{}",
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
+            )
         } else {
             format!("path={}", ffmpeg::escape_path_in_filter(&model))
         };
         format!(
-            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='{}':n_threads={}",
+            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='{}':\
+             n_threads={}",
             ffmpeg::escape_path_in_filter(stat_file),
             model_path,
             threads
@@ -234,7 +242,11 @@ pub fn run_vmaf(
         format!(
             "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}:n_threads={}",
             ffmpeg::escape_path_in_filter(stat_file),
-            if disable_motion { ":model='version=vmaf_v0.6.1\\:motion.motion_force_zero=true'" } else { "" },
+            if disable_motion {
+                ":model='version=vmaf_v0.6.1\\:motion.motion_force_zero=true'"
+            } else {
+                ""
+            },
             threads
         )
     };
@@ -258,12 +270,12 @@ pub fn run_vmaf(
         "-loglevel",
         "error",
         "-hide_banner",
-	"-nostdin",
+        "-nostdin",
         "-y",
         "-thread_queue_size",
         "1024",
         "-r",
-	&framerate.to_string(),
+        &framerate.to_string(),
         "-i",
     ]);
     cmd.arg(encoded);
@@ -289,7 +301,7 @@ pub fn run_vmaf(
     let output = cmd.output().unwrap();
 
     if !output.status.success() {
-	return Err(Box::new(EncoderCrash {
+        return Err(Box::new(EncoderCrash {
             exit_status:        output.status,
             source_pipe_stderr: String::new().into(),
             ffmpeg_pipe_stderr: None,
@@ -350,19 +362,31 @@ pub fn run_vmaf_weighted(
         if model.as_ref().as_os_str() == "vmaf_v0.6.1neg.json" {
             format!(
                 "version=vmaf_v0.6.1neg{}",
-                if disable_motion { "\\:motion.motion_force_zero=true" } else { "" }
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
             )
         } else {
             format!(
                 "path={}{}",
                 ffmpeg::escape_path_in_filter(&model),
-                if disable_motion { "\\:motion.motion_force_zero=true" } else { "" }
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
             )
         }
     } else {
         format!(
             "version=vmaf_v0.6.1{}",
-            if disable_motion { "\\:motion.motion_force_zero=true" } else { "" }
+            if disable_motion {
+                "\\:motion.motion_force_zero=true"
+            } else {
+                ""
+            }
         )
     };
 
@@ -384,7 +408,7 @@ pub fn run_vmaf_weighted(
         "-loglevel",
         "error",
         "-hide_banner",
-	"-nostdin",
+        "-nostdin",
         "-y",
         "-thread_queue_size",
         "1024",
@@ -424,19 +448,19 @@ pub fn run_vmaf_weighted(
     let output = cmd.output().unwrap();
 
     if !output.status.success() {
-        return Err(anyhow::anyhow!("FFmpeg command failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(anyhow::anyhow!(
+            "FFmpeg command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
     }
 
     if !vmaf_y_path.exists() || !vmaf_u_path.exists() || !vmaf_v_path.exists() {
         return Err(anyhow::anyhow!("Y, U, V VMAF files were not created"));
     }
 
-    let y_scores = read_vmaf_file(&vmaf_y_path)
-        .context("Failed to read VMAF Y scores")?;
-    let u_scores = read_vmaf_file(&vmaf_u_path)
-        .context("Failed to read VMAF U scores")?;
-    let v_scores = read_vmaf_file(&vmaf_v_path)
-        .context("Failed to read VMAF V scores")?;
+    let y_scores = read_vmaf_file(&vmaf_y_path).context("Failed to read VMAF Y scores")?;
+    let u_scores = read_vmaf_file(&vmaf_u_path).context("Failed to read VMAF U scores")?;
+    let v_scores = read_vmaf_file(&vmaf_v_path).context("Failed to read VMAF V scores")?;
 
     let weighted_scores: Vec<f64> = y_scores
         .iter()
@@ -449,7 +473,9 @@ pub fn run_vmaf_weighted(
         frames: weighted_scores
             .iter()
             .map(|&score| Metrics {
-                metrics: VmafScore { vmaf: score },
+                metrics: VmafScore {
+                    vmaf: score
+                },
             })
             .collect(),
     };
@@ -487,9 +513,7 @@ pub fn read_weighted_vmaf<P: AsRef<Path>>(
 
             Ok(sorted_scores[index])
         },
-        VmafScoreMethod::Mean => {
-            Ok(scores.iter().sum::<f64>() / scores.len() as f64)
-        },
+        VmafScoreMethod::Mean => Ok(scores.iter().sum::<f64>() / scores.len() as f64),
         VmafScoreMethod::Median => {
             let mut sorted_scores = scores.clone();
             sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));

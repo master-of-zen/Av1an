@@ -215,24 +215,28 @@ impl Broker<'_> {
         update_mp_chunk(worker_id, chunk.index, padding);
 
         if let Some(ref tq) = self.project.args.target_quality {
-	    update_mp_msg(worker_id, format!("Targeting Quality: {target}", target = tq.target));
+            update_mp_msg(
+                worker_id,
+                format!("Targeting Quality: {target}", target = tq.target),
+            );
             tq.per_shot_target_quality_routine(chunk, Some(worker_id)).unwrap();
 
-	    if tq.probe_slow && chunk.tq_cq.is_some() {
-		let optimal_q = chunk.tq_cq.unwrap();
-		let extension = match self.project.args.encoder {
-		    crate::encoder::Encoder::x264 => "264",
-		    crate::encoder::Encoder::x265 => "hevc",
-		    _ => "ivf",
-		};
-		let probe_file = std::path::Path::new(&self.project.args.temp)
-		    .join("split")
-		    .join(format!("v_{optimal_q}_{index}.{extension}", index = chunk.index));
+            if tq.probe_slow && chunk.tq_cq.is_some() {
+                let optimal_q = chunk.tq_cq.unwrap();
+                let extension = match self.project.args.encoder {
+                    crate::encoder::Encoder::x264 => "264",
+                    crate::encoder::Encoder::x265 => "hevc",
+                    _ => "ivf",
+                };
+                let probe_file = std::path::Path::new(&self.project.args.temp).join("split").join(
+                    format!("v_{optimal_q}_{index}.{extension}", index = chunk.index),
+                );
 
                 if probe_file.exists() {
                     let encode_dir = std::path::Path::new(&self.project.args.temp).join("encode");
                     std::fs::create_dir_all(&encode_dir).unwrap();
-                    let output_file = encode_dir.join(format!("{index:05}.{extension}", index = chunk.index));
+                    let output_file =
+                        encode_dir.join(format!("{index:05}.{extension}", index = chunk.index));
                     std::fs::copy(&probe_file, &output_file).unwrap();
 
                     inc_mp_bar(chunk.frames() as u64);
@@ -268,11 +272,12 @@ impl Broker<'_> {
             return Err(None);
         }
 
-	// space padding at the beginning to align with "finished chunk"
-	debug!(" started chunk {index:05}: {frames} frames",
-		index = chunk.index,
-		frames = chunk.frames()
-	);
+        // space padding at the beginning to align with "finished chunk"
+        debug!(
+            " started chunk {index:05}: {frames} frames",
+            index = chunk.index,
+            frames = chunk.frames()
+        );
 
         let passes = chunk.passes;
         for current_pass in 1..=passes {
@@ -281,7 +286,7 @@ impl Broker<'_> {
                 if let Err((e, frames)) = res {
                     dec_bar(frames);
 
-		    // If user presses CTRL+C more than once, do not let the worker finish
+                    // If user presses CTRL+C more than once, do not let the worker finish
                     if terminations_requested.load(Ordering::SeqCst) > 1 {
                         trace!(
                             "Termination requested after Worker restart. Skipping chunk {}",
@@ -291,15 +296,19 @@ impl Broker<'_> {
                     }
 
                     if r#try == self.project.args.max_tries {
-			error!("[chunk {index}] encoder failed {tries} times, shutting down worker",
-				index = chunk.index,
-				tries = self.project.args.max_tries
-			);
+                        error!(
+                            "[chunk {index}] encoder failed {tries} times, shutting down worker",
+                            index = chunk.index,
+                            tries = self.project.args.max_tries
+                        );
                         return Err(Some(e));
                     }
-		    // avoids double-print of the error message as both a WARN and ERROR,
-		    // since `Broker::encoding_loop` will print the error message as well
-		    warn!("Encoder failed (on chunk {index}):\n{e}", index = chunk.index);
+                    // avoids double-print of the error message as both a WARN and ERROR,
+                    // since `Broker::encoding_loop` will print the error message as well
+                    warn!(
+                        "Encoder failed (on chunk {index}):\n{e}",
+                        index = chunk.index
+                    );
                 } else {
                     break;
                 }
@@ -330,10 +339,11 @@ impl Broker<'_> {
             (get_done().done.len() as u32, total_chunks),
         );
 
-	debug!("finished chunk {index:05}: {frames} frames, {fps:.2} fps, took {enc_time:.2?}",
-		index = chunk.index,
-		frames = chunk.frames()
-	);
+        debug!(
+            "finished chunk {index:05}: {frames} frames, {fps:.2} fps, took {enc_time:.2?}",
+            index = chunk.index,
+            frames = chunk.frames()
+        );
 
         Ok(())
     }

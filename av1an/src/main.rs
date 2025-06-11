@@ -32,6 +32,7 @@ use av1an_core::{
     SplitMethod,
     TargetQuality,
     Verbosity,
+    VmafFeature,
     DEFAULT_LOG_LEVEL,
 };
 use clap::{value_parser, Parser};
@@ -39,7 +40,6 @@ use num_traits::cast::ToPrimitive;
 use once_cell::sync::OnceCell;
 use path_abs::{PathAbs, PathInfo};
 use tracing::{instrument, level_filters::LevelFilter, warn};
-use av1an_core::VmafFeature;
 
 fn main() -> anyhow::Result<()> {
     let orig_hook = panic::take_hook();
@@ -684,8 +684,14 @@ pub struct CliOpts {
     ///   median    - Middle value of sorted probe scores
     ///   harmonic  - Harmonic mean (emphasizes lower scores)
     ///
-    /// If not specified, uses percentile-based calculation (see --probing-percent)
-    #[clap(long, value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
+    /// If not specified, uses percentile-based calculation (see
+    /// --probing-percent)
+    #[clap(
+        long,
+        value_enum,
+        help_heading = "Target Quality",
+        verbatim_doc_comment
+    )]
     pub probing_stats: Option<ProbingStats>,
 
     /// Percentile threshold for target quality calculation (0.0-1.0)
@@ -737,12 +743,12 @@ impl CliOpts {
                 probe_slow: self.probe_slow,
                 probing_speed: self.probing_speed.clone().map(|s| s as u8),
                 probing_rate: adapt_probing_rate(self.probing_rate as usize),
-		probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
-		    vec![VmafFeature::Default]
-		} else {
-		    self.probing_vmaf_features.clone()
-		},
-		probing_stats: self.probing_stats,
+                probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
+                    vec![VmafFeature::Default]
+                } else {
+                    self.probing_vmaf_features.clone()
+                },
+                probing_stats: self.probing_stats,
                 probing_percent: self.probing_percent,
             }
         })

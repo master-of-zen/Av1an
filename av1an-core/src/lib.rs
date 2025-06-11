@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+pub use target_quality::VmafFeature;
+pub use settings::ProbingStats;
+
 use std::{
     cmp::max,
     collections::hash_map::DefaultHasher,

@@ -15,13 +15,19 @@ use std::{
 use cfg_if::cfg_if;
 use smallvec::SmallVec;
 use thiserror::Error;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, trace, warn};
 
 use crate::{
     context::Av1anContext,
     finish_progress_bar,
     get_done,
-    progress_bar::{dec_bar, update_mp_chunk, update_mp_msg, update_progress_bar_estimates},
+    progress_bar::{
+        dec_bar,
+        inc_mp_bar,
+        update_mp_chunk,
+        update_mp_msg,
+        update_progress_bar_estimates,
+    },
     util::printable_base10_digits,
     Chunk,
     DoneChunk,
@@ -45,7 +51,7 @@ impl Debug for StringOrBytes {
         match self {
             Self::String(s) => {
                 if f.alternate() {
-                    f.write_str(&textwrap::indent(s, /* 8 spaces */ "        "))?;
+                    f.write_str(&textwrap::indent(s, "        "))?; // 8 spaces
                 } else {
                     f.write_str(s)?;
                 }
@@ -60,7 +66,6 @@ impl Debug for StringOrBytes {
 impl From<Vec<u8>> for StringOrBytes {
     fn from(bytes: Vec<u8>) -> Self {
         if simdutf8::basic::from_utf8(&bytes).is_ok() {
-            // SAFETY: this branch guarantees that the input is valid UTF8
             Self::String(unsafe { String::from_utf8_unchecked(bytes) })
         } else {
             Self::Bytes(bytes)
@@ -109,8 +114,6 @@ impl Display for EncoderCrash {
 }
 
 impl Broker<'_> {
-    /// Main encoding loop. set_thread_affinity may be ignored if the value is
-    /// invalid.
     #[tracing::instrument(skip(self))]
     pub fn encoding_loop(
         self,
@@ -127,75 +130,72 @@ impl Broker<'_> {
             drop(sender);
 
             crossbeam_utils::thread::scope(|s| {
-        let terminations_requested = Arc::new(AtomicU8::new(0));
-        let terminations_requested_clone = terminations_requested.clone();
-        ctrlc::set_handler(move || {
-          let count = terminations_requested_clone.fetch_add(1, Ordering::SeqCst) + 1;
-          if count == 1 {
-            error!("Shutting down. Waiting for current workers to finish...");
-          } else {
-            error!("Shutting down all workers...");
-          }
-        })
-        .unwrap();
-
-        let consumers: Vec<_> = (0..self.project.args.workers)
-          .map(|idx| (receiver.clone(), &self, idx, terminations_requested.clone()))
-          .map(|(rx, queue, worker_id, terminations_requested)| {
-            let tx = tx.clone();
-            s.spawn(move |_| {
-              cfg_if! {
-                if #[cfg(any(target_os = "linux", target_os = "windows"))] {
-                  if let Some(threads) = set_thread_affinity {
-                    if threads == 0 {
-                      warn!("Ignoring set_thread_affinity: Requested 0 threads");
+                let terminations_requested = Arc::new(AtomicU8::new(0));
+                let terminations_requested_clone = terminations_requested.clone();
+                ctrlc::set_handler(move || {
+                    let count = terminations_requested_clone.fetch_add(1, Ordering::SeqCst) + 1;
+                    if count == 1 {
+                        error!("Shutting down. Waiting for current workers to finish...");
                     } else {
-                      match available_parallelism() {
-                        Ok(parallelism) => {
-                          let available_threads = parallelism.get();
-                          let mut cpu_set = SmallVec::<[usize; 16]>::new();
-                          let start_thread = (threads * worker_id) % available_threads;
-                          cpu_set.extend((start_thread..start_thread + threads).map(|t| t % available_threads));
-                          if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
-                            warn!(
-                              "Failed to set thread affinity for worker {}: {}",
-                              worker_id, e
-                            );
-                          }
-                        },
-                        Err(e) => {
-                          warn!("Failed to get thread count: {}. Thread affinity will not be set", e);
-                        }
-                      }
+                        error!("Shutting down all workers...");
                     }
-                  }
-                }
-              }
+                })
+                .unwrap();
 
-              while let Ok(mut chunk) = rx.recv() {
-                if terminations_requested.load(Ordering::SeqCst) == 0 {
-                  if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested, total_chunks) {
-                    if let Some(e) = e {
-                      error!("[chunk {}] {}", chunk.index, e);
-                    }
+                let consumers: Vec<_> = (0..self.project.args.workers)
+                    .map(|idx| (receiver.clone(), &self, idx, terminations_requested.clone()))
+                    .map(|(rx, queue, worker_id, terminations_requested)| {
+                        let tx = tx.clone();
+                        s.spawn(move |_| {
+                            cfg_if! {
+                                if #[cfg(any(target_os = "linux", target_os = "windows"))] {
+                                    if let Some(threads) = set_thread_affinity {
+                                        if threads == 0 {
+                                            warn!("Ignoring set_thread_affinity: Requested 0 threads");
+                                        } else {
+                                            match available_parallelism() {
+                                                Ok(parallelism) => {
+                                                    let available_threads = parallelism.get();
+                                                    let mut cpu_set = SmallVec::<[usize; 16]>::new();
+                                                    let start_thread = (threads * worker_id) % available_threads;
+                                                    cpu_set.extend((start_thread..start_thread + threads).map(|t| t % available_threads));
+                                                    if let Err(e) = affinity::set_thread_affinity(&cpu_set) {
+							warn!("Failed to set thread affinity for worker {worker_id}: {e}");
+                                                    }
+                                                },
+                                                Err(e) => {
+						    warn!("Failed to get thread count: {e}. Thread affinity will not be set");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            while let Ok(mut chunk) = rx.recv() {
+                                if terminations_requested.load(Ordering::SeqCst) == 0 {
+                                    if let Err(e) = queue.encode_chunk(&mut chunk, worker_id, &terminations_requested, total_chunks) {
+                                        if let Some(e) = e {
+					    error!("[chunk {index}] {e}", index = chunk.index);
+                                        }
+                                        tx.send(()).unwrap();
+                                        return Err(());
+                                    }
+                                }
+                            }
+                            Ok(())
+                        })
+                    })
+                    .collect();
+                for consumer in consumers {
+                    consumer.join().unwrap().ok();
+                }
+
+                if terminations_requested.load(Ordering::SeqCst) > 0 {
                     tx.send(()).unwrap();
-                    return Err(());
-                  }
                 }
-              }
-              Ok(())
             })
-          })
-          .collect();
-        for consumer in consumers {
-          consumer.join().unwrap().ok();
-        }
-
-        if terminations_requested.load(Ordering::SeqCst) > 0 {
-          tx.send(()).unwrap();
-        }
-      })
-      .unwrap();
+            .unwrap();
 
             finish_progress_bar();
         }
@@ -211,13 +211,53 @@ impl Broker<'_> {
     ) -> Result<(), Option<Box<EncoderCrash>>> {
         let st_time = Instant::now();
 
-        // we display the index, so we need to subtract 1 to get the max index
         let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
         update_mp_chunk(worker_id, chunk.index, padding);
 
         if let Some(ref tq) = self.project.args.target_quality {
-            update_mp_msg(worker_id, format!("Targeting Quality: {}", tq.target));
+	    update_mp_msg(worker_id, format!("Targeting Quality: {target}", target = tq.target));
             tq.per_shot_target_quality_routine(chunk, Some(worker_id)).unwrap();
+
+	    if tq.probe_slow && chunk.tq_cq.is_some() {
+		let optimal_q = chunk.tq_cq.unwrap();
+		let extension = match self.project.args.encoder {
+		    crate::encoder::Encoder::x264 => "264",
+		    crate::encoder::Encoder::x265 => "hevc",
+		    _ => "ivf",
+		};
+		let probe_file = std::path::Path::new(&self.project.args.temp)
+		    .join("split")
+		    .join(format!("v_{optimal_q}_{index}.{extension}", index = chunk.index));
+
+                if probe_file.exists() {
+                    let encode_dir = std::path::Path::new(&self.project.args.temp).join("encode");
+                    std::fs::create_dir_all(&encode_dir).unwrap();
+                    let output_file = encode_dir.join(format!("{index:05}.{extension}", index = chunk.index));
+                    std::fs::copy(&probe_file, &output_file).unwrap();
+
+                    inc_mp_bar(chunk.frames() as u64);
+
+                    let progress_file = Path::new(&self.project.args.temp).join("done.json");
+                    get_done().done.insert(chunk.name(), DoneChunk {
+                        frames:     chunk.frames(),
+                        size_bytes: output_file.metadata().unwrap().len(),
+                    });
+
+                    let mut progress_file = File::create(progress_file).unwrap();
+                    progress_file
+                        .write_all(serde_json::to_string(get_done()).unwrap().as_bytes())
+                        .unwrap();
+
+                    update_progress_bar_estimates(
+                        chunk.frame_rate,
+                        self.project.frames,
+                        self.project.args.verbosity,
+                        (get_done().done.len() as u32, total_chunks),
+                    );
+
+                    return Ok(());
+                }
+            }
         }
 
         if terminations_requested.load(Ordering::SeqCst) > 0 {
@@ -228,12 +268,11 @@ impl Broker<'_> {
             return Err(None);
         }
 
-        // space padding at the beginning to align with "finished chunk"
-        debug!(
-            " started chunk {:05}: {} frames",
-            chunk.index,
-            chunk.frames()
-        );
+	// space padding at the beginning to align with "finished chunk"
+	debug!(" started chunk {index:05}: {frames} frames",
+		index = chunk.index,
+		frames = chunk.frames()
+	);
 
         let passes = chunk.passes;
         for current_pass in 1..=passes {
@@ -242,7 +281,7 @@ impl Broker<'_> {
                 if let Err((e, frames)) = res {
                     dec_bar(frames);
 
-                    // If user presses CTRL+C more than once, do not let the worker finish
+		    // If user presses CTRL+C more than once, do not let the worker finish
                     if terminations_requested.load(Ordering::SeqCst) > 1 {
                         trace!(
                             "Termination requested after Worker restart. Skipping chunk {}",
@@ -252,15 +291,15 @@ impl Broker<'_> {
                     }
 
                     if r#try == self.project.args.max_tries {
-                        error!(
-                            "[chunk {}] encoder failed {} times, shutting down worker",
-                            chunk.index, self.project.args.max_tries
-                        );
+			error!("[chunk {index}] encoder failed {tries} times, shutting down worker",
+				index = chunk.index,
+				tries = self.project.args.max_tries
+			);
                         return Err(Some(e));
                     }
-                    // avoids double-print of the error message as both a WARN and ERROR,
-                    // since `Broker::encoding_loop` will print the error message as well
-                    warn!("Encoder failed (on chunk {}):\n{}", chunk.index, e);
+		    // avoids double-print of the error message as both a WARN and ERROR,
+		    // since `Broker::encoding_loop` will print the error message as well
+		    warn!("Encoder failed (on chunk {index}):\n{e}", index = chunk.index);
                 } else {
                     break;
                 }
@@ -291,13 +330,10 @@ impl Broker<'_> {
             (get_done().done.len() as u32, total_chunks),
         );
 
-        debug!(
-            "finished chunk {:05}: {} frames, {:.2} fps, took {:.2?}",
-            chunk.index,
-            chunk.frames(),
-            fps,
-            enc_time
-        );
+	debug!("finished chunk {index:05}: {frames} frames, {fps:.2} fps, took {enc_time:.2?}",
+		index = chunk.index,
+		frames = chunk.frames()
+	);
 
         Ok(())
     }

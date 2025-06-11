@@ -282,7 +282,7 @@ pub fn ffmpeg(temp: &Path, output: &Path) -> anyhow::Result<()> {
             writeln!(
                 contents,
                 "file {}",
-                format!("{}", i.path().display())
+		format!("{path}", path = i.path().display())
                     .replace('\\', r"\\")
                     .replace(' ', r"\ ")
                     .replace('\'', r"\'")

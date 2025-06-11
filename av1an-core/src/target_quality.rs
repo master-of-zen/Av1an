@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 use std::{
     cmp,
     cmp::Ordering,
@@ -19,12 +16,19 @@ use tracing::{debug, error};
 use crate::{
     broker::EncoderCrash,
     chunk::Chunk,
+    metrics::{
+        butteraugli::ButteraugliSubMetric,
+        ssimulacra2::MetricStatistics,
+        vmaf::{self, read_weighted_vmaf},
+        xpsnr::{self, read_weighted_xpsnr, XPSNRSubMetric},
+    },
     progress_bar::update_mp_msg,
-    vmaf::{self, read_weighted_vmaf},
+    vapoursynth::{measure_butteraugli, measure_ssimulacra2, measure_xpsnr},
     Encoder,
+    TargetMetric,
 };
 
-const VMAF_PERCENTILE: f64 = 0.01;
+const METRIC_PERCENTILE: f64 = 0.01;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
@@ -33,10 +37,12 @@ pub struct TargetQuality {
     pub vmaf_filter:   Option<String>,
     pub vmaf_threads:  usize,
     pub model:         Option<PathBuf>,
+    pub probe_res:     Option<String>,
     pub probing_rate:  usize,
     pub probing_speed: Option<u8>,
     pub probes:        u32,
     pub target:        f64,
+    pub metric:        TargetMetric,
     pub min_q:         u32,
     pub max_q:         u32,
     pub encoder:       Encoder,
@@ -54,7 +60,7 @@ impl TargetQuality {
         chunk: &Chunk,
         worker_id: Option<usize>,
     ) -> Result<u32, Box<EncoderCrash>> {
-        let mut vmaf_cq = vec![];
+        let mut score_quality = vec![];
         let frames = chunk.frames();
 
         // Make middle probe
@@ -65,25 +71,88 @@ impl TargetQuality {
             if let Some(worker_id) = worker_id {
                 update_mp_msg(
                     worker_id,
-                    format!("Targeting Quality {} - Testing {}", self.target, last_q),
+                    format!(
+                        "Targeting {} Quality {} - Testing {}",
+                        self.metric, self.target, last_q
+                    ),
                 );
             }
         };
 
         update_progress_bar(last_q);
 
-        let mut score =
-            read_weighted_vmaf(self.vmaf_probe(chunk, last_q as usize)?, VMAF_PERCENTILE).unwrap();
-        vmaf_cq.push((score, last_q));
+        fn measure_probe(
+            tq: &TargetQuality,
+            chunk: &Chunk,
+            metric: TargetMetric,
+            target: usize,
+        ) -> f64 {
+            match metric {
+                TargetMetric::VMAF => {
+                    let fl_path = tq.vmaf_probe(chunk, target).unwrap();
+                    read_weighted_vmaf(fl_path, METRIC_PERCENTILE).unwrap()
+                },
+                TargetMetric::SSIMULACRA2 => {
+                    let scores = tq.ssimulacra2_probe(chunk, target).unwrap();
+                    MetricStatistics::new(scores).average()
+                },
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => {
+                    let scores = tq
+                        .butteraugli_probe(
+                            chunk,
+                            target,
+                            if tq.metric == TargetMetric::ButteraugliInf {
+                                ButteraugliSubMetric::InfiniteNorm
+                            } else {
+                                ButteraugliSubMetric::ThreeNorm
+                            },
+                        )
+                        .unwrap();
+                    MetricStatistics::new(scores).average()
+                },
+                TargetMetric::XPSNR | TargetMetric::XPSNRWeighted => {
+                    let submetric = if tq.metric == TargetMetric::XPSNR {
+                        XPSNRSubMetric::Minimum
+                    } else {
+                        XPSNRSubMetric::Weighted
+                    };
+                    if tq.probing_rate > 1 {
+                        let scores = tq.xpsnr_vs_probe(chunk, target, submetric).unwrap();
+                        MetricStatistics::new(scores).percentile(1)
+                    } else {
+                        let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
+                        read_weighted_xpsnr(fl_path, METRIC_PERCENTILE, submetric).unwrap()
+                    }
+                },
+            }
+        }
+
+        let mut score = measure_probe(self, chunk, self.metric, last_q as usize);
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
+            // Butteraugli is inverted, where quality lowers as score increases
+            score *= -1.0;
+        }
+        let target = if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
+            -self.target
+        } else {
+            self.target
+        };
+        score_quality.push((score, last_q));
 
         // Initialize search boundary
-        let mut vmaf_lower = score;
-        let mut vmaf_upper = score;
-        let mut vmaf_cq_lower = last_q;
-        let mut vmaf_cq_upper = last_q;
+        let mut score_lower = score;
+        let mut score_upper = score;
+        let mut cq_lower = last_q;
+        let mut cq_upper = last_q;
 
         // Branch
-        let next_q = if score < self.target {
+        let next_q = if score < target {
             self.min_q
         } else {
             self.max_q
@@ -91,21 +160,38 @@ impl TargetQuality {
         update_progress_bar(next_q);
 
         // Edge case check
-        score =
-            read_weighted_vmaf(self.vmaf_probe(chunk, next_q as usize)?, VMAF_PERCENTILE).unwrap();
-        vmaf_cq.push((score, next_q));
+        score = measure_probe(self, chunk, self.metric, next_q as usize);
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
+            // Invert butteraugli score for comparison
+            score *= -1.0;
+        }
+        score_quality.push((score, next_q));
 
-        if (next_q == self.min_q && score < self.target)
-            || (next_q == self.max_q && score > self.target)
-        {
+        if (next_q == self.min_q && score < target) || (next_q == self.max_q && score > target) {
+            // Invert butteraugli scores back to positive for logging
+            if matches!(
+                self.metric,
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+            ) {
+                for (score, _) in score_quality.iter_mut() {
+                    *score *= -1.0;
+                }
+            }
+
             log_probes(
-                &mut vmaf_cq,
+                &mut score_quality,
                 frames as u32,
                 self.probing_rate as u32,
                 &chunk.name(),
                 next_q,
-                score,
-                if score < self.target {
+                match self.metric {
+                    TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -score,
+                    _ => score,
+                },
+                if score < target {
                     Skip::Low
                 } else {
                     Skip::High
@@ -115,59 +201,78 @@ impl TargetQuality {
         }
 
         // Set boundary
-        if score < self.target {
-            vmaf_lower = score;
-            vmaf_cq_lower = next_q;
+        if score < target {
+            score_lower = score;
+            cq_lower = next_q;
         } else {
-            vmaf_upper = score;
-            vmaf_cq_upper = next_q;
+            score_upper = score;
+            cq_upper = next_q;
         }
 
         // VMAF search
         for _ in 0..self.probes - 2 {
             let new_point = weighted_search(
-                f64::from(vmaf_cq_lower),
-                vmaf_lower,
-                f64::from(vmaf_cq_upper),
-                vmaf_upper,
-                self.target,
+                f64::from(cq_lower),
+                score_lower,
+                f64::from(cq_upper),
+                score_upper,
+                target,
             );
 
-            if vmaf_cq.iter().map(|(_, x)| *x).any(|x| x == new_point as u32) {
+            if score_quality.iter().map(|(_, x)| *x).any(|x| x == new_point as u32) {
                 break;
             }
 
             update_progress_bar(new_point as u32);
 
-            score =
-                read_weighted_vmaf(self.vmaf_probe(chunk, new_point)?, VMAF_PERCENTILE).unwrap();
-            vmaf_cq.push((score, new_point as u32));
+            score = measure_probe(self, chunk, self.metric, new_point as usize);
+            if matches!(
+                self.metric,
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+            ) {
+                // Invert butteraugli score for comparison
+                score *= -1.0;
+            }
+            score_quality.push((score, new_point as u32));
 
             // Update boundary
-            if score < self.target {
-                vmaf_lower = score;
-                vmaf_cq_lower = new_point as u32;
+            if score < target {
+                score_lower = score;
+                cq_lower = new_point as u32;
             } else {
-                vmaf_upper = score;
-                vmaf_cq_upper = new_point as u32;
+                score_upper = score;
+                cq_upper = new_point as u32;
             }
         }
 
-        let (q, q_vmaf) = interpolated_target_q(vmaf_cq.clone(), self.target);
+        let (q, q_score) = interpolated_target_q(score_quality.clone(), target);
+
+        // Invert butteraugli scores back to positive for logging
+        if matches!(
+            self.metric,
+            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
+        ) {
+            for (score, _) in score_quality.iter_mut() {
+                *score *= -1.0;
+            }
+        }
         log_probes(
-            &mut vmaf_cq,
+            &mut score_quality,
             frames as u32,
             self.probing_rate as u32,
             &chunk.name(),
             q as u32,
-            q_vmaf,
+            match self.metric {
+                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -q_score,
+                _ => q_score,
+            },
             Skip::None,
         );
 
         Ok(q as u32)
     }
 
-    fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
+    fn probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
         let vmaf_threads = if self.vmaf_threads == 0 {
             vmaf_auto_threads(self.workers)
         } else {
@@ -264,6 +369,12 @@ impl TargetQuality {
 
         let probe_name =
             Path::new(&chunk.temp).join("split").join(format!("v_{q}_{}.ivf", chunk.index));
+
+        Ok(probe_name)
+    }
+
+    fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
         let fl_path = Path::new(&chunk.temp).join("split").join(format!("{}.json", chunk.index));
 
         vmaf::run_vmaf(
@@ -272,7 +383,7 @@ impl TargetQuality {
             self.vspipe_args.clone(),
             &fl_path,
             self.model.as_ref(),
-            &self.vmaf_res,
+            self.probe_res.as_ref().unwrap_or(&self.vmaf_res),
             &self.vmaf_scaler,
             self.probing_rate,
             self.vmaf_filter.as_deref(),
@@ -280,6 +391,79 @@ impl TargetQuality {
         )?;
 
         Ok(fl_path)
+    }
+    fn ssimulacra2_probe(&self, chunk: &Chunk, q: usize) -> Result<Vec<f64>, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
+
+        let scores = measure_ssimulacra2(
+            &chunk.input,
+            &probe_name,
+            (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
+            self.probing_rate,
+        )
+        .unwrap();
+
+        Ok(scores)
+    }
+
+    fn butteraugli_probe(
+        &self,
+        chunk: &Chunk,
+        q: usize,
+        submetric: ButteraugliSubMetric,
+    ) -> Result<Vec<f64>, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
+
+        let scores = measure_butteraugli(
+            submetric,
+            &chunk.input,
+            &probe_name,
+            (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
+            self.probing_rate,
+        )
+        .unwrap();
+
+        Ok(scores)
+    }
+
+    fn xpsnr_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
+        let fl_path = Path::new(&chunk.temp).join("split").join(format!("{}.json", chunk.index));
+
+        xpsnr::run_xpsnr(
+            &probe_name,
+            chunk.source_cmd.as_slice(),
+            self.vspipe_args.clone(),
+            &fl_path,
+            self.probe_res.as_ref().unwrap_or(&self.vmaf_res),
+            &self.vmaf_scaler,
+            self.probing_rate,
+        )?;
+
+        Ok(fl_path)
+    }
+
+    fn xpsnr_vs_probe(
+        &self,
+        chunk: &Chunk,
+        q: usize,
+        submetric: XPSNRSubMetric,
+    ) -> Result<Vec<f64>, Box<EncoderCrash>> {
+        let probe_name = self.probe(chunk, q)?;
+
+        let scores = measure_xpsnr(
+            submetric,
+            &chunk.input,
+            &probe_name,
+            (chunk.start_frame as u32, chunk.end_frame as u32),
+            self.probe_res.as_ref(),
+            self.probing_rate,
+        )
+        .unwrap();
+
+        Ok(scores)
     }
 
     #[inline]
@@ -364,34 +548,32 @@ pub enum Skip {
 }
 
 pub fn log_probes(
-    vmaf_cq_scores: &mut [(f64, u32)],
+    cq_scores: &mut [(f64, u32)],
     frames: u32,
     probing_rate: u32,
     chunk_idx: &str,
     target_q: u32,
-    target_vmaf: f64,
+    target_score: f64,
     skip: Skip,
 ) {
-    vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
+    cq_scores.sort_by_key(|(_score, q)| *q);
 
     // TODO: take chunk id as integer instead and format with {:05}
     debug!(
-        "chunk {}: P-Rate={}, {} frames",
-        chunk_idx, probing_rate, frames
-    );
-    debug!(
-        "chunk {}: TQ-Probes: {:.2?}{}",
+        "chunk {}: P-Rate={}, {} frames
+    TQ-Probes: {:.2?}{}
+    Target Q={:.0}, Score={:.2}",
         chunk_idx,
-        vmaf_cq_scores,
+        probing_rate,
+        frames,
+        cq_scores,
         match skip {
             Skip::High => " Early Skip High Q",
             Skip::Low => " Early Skip Low Q",
             Skip::None => "",
-        }
-    );
-    debug!(
-        "chunk {}: Target Q={:.0}, VMAF={:.2}",
-        chunk_idx, target_q, target_vmaf
+        },
+        target_q,
+        target_score
     );
 }
 
@@ -467,4 +649,24 @@ fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
     }
 
     (xb, yb + y)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::target_quality::lagrange_bisect;
+
+    #[test]
+    fn test_bisect() {
+        let sorted = vec![(0, 0.0), (1, 1.0), (256, 256.0 * 256.0)];
+
+        assert!(lagrange_bisect(&sorted, 0.0).0 == 0);
+        assert!(lagrange_bisect(&sorted, 1.0).0 == 1);
+        assert!(lagrange_bisect(&sorted, 256.0 * 256.0).0 == 256);
+
+        assert!(lagrange_bisect(&sorted, 8.0).0 == 3);
+        assert!(lagrange_bisect(&sorted, 9.0).0 == 3);
+
+        assert!(lagrange_bisect(&sorted, -1.0).0 == 0);
+        assert!(lagrange_bisect(&sorted, 2.0 * 256.0 * 256.0).0 == 256);
+    }
 }

@@ -8,7 +8,8 @@ fn test_chunk_name_1() {
         temp:                  "none".to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: "test.mkv".into(),
+            path:        "test.mkv".into(),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -30,7 +31,8 @@ fn test_chunk_name_10000() {
         temp:                  "none".to_owned(),
         index:                 10000,
         input:                 Input::Video {
-            path: "test.mkv".into(),
+            path:        "test.mkv".into(),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -53,7 +55,8 @@ fn test_chunk_output() {
         temp:                  "d".to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: "test.mkv".into(),
+            path:        "test.mkv".into(),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -76,7 +79,8 @@ fn test_chunk_frames() {
         temp:                  "none".to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: "test.mkv".into(),
+            path:        "test.mkv".into(),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -100,7 +104,9 @@ fn test_apply_photon_noise_args_with_noise() -> anyhow::Result<()> {
         temp:                  temp_dir.path().to_str().unwrap().to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-files/blank_1080p.mkv"),
+            path:        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("test-files/blank_1080p.mkv"),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -127,7 +133,9 @@ fn test_apply_photon_noise_args_no_noise() -> anyhow::Result<()> {
         temp:                  temp_dir.path().to_str().unwrap().to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-files/blank_1080p.mkv"),
+            path:        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("test-files/blank_1080p.mkv"),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),
@@ -154,7 +162,9 @@ fn test_apply_photon_noise_args_unsupported_encoder() -> anyhow::Result<()> {
         temp:                  temp_dir.path().to_str().unwrap().to_owned(),
         index:                 1,
         input:                 Input::Video {
-            path: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-files/blank_1080p.mkv"),
+            path:        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("test-files/blank_1080p.mkv"),
+            script_text: None,
         },
         source_cmd:            vec!["".into()],
         output_ext:            "ivf".to_owned(),

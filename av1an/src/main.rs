@@ -664,12 +664,13 @@ pub struct CliOpts {
     #[clap(long, help_heading = "Target Quality")]
     pub max_q: Option<u32>,
 
+    #[rustfmt::skip]
     /// VMAF calculation features for target quality probing
     ///
     /// Available features:
     ///   default     - Standard VMAF calculation (baseline)
     ///   weighted    - Perceptual weighting using (4Y+1U+1V)/6 formula
-    ///   neg         - Use NEG model for better dark scene accuracy
+    ///   neg         - No Enhancement Gain: isolates compression artifacts by subtracting enhancement gains (e.g., sharpening)
     ///   motionless  - Disable motion compensation (prevents score inflation)
     ///
     /// Multiple features can be combined:
@@ -677,7 +678,6 @@ pub struct CliOpts {
     ///   --probing-vmaf-features default motionless
     #[clap(long, num_args = 0.., value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_vmaf_features: Vec<VmafFeature>,
-
     #[rustfmt::skip]
     /// Statistical method for calculating target quality from sorted probe
     /// scores

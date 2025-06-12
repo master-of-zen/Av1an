@@ -24,7 +24,6 @@ use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-pub use settings::ProbingStats;
 use strum::{Display, EnumString, IntoStaticStr};
 pub use target_quality::VmafFeature;
 
@@ -515,4 +514,30 @@ pub enum ProbingSpeed {
     Fast = 3,
     #[strum(serialize = "veryfast")]
     VeryFast = 4,
+}
+
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+pub enum ProbingStatisticName {
+    #[strum(serialize = "mean")]
+    Mean = 0,
+    #[strum(serialize = "median")]
+    Median = 1,
+    #[strum(serialize = "harmonic")]
+    Harmonic = 2,
+    #[strum(serialize = "percentile")]
+    Percentile = 3,
+    #[strum(serialize = "standard-deviation")]
+    StandardDeviation = 4,
+    #[strum(serialize = "mode")]
+    Mode = 5,
+    #[strum(serialize = "minimum")]
+    Minimum = 6,
+    #[strum(serialize = "maximum")]
+    Maximum = 7,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProbingStatistic {
+    pub name:  ProbingStatisticName,
+    pub value: Option<f64>,
 }

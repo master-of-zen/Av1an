@@ -27,7 +27,8 @@ use av1an_core::{
     InputPixelFormat,
     PixelFormat,
     ProbingSpeed,
-    ProbingStats,
+    ProbingStatistic,
+    ProbingStatisticName,
     ScenecutMethod,
     SplitMethod,
     TargetQuality,
@@ -677,34 +678,22 @@ pub struct CliOpts {
     #[clap(long, num_args = 0.., value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_vmaf_features: Vec<VmafFeature>,
 
-    /// Statistical method for calculating target quality from probe results
+    /// Statistical method for calculating target quality from sorted probe
+    /// scores
     ///
     /// Available methods:
-    ///   mean      - Arithmetic mean of all probe scores
-    ///   median    - Middle value of sorted probe scores
+    ///   mean      - Arithmetic mean (average)
+    ///   median    - Middle value
     ///   harmonic  - Harmonic mean (emphasizes lower scores)
-    ///
-    /// If not specified, uses percentile-based calculation (see
-    /// --probing-percent)
-    #[clap(
-        long,
-        value_enum,
-        help_heading = "Target Quality",
-        verbatim_doc_comment
-    )]
-    pub probing_stats: Option<ProbingStats>,
-
-    /// Percentile threshold for target quality calculation (0.0-1.0)
-    ///
-    /// Controls which percentile of probe scores to target:
-    ///   0.01  - 1st percentile (1% lows, default - targets worst quality)
-    ///   0.10  - 10th percentile (bottom 10%)
-    ///   0.50  - 50th percentile (median)
-    ///
-    /// Lower values ensure consistent quality in difficult scenes.
-    /// This setting overrides --probing-stats when specified.
-    #[clap(long, help_heading = "Target Quality", verbatim_doc_comment)]
-    pub probing_percent: Option<f64>,
+    ///   percentile-<FLOAT> - Percentile of a specified value. Must be between
+    /// 0.0 and 100.0
+    ///   standard-deviation-<FLOAT> - Standard deviation distance from mean (σ)
+    /// clamped by the minimum and maximum probe scores
+    ///   mode      - Most common integer-rounded value
+    ///   minimum   - Lowest value
+    ///   maximum   - Highest value
+    #[clap(long, default_value_t = String::from("percentile-1"), help_heading = "Target Quality", verbatim_doc_comment)]
+    pub probing_stat: String,
 }
 
 impl CliOpts {
@@ -714,44 +703,117 @@ impl CliOpts {
         temp_dir: String,
         video_params: Vec<String>,
         output_pix_format: Pixel,
-    ) -> Option<TargetQuality> {
-        self.target_quality.map(|tq| {
-            let (min, max) = self.encoder.get_default_cq_range();
-            let min_q = self.min_q.unwrap_or(min as u32);
-            let max_q = self.max_q.unwrap_or(max as u32);
+    ) -> anyhow::Result<Option<TargetQuality>> {
+        self.target_quality
+            .map(|tq| {
+                let (min, max) = self.encoder.get_default_cq_range();
+                let min_q = self.min_q.unwrap_or(min as u32);
+                let max_q = self.max_q.unwrap_or(max as u32);
 
-            TargetQuality {
-                vmaf_res: self.vmaf_res.clone(),
-                vmaf_scaler: self.scaler.clone(),
-                vmaf_filter: self.vmaf_filter.clone(),
-                vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
-                    available_parallelism()
-                        .expect("Unrecoverable: Failed to get thread count")
-                        .get()
-                }),
-                model: self.vmaf_path.clone(),
-                probes: self.probes,
-                target: tq,
-                min_q,
-                max_q,
-                encoder: self.encoder,
-                pix_format: output_pix_format,
-                temp: temp_dir.clone(),
-                workers: self.workers,
-                video_params: video_params.clone(),
-                vspipe_args: self.vspipe_args.clone(),
-                probe_slow: self.probe_slow,
-                probing_speed: self.probing_speed.clone().map(|s| s as u8),
-                probing_rate: adapt_probing_rate(self.probing_rate as usize),
-                probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
-                    vec![VmafFeature::Default]
-                } else {
-                    self.probing_vmaf_features.clone()
-                },
-                probing_stats: self.probing_stats,
-                probing_percent: self.probing_percent,
-            }
-        })
+                let probing_statistic = match self.probing_stat.to_lowercase().as_str() {
+                    "mean" => ProbingStatistic {
+                        name:  ProbingStatisticName::Mean,
+                        value: None,
+                    },
+                    "median" => ProbingStatistic {
+                        name:  ProbingStatisticName::Median,
+                        value: None,
+                    },
+                    "mode" => ProbingStatistic {
+                        name:  ProbingStatisticName::Mode,
+                        value: None,
+                    },
+                    "minimum" => ProbingStatistic {
+                        name:  ProbingStatisticName::Minimum,
+                        value: None,
+                    },
+                    "maximum" => ProbingStatistic {
+                        name:  ProbingStatisticName::Maximum,
+                        value: None,
+                    },
+                    probe_statistic
+                        if probe_statistic.matches('-').count() == 1
+                            && probe_statistic.starts_with("percentile-") =>
+                    {
+                        let value = probe_statistic
+                            .split("-")
+                            .last()
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .and_then(|v| {
+                                if (0.0..=100.0).contains(&v) {
+                                    Some(v)
+                                } else {
+                                    None
+                                }
+                            })
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "Probing Statistic percentile must have a value between 0 and \
+                                     100 appended"
+                                )
+                            })?;
+                        ProbingStatistic {
+                            name:  ProbingStatisticName::Percentile,
+                            value: Some(value),
+                        }
+                    },
+                    probe_statistic
+                        if (probe_statistic.matches('-').count() == 2
+                            || probe_statistic.matches('-').count() == 3)
+                            && probe_statistic.starts_with("standard-deviation-") =>
+                    {
+                        let value = probe_statistic
+                            .rsplit('-')
+                            .next()
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "Probing Statistic standard deviation must have a value \
+                                     appended"
+                                )
+                            })?;
+                        ProbingStatistic {
+                            name:  ProbingStatisticName::StandardDeviation,
+                            value: Some(value),
+                        }
+                    },
+                    _ => {
+                        return Err(anyhow!("Unknown Probing Statistic: {}", self.probing_stat));
+                    },
+                };
+
+                Ok(TargetQuality {
+                    vmaf_res: self.vmaf_res.clone(),
+                    vmaf_scaler: self.scaler.clone(),
+                    vmaf_filter: self.vmaf_filter.clone(),
+                    vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
+                        available_parallelism()
+                            .expect("Unrecoverable: Failed to get thread count")
+                            .get()
+                    }),
+                    model: self.vmaf_path.clone(),
+                    probes: self.probes,
+                    target: tq,
+                    min_q,
+                    max_q,
+                    encoder: self.encoder,
+                    pix_format: output_pix_format,
+                    temp: temp_dir.clone(),
+                    workers: self.workers,
+                    video_params: video_params.clone(),
+                    vspipe_args: self.vspipe_args.clone(),
+                    probe_slow: self.probe_slow,
+                    probing_speed: self.probing_speed.clone().map(|s| s as u8),
+                    probing_rate: adapt_probing_rate(self.probing_rate as usize),
+                    probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
+                        vec![VmafFeature::Default]
+                    } else {
+                        self.probing_vmaf_features.clone()
+                    },
+                    probing_statistic,
+                })
+            })
+            .transpose()
     }
 }
 
@@ -837,6 +899,12 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             format:    args.pix_format,
             bit_depth: args.encoder.get_format_bit_depth(args.pix_format)?,
         };
+
+        let target_quality = args.target_quality_params(
+            temp.clone(),
+            video_params.clone(),
+            output_pix_format.format,
+        )?;
 
         // TODO make an actual constructor for this
         let arg = EncodeArgs {
@@ -955,11 +1023,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             force_keyframes: parse_comma_separated_numbers(
                 args.force_keyframes.as_deref().unwrap_or(""),
             )?,
-            target_quality: args.target_quality_params(
-                temp,
-                video_params,
-                output_pix_format.format,
-            ),
+            target_quality,
             vmaf: args.vmaf,
             vmaf_path: args.vmaf_path.clone(),
             vmaf_res: args.vmaf_res.clone(),

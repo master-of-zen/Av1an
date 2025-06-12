@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     ffi::OsStr,
     path::Path,
     process::{Command, Stdio},
@@ -10,7 +11,15 @@ use plotters::prelude::*;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-use crate::{broker::EncoderCrash, ffmpeg, ref_smallvec, util::printable_base10_digits, Input};
+use crate::{
+    broker::EncoderCrash,
+    ffmpeg,
+    ref_smallvec,
+    util::printable_base10_digits,
+    Input,
+    ProbingStatistic,
+    ProbingStatisticName,
+};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct VmafScore {
@@ -27,12 +36,104 @@ struct VmafResult {
     frames: Vec<Metrics>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum VmafScoreMethod {
-    Percentile(f64),
-    Mean,
-    Median,
-    HarmonicMean,
+pub struct MetricStatistics {
+    scores: Vec<f64>,
+    cache:  HashMap<String, f64>,
+}
+
+impl MetricStatistics {
+    pub fn new(scores: Vec<f64>) -> Self {
+        MetricStatistics {
+            scores,
+            cache: HashMap::new(),
+        }
+    }
+
+    fn get_or_compute(&mut self, key: &str, compute: impl FnOnce(&[f64]) -> f64) -> f64 {
+        *self.cache.entry(key.to_string()).or_insert_with(|| compute(&self.scores))
+    }
+
+    pub fn mean(&mut self) -> f64 {
+        self.get_or_compute("average", |scores| {
+            scores.iter().sum::<f64>() / scores.len() as f64
+        })
+    }
+
+    pub fn harmonic_mean(&mut self) -> f64 {
+        self.get_or_compute("harmonic_mean", |scores| {
+            let sum_reciprocals: f64 = scores.iter().map(|&x| 1.0 / x).sum();
+            scores.len() as f64 / sum_reciprocals
+        })
+    }
+
+    pub fn median(&mut self) -> f64 {
+        let mut sorted_scores = self.scores.clone();
+        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+        self.get_or_compute("median", |scores| {
+            let mid = scores.len() / 2;
+            if scores.len() % 2 == 0 {
+                (sorted_scores[mid - 1] + sorted_scores[mid]) / 2.0
+            } else {
+                sorted_scores[mid]
+            }
+        })
+    }
+
+    pub fn mode(&mut self) -> f64 {
+        let mut counts = HashMap::new();
+        for score in &self.scores {
+            // Round to nearest integer for fewer unique buckets
+            let rounded_score = score.round() as i32;
+            *counts.entry(rounded_score).or_insert(0) += 1;
+        }
+        let max_count = counts.values().copied().max().unwrap_or(0);
+        self.get_or_compute("mode", |scores| {
+            *scores
+                .iter()
+                .find(|score| counts[&(score.round() as i32)] == max_count)
+                .unwrap_or(&0.0)
+        })
+    }
+
+    pub fn minimum(&mut self) -> f64 {
+        self.get_or_compute("minimum", |scores| {
+            *scores.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
+        })
+    }
+
+    pub fn maximum(&mut self) -> f64 {
+        self.get_or_compute("maximum", |scores| {
+            *scores.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
+        })
+    }
+
+    pub fn variance(&mut self) -> f64 {
+        let average = self.mean();
+        self.get_or_compute("variance", |scores| {
+            scores
+                .iter()
+                .map(|x| {
+                    let diff = x - average;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / scores.len() as f64
+        })
+    }
+
+    pub fn standard_deviation(&mut self) -> f64 {
+        let variance = self.variance();
+        self.get_or_compute("standard_deviation", |_| variance.sqrt())
+    }
+
+    pub fn percentile(&mut self, index: usize) -> f64 {
+        let mut sorted_scores = self.scores.clone();
+        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+        self.get_or_compute(&format!("percentile_{index}"), |scores| {
+            let index = (index as f64 / 100.0 * scores.len() as f64) as usize;
+            *sorted_scores.get(index).unwrap_or(&sorted_scores[0])
+        })
+    }
 }
 
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
@@ -497,39 +598,40 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
 /// Read a certain, given percentile VMAF score from the VMAF json file
 pub fn read_weighted_vmaf<P: AsRef<Path>>(
     file: P,
-    method: VmafScoreMethod,
+    probe_statistic: ProbingStatistic,
 ) -> Result<f64, serde_json::Error> {
     let scores = read_vmaf_file(file)?;
     assert!(!scores.is_empty());
 
-    match method {
-        VmafScoreMethod::Percentile(percentile) => {
-            let mut sorted_scores = scores.clone();
-            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+    // Must be mutable as each computation is cached for reuse in implementation
+    let mut metric_statistics = MetricStatistics::new(scores);
 
-            let index = ((sorted_scores.len() as f64 * percentile) as usize)
-                .saturating_sub(1)
-                .min(sorted_scores.len() - 1);
-
-            Ok(sorted_scores[index])
-        },
-        VmafScoreMethod::Mean => Ok(scores.iter().sum::<f64>() / scores.len() as f64),
-        VmafScoreMethod::Median => {
-            let mut sorted_scores = scores.clone();
-            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-            let len = sorted_scores.len();
-            if len % 2 == 0 {
-                Ok((sorted_scores[len / 2 - 1] + sorted_scores[len / 2]) / 2.0)
+    let statistic = match probe_statistic.name {
+        ProbingStatisticName::Mean => metric_statistics.mean(),
+        ProbingStatisticName::Median => metric_statistics.median(),
+        ProbingStatisticName::Harmonic => metric_statistics.harmonic_mean(),
+        ProbingStatisticName::Percentile => {
+            if let Some(value) = probe_statistic.value {
+                metric_statistics.percentile(value as usize)
             } else {
-                Ok(sorted_scores[len / 2])
+                panic!("Expected a value for Percentile statistic");
             }
         },
-        VmafScoreMethod::HarmonicMean => {
-            let sum_reciprocals: f64 = scores.iter().map(|&x| 1.0 / x).sum();
-            Ok(scores.len() as f64 / sum_reciprocals)
+        ProbingStatisticName::StandardDeviation => {
+            if let Some(value) = probe_statistic.value {
+                let sigma =
+                    metric_statistics.mean() + (value * metric_statistics.standard_deviation());
+                sigma.clamp(metric_statistics.minimum(), metric_statistics.maximum())
+            } else {
+                panic!("Expected a value for StandardDeviation statistic");
+            }
         },
-    }
+        ProbingStatisticName::Mode => metric_statistics.mode(),
+        ProbingStatisticName::Minimum => metric_statistics.minimum(),
+        ProbingStatisticName::Maximum => metric_statistics.maximum(),
+    };
+
+    Ok(statistic)
 }
 
 pub fn percentile_of_sorted(scores: &[f64], percentile: f64) -> f64 {

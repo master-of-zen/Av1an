@@ -114,6 +114,8 @@ impl Display for EncoderCrash {
 }
 
 impl Broker<'_> {
+    /// Main encoding loop. set_thread_affinity may be ignored if the value is
+    /// invalid.
     #[tracing::instrument(skip(self))]
     pub fn encoding_loop(
         self,
@@ -211,6 +213,7 @@ impl Broker<'_> {
     ) -> Result<(), Option<Box<EncoderCrash>>> {
         let st_time = Instant::now();
 
+        // we display the index, so we need to subtract 1 to get the max index
         let padding = printable_base10_digits(self.chunk_queue.len() - 1) as usize;
         update_mp_chunk(worker_id, chunk.index, padding);
 

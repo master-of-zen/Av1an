@@ -24,7 +24,7 @@ use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString, IntoStaticStr};
+use strum::{Display, EnumString, FromRepr, IntoStaticStr};
 pub use target_quality::VmafFeature;
 
 use crate::progress_bar::finish_progress_bar;
@@ -502,7 +502,7 @@ fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
     Ok(serde_json::from_str(&contents)?)
 }
 
-#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone, FromRepr)]
 pub enum ProbingSpeed {
     #[strum(serialize = "veryslow")]
     VerySlow = 0,

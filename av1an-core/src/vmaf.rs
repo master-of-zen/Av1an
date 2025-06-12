@@ -611,20 +611,15 @@ pub fn read_weighted_vmaf<P: AsRef<Path>>(
         ProbingStatisticName::Median => metric_statistics.median(),
         ProbingStatisticName::Harmonic => metric_statistics.harmonic_mean(),
         ProbingStatisticName::Percentile => {
-            if let Some(value) = probe_statistic.value {
-                metric_statistics.percentile(value as usize)
-            } else {
-                panic!("Expected a value for Percentile statistic");
-            }
+            assert!(probe_statistic.value.is_some());
+            metric_statistics.percentile(probe_statistic.value.unwrap() as usize)
         },
         ProbingStatisticName::StandardDeviation => {
-            if let Some(value) = probe_statistic.value {
-                let sigma =
-                    metric_statistics.mean() + (value * metric_statistics.standard_deviation());
-                sigma.clamp(metric_statistics.minimum(), metric_statistics.maximum())
-            } else {
-                panic!("Expected a value for StandardDeviation statistic");
-            }
+            assert!(probe_statistic.value.is_some());
+            let sigma_distance =
+                probe_statistic.value.unwrap() * metric_statistics.standard_deviation();
+            let statistic = metric_statistics.mean() + sigma_distance;
+            statistic.clamp(metric_statistics.minimum(), metric_statistics.maximum())
         },
         ProbingStatisticName::Mode => metric_statistics.mode(),
         ProbingStatisticName::Minimum => metric_statistics.minimum(),

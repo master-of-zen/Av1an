@@ -685,14 +685,14 @@ pub struct CliOpts {
     ///   mean      - Arithmetic mean (average)
     ///   median    - Middle value
     ///   harmonic  - Harmonic mean (emphasizes lower scores)
-    ///   percentile-<FLOAT> - Percentile of a specified value. Must be between
+    ///   percentile=<FLOAT> - Percentile of a specified value. Must be between
     /// 0.0 and 100.0
-    ///   standard-deviation-<FLOAT> - Standard deviation distance from mean (σ)
+    ///   standard-deviation=<FLOAT> - Standard deviation distance from mean (σ)
     /// clamped by the minimum and maximum probe scores
     ///   mode      - Most common integer-rounded value
     ///   minimum   - Lowest value
     ///   maximum   - Highest value
-    #[clap(long, default_value_t = String::from("percentile-1"), help_heading = "Target Quality", verbatim_doc_comment)]
+    #[clap(long, default_value_t = String::from("percentile=1"), help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_stat: String,
 }
 
@@ -731,12 +731,17 @@ impl CliOpts {
                         name:  ProbingStatisticName::Maximum,
                         value: None,
                     },
-                    probe_statistic
-                        if probe_statistic.matches('-').count() == 1
-                            && probe_statistic.starts_with("percentile-") =>
-                    {
+                    probe_statistic if probe_statistic.starts_with("percentile") => {
+                        if probe_statistic.matches('=').count() != 1
+                            || !probe_statistic.starts_with("percentile=")
+                        {
+                            return Err(anyhow!(
+                                "Probing Statistic percentile must have a value between 0.0 and \
+                                 100.0 set using \"=\" (eg. \"--probing-stat percentile=1\")"
+                            ));
+                        }
                         let value = probe_statistic
-                            .split("-")
+                            .split("=")
                             .last()
                             .and_then(|s| s.parse::<f64>().ok())
                             .and_then(|v| {
@@ -748,8 +753,8 @@ impl CliOpts {
                             })
                             .ok_or_else(|| {
                                 anyhow!(
-                                    "Probing Statistic percentile must have a value between 0 and \
-                                     100 appended"
+                                    "Probing Statistic percentile must be set to a value between \
+                                     0 and 100"
                                 )
                             })?;
                         ProbingStatistic {
@@ -757,14 +762,19 @@ impl CliOpts {
                             value: Some(value),
                         }
                     },
-                    probe_statistic
-                        if (probe_statistic.matches('-').count() == 2
-                            || probe_statistic.matches('-').count() == 3)
-                            && probe_statistic.starts_with("standard-deviation-") =>
-                    {
+                    probe_statistic if probe_statistic.starts_with("standard-deviation") => {
+                        if probe_statistic.matches('=').count() != 1
+                            || !probe_statistic.starts_with("standard-deviation=")
+                        {
+                            return Err(anyhow!(
+                                "Probing Statistic standard deviation must have a positive or \
+                                 negative value set using \"=\" (eg. \"--probing-stat \
+                                 standard-deviation=-0.25\")"
+                            ));
+                        }
                         let value = probe_statistic
-                            .rsplit('-')
-                            .next()
+                            .split('=')
+                            .next_back()
                             .and_then(|s| s.parse::<f64>().ok())
                             .ok_or_else(|| {
                                 anyhow!(

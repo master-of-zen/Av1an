@@ -229,7 +229,7 @@ impl Broker<'_> {
                     _ => "ivf",
                 };
                 let probe_file = std::path::Path::new(&self.project.args.temp).join("split").join(
-                    format!("v_{optimal_q}_{index}.{extension}", index = chunk.index),
+                    format!("v_{index:05}_{optimal_q}.{extension}", index = chunk.index),
                 );
 
                 if probe_file.exists() {

@@ -20,7 +20,10 @@ use crate::{
     settings::ProbingStats,
     vmaf::{read_weighted_vmaf, VmafScoreMethod},
     Encoder,
+    ProbingSpeed,
 };
+
+const SCORE_TOLERANCE: f64 = 0.01;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
@@ -65,7 +68,8 @@ impl TargetQuality {
         chunk: &Chunk,
         worker_id: Option<usize>,
     ) -> anyhow::Result<u32> {
-        let mut history: Vec<(u32, f64, PathBuf)> = vec![];
+        // History of probe results as quantizer-score pairs
+        let mut quantizer_score_history: Vec<(u32, f64)> = vec![];
 
         let update_progress_bar = |last_q: u32| {
             if let Some(worker_id) = worker_id {
@@ -79,8 +83,9 @@ impl TargetQuality {
             }
         };
 
-        let mut low = self.min_q;
-        let mut high = self.max_q;
+        // Initialize quantizer limits from specified minimum and maximum quantizers
+        let mut lower_quantizer_limit = self.min_q;
+        let mut upper_quantizer_limit = self.max_q;
 
         let score_method = if let Some(percent) = self.probing_percent {
             VmafScoreMethod::Percentile(percent)
@@ -95,75 +100,109 @@ impl TargetQuality {
         };
 
         loop {
-            let predicted_q = predict_crf(low, high, &history, self.target);
+            let next_quantizer = predict_quantizer(
+                lower_quantizer_limit,
+                upper_quantizer_limit,
+                &quantizer_score_history,
+                self.target,
+            );
 
-            if history.iter().any(|(q, _, _)| *q == predicted_q) {
+            if quantizer_score_history
+                .iter()
+                .any(|(quantizer, _)| *quantizer == next_quantizer)
+            {
+                // Predicted quantizer has already been probed
+                let (last_quantizer, last_score) = quantizer_score_history
+                    .iter()
+                    .find(|(quantizer, _)| *quantizer == next_quantizer)
+                    .unwrap();
+                log_probes(
+                    &mut quantizer_score_history.clone(),
+                    self.target,
+                    chunk.frames() as u32,
+                    self.probing_rate as u32,
+                    self.probing_speed,
+                    &chunk.name(),
+                    *last_quantizer,
+                    *last_score,
+                    SkipProbingReason::None,
+                );
                 break;
             }
 
-            update_progress_bar(predicted_q);
+            update_progress_bar(next_quantizer);
 
-            let probe_path = self.vmaf_probe(chunk, predicted_q as usize)?;
+            let probe_path = self.vmaf_probe(chunk, next_quantizer as usize)?;
             let score = read_weighted_vmaf(&probe_path, score_method)?;
+            let score_within_tolerance = within_tolerance(score, self.target);
 
-            history.push((predicted_q, score, probe_path.clone()));
+            quantizer_score_history.push((next_quantizer, score));
 
-            if within_tolerance(score, self.target) || history.len() >= self.probes as usize {
+            if score_within_tolerance || quantizer_score_history.len() >= self.probes as usize {
+                log_probes(
+                    &mut quantizer_score_history,
+                    self.target,
+                    chunk.frames() as u32,
+                    self.probing_rate as u32,
+                    self.probing_speed,
+                    &chunk.name(),
+                    next_quantizer,
+                    score,
+                    if score_within_tolerance {
+                        SkipProbingReason::WithinTolerance
+                    } else {
+                        SkipProbingReason::ProbeLimitReached
+                    },
+                );
                 break;
             }
 
             if score > self.target {
-                low = (predicted_q + 1).min(high);
+                lower_quantizer_limit = (next_quantizer + 1).min(upper_quantizer_limit);
             } else {
-                high = (predicted_q - 1).max(low);
+                upper_quantizer_limit = (next_quantizer - 1).max(lower_quantizer_limit);
             }
 
-            if low > high {
+            // Ensure quantizer limits are valid
+            if lower_quantizer_limit > upper_quantizer_limit {
+                log_probes(
+                    &mut quantizer_score_history,
+                    self.target,
+                    chunk.frames() as u32,
+                    self.probing_rate as u32,
+                    self.probing_speed,
+                    &chunk.name(),
+                    next_quantizer,
+                    score,
+                    if score > self.target {
+                        SkipProbingReason::QuantizerTooHigh
+                    } else {
+                        SkipProbingReason::QuantizerTooLow
+                    },
+                );
                 break;
             }
         }
 
-        let good_results: Vec<&(u32, f64, PathBuf)> = history
+        let history_within_tolerance: Vec<&(u32, f64)> = quantizer_score_history
             .iter()
-            .filter(|(_, score, _)| within_tolerance(*score, self.target))
+            .filter(|(_, score)| within_tolerance(*score, self.target))
             .collect();
 
-        debug!(
-            "Good results: {:?}",
-            good_results.iter().map(|(q, s, _)| (*q, *s)).collect::<Vec<_>>()
-        );
-
-        let best_result = if !good_results.is_empty() {
-            good_results.iter().max_by_key(|(q, _, _)| *q).unwrap()
+        let final_quantizer_score = if !history_within_tolerance.is_empty() {
+            history_within_tolerance.iter().max_by_key(|(quantizer, _)| *quantizer).unwrap()
         } else {
-            history
+            quantizer_score_history
                 .iter()
-                .min_by(|(_, s1, _), (_, s2, _)| {
-                    let d1 = (s1 - self.target).abs();
-                    let d2 = (s2 - self.target).abs();
-                    d1.partial_cmp(&d2).unwrap_or(Ordering::Equal)
+                .min_by(|(_, score1), (_, score2)| {
+                    let difference1 = (score1 - self.target).abs();
+                    let difference2 = (score2 - self.target).abs();
+                    difference1.partial_cmp(&difference2).unwrap_or(Ordering::Equal)
                 })
                 .unwrap()
         };
 
-        debug!(
-            "Best result: Q={q}, VMAF={vmaf:.2}",
-            q = best_result.0,
-            vmaf = best_result.1
-        );
-
-        let mut vmaf_cq: Vec<(f64, u32)> = history.iter().map(|(q, s, _)| (*s, *q)).collect();
-        log_probes(
-            &mut vmaf_cq,
-            chunk.frames() as u32,
-            self.probing_rate as u32,
-            &chunk.name(),
-            best_result.0,
-            best_result.1,
-            Skip::None,
-        );
-
-        Ok(best_result.0)
+        Ok(final_quantizer_score.0)
     }
 
     fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
@@ -341,28 +380,59 @@ impl TargetQuality {
     }
 }
 
-fn predict_crf(low: u32, high: u32, history: &[(u32, f64, PathBuf)], target: f64) -> u32 {
-    let mut sorted_history = history.to_vec();
-    sorted_history.sort_by_key(|(crf, _, _)| *crf);
+fn predict_quantizer(
+    lower_quantizer_limit: u32,
+    upper_quantizer_limit: u32,
+    quantizer_score_history: &[(u32, f64)],
+    target: f64,
+) -> u32 {
+    if quantizer_score_history.len() < 2 {
+        // Fewer than 2 probes, return the midpoint between the upper and lower
+        // quantizer bounds
+        return (lower_quantizer_limit + upper_quantizer_limit) / 2;
+    }
 
-    let mut crf_score_map: Vec<(u32, f64)> =
-        sorted_history.iter().map(|(crf, score, _)| (*crf, *score)).collect();
-    crf_score_map.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+    // Sort history by quantizer
+    let mut sorted_quantizer_score_history = quantizer_score_history.to_vec();
+    sorted_quantizer_score_history.sort_by_key(|(quantizer, _)| *quantizer);
+    let mut quantizer_score_map: Vec<(u32, f64)> = sorted_quantizer_score_history
+        .iter()
+        .map(|(quantizer, score)| (*quantizer, *score))
+        .collect();
+    quantizer_score_map.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+    // Create interpolation keys from score-quantizer pairs
+    let (scores, quantizers): (Vec<f64>, Vec<f64>) = quantizer_score_map
+        .iter()
+        .map(|(quantizer, score)| (*score, *quantizer as f64))
+        .unzip();
+    let keys = scores
+        .iter()
+        .zip(quantizers.iter())
+        .map(|(score, quantizer)| {
+            Key::new(
+                *score,
+                *quantizer,
+                match sorted_quantizer_score_history.len() {
+                    0..=1 => unreachable!(),        // Handled in earlier guard
+                    2 => Interpolation::Linear,     // 2 probes, use Linear without fitting curve
+                    _ => Interpolation::CatmullRom, // 3 or more probes, fit CatmullRom curve
+                },
+            )
+        })
+        .collect();
 
-    if crf_score_map.len() >= 3 {
-        let (scores, crfs): (Vec<f64>, Vec<f64>) =
-            crf_score_map.iter().map(|(crf, score)| (*score, *crf as f64)).unzip();
-
-        let keys: Vec<Key<f64, f64>> = scores
-            .iter()
-            .zip(crfs.iter())
-            .map(|(score, crf)| Key::new(*score, *crf, Interpolation::CatmullRom))
-            .collect();
-
-        let spline = Spline::from_vec(keys);
-        if let Some(predicted) = spline.sample(target) {
-            return (predicted.round() as u32).clamp(low, high);
-        }
+    let spline = Spline::from_vec(keys);
+    if let Some(predicted_quantizer) = spline.sample(target) {
+        // Ensure predicted quantizer is an integer and within bounds
+        (predicted_quantizer.round() as u32).clamp(lower_quantizer_limit, upper_quantizer_limit)
+    } else {
+        // We expect this to be unreachable but just in case
+        // Failed to predict quantizer from Spline interpolation
+        error!(
+            "Failed to predict quantizer from Spline interpolation with target: {target}
+            quantizer_score_history: {quantizer_score_history:?}",
+        );
+        (lower_quantizer_limit + upper_quantizer_limit) / 2
     }
 
     if crf_score_map.len() == 2 {
@@ -385,7 +455,7 @@ fn predict_crf(low: u32, high: u32, history: &[(u32, f64, PathBuf)], target: f64
 }
 
 fn within_tolerance(score: f64, target: f64) -> bool {
-    (score - target).abs() / target < 0.01
+    (score - target).abs() / target < SCORE_TOLERANCE
 }
 
 pub fn vmaf_auto_threads(workers: usize) -> usize {
@@ -402,29 +472,49 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
 }
 
 #[derive(Copy, Clone)]
-pub enum Skip {
+pub enum SkipProbingReason {
+    QuantizerTooHigh,
+    QuantizerTooLow,
+    WithinTolerance,
+    ProbeLimitReached,
     None,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn log_probes(
-    vmaf_cq_scores: &mut [(f64, u32)],
+    quantizer_score_history: &mut [(u32, f64)],
+    target: f64,
     frames: u32,
     probing_rate: u32,
-    chunk_idx: &str,
-    target_q: u32,
-    target_vmaf: f64,
-    skip: Skip,
+    probing_speed: Option<u8>,
+    chunk_name: &str,
+    target_quantizer: u32,
+    target_score: f64,
+    skip: SkipProbingReason,
 ) {
-    vmaf_cq_scores.sort_by_key(|(_score, q)| *q);
+    // Sort history by quantizer
+    quantizer_score_history.sort_by_key(|(quantizer, _)| *quantizer);
 
-    debug!("chunk {chunk_idx}: P-Rate={probing_rate}, {frames} frames");
     debug!(
-        "chunk {chunk_idx}: TQ-Probes: {vmaf_cq_scores:.2?}{suffix}",
+        "chunk {name}: Target={target}, P-Rate={rate}, P-Speed={speed:?}, {frame_count} frames
+        TQ-Probes: {history:.2?}{suffix}
+        Final Q={target_quantizer:.0}, Final Score={target_score:.2}",
+        name = chunk_name,
+        target = target,
+        rate = probing_rate,
+        speed = ProbingSpeed::from_repr(probing_speed.unwrap_or(4) as usize),
+        frame_count = frames,
+        history = quantizer_score_history,
         suffix = match skip {
-            Skip::None => "",
-        }
+            SkipProbingReason::None => "",
+            SkipProbingReason::QuantizerTooHigh => "Early Skip High Quantizer",
+            SkipProbingReason::QuantizerTooLow => " Early Skip Low Quantizer",
+            SkipProbingReason::WithinTolerance => " Early Skip Within Tolerance",
+            SkipProbingReason::ProbeLimitReached => " Early Skip Probe Limit Reached",
+        },
+        target_quantizer = target_quantizer,
+        target_score = target_score
     );
-    debug!("chunk {chunk_idx}: Target Q={target_q:.0}, VMAF={target_vmaf:.2}");
 }
 
 #[inline]

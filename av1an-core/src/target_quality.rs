@@ -269,7 +269,7 @@ impl TargetQuality {
 
         let probe_name = std::path::Path::new(&chunk.temp)
             .join("split")
-            .join(format!("v_{q}_{index}.{extension}", index = chunk.index));
+            .join(format!("v_{index:05}_{q}.{extension}", index = chunk.index));
         let fl_path = std::path::Path::new(&chunk.temp)
             .join("split")
             .join(format!("{index}.json", index = chunk.index));

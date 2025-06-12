@@ -527,7 +527,8 @@ impl Encoder {
     pub const fn output_extension(&self) -> &'static str {
         match &self {
             Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
-            Self::x264 | Self::x265 => "mkv",
+            Self::x264 => "264",
+            Self::x265 => "hevc",
         }
     }
 
@@ -967,7 +968,7 @@ impl Encoder {
             Encoder::x265 => "hevc",
             _ => "ivf",
         };
-        let probe_name = format!("v_{q}_{chunk_index}.{extension}");
+        let probe_name = format!("v_{chunk_index:05}_{q}.{extension}");
 
         let mut probe = PathBuf::from(temp);
         probe.push("split");

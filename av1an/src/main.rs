@@ -672,10 +672,14 @@ pub struct CliOpts {
     ///   weighted    - Perceptual weighting using (4Y+1U+1V)/6 formula
     ///   neg         - No Enhancement Gain: isolates compression artifacts by subtracting enhancement gains (e.g., sharpening)
     ///   motionless  - Disable motion compensation (prevents score inflation)
+    ///   uhd         - Use 4K optimized VMAF model: Overrides 'DEFAULT' but can be combined with 'NEG'.
     ///
     /// Multiple features can be combined:
     ///   --probing-vmaf-features weighted neg motionless
     ///   --probing-vmaf-features default motionless
+    ///
+    /// 'NEG' overrides 'DEFAULT' because it is a different model.
+    ///
     #[clap(long, num_args = 0.., value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_vmaf_features: Vec<VmafFeature>,
     #[rustfmt::skip]

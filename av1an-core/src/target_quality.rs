@@ -59,6 +59,8 @@ pub enum VmafFeature {
     Neg,
     #[value(name = "motionless")]
     Motionless,
+    #[value(name = "uhd")]
+    Uhd,
 }
 
 impl TargetQuality {
@@ -312,11 +314,18 @@ impl TargetQuality {
         let features: HashSet<_> = self.probing_vmaf_features.iter().copied().collect();
         let use_weighted = features.contains(&VmafFeature::Weighted);
         let use_neg = features.contains(&VmafFeature::Neg);
+        let use_uhd = features.contains(&VmafFeature::Uhd);
         let disable_motion = features.contains(&VmafFeature::Motionless);
 
-        let default_neg_model = PathBuf::from("vmaf_v0.6.1neg.json");
-        let model = if use_neg && self.model.is_none() {
-            Some(&default_neg_model)
+        let default_model = match (use_uhd, use_neg) {
+            (true, true) => Some(PathBuf::from("vmaf_4k_v0.6.1neg.json")),
+            (true, false) => Some(PathBuf::from("vmaf_4k_v0.6.1.json")),
+            (false, true) => Some(PathBuf::from("vmaf_v0.6.1neg.json")),
+            (false, false) => None,
+        };
+
+        let model = if self.model.is_none() {
+            default_model.as_ref()
         } else {
             self.model.as_ref()
         };

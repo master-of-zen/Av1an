@@ -395,23 +395,13 @@ fn predict_quantizer(
     // Sort history by quantizer
     let mut sorted_quantizer_score_history = quantizer_score_history.to_vec();
     sorted_quantizer_score_history.sort_by_key(|(quantizer, _)| *quantizer);
-    let mut quantizer_score_map: Vec<(u32, f64)> = sorted_quantizer_score_history
+
+    let keys = sorted_quantizer_score_history
         .iter()
-        .map(|(quantizer, score)| (*quantizer, *score))
-        .collect();
-    quantizer_score_map.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
-    // Create interpolation keys from score-quantizer pairs
-    let (scores, quantizers): (Vec<f64>, Vec<f64>) = quantizer_score_map
-        .iter()
-        .map(|(quantizer, score)| (*score, *quantizer as f64))
-        .unzip();
-    let keys = scores
-        .iter()
-        .zip(quantizers.iter())
-        .map(|(score, quantizer)| {
+        .map(|(quantizer, score)| {
             Key::new(
                 *score,
-                *quantizer,
+                *quantizer as f64,
                 match sorted_quantizer_score_history.len() {
                     0..=1 => unreachable!(),        // Handled in earlier guard
                     2 => Interpolation::Linear,     // 2 probes, use Linear without fitting curve
@@ -419,7 +409,7 @@ fn predict_quantizer(
                 },
             )
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let spline = Spline::from_vec(keys);
     if let Some(predicted_quantizer) = spline.sample(target) {

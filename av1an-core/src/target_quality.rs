@@ -386,10 +386,11 @@ fn predict_quantizer(
     quantizer_score_history: &[(u32, f64)],
     target: f64,
 ) -> u32 {
+    // The midpoint between the upper and lower quantizer bounds
+    let binary_search = (lower_quantizer_limit + upper_quantizer_limit) / 2;
     if quantizer_score_history.len() < 2 {
-        // Fewer than 2 probes, return the midpoint between the upper and lower
-        // quantizer bounds (binary search)
-        return (lower_quantizer_limit + upper_quantizer_limit) / 2;
+        // Fewer than 2 probes, predict using binary search
+        return binary_search;
     }
 
     // Sort history by quantizer
@@ -412,13 +413,22 @@ fn predict_quantizer(
         .collect::<Vec<_>>();
 
     let spline = Spline::from_vec(keys);
-    if let Some(predicted_quantizer) = spline.sample(target) {
-        // Ensure predicted quantizer is an integer and within bounds
-        (predicted_quantizer.round() as u32).clamp(lower_quantizer_limit, upper_quantizer_limit)
-    } else {
-        // Probes do not fit Catmull-Rom curve, fallback to binary search
-        (lower_quantizer_limit + upper_quantizer_limit) / 2
-    }
+    let predicted_quantizer = spline.sample(target).unwrap_or_else(|| {
+        // Probes do not fit Catmull-Rom curve, fallback to Linear
+        debug!("Probes do not fit Catmull-Rom curve, falling back to Linear");
+        let keys = sorted_quantizer_score_history
+            .iter()
+            .map(|(quantizer, score)| Key::new(*score, *quantizer as f64, Interpolation::Linear))
+            .collect();
+        Spline::from_vec(keys).sample(target).unwrap_or_else(|| {
+            // Probes do not fit Catmull-Rom curve or Linear, fallback to binary search
+            debug!("Probes do not fit Linear curve, falling back to binary search");
+            binary_search as f64
+        })
+    });
+
+    // Ensure predicted quantizer is an integer and within bounds
+    (predicted_quantizer.round() as u32).clamp(lower_quantizer_limit, upper_quantizer_limit)
 }
 
 fn within_tolerance(score: f64, target: f64) -> bool {

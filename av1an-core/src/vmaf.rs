@@ -599,9 +599,11 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
 pub fn read_weighted_vmaf<P: AsRef<Path>>(
     file: P,
     probe_statistic: ProbingStatistic,
-) -> Result<f64, serde_json::Error> {
+) -> Result<f64, Box<dyn std::error::Error>> {
     let scores = read_vmaf_file(file)?;
-    assert!(!scores.is_empty());
+    if scores.is_empty() {
+        return Err("No VMAF scores found".into());
+    }
 
     // Must be mutable as each computation is cached for reuse in implementation
     let mut metric_statistics = MetricStatistics::new(scores);
@@ -611,13 +613,13 @@ pub fn read_weighted_vmaf<P: AsRef<Path>>(
         ProbingStatisticName::Median => metric_statistics.median(),
         ProbingStatisticName::Harmonic => metric_statistics.harmonic_mean(),
         ProbingStatisticName::Percentile => {
-            assert!(probe_statistic.value.is_some());
-            metric_statistics.percentile(probe_statistic.value.unwrap() as usize)
+            let value = probe_statistic.value.ok_or("Percentile statistic requires a value")?;
+            metric_statistics.percentile(value as usize)
         },
         ProbingStatisticName::StandardDeviation => {
-            assert!(probe_statistic.value.is_some());
-            let sigma_distance =
-                probe_statistic.value.unwrap() * metric_statistics.standard_deviation();
+            let value =
+                probe_statistic.value.ok_or("Standard deviation statistic requires a value")?;
+            let sigma_distance = value * metric_statistics.standard_deviation();
             let statistic = metric_statistics.mean() + sigma_distance;
             statistic.clamp(metric_statistics.minimum(), metric_statistics.maximum())
         },

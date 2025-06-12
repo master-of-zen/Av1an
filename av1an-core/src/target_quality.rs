@@ -91,7 +91,16 @@ impl TargetQuality {
             update_progress_bar(predicted_q);
 
             let probe_path = self.vmaf_probe(chunk, predicted_q as usize)?;
-            let score = read_weighted_vmaf(&probe_path, self.probing_statistic.clone())?;
+            let score =
+                read_weighted_vmaf(&probe_path, self.probing_statistic.clone()).map_err(|e| {
+                    Box::new(EncoderCrash {
+                        exit_status:        std::process::ExitStatus::default(),
+                        source_pipe_stderr: String::new().into(),
+                        ffmpeg_pipe_stderr: None,
+                        stderr:             format!("VMAF calculation failed: {e}").into(),
+                        stdout:             String::new().into(),
+                    })
+                })?;
 
             history.push((predicted_q, score, probe_path.clone()));
 

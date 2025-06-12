@@ -695,6 +695,11 @@ pub struct CliOpts {
     ///   mode                       - Most common integer-rounded value
     ///   minimum                    - Lowest value
     ///   maximum                    - Highest value
+    ///   rms                        - Root Mean Square (quadratic mean)
+    ///
+    /// Warning:
+    ///   'RMS, Root Mean Square' can only be used with reverse metrics such as 'BUTTERAUGLI'.
+    ///   'HARMONIC' only works when there is no negative score. Use with caution on 'SSIMU2'.
     #[clap(long, default_value_t = String::from("percentile=1"), help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_stat: String,
 }

@@ -534,6 +534,8 @@ pub enum ProbingStatisticName {
     Minimum = 6,
     #[strum(serialize = "maximum")]
     Maximum = 7,
+    #[strum(serialize = "rms")]
+    RootMeanSquare = 8,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -134,6 +134,13 @@ impl MetricStatistics {
             *sorted_scores.get(index).unwrap_or(&sorted_scores[0])
         })
     }
+
+    pub fn root_mean_square(&mut self) -> f64 {
+        self.get_or_compute("root_mean_square", |scores| {
+            let sum_of_squares: f64 = scores.iter().map(|&x| x * x).sum();
+            (sum_of_squares / scores.len() as f64).sqrt()
+        })
+    }
 }
 
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
@@ -626,6 +633,7 @@ pub fn read_weighted_vmaf<P: AsRef<Path>>(
         ProbingStatisticName::Mode => metric_statistics.mode(),
         ProbingStatisticName::Minimum => metric_statistics.minimum(),
         ProbingStatisticName::Maximum => metric_statistics.maximum(),
+        ProbingStatisticName::RootMeanSquare => metric_statistics.root_mean_square(),
     };
 
     Ok(statistic)

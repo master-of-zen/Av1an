@@ -257,7 +257,16 @@ pub fn mkvmerge_options_json(
     )
     .unwrap();
     for i in 0..num {
-        write!(file_string, ", \"{i:05}.{}\"", encoder.output_extension()).unwrap();
+        write!(
+            file_string,
+            ", \"{i:05}.{ext}\"",
+            ext = match encoder {
+                Encoder::x264 => "264",
+                Encoder::x265 => "hevc",
+                _ => "ivf",
+            }
+        )
+        .unwrap();
     }
     file_string.push_str(",\"]\"]");
 

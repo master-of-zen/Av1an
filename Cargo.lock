@@ -246,6 +246,7 @@ dependencies = [
  "av-scenechange",
  "av1-grain",
  "cfg-if",
+ "clap",
  "crossbeam-channel",
  "crossbeam-utils",
  "ctrlc",

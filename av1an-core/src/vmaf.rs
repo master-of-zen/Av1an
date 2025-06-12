@@ -7,24 +7,32 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use plotters::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
 use crate::{broker::EncoderCrash, ffmpeg, ref_smallvec, util::printable_base10_digits, Input};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct VmafScore {
     vmaf: f64,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Metrics {
     metrics: VmafScore,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct VmafResult {
     frames: Vec<Metrics>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum VmafScoreMethod {
+    Percentile(f64),
+    Mean,
+    Median,
+    HarmonicMean,
 }
 
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
@@ -171,6 +179,8 @@ pub fn plot(
         sample_rate,
         filter,
         threads,
+        60.0,
+        false,
     )?;
 
     plot_vmaf_score_file(&json_file, &plot_file).unwrap();
@@ -189,6 +199,8 @@ pub fn run_vmaf(
     sample_rate: usize,
     vmaf_filter: Option<&str>,
     threads: usize,
+    framerate: f64,
+    disable_motion: bool,
 ) -> Result<(), Box<EncoderCrash>> {
     let mut filter = if sample_rate > 1 {
         format!(
@@ -207,17 +219,34 @@ pub fn run_vmaf(
     }
 
     let vmaf = if let Some(model) = model {
+        let model_path = if model.as_ref().as_os_str() == "vmaf_v0.6.1neg.json" {
+            format!(
+                "version=vmaf_v0.6.1neg{}",
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
+            )
+        } else {
+            format!("path={}", ffmpeg::escape_path_in_filter(&model))
+        };
         format!(
-            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='path={}':\
+            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:model='{}':\
              n_threads={}",
             ffmpeg::escape_path_in_filter(stat_file),
-            ffmpeg::escape_path_in_filter(&model),
+            model_path,
             threads
         )
     } else {
         format!(
-            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}:n_threads={}",
+            "[distorted][ref]libvmaf=log_fmt='json':eof_action=endall:log_path={}{}:n_threads={}",
             ffmpeg::escape_path_in_filter(stat_file),
+            if disable_motion {
+                ":model='version=vmaf_v0.6.1\\:motion.motion_force_zero=true'"
+            } else {
+                ""
+            },
             threads
         )
     };
@@ -241,16 +270,16 @@ pub fn run_vmaf(
         "-loglevel",
         "error",
         "-hide_banner",
+        "-nostdin",
         "-y",
         "-thread_queue_size",
         "1024",
-        "-hide_banner",
         "-r",
-        "60",
+        &framerate.to_string(),
         "-i",
     ]);
     cmd.arg(encoded);
-    cmd.args(["-r", "60", "-i", "-", "-filter_complex"]);
+    cmd.args(["-r", &framerate.to_string(), "-i", "-", "-filter_complex"]);
 
     let distorted = format!(
         "[0:v]scale={}:flags={}:force_original_aspect_ratio=decrease,setpts=PTS-STARTPTS,\
@@ -284,6 +313,179 @@ pub fn run_vmaf(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn run_vmaf_weighted(
+    encoded: &Path,
+    reference_pipe_cmd: &[impl AsRef<OsStr>],
+    vspipe_args: Vec<String>,
+    stat_file: impl AsRef<Path>,
+    model: Option<impl AsRef<Path>>,
+    _res: &str,
+    _scaler: &str,
+    sample_rate: usize,
+    vmaf_filter: Option<&str>,
+    threads: usize,
+    framerate: f64,
+    disable_motion: bool,
+) -> anyhow::Result<()> {
+    let temp_dir = encoded.parent().unwrap();
+    let vmaf_y_path = temp_dir.join(format!(
+        "vmaf_y_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
+    let vmaf_u_path = temp_dir.join(format!(
+        "vmaf_u_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
+    let vmaf_v_path = temp_dir.join(format!(
+        "vmaf_v_{}.json",
+        encoded.file_stem().unwrap().to_str().unwrap()
+    ));
+
+    let mut filter = if sample_rate > 1 {
+        format!(
+            "select=not(mod(n\\,{})),setpts={:.4}*PTS,",
+            sample_rate,
+            1.0 / sample_rate as f64,
+        )
+    } else {
+        String::new()
+    };
+
+    if let Some(vmaf_filter) = vmaf_filter {
+        filter.reserve(1 + vmaf_filter.len());
+        filter.push_str(vmaf_filter);
+        filter.push(',');
+    }
+
+    let model_str = if let Some(model) = model {
+        if model.as_ref().as_os_str() == "vmaf_v0.6.1neg.json" {
+            format!(
+                "version=vmaf_v0.6.1neg{}",
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
+            )
+        } else {
+            format!(
+                "path={}{}",
+                ffmpeg::escape_path_in_filter(&model),
+                if disable_motion {
+                    "\\:motion.motion_force_zero=true"
+                } else {
+                    ""
+                }
+            )
+        }
+    } else {
+        format!(
+            "version=vmaf_v0.6.1{}",
+            if disable_motion {
+                "\\:motion.motion_force_zero=true"
+            } else {
+                ""
+            }
+        )
+    };
+
+    let mut source_pipe = if let [cmd, args @ ..] = reference_pipe_cmd {
+        let mut source_pipe = Command::new(cmd);
+        for arg in vspipe_args {
+            source_pipe.args(["-a", &arg]);
+        }
+        source_pipe.args(args);
+        source_pipe.stdout(Stdio::piped());
+        source_pipe.stderr(Stdio::null());
+        source_pipe.spawn().unwrap()
+    } else {
+        unreachable!()
+    };
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args([
+        "-loglevel",
+        "error",
+        "-hide_banner",
+        "-nostdin",
+        "-y",
+        "-thread_queue_size",
+        "1024",
+        "-r",
+        &framerate.to_string(),
+        "-i",
+    ]);
+    cmd.arg(encoded);
+    cmd.args(["-r", &framerate.to_string(), "-i", "-", "-filter_complex"]);
+
+    let filter_complex = format!(
+        "[1:v]format=yuv420p[ref];[0:v]format=yuv420p[dis];\
+         [dis]extractplanes=y+u+v[dis_y][dis_u][dis_v];\
+         [ref]extractplanes=y+u+v[ref_y][ref_u][ref_v];[dis_y][ref_y]libvmaf=log_path={}:\
+         log_fmt=json:n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_y_out];\
+         [dis_u][ref_u]libvmaf=log_path={}:log_fmt=json:n_threads={}:n_subsample=1:model='{}':\
+         eof_action=endall[vmaf_u_out];[dis_v][ref_v]libvmaf=log_path={}:log_fmt=json:\
+         n_threads={}:n_subsample=1:model='{}':eof_action=endall[vmaf_v_out]",
+        ffmpeg::escape_path_in_filter(&vmaf_y_path),
+        threads,
+        model_str,
+        ffmpeg::escape_path_in_filter(&vmaf_u_path),
+        threads,
+        model_str,
+        ffmpeg::escape_path_in_filter(&vmaf_v_path),
+        threads,
+        model_str
+    );
+
+    cmd.arg(filter_complex);
+    cmd.args(["-map", "[vmaf_y_out]", "-map", "[vmaf_u_out]", "-map", "[vmaf_v_out]"]);
+    cmd.args(["-an", "-sn", "-dn", "-f", "null", "-"]);
+    cmd.stdin(source_pipe.stdout.take().unwrap());
+    cmd.stderr(Stdio::piped());
+    cmd.stdout(Stdio::null());
+
+    let output = cmd.output().unwrap();
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "FFmpeg command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    if !vmaf_y_path.exists() || !vmaf_u_path.exists() || !vmaf_v_path.exists() {
+        return Err(anyhow::anyhow!("Y, U, V VMAF files were not created"));
+    }
+
+    let y_scores = read_vmaf_file(&vmaf_y_path).context("Failed to read VMAF Y scores")?;
+    let u_scores = read_vmaf_file(&vmaf_u_path).context("Failed to read VMAF U scores")?;
+    let v_scores = read_vmaf_file(&vmaf_v_path).context("Failed to read VMAF V scores")?;
+
+    let weighted_scores: Vec<f64> = y_scores
+        .iter()
+        .zip(u_scores.iter())
+        .zip(v_scores.iter())
+        .map(|((y, u), v)| (4.0 * y + u + v) / 6.0)
+        .collect();
+
+    let weighted_result = VmafResult {
+        frames: weighted_scores
+            .iter()
+            .map(|&score| Metrics {
+                metrics: VmafScore {
+                    vmaf: score
+                },
+            })
+            .collect(),
+    };
+
+    let json_str = serde_json::to_string_pretty(&weighted_result)?;
+    std::fs::write(stat_file, json_str)?;
+
+    Ok(())
+}
+
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
     let json_str = std::fs::read_to_string(file).unwrap();
     let vmaf_results = serde_json::from_str::<VmafResult>(&json_str)?;
@@ -292,34 +494,44 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
     Ok(v)
 }
 
-/// Read a certain percentile VMAF score from the VMAF json file
-///
-/// Do not call this function more than once on the same json file,
-/// as this function is only more efficient for a single read.
+/// Read a certain, given percentile VMAF score from the VMAF json file
 pub fn read_weighted_vmaf<P: AsRef<Path>>(
     file: P,
-    percentile: f64,
+    method: VmafScoreMethod,
 ) -> Result<f64, serde_json::Error> {
-    fn inner(file: &Path, percentile: f64) -> Result<f64, serde_json::Error> {
-        let mut scores = read_vmaf_file(file)?;
+    let scores = read_vmaf_file(file)?;
+    assert!(!scores.is_empty());
 
-        assert!(!scores.is_empty());
+    match method {
+        VmafScoreMethod::Percentile(percentile) => {
+            let mut sorted_scores = scores.clone();
+            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-        let k = ((scores.len() - 1) as f64 * percentile) as usize;
+            let index = ((sorted_scores.len() as f64 * percentile) as usize)
+                .saturating_sub(1)
+                .min(sorted_scores.len() - 1);
 
-        // if we are just calling this function a single time for this file, it is more
-        // efficient to use select_nth_unstable_by than it is to completely sort
-        // scores
-        let (_, kth_element, _) =
-            scores.select_nth_unstable_by(k, |a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+            Ok(sorted_scores[index])
+        },
+        VmafScoreMethod::Mean => Ok(scores.iter().sum::<f64>() / scores.len() as f64),
+        VmafScoreMethod::Median => {
+            let mut sorted_scores = scores.clone();
+            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
-        Ok(*kth_element)
+            let len = sorted_scores.len();
+            if len % 2 == 0 {
+                Ok((sorted_scores[len / 2 - 1] + sorted_scores[len / 2]) / 2.0)
+            } else {
+                Ok(sorted_scores[len / 2])
+            }
+        },
+        VmafScoreMethod::HarmonicMean => {
+            let sum_reciprocals: f64 = scores.iter().map(|&x| 1.0 / x).sum();
+            Ok(scores.len() as f64 / sum_reciprocals)
+        },
     }
-
-    inner(file.as_ref(), percentile)
 }
 
-/// Calculates percentile from an array of sorted values
 pub fn percentile_of_sorted(scores: &[f64], percentile: f64) -> f64 {
     assert!(!scores.is_empty());
 

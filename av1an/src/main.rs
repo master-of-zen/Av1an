@@ -27,10 +27,12 @@ use av1an_core::{
     InputPixelFormat,
     PixelFormat,
     ProbingSpeed,
+    ProbingStats,
     ScenecutMethod,
     SplitMethod,
     TargetQuality,
     Verbosity,
+    VmafFeature,
     DEFAULT_LOG_LEVEL,
 };
 use clap::{value_parser, Parser};
@@ -660,6 +662,49 @@ pub struct CliOpts {
     /// If not specified, the default value is used (chosen per encoder).
     #[clap(long, help_heading = "Target Quality")]
     pub max_q: Option<u32>,
+
+    /// VMAF calculation features for target quality probing
+    ///
+    /// Available features:
+    ///   default     - Standard VMAF calculation (baseline)
+    ///   weighted    - Perceptual weighting using (4Y+1U+1V)/6 formula
+    ///   neg         - Use NEG model for better dark scene accuracy
+    ///   motionless  - Disable motion compensation (prevents score inflation)
+    ///
+    /// Multiple features can be combined:
+    ///   --probing-vmaf-features weighted neg motionless
+    ///   --probing-vmaf-features default motionless
+    #[clap(long, num_args = 0.., value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
+    pub probing_vmaf_features: Vec<VmafFeature>,
+
+    /// Statistical method for calculating target quality from probe results
+    ///
+    /// Available methods:
+    ///   mean      - Arithmetic mean of all probe scores
+    ///   median    - Middle value of sorted probe scores
+    ///   harmonic  - Harmonic mean (emphasizes lower scores)
+    ///
+    /// If not specified, uses percentile-based calculation (see
+    /// --probing-percent)
+    #[clap(
+        long,
+        value_enum,
+        help_heading = "Target Quality",
+        verbatim_doc_comment
+    )]
+    pub probing_stats: Option<ProbingStats>,
+
+    /// Percentile threshold for target quality calculation (0.0-1.0)
+    ///
+    /// Controls which percentile of probe scores to target:
+    ///   0.01  - 1st percentile (1% lows, default - targets worst quality)
+    ///   0.10  - 10th percentile (bottom 10%)
+    ///   0.50  - 50th percentile (median)
+    ///
+    /// Lower values ensure consistent quality in difficult scenes.
+    /// This setting overrides --probing-stats when specified.
+    #[clap(long, help_heading = "Target Quality", verbatim_doc_comment)]
+    pub probing_percent: Option<f64>,
 }
 
 impl CliOpts {
@@ -698,6 +743,13 @@ impl CliOpts {
                 probe_slow: self.probe_slow,
                 probing_speed: self.probing_speed.clone().map(|s| s as u8),
                 probing_rate: adapt_probing_rate(self.probing_rate as usize),
+                probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
+                    vec![VmafFeature::Default]
+                } else {
+                    self.probing_vmaf_features.clone()
+                },
+                probing_stats: self.probing_stats,
+                probing_percent: self.probing_percent,
             }
         })
     }

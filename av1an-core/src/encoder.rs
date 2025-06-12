@@ -281,17 +281,6 @@ impl Encoder {
     /// Returns default settings for the encoder
     #[inline]
     pub fn get_default_arguments(self, (cols, rows): (u32, u32)) -> Vec<String> {
-        /// Integer log base 2
-        pub const fn ilog2(x: u32) -> u32 {
-            // TODO: switch to built-in integer log2 functions once they are stabilized
-            // https://github.com/rust-lang/rust/issues/70887
-            if x == 0 {
-                0
-            } else {
-                u32::BITS - 1 - x.leading_zeros()
-            }
-        }
-
         match self {
             // aomenc automatically infers the correct bit depth, and thus for aomenc, not
             // specifying the bit depth is actually more accurate because if for example
@@ -308,8 +297,8 @@ impl Encoder {
                 ];
 
                 if cols > 1 || rows > 1 {
-                    let columns = ilog2(cols);
-                    let rows = ilog2(rows);
+                    let columns = cols.ilog2();
+                    let rows = rows.ilog2();
 
                     let aom_tiles: Vec<String> = into_vec![
                         format!("--tile-columns={columns}"),
@@ -332,7 +321,8 @@ impl Encoder {
                 ];
 
                 if cols > 1 || rows > 1 {
-                    let tiles: Vec<String> = into_vec!["--tiles", format!("{}", cols * rows)];
+                    let tiles: Vec<String> =
+                        into_vec!["--tiles", format!("{tiles}", tiles = cols * rows)];
                     chain!(defaults, tiles).collect()
                 } else {
                     defaults
@@ -357,8 +347,8 @@ impl Encoder {
                 ];
 
                 if cols > 1 || rows > 1 {
-                    let columns = ilog2(cols);
-                    let rows = ilog2(rows);
+                    let columns = cols.ilog2();
+                    let rows = rows.ilog2();
 
                     let aom_tiles: Vec<String> = into_vec![
                         format!("--tile-columns={columns}"),
@@ -374,8 +364,8 @@ impl Encoder {
                     "--preset", "4", "--keyint", "0", "--scd", "0", "--rc", "0", "--crf", "25"
                 ];
                 if cols > 1 || rows > 1 {
-                    let columns = ilog2(cols);
-                    let rows = ilog2(rows);
+                    let columns = cols.ilog2();
+                    let rows = rows.ilog2();
 
                     let tiles: Vec<String> = into_vec![
                         "--tile-columns",
@@ -537,7 +527,8 @@ impl Encoder {
     pub const fn output_extension(&self) -> &'static str {
         match &self {
             Self::aom | Self::rav1e | Self::vpx | Self::svt_av1 => "ivf",
-            Self::x264 | Self::x265 => "mkv",
+            Self::x264 => "264",
+            Self::x265 => "hevc",
         }
     }
 
@@ -972,7 +963,13 @@ impl Encoder {
             pix_fmt,
         );
 
-        let probe_name = format!("v_{q}_{chunk_index}.ivf");
+        let extension = match self {
+            Encoder::x264 => "264",
+            Encoder::x265 => "hevc",
+            _ => "ivf",
+        };
+        let probe_name = format!("v_{chunk_index:05}_{q}.{extension}");
+
         let mut probe = PathBuf::from(temp);
         probe.push("split");
         probe.push(&probe_name);

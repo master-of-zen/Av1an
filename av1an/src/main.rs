@@ -678,20 +678,19 @@ pub struct CliOpts {
     #[clap(long, num_args = 0.., value_enum, help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_vmaf_features: Vec<VmafFeature>,
 
+    #[rustfmt::skip]
     /// Statistical method for calculating target quality from sorted probe
     /// scores
     ///
     /// Available methods:
-    ///   mean      - Arithmetic mean (average)
-    ///   median    - Middle value
-    ///   harmonic  - Harmonic mean (emphasizes lower scores)
-    ///   percentile=<FLOAT> - Percentile of a specified value. Must be between
-    /// 0.0 and 100.0
-    ///   standard-deviation=<FLOAT> - Standard deviation distance from mean (σ)
-    /// clamped by the minimum and maximum probe scores
-    ///   mode      - Most common integer-rounded value
-    ///   minimum   - Lowest value
-    ///   maximum   - Highest value
+    ///   mean                       - Arithmetic mean (average)
+    ///   median                     - Middle value
+    ///   harmonic                   - Harmonic mean (emphasizes lower scores)
+    ///   percentile=<FLOAT>         - Percentile of a specified value. Must be between 0.0 and 100.0
+    ///   standard-deviation=<FLOAT> - Standard deviation distance from mean (σ) clamped by the minimum and maximum probe scores
+    ///   mode                       - Most common integer-rounded value
+    ///   minimum                    - Lowest value
+    ///   maximum                    - Highest value
     #[clap(long, default_value_t = String::from("percentile=1"), help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_stat: String,
 }

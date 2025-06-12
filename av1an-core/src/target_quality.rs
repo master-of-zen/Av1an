@@ -17,10 +17,10 @@ use crate::{
     broker::EncoderCrash,
     chunk::Chunk,
     progress_bar::update_mp_msg,
-    settings::ProbingStats,
-    vmaf::{read_weighted_vmaf, VmafScoreMethod},
+    vmaf::read_weighted_vmaf,
     Encoder,
     ProbingSpeed,
+    ProbingStatistic,
 };
 
 const SCORE_TOLERANCE: f64 = 0.01;
@@ -46,8 +46,7 @@ pub struct TargetQuality {
     pub vspipe_args:           Vec<String>,
     pub probe_slow:            bool,
     pub probing_vmaf_features: Vec<VmafFeature>,
-    pub probing_stats:         Option<ProbingStats>,
-    pub probing_percent:       Option<f64>,
+    pub probing_statistic:     ProbingStatistic,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum)]
@@ -87,18 +86,6 @@ impl TargetQuality {
         let mut lower_quantizer_limit = self.min_q;
         let mut upper_quantizer_limit = self.max_q;
 
-        let score_method = if let Some(percent) = self.probing_percent {
-            VmafScoreMethod::Percentile(percent)
-        } else if let Some(stats) = self.probing_stats {
-            match stats {
-                ProbingStats::Mean => VmafScoreMethod::Mean,
-                ProbingStats::Median => VmafScoreMethod::Median,
-                ProbingStats::HarmonicMean => VmafScoreMethod::HarmonicMean,
-            }
-        } else {
-            VmafScoreMethod::Percentile(0.01)
-        };
-
         loop {
             let next_quantizer = predict_quantizer(
                 lower_quantizer_limit,
@@ -133,7 +120,16 @@ impl TargetQuality {
             update_progress_bar(next_quantizer);
 
             let probe_path = self.vmaf_probe(chunk, next_quantizer as usize)?;
-            let score = read_weighted_vmaf(&probe_path, score_method)?;
+            let score =
+                read_weighted_vmaf(&probe_path, self.probing_statistic.clone()).map_err(|e| {
+                    Box::new(EncoderCrash {
+                        exit_status:        std::process::ExitStatus::default(),
+                        source_pipe_stderr: String::new().into(),
+                        ffmpeg_pipe_stderr: None,
+                        stderr:             format!("VMAF calculation failed: {e}").into(),
+                        stdout:             String::new().into(),
+                    })
+                })?;
             let score_within_tolerance = within_tolerance(score, self.target);
 
             quantizer_score_history.push((next_quantizer, score));

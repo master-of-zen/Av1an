@@ -388,7 +388,7 @@ fn predict_quantizer(
 ) -> u32 {
     if quantizer_score_history.len() < 2 {
         // Fewer than 2 probes, return the midpoint between the upper and lower
-        // quantizer bounds
+        // quantizer bounds (binary search)
         return (lower_quantizer_limit + upper_quantizer_limit) / 2;
     }
 
@@ -416,32 +416,9 @@ fn predict_quantizer(
         // Ensure predicted quantizer is an integer and within bounds
         (predicted_quantizer.round() as u32).clamp(lower_quantizer_limit, upper_quantizer_limit)
     } else {
-        // We expect this to be unreachable but just in case
-        // Failed to predict quantizer from Spline interpolation
-        error!(
-            "Failed to predict quantizer from Spline interpolation with target: {target}
-            quantizer_score_history: {quantizer_score_history:?}",
-        );
+        // Probes do not fit Catmull-Rom curve, fallback to binary search
         (lower_quantizer_limit + upper_quantizer_limit) / 2
     }
-
-    if crf_score_map.len() == 2 {
-        let score_crf_pairs: Vec<(f64, u32)> =
-            crf_score_map.iter().map(|(crf, score)| (*score, *crf)).collect();
-
-        let (score1, crf1) = score_crf_pairs[0];
-        let (score2, crf2) = score_crf_pairs[1];
-
-        if score1 == score2 {
-            return ((crf1 + crf2) / 2).clamp(low, high);
-        }
-
-        let slope = (crf2 as f64 - crf1 as f64) / (score2 - score1);
-        let predicted = crf1 as f64 + slope * (target - score1);
-        return (predicted.round() as u32).clamp(low, high);
-    }
-
-    (low + high) / 2
 }
 
 fn within_tolerance(score: f64, target: f64) -> bool {

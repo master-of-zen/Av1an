@@ -6,7 +6,7 @@ Name | Flag | Type | Default
 [Probes](#probes---probes) | `--probes` | Integer | `4`
 [Probing Rate](#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
 [Probing Speed](#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
-[Probing Statistic](#probing-statistic---probing-statistic) | `--probing-statistic` | String | `percentile=1`
+[Probing Statistic](#probing-statistic---probing-stat) | `--probing-stat` | String | `percentile=1`
 [Probe Slow](#probe-slow---probe-slow) | `--probe-slow` || 
 [Minimum Quantizer](#minimum-quantizer---min-q) | `--min-q` | Integer | Based on Encoder
 [Maximum Quantizer](#maximum-quantizer---max-q) | `--max-q` | Integer | Based on Encoder
@@ -73,7 +73,7 @@ Can be any of the following:
 
 If not specified, `veryfast` is used unless `--probe-slow` is specified.
 
-## Probing Statistic `--probing-statistic`
+## Probing Statistic `--probing-stat`
 
 Statistical method for calculating target quality from sorted probe results.
 
@@ -84,6 +84,7 @@ Can be any of the following:
 * `mean` - Arithmetic mean (average)
 * `median` - Middle value
 * `harmonic` - Harmonic mean (emphasizes lower scores)
+* `root-mean-square` - Root mean square (quadratic mean)
 * `percentile=<FLOAT>` - Percentile of a specified `<FLOAT>` value, where `<FLOAT>` is a value between 0.0 and 100.0
 * `standard-deviation=<FLOAT>` - Standard deviation distance from mean (σ) clamped by the minimum and maximum probe scores of a specified `<FLOAT>` value, where `<FLOAT>` can be a positive or negative value
 * `mode` - Most common integer-rounded value

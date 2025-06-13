@@ -11,7 +11,7 @@ use clap::ValueEnum;
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
 use splines::{Interpolation, Key, Spline};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::{
     broker::EncoderCrash,
@@ -96,24 +96,20 @@ impl TargetQuality {
                 self.target,
             );
 
-            if quantizer_score_history
+            if let Some((quantizer, score)) = quantizer_score_history
                 .iter()
-                .any(|(quantizer, _)| *quantizer == next_quantizer)
+                .find(|(quantizer, _)| *quantizer == next_quantizer)
             {
                 // Predicted quantizer has already been probed
-                let (last_quantizer, last_score) = quantizer_score_history
-                    .iter()
-                    .find(|(quantizer, _)| *quantizer == next_quantizer)
-                    .unwrap();
                 log_probes(
-                    &mut quantizer_score_history.clone(),
+                    &quantizer_score_history,
                     self.target,
                     chunk.frames() as u32,
                     self.probing_rate as u32,
                     self.probing_speed,
                     &chunk.name(),
-                    *last_quantizer,
-                    *last_score,
+                    *quantizer,
+                    *score,
                     SkipProbingReason::None,
                 );
                 break;
@@ -138,7 +134,7 @@ impl TargetQuality {
 
             if score_within_tolerance || quantizer_score_history.len() >= self.probes as usize {
                 log_probes(
-                    &mut quantizer_score_history,
+                    &quantizer_score_history,
                     self.target,
                     chunk.frames() as u32,
                     self.probing_rate as u32,
@@ -164,7 +160,7 @@ impl TargetQuality {
             // Ensure quantizer limits are valid
             if lower_quantizer_limit > upper_quantizer_limit {
                 log_probes(
-                    &mut quantizer_score_history,
+                    &quantizer_score_history,
                     self.target,
                     chunk.frames() as u32,
                     self.probing_rate as u32,
@@ -182,14 +178,16 @@ impl TargetQuality {
             }
         }
 
-        let history_within_tolerance: Vec<&(u32, f64)> = quantizer_score_history
-            .iter()
-            .filter(|(_, score)| within_tolerance(*score, self.target))
-            .collect();
-
-        let final_quantizer_score = if !history_within_tolerance.is_empty() {
-            history_within_tolerance.iter().max_by_key(|(quantizer, _)| *quantizer).unwrap()
+        let final_quantizer_score = if let Some(highest_quantizer_score_within_tolerance) =
+            quantizer_score_history
+                .iter()
+                .filter(|(_, score)| within_tolerance(*score, self.target))
+                .max_by_key(|(quantizer, _)| *quantizer)
+        {
+            // Multiple probes within tolerance, choose the highest
+            highest_quantizer_score_within_tolerance
         } else {
+            // No quantizers within tolerance, choose the quantizer closest to target
             quantizer_score_history
                 .iter()
                 .min_by(|(_, score1), (_, score2)| {
@@ -420,14 +418,14 @@ fn predict_quantizer(
     let spline = Spline::from_vec(keys);
     let predicted_quantizer = spline.sample(target).unwrap_or_else(|| {
         // Probes do not fit Catmull-Rom curve, fallback to Linear
-        debug!("Probes do not fit Catmull-Rom curve, falling back to Linear");
+        trace!("Probes do not fit Catmull-Rom curve, falling back to Linear");
         let keys = sorted_quantizer_score_history
             .iter()
             .map(|(quantizer, score)| Key::new(*score, *quantizer as f64, Interpolation::Linear))
             .collect();
         Spline::from_vec(keys).sample(target).unwrap_or_else(|| {
             // Probes do not fit Catmull-Rom curve or Linear, fallback to binary search
-            debug!("Probes do not fit Linear curve, falling back to binary search");
+            trace!("Probes do not fit Linear curve, falling back to binary search");
             binary_search as f64
         })
     });
@@ -464,7 +462,7 @@ pub enum SkipProbingReason {
 
 #[allow(clippy::too_many_arguments)]
 pub fn log_probes(
-    quantizer_score_history: &mut [(u32, f64)],
+    quantizer_score_history: &[(u32, f64)],
     target: f64,
     frames: u32,
     probing_rate: u32,
@@ -475,7 +473,8 @@ pub fn log_probes(
     skip: SkipProbingReason,
 ) {
     // Sort history by quantizer
-    quantizer_score_history.sort_by_key(|(quantizer, _)| *quantizer);
+    let mut sorted_quantizer_scores = quantizer_score_history.to_vec();
+    sorted_quantizer_scores.sort_by_key(|(quantizer, _)| *quantizer);
 
     debug!(
         "chunk {name}: Target={target}, P-Rate={rate}, P-Speed={speed:?}, {frame_count} frames
@@ -486,7 +485,7 @@ pub fn log_probes(
         rate = probing_rate,
         speed = ProbingSpeed::from_repr(probing_speed.unwrap_or(4) as usize),
         frame_count = frames,
-        history = quantizer_score_history,
+        history = sorted_quantizer_scores,
         suffix = match skip {
             SkipProbingReason::None => "",
             SkipProbingReason::QuantizerTooHigh => "Early Skip High Quantizer",

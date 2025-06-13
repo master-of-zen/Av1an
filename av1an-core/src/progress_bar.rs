@@ -239,7 +239,11 @@ pub fn init_multi_progress_bar(len: u64, workers: usize, resume_frames: u64, chu
         pb.set_position(0);
         pb.set_length(len);
         pb.reset();
-        pb.set_prefix(format!("[{}/{} Chunks] ", chunks.0, chunks.1));
+        pb.set_prefix(format!(
+            "[{done}/{total} Chunks] ",
+            done = chunks.0,
+            total = chunks.1
+        ));
         pbs.push(mpb.add(pb));
 
         mpb.set_draw_target(ProgressDrawTarget::stderr());
@@ -270,7 +274,11 @@ pub fn update_mp_bar_info(kbps: f64, est_size: HumanBytes, chunks: (u32, u32)) {
     if let Some((_, pbs)) = MULTI_PROGRESS_BAR.get() {
         let pb = pbs.last().unwrap();
         pb.set_message(format!(", {kbps:.1} Kbps, est. {est_size}"));
-        pb.set_prefix(format!("[{}/{} Chunks] ", chunks.0, chunks.1));
+        pb.set_prefix(format!(
+            "[{done}/{total} Chunks] ",
+            done = chunks.0,
+            total = chunks.1
+        ));
     }
 }
 

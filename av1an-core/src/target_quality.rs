@@ -1,17 +1,17 @@
 use std::{
     cmp,
     cmp::Ordering,
+    collections::HashSet,
     convert::TryInto,
-    fmt::Error,
-    path::{Path, PathBuf},
-    process::Stdio,
+    path::PathBuf,
     thread::available_parallelism,
 };
 
+use clap::ValueEnum;
 use ffmpeg::format::Pixel;
 use serde::{Deserialize, Serialize};
 use splines::{Interpolation, Key, Spline};
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::{
     broker::EncoderCrash,
@@ -23,35 +23,47 @@ use crate::{
         xpsnr::{self, read_weighted_xpsnr, XPSNRSubMetric},
     },
     progress_bar::update_mp_msg,
-    vapoursynth::{measure_butteraugli, measure_ssimulacra2, measure_xpsnr},
+    settings::ProbingStats,
+    vmaf::{read_weighted_vmaf, VmafScoreMethod},
     Encoder,
     TargetMetric,
 };
 
-const METRIC_PERCENTILE: f64 = 0.01;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TargetQuality {
-    pub vmaf_res:      String,
-    pub vmaf_scaler:   String,
-    pub vmaf_filter:   Option<String>,
-    pub vmaf_threads:  usize,
-    pub model:         Option<PathBuf>,
-    pub probe_res:     Option<String>,
-    pub probing_rate:  usize,
-    pub probing_speed: Option<u8>,
-    pub probes:        u32,
-    pub target:        f64,
-    pub metric:        TargetMetric,
-    pub min_q:         u32,
-    pub max_q:         u32,
-    pub encoder:       Encoder,
-    pub pix_format:    Pixel,
-    pub temp:          String,
-    pub workers:       usize,
-    pub video_params:  Vec<String>,
-    pub vspipe_args:   Vec<String>,
-    pub probe_slow:    bool,
+    pub vmaf_res:              String,
+    pub vmaf_scaler:           String,
+    pub vmaf_filter:           Option<String>,
+    pub vmaf_threads:          usize,
+    pub model:                 Option<PathBuf>,
+    pub probing_rate:          usize,
+    pub probing_speed:         Option<u8>,
+    pub probes:                u32,
+    pub target:                f64,
+    pub min_q:                 u32,
+    pub max_q:                 u32,
+    pub encoder:               Encoder,
+    pub pix_format:            Pixel,
+    pub temp:                  String,
+    pub workers:               usize,
+    pub video_params:          Vec<String>,
+    pub vspipe_args:           Vec<String>,
+    pub probe_slow:            bool,
+    pub probing_vmaf_features: Vec<VmafFeature>,
+    pub probing_stats:         Option<ProbingStats>,
+    pub probing_percent:       Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum)]
+pub enum VmafFeature {
+    #[value(name = "default")]
+    Default,
+    #[value(name = "weighted")]
+    Weighted,
+    #[value(name = "neg")]
+    Neg,
+    #[value(name = "motionless")]
+    Motionless,
 }
 
 impl TargetQuality {
@@ -59,217 +71,106 @@ impl TargetQuality {
         &self,
         chunk: &Chunk,
         worker_id: Option<usize>,
-    ) -> Result<u32, Box<EncoderCrash>> {
-        let mut score_quality = vec![];
-        let frames = chunk.frames();
-
-        // Make middle probe
-        let middle_point = (self.min_q + self.max_q) / 2;
-        let last_q = middle_point;
+    ) -> anyhow::Result<u32> {
+        let mut history: Vec<(u32, f64, PathBuf)> = vec![];
 
         let update_progress_bar = |last_q: u32| {
             if let Some(worker_id) = worker_id {
                 update_mp_msg(
                     worker_id,
                     format!(
-                        "Targeting {} Quality {} - Testing {}",
-                        self.metric, self.target, last_q
+                        "Targeting Quality {target} - Testing {last_q}",
+                        target = self.target
                     ),
                 );
             }
         };
 
-        update_progress_bar(last_q);
+        let mut low = self.min_q;
+        let mut high = self.max_q;
 
-        fn measure_probe(
-            tq: &TargetQuality,
-            chunk: &Chunk,
-            metric: TargetMetric,
-            target: usize,
-        ) -> f64 {
-            match metric {
-                TargetMetric::VMAF => {
-                    let fl_path = tq.vmaf_probe(chunk, target).unwrap();
-                    read_weighted_vmaf(fl_path, METRIC_PERCENTILE).unwrap()
-                },
-                TargetMetric::SSIMULACRA2 => {
-                    let scores = tq.ssimulacra2_probe(chunk, target).unwrap();
-                    MetricStatistics::new(scores).average()
-                },
-                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => {
-                    let scores = tq
-                        .butteraugli_probe(
-                            chunk,
-                            target,
-                            if tq.metric == TargetMetric::ButteraugliInf {
-                                ButteraugliSubMetric::InfiniteNorm
-                            } else {
-                                ButteraugliSubMetric::ThreeNorm
-                            },
-                        )
-                        .unwrap();
-                    MetricStatistics::new(scores).average()
-                },
-                TargetMetric::XPSNR | TargetMetric::XPSNRWeighted => {
-                    let submetric = if tq.metric == TargetMetric::XPSNR {
-                        XPSNRSubMetric::Minimum
-                    } else {
-                        XPSNRSubMetric::Weighted
-                    };
-                    if tq.probing_rate > 1 {
-                        let scores = tq.xpsnr_vs_probe(chunk, target, submetric).unwrap();
-                        MetricStatistics::new(scores).percentile(1)
-                    } else {
-                        let fl_path = tq.xpsnr_probe(chunk, target).unwrap();
-                        read_weighted_xpsnr(fl_path, METRIC_PERCENTILE, submetric).unwrap()
-                    }
-                },
+        let score_method = if let Some(percent) = self.probing_percent {
+            VmafScoreMethod::Percentile(percent)
+        } else if let Some(stats) = self.probing_stats {
+            match stats {
+                ProbingStats::Mean => VmafScoreMethod::Mean,
+                ProbingStats::Median => VmafScoreMethod::Median,
+                ProbingStats::HarmonicMean => VmafScoreMethod::HarmonicMean,
             }
-        }
-
-        let mut score = measure_probe(self, chunk, self.metric, last_q as usize);
-        if matches!(
-            self.metric,
-            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-        ) {
-            // Butteraugli is inverted, where quality lowers as score increases
-            score *= -1.0;
-        }
-        let target = if matches!(
-            self.metric,
-            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-        ) {
-            -self.target
         } else {
-            self.target
+            VmafScoreMethod::Percentile(0.01)
         };
-        score_quality.push((score, last_q));
 
-        // Initialize search boundary
-        let mut score_lower = score;
-        let mut score_upper = score;
-        let mut cq_lower = last_q;
-        let mut cq_upper = last_q;
+        loop {
+            let predicted_q = predict_crf(low, high, &history, self.target);
 
-        // Branch
-        let next_q = if score < target {
-            self.min_q
-        } else {
-            self.max_q
-        };
-        update_progress_bar(next_q);
-
-        // Edge case check
-        score = measure_probe(self, chunk, self.metric, next_q as usize);
-        if matches!(
-            self.metric,
-            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-        ) {
-            // Invert butteraugli score for comparison
-            score *= -1.0;
-        }
-        score_quality.push((score, next_q));
-
-        if (next_q == self.min_q && score < target) || (next_q == self.max_q && score > target) {
-            // Invert butteraugli scores back to positive for logging
-            if matches!(
-                self.metric,
-                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-            ) {
-                for (score, _) in score_quality.iter_mut() {
-                    *score *= -1.0;
-                }
-            }
-
-            log_probes(
-                &mut score_quality,
-                frames as u32,
-                self.probing_rate as u32,
-                &chunk.name(),
-                next_q,
-                match self.metric {
-                    TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -score,
-                    _ => score,
-                },
-                if score < target {
-                    Skip::Low
-                } else {
-                    Skip::High
-                },
-            );
-            return Ok(next_q);
-        }
-
-        // Set boundary
-        if score < target {
-            score_lower = score;
-            cq_lower = next_q;
-        } else {
-            score_upper = score;
-            cq_upper = next_q;
-        }
-
-        // VMAF search
-        for _ in 0..self.probes - 2 {
-            let new_point = weighted_search(
-                f64::from(cq_lower),
-                score_lower,
-                f64::from(cq_upper),
-                score_upper,
-                target,
-            );
-
-            if score_quality.iter().map(|(_, x)| *x).any(|x| x == new_point as u32) {
+            if history.iter().any(|(q, _, _)| *q == predicted_q) {
                 break;
             }
 
-            update_progress_bar(new_point as u32);
+            update_progress_bar(predicted_q);
 
-            score = measure_probe(self, chunk, self.metric, new_point as usize);
-            if matches!(
-                self.metric,
-                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-            ) {
-                // Invert butteraugli score for comparison
-                score *= -1.0;
+            let probe_path = self.vmaf_probe(chunk, predicted_q as usize)?;
+            let score = read_weighted_vmaf(&probe_path, score_method)?;
+
+            history.push((predicted_q, score, probe_path.clone()));
+
+            if within_tolerance(score, self.target) || history.len() >= self.probes as usize {
+                break;
             }
-            score_quality.push((score, new_point as u32));
 
-            // Update boundary
-            if score < target {
-                score_lower = score;
-                cq_lower = new_point as u32;
+            if score > self.target {
+                low = (predicted_q + 1).min(high);
             } else {
-                score_upper = score;
-                cq_upper = new_point as u32;
+                high = (predicted_q - 1).max(low);
+            }
+
+            if low > high {
+                break;
             }
         }
 
-        let (q, q_score) = interpolated_target_q(score_quality.clone(), target);
+        let good_results: Vec<&(u32, f64, PathBuf)> = history
+            .iter()
+            .filter(|(_, score, _)| within_tolerance(*score, self.target))
+            .collect();
 
-        // Invert butteraugli scores back to positive for logging
-        if matches!(
-            self.metric,
-            TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3
-        ) {
-            for (score, _) in score_quality.iter_mut() {
-                *score *= -1.0;
-            }
-        }
+        debug!(
+            "Good results: {:?}",
+            good_results.iter().map(|(q, s, _)| (*q, *s)).collect::<Vec<_>>()
+        );
+
+        let best_result = if !good_results.is_empty() {
+            good_results.iter().max_by_key(|(q, _, _)| *q).unwrap()
+        } else {
+            history
+                .iter()
+                .min_by(|(_, s1, _), (_, s2, _)| {
+                    let d1 = (s1 - self.target).abs();
+                    let d2 = (s2 - self.target).abs();
+                    d1.partial_cmp(&d2).unwrap_or(Ordering::Equal)
+                })
+                .unwrap()
+        };
+
+        debug!(
+            "Best result: Q={q}, VMAF={vmaf:.2}",
+            q = best_result.0,
+            vmaf = best_result.1
+        );
+
+        let mut vmaf_cq: Vec<(f64, u32)> = history.iter().map(|(q, s, _)| (*s, *q)).collect();
         log_probes(
-            &mut score_quality,
-            frames as u32,
+            &mut vmaf_cq,
+            chunk.frames() as u32,
             self.probing_rate as u32,
             &chunk.name(),
-            q as u32,
-            match self.metric {
-                TargetMetric::ButteraugliInf | TargetMetric::BUTTERAUGLI3 => -q_score,
-                _ => q_score,
-            },
+            best_result.0,
+            best_result.1,
             Skip::None,
         );
 
-        Ok(q as u32)
+        Ok(best_result.0)
     }
 
     fn probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
@@ -296,28 +197,29 @@ impl TargetQuality {
                 tokio::process::Command::new(pipe_cmd)
                     .args(args)
                     .stderr(if cfg!(windows) {
-                        Stdio::null()
+                        std::process::Stdio::null()
                     } else {
-                        Stdio::piped()
+                        std::process::Stdio::piped()
                     })
-                    .stdout(Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
                     .spawn()
                     .unwrap()
             } else {
                 unreachable!()
             };
 
-            let source_pipe_stdout: Stdio = source.stdout.take().unwrap().try_into().unwrap();
+            let source_pipe_stdout: std::process::Stdio =
+                source.stdout.take().unwrap().try_into().unwrap();
 
             let mut source_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
                 tokio::process::Command::new(ffmpeg)
                     .args(args)
                     .stdin(source_pipe_stdout)
-                    .stdout(Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
                     .stderr(if cfg!(windows) {
-                        Stdio::null()
+                        std::process::Stdio::null()
                     } else {
-                        Stdio::piped()
+                        std::process::Stdio::piped()
                     })
                     .spawn()
                     .unwrap()
@@ -325,17 +227,18 @@ impl TargetQuality {
                 unreachable!()
             };
 
-            let source_pipe_stdout: Stdio = source_pipe.stdout.take().unwrap().try_into().unwrap();
+            let source_pipe_stdout: std::process::Stdio =
+                source_pipe.stdout.take().unwrap().try_into().unwrap();
 
             let enc_pipe = if let [cmd, args @ ..] = &*cmd.1 {
                 tokio::process::Command::new(cmd.as_ref())
                     .args(args.iter().map(AsRef::as_ref))
                     .stdin(source_pipe_stdout)
-                    .stdout(Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
                     .stderr(if cfg!(windows) {
-                        Stdio::null()
+                        std::process::Stdio::null()
                     } else {
-                        Stdio::piped()
+                        std::process::Stdio::piped()
                     })
                     .spawn()
                     .unwrap()
@@ -356,7 +259,6 @@ impl TargetQuality {
                     source_pipe_stderr: source_pipe_output.stderr.into(),
                     ffmpeg_pipe_stderr: None,
                 };
-                error!("[chunk {}] {}", chunk.index, e);
                 return Err(e);
             }
 
@@ -364,31 +266,73 @@ impl TargetQuality {
         };
 
         let rt = tokio::runtime::Builder::new_current_thread().enable_io().build().unwrap();
-
         rt.block_on(future)?;
 
-        let probe_name =
-            Path::new(&chunk.temp).join("split").join(format!("v_{q}_{}.ivf", chunk.index));
+        let extension = match self.encoder {
+            crate::encoder::Encoder::x264 => "264",
+            crate::encoder::Encoder::x265 => "hevc",
+            _ => "ivf",
+        };
 
-        Ok(probe_name)
-    }
+        let probe_name = std::path::Path::new(&chunk.temp)
+            .join("split")
+            .join(format!("v_{index:05}_{q}.{extension}", index = chunk.index));
+        let fl_path = std::path::Path::new(&chunk.temp)
+            .join("split")
+            .join(format!("{index}.json", index = chunk.index));
 
-    fn vmaf_probe(&self, chunk: &Chunk, q: usize) -> Result<PathBuf, Box<EncoderCrash>> {
-        let probe_name = self.probe(chunk, q)?;
-        let fl_path = Path::new(&chunk.temp).join("split").join(format!("{}.json", chunk.index));
+        let features: HashSet<_> = self.probing_vmaf_features.iter().copied().collect();
+        let use_weighted = features.contains(&VmafFeature::Weighted);
+        let use_neg = features.contains(&VmafFeature::Neg);
+        let disable_motion = features.contains(&VmafFeature::Motionless);
 
-        vmaf::run_vmaf(
-            &probe_name,
-            chunk.source_cmd.as_slice(),
-            self.vspipe_args.clone(),
-            &fl_path,
-            self.model.as_ref(),
-            self.probe_res.as_ref().unwrap_or(&self.vmaf_res),
-            &self.vmaf_scaler,
-            self.probing_rate,
-            self.vmaf_filter.as_deref(),
-            self.vmaf_threads,
-        )?;
+        let default_neg_model = PathBuf::from("vmaf_v0.6.1neg.json");
+        let model = if use_neg && self.model.is_none() {
+            Some(&default_neg_model)
+        } else {
+            self.model.as_ref()
+        };
+
+        if use_weighted {
+            crate::vmaf::run_vmaf_weighted(
+                &probe_name,
+                chunk.source_cmd.as_slice(),
+                self.vspipe_args.clone(),
+                &fl_path,
+                model,
+                &self.vmaf_res,
+                &self.vmaf_scaler,
+                self.probing_rate,
+                self.vmaf_filter.as_deref(),
+                self.vmaf_threads,
+                chunk.frame_rate,
+                disable_motion,
+            )
+            .map_err(|e| {
+                Box::new(EncoderCrash {
+                    exit_status:        std::process::ExitStatus::default(),
+                    source_pipe_stderr: String::new().into(),
+                    ffmpeg_pipe_stderr: None,
+                    stderr:             format!("VMAF calculation failed: {e}").into(),
+                    stdout:             String::new().into(),
+                })
+            })?;
+        } else {
+            crate::vmaf::run_vmaf(
+                &probe_name,
+                chunk.source_cmd.as_slice(),
+                self.vspipe_args.clone(),
+                &fl_path,
+                model,
+                &self.vmaf_res,
+                &self.vmaf_scaler,
+                self.probing_rate,
+                self.vmaf_filter.as_deref(),
+                self.vmaf_threads,
+                chunk.frame_rate,
+                disable_motion,
+            )?;
+        }
 
         Ok(fl_path)
     }
@@ -471,35 +415,62 @@ impl TargetQuality {
         &self,
         chunk: &mut Chunk,
         worker_id: Option<usize>,
-    ) -> Result<(), Box<EncoderCrash>> {
+    ) -> anyhow::Result<()> {
         chunk.tq_cq = Some(self.per_shot_target_quality(chunk, worker_id)?);
         Ok(())
     }
 }
 
-pub fn weighted_search(num1: f64, vmaf1: f64, num2: f64, vmaf2: f64, target: f64) -> usize {
-    let dif1 = (transform_vmaf(target) - transform_vmaf(vmaf2)).abs();
-    let dif2 = (transform_vmaf(target) - transform_vmaf(vmaf1)).abs();
+fn predict_crf(low: u32, high: u32, history: &[(u32, f64, PathBuf)], target: f64) -> u32 {
+    let mut sorted_history = history.to_vec();
+    sorted_history.sort_by_key(|(crf, _, _)| *crf);
 
-    let tot = dif1 + dif2;
+    let mut crf_score_map: Vec<(u32, f64)> =
+        sorted_history.iter().map(|(crf, score, _)| (*crf, *score)).collect();
+    crf_score_map.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
 
-    num1.mul_add(dif1 / tot, num2 * (dif2 / tot)).round() as usize
-}
+    if crf_score_map.len() >= 3 {
+        let (scores, crfs): (Vec<f64>, Vec<f64>) =
+            crf_score_map.iter().map(|(crf, score)| (*score, *crf as f64)).unzip();
 
-pub fn transform_vmaf(vmaf: f64) -> f64 {
-    let x: f64 = 1.0 - vmaf / 100.0;
-    if vmaf < 99.99 {
-        -x.ln()
-    } else {
-        9.2
+        let keys: Vec<Key<f64, f64>> = scores
+            .iter()
+            .zip(crfs.iter())
+            .map(|(score, crf)| Key::new(*score, *crf, Interpolation::CatmullRom))
+            .collect();
+
+        let spline = Spline::from_vec(keys);
+        if let Some(predicted) = spline.sample(target) {
+            return (predicted.round() as u32).clamp(low, high);
+        }
     }
+
+    if crf_score_map.len() == 2 {
+        let score_crf_pairs: Vec<(f64, u32)> =
+            crf_score_map.iter().map(|(crf, score)| (*score, *crf)).collect();
+
+        let (score1, crf1) = score_crf_pairs[0];
+        let (score2, crf2) = score_crf_pairs[1];
+
+        if score1 == score2 {
+            return ((crf1 + crf2) / 2).clamp(low, high);
+        }
+
+        let slope = (crf2 as f64 - crf1 as f64) / (score2 - score1);
+        let predicted = crf1 as f64 + slope * (target - score1);
+        return (predicted.round() as u32).clamp(low, high);
+    }
+
+    (low + high) / 2
 }
 
-/// Returns auto detected amount of threads used for vmaf calculation
+fn within_tolerance(score: f64, target: f64) -> bool {
+    (score - target).abs() / target < 0.01
+}
+
 pub fn vmaf_auto_threads(workers: usize) -> usize {
     const OVER_PROVISION_FACTOR: f64 = 1.25;
 
-    // Logical CPUs
     let threads = available_parallelism()
         .expect("Unrecoverable: Failed to get thread count")
         .get();
@@ -510,40 +481,8 @@ pub fn vmaf_auto_threads(workers: usize) -> usize {
     )
 }
 
-/// Use linear interpolation to get q/crf values closest to the target value
-pub fn interpolate_target_q(scores: Vec<(f64, u32)>, target: f64) -> Result<f64, Error> {
-    let mut sorted = scores;
-    sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-
-    let keys = sorted
-        .iter()
-        .map(|(x, y)| Key::new(*x, f64::from(*y), Interpolation::Linear))
-        .collect();
-
-    let spline = Spline::from_vec(keys);
-
-    Ok(spline.sample(target).unwrap())
-}
-
-/// Use linear interpolation to get vmaf value that expected from q
-pub fn interpolate_target_vmaf(scores: Vec<(f64, u32)>, q: f64) -> Result<f64, Error> {
-    let mut sorted = scores;
-    sorted.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-    let keys = sorted
-        .iter()
-        .map(|f| Key::new(f64::from(f.1), f.0, Interpolation::Linear))
-        .collect();
-
-    let spline = Spline::from_vec(keys);
-
-    Ok(spline.sample(q).unwrap())
-}
-
 #[derive(Copy, Clone)]
 pub enum Skip {
-    High,
-    Low,
     None,
 }
 
@@ -558,23 +497,14 @@ pub fn log_probes(
 ) {
     cq_scores.sort_by_key(|(_score, q)| *q);
 
-    // TODO: take chunk id as integer instead and format with {:05}
+    debug!("chunk {chunk_idx}: P-Rate={probing_rate}, {frames} frames");
     debug!(
-        "chunk {}: P-Rate={}, {} frames
-    TQ-Probes: {:.2?}{}
-    Target Q={:.0}, Score={:.2}",
-        chunk_idx,
-        probing_rate,
-        frames,
-        cq_scores,
-        match skip {
-            Skip::High => " Early Skip High Q",
-            Skip::Low => " Early Skip Low Q",
+        "chunk {chunk_idx}: TQ-Probes: {vmaf_cq_scores:.2?}{suffix}",
+        suffix = match skip {
             Skip::None => "",
-        },
-        target_q,
-        target_score
+        }
     );
+    debug!("chunk {chunk_idx}: Target Q={target_q:.0}, VMAF={target_vmaf:.2}");
 }
 
 #[inline]
@@ -582,91 +512,5 @@ pub const fn adapt_probing_rate(rate: usize) -> usize {
     match rate {
         1..=4 => rate,
         _ => 1,
-    }
-}
-
-pub fn interpolated_target_q(scores: Vec<(f64, u32)>, target: f64) -> (f64, f64) {
-    let q = interpolate_target_q(scores.clone(), target).unwrap();
-
-    let vmaf = interpolate_target_vmaf(scores, q).unwrap();
-
-    (q, vmaf)
-}
-
-#[allow(unused)]
-fn lagrange_interpolate(p: &[(u32, f64)], x: u32) -> f64 {
-    p.iter()
-        .map(|(x0, y0)| {
-            let mut num = 1;
-            let mut den = 1;
-            for (x1, _y1) in p {
-                if x0 != x1 {
-                    num *= i64::from(x) - i64::from(*x1);
-                    den *= i64::from(*x0) - i64::from(*x1);
-                }
-            }
-            y0 * num as f64 / den as f64
-        })
-        .sum()
-}
-
-#[allow(unused)]
-fn lagrange_bisect(p: &[(u32, f64)], y: f64) -> (u32, f64) {
-    assert!(p.len() >= 2);
-
-    // Re-center the samples at the target value
-    let mut sorted = Vec::from(p);
-    for v in &mut sorted {
-        v.1 -= y;
-    }
-
-    // Order samples by distance from target value
-    sorted.sort_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap());
-
-    // Take the closest point
-    let (mut xb, mut yb) = sorted[0];
-    // Take the next close point that brackets the root
-    let (mut xa, mut ya) = sorted.iter().find(|&&v| v.1 * yb < 0.).unwrap_or(&(xb, yb));
-
-    loop {
-        let x0 = (xa + xb).div_ceil(2);
-        if x0 == xb || x0 == xa {
-            break;
-        }
-
-        let y0 = lagrange_interpolate(&sorted, x0);
-        if ya * y0 < 0. {
-            xb = x0;
-            yb = y0;
-        } else {
-            xa = x0;
-            ya = y0;
-        }
-        if ya.abs() < yb.abs() {
-            std::mem::swap(&mut xa, &mut xb);
-            std::mem::swap(&mut ya, &mut yb);
-        }
-    }
-
-    (xb, yb + y)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::target_quality::lagrange_bisect;
-
-    #[test]
-    fn test_bisect() {
-        let sorted = vec![(0, 0.0), (1, 1.0), (256, 256.0 * 256.0)];
-
-        assert!(lagrange_bisect(&sorted, 0.0).0 == 0);
-        assert!(lagrange_bisect(&sorted, 1.0).0 == 1);
-        assert!(lagrange_bisect(&sorted, 256.0 * 256.0).0 == 256);
-
-        assert!(lagrange_bisect(&sorted, 8.0).0 == 3);
-        assert!(lagrange_bisect(&sorted, 9.0).0 == 3);
-
-        assert!(lagrange_bisect(&sorted, -1.0).0 == 0);
-        assert!(lagrange_bisect(&sorted, 2.0 * 256.0 * 256.0).0 == 256);
     }
 }

@@ -59,7 +59,7 @@ impl Chunk {
             let iso_setting = u32::from(strength) * 100;
             let grain_table = Path::new(&self.temp).join(format!("iso{iso_setting}-grain.tbl"));
             if !grain_table.exists() {
-                debug!("Generating grain table at ISO {}", iso_setting);
+                debug!("Generating grain table at ISO {iso_setting}");
                 let (mut width, mut height) = self.input.resolution()?;
                 if self.noise_size.0.is_some() {
                     width = self.noise_size.0.unwrap();

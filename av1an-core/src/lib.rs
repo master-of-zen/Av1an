@@ -24,8 +24,7 @@ use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-pub use settings::ProbingStats;
-use strum::{Display, EnumString, IntoStaticStr};
+use strum::{Display, EnumString, FromRepr, IntoStaticStr};
 pub use target_quality::VmafFeature;
 
 use crate::progress_bar::finish_progress_bar;
@@ -503,7 +502,7 @@ fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
     Ok(serde_json::from_str(&contents)?)
 }
 
-#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone, FromRepr)]
 pub enum ProbingSpeed {
     #[strum(serialize = "veryslow")]
     VerySlow = 0,
@@ -515,4 +514,32 @@ pub enum ProbingSpeed {
     Fast = 3,
     #[strum(serialize = "veryfast")]
     VeryFast = 4,
+}
+
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+pub enum ProbingStatisticName {
+    #[strum(serialize = "mean")]
+    Mean = 0,
+    #[strum(serialize = "median")]
+    Median = 1,
+    #[strum(serialize = "harmonic")]
+    Harmonic = 2,
+    #[strum(serialize = "percentile")]
+    Percentile = 3,
+    #[strum(serialize = "standard-deviation")]
+    StandardDeviation = 4,
+    #[strum(serialize = "mode")]
+    Mode = 5,
+    #[strum(serialize = "minimum")]
+    Minimum = 6,
+    #[strum(serialize = "maximum")]
+    Maximum = 7,
+    #[strum(serialize = "root-mean-square")]
+    RootMeanSquare = 8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProbingStatistic {
+    pub name:  ProbingStatisticName,
+    pub value: Option<f64>,
 }

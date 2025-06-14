@@ -81,7 +81,7 @@ pub fn best_available_chunk_method() -> ChunkMethod {
     }
 }
 
-fn get_clip_info(env: &Environment) -> VideoInfo {
+fn get_clip_info(env: &Environment) -> VideoInfo<'_> {
     // Get the output node.
     const OUTPUT_INDEX: i32 = 0;
 

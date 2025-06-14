@@ -44,16 +44,6 @@ pub enum InputPixelFormat {
     FFmpeg { format: Pixel },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
-pub enum ProbingStats {
-    #[value(name = "mean")]
-    Mean,
-    #[value(name = "median")]
-    Median,
-    #[value(name = "harmonic_mean")]
-    HarmonicMean,
-}
-
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct EncodeArgs {

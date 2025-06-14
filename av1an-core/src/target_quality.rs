@@ -278,45 +278,49 @@ impl TargetQuality {
                 // Drop stdout to prevent buffer deadlock
                 drop(enc_pipe.stdout.take());
 
-                // Consume stderr streams to prevent deadlock
-                let source_stderr = source.stderr.take();
-                let source_pipe_stderr = source_pipe.stderr.take();
-                let enc_stderr = enc_pipe.stderr.take();
+                // Start reading stderr concurrently to prevent deadlock
+                use std::{io::Read, thread};
 
-                let stderr_handles = (
-                    source_stderr
-                        .map(|mut s| {
-                            let mut buf = Vec::new();
-                            std::io::Read::read_to_end(&mut s, &mut buf).ok();
-                            buf
-                        })
-                        .unwrap_or_default(),
-                    source_pipe_stderr
-                        .map(|mut s| {
-                            let mut buf = Vec::new();
-                            std::io::Read::read_to_end(&mut s, &mut buf).ok();
-                            buf
-                        })
-                        .unwrap_or_default(),
-                    enc_stderr
-                        .map(|mut s| {
-                            let mut buf = Vec::new();
-                            std::io::Read::read_to_end(&mut s, &mut buf).ok();
-                            buf
-                        })
-                        .unwrap_or_default(),
-                );
+                let source_stderr = source.stderr.take().unwrap();
+                let source_pipe_stderr = source_pipe.stderr.take().unwrap();
+                let enc_stderr = enc_pipe.stderr.take().unwrap();
 
-                // Wait for all processes
-                let enc_result = enc_pipe.wait();
+                let stderr_thread1 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = source_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
 
-                let enc_status = enc_result.map_err(|e| EncoderCrash {
+                let stderr_thread2 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = source_pipe_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
+
+                let stderr_thread3 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = enc_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
+
+                // Wait for encoder to finish
+                let enc_status = enc_pipe.wait().map_err(|e| EncoderCrash {
                     exit_status:        std::process::ExitStatus::default(),
                     source_pipe_stderr: String::new().into(),
                     ffmpeg_pipe_stderr: None,
                     stderr:             format!("Failed to wait for encoder: {e}").into(),
                     stdout:             String::new().into(),
                 })?;
+
+                // Collect stderr after process finishes
+                let stderr_handles = (
+                    stderr_thread1.join().unwrap_or_default(),
+                    stderr_thread2.join().unwrap_or_default(),
+                    stderr_thread3.join().unwrap_or_default(),
+                );
 
                 if !enc_status.success() {
                     return Err(EncoderCrash {

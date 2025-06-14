@@ -162,7 +162,7 @@ pub fn mkvmerge(
     output: &Path,
     encoder: Encoder,
     num_chunks: usize,
-    output_fps: Rational64,
+    output_fps: Option<Rational64>,
 ) -> anyhow::Result<()> {
     // mkvmerge does not accept UNC paths on Windows
     #[cfg(windows)]
@@ -242,20 +242,24 @@ pub fn mkvmerge_options_json(
     encoder: Encoder,
     output: &str,
     audio: Option<&str>,
-    output_fps: Rational64,
+    output_fps: Option<Rational64>,
 ) -> String {
     let mut file_string = String::with_capacity(64 + 12 * num);
     write!(file_string, "[\"-o\", {output:?}").unwrap();
     if let Some(audio) = audio {
         write!(file_string, ", {audio:?}").unwrap();
     }
-    write!(
-        file_string,
-        ", \"--default-duration\", \"0:{}/{}fps\", \"[\"",
-        output_fps.numer(),
-        output_fps.denom()
-    )
-    .unwrap();
+    if let Some(output_fps) = output_fps {
+        write!(
+            file_string,
+            ", \"--default-duration\", \"0:{}/{}fps\", \"[\"",
+            output_fps.numer(),
+            output_fps.denom()
+        )
+        .unwrap();
+    } else {
+        file_string.push_str(", \"[\"");
+    }
     for i in 0..num {
         write!(
             file_string,

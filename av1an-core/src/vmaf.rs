@@ -555,6 +555,8 @@ pub fn run_vmaf_weighted(
 
     let output = cmd.output().unwrap();
 
+    let _ = source_pipe.wait();
+
     if !output.status.success() {
         return Err(anyhow::anyhow!(
             "FFmpeg command failed: {}",

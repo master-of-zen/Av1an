@@ -306,7 +306,7 @@ impl TargetQuality {
                     buf
                 });
 
-                // Wait for encoder to finish
+                // Wait for encoder & other processes to finish
                 let enc_status = enc_pipe.wait().map_err(|e| EncoderCrash {
                     exit_status:        std::process::ExitStatus::default(),
                     source_pipe_stderr: String::new().into(),
@@ -314,6 +314,9 @@ impl TargetQuality {
                     stderr:             format!("Failed to wait for encoder: {e}").into(),
                     stdout:             String::new().into(),
                 })?;
+
+                let _ = source_pipe.wait();
+                let _ = source.wait();
 
                 // Collect stderr after process finishes
                 let stderr_handles = (

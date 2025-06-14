@@ -4,7 +4,13 @@ use super::*;
 
 #[test]
 fn test_mkvmerge_options_json_no_audio() {
-    let result = mkvmerge_options_json(2, Encoder::aom, "output.mkv", None, Rational64::new(30, 1));
+    let result = mkvmerge_options_json(
+        2,
+        Encoder::aom,
+        "output.mkv",
+        None,
+        Some(Rational64::new(30, 1)),
+    );
     assert_eq!(
         result,
         r#"["-o", "output.mkv", "--default-duration", "0:30/1fps", "[", "00000.ivf", "00001.ivf","]"]"#
@@ -18,7 +24,7 @@ fn test_mkvmerge_options_json_with_audio() {
         Encoder::aom,
         "output.mkv",
         Some("audio.mkv"),
-        Rational64::new(30, 1),
+        Some(Rational64::new(30, 1)),
     );
     assert_eq!(
         result,

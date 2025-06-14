@@ -621,9 +621,14 @@ pub struct CliOpts {
     #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
     pub probes: u32,
 
-    /// Framerate for probes, 1 - original
-    #[clap(long, default_value_t = 1, help_heading = "Target Quality")]
-    pub probing_rate: u32,
+    /// Only use every nth frame for VMAF calculation, while probing.
+    ///
+    /// WARNING: The resulting VMAF score might differ from if all the frames
+    /// were used; usually it should be lower, which means to get the same
+    /// quality you must also usually lower the --target-quality. Going higher
+    /// than n=4 usually results in unusable scores, so this is disabled.
+    #[clap(long, default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..=4), help_heading = "Target Quality")]
+    pub probing_rate: u16,
 
     /// Speed for probes, defaults to veryfast
     ///

@@ -85,7 +85,8 @@ impl TargetQuality {
                 update_mp_msg(
                     worker_id,
                     format!(
-                        "Targeting Quality {target} - Testing {quantizer}",
+                        "Targeting {metric} Quality {target} - Testing {quantizer}",
+                        metric = self.metric,
                         target = self.target,
                         quantizer = next_quantizer
                     ),

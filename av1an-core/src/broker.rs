@@ -220,7 +220,11 @@ impl Broker<'_> {
         if let Some(ref tq) = self.project.args.target_quality {
             update_mp_msg(
                 worker_id,
-                format!("Targeting Quality: {target}", target = tq.target),
+                format!(
+                    "Targeting {metric} Quality: {target}",
+                    metric = tq.metric,
+                    target = tq.target
+                ),
             );
             tq.per_shot_target_quality_routine(chunk, Some(worker_id)).unwrap();
 

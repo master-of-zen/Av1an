@@ -388,7 +388,19 @@ impl Av1anContext {
                         self.args.output_file.as_ref(),
                         self.args.encoder,
                         total_chunks,
-                        fps_ratio,
+                        if self.args.ignore_frame_mismatch {
+                            info!(
+                                "`--ignore-frame-mismatch` set. Don't force output FPS, as an FPS \
+                                 changing filter might have been applied."
+                            );
+                            None
+                        } else {
+                            debug!(
+                                "`--ignore-frame-mismatch` not set. Forcing output FPS to \
+                                 {fps_ratio} with mkvmerge."
+                            );
+                            Some(fps_ratio)
+                        },
                     )?;
                 },
                 ConcatMethod::FFmpeg => {

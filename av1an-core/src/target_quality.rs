@@ -1,7 +1,6 @@
 use std::{
     cmp::{self, Ordering},
     collections::HashSet,
-    convert::TryInto,
     path::{Path, PathBuf},
     thread::available_parallelism,
 };
@@ -491,76 +490,131 @@ impl TargetQuality {
         );
 
         let future = async {
-            let mut source = if let [pipe_cmd, args @ ..] = &*chunk.source_cmd {
-                tokio::process::Command::new(pipe_cmd)
-                    .args(args)
-                    .stderr(if cfg!(windows) {
-                        std::process::Stdio::null()
-                    } else {
-                        std::process::Stdio::piped()
-                    })
-                    .stdout(std::process::Stdio::piped())
-                    .spawn()
-                    .unwrap()
-            } else {
-                unreachable!()
-            };
+            let source_cmd = chunk.source_cmd.clone();
+            let cmd = cmd.clone();
 
-            let source_pipe_stdout: std::process::Stdio =
-                source.stdout.take().unwrap().try_into().unwrap();
-
-            let mut source_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
-                tokio::process::Command::new(ffmpeg)
-                    .args(args)
-                    .stdin(source_pipe_stdout)
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(if cfg!(windows) {
-                        std::process::Stdio::null()
-                    } else {
-                        std::process::Stdio::piped()
-                    })
-                    .spawn()
-                    .unwrap()
-            } else {
-                unreachable!()
-            };
-
-            let source_pipe_stdout: std::process::Stdio =
-                source_pipe.stdout.take().unwrap().try_into().unwrap();
-
-            let enc_pipe = if let [cmd, args @ ..] = &*cmd.1 {
-                tokio::process::Command::new(cmd.as_ref())
-                    .args(args.iter().map(AsRef::as_ref))
-                    .stdin(source_pipe_stdout)
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(if cfg!(windows) {
-                        std::process::Stdio::null()
-                    } else {
-                        std::process::Stdio::piped()
-                    })
-                    .spawn()
-                    .unwrap()
-            } else {
-                unreachable!()
-            };
-
-            let source_pipe_output = source_pipe.wait_with_output().await.unwrap();
-
-            // TODO: Expand EncoderCrash to handle io errors as well
-            let enc_output = enc_pipe.wait_with_output().await.unwrap();
-
-            if !enc_output.status.success() {
-                let e = EncoderCrash {
-                    exit_status:        enc_output.status,
-                    stdout:             enc_output.stdout.into(),
-                    stderr:             enc_output.stderr.into(),
-                    source_pipe_stderr: source_pipe_output.stderr.into(),
-                    ffmpeg_pipe_stderr: None,
+            tokio::task::spawn_blocking(move || {
+                let mut source = if let [pipe_cmd, args @ ..] = &*source_cmd {
+                    std::process::Command::new(pipe_cmd)
+                        .args(args)
+                        .stderr(std::process::Stdio::piped())
+                        .stdout(std::process::Stdio::piped())
+                        .spawn()
+                        .map_err(|e| EncoderCrash {
+                            exit_status:        std::process::ExitStatus::default(),
+                            source_pipe_stderr: format!("Failed to spawn source: {e}").into(),
+                            ffmpeg_pipe_stderr: None,
+                            stderr:             String::new().into(),
+                            stdout:             String::new().into(),
+                        })?
+                } else {
+                    unreachable!()
                 };
-                return Err(e);
-            }
 
-            Ok(())
+                let source_stdout = source.stdout.take().unwrap();
+
+                let mut source_pipe = if let [ffmpeg, args @ ..] = &*cmd.0 {
+                    std::process::Command::new(ffmpeg)
+                        .args(args)
+                        .stdin(source_stdout)
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .map_err(|e| EncoderCrash {
+                            exit_status:        std::process::ExitStatus::default(),
+                            source_pipe_stderr: format!("Failed to spawn ffmpeg: {e}").into(),
+                            ffmpeg_pipe_stderr: None,
+                            stderr:             String::new().into(),
+                            stdout:             String::new().into(),
+                        })?
+                } else {
+                    unreachable!()
+                };
+
+                let source_pipe_stdout = source_pipe.stdout.take().unwrap();
+
+                let mut enc_pipe = if let [cmd, args @ ..] = &*cmd.1 {
+                    std::process::Command::new(cmd.as_ref())
+                        .args(args.iter().map(AsRef::as_ref))
+                        .stdin(source_pipe_stdout)
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .map_err(|e| EncoderCrash {
+                            exit_status:        std::process::ExitStatus::default(),
+                            source_pipe_stderr: String::new().into(),
+                            ffmpeg_pipe_stderr: None,
+                            stderr:             format!("Failed to spawn encoder: {e}").into(),
+                            stdout:             String::new().into(),
+                        })?
+                } else {
+                    unreachable!()
+                };
+
+                // Drop stdout to prevent buffer deadlock
+                drop(enc_pipe.stdout.take());
+
+                // Start reading stderr concurrently to prevent deadlock
+                use std::{io::Read, thread};
+
+                let source_stderr = source.stderr.take().unwrap();
+                let source_pipe_stderr = source_pipe.stderr.take().unwrap();
+                let enc_stderr = enc_pipe.stderr.take().unwrap();
+
+                let stderr_thread1 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = source_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
+
+                let stderr_thread2 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = source_pipe_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
+
+                let stderr_thread3 = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut stderr = enc_stderr;
+                    stderr.read_to_end(&mut buf).ok();
+                    buf
+                });
+
+                // Wait for encoder & other processes to finish
+                let enc_status = enc_pipe.wait().map_err(|e| EncoderCrash {
+                    exit_status:        std::process::ExitStatus::default(),
+                    source_pipe_stderr: String::new().into(),
+                    ffmpeg_pipe_stderr: None,
+                    stderr:             format!("Failed to wait for encoder: {e}").into(),
+                    stdout:             String::new().into(),
+                })?;
+
+                let _ = source_pipe.wait();
+                let _ = source.wait();
+
+                // Collect stderr after process finishes
+                let stderr_handles = (
+                    stderr_thread1.join().unwrap_or_default(),
+                    stderr_thread2.join().unwrap_or_default(),
+                    stderr_thread3.join().unwrap_or_default(),
+                );
+
+                if !enc_status.success() {
+                    return Err(EncoderCrash {
+                        exit_status:        enc_status,
+                        source_pipe_stderr: stderr_handles.0.into(),
+                        ffmpeg_pipe_stderr: Some(stderr_handles.1.into()),
+                        stderr:             stderr_handles.2.into(),
+                        stdout:             String::new().into(),
+                    });
+                }
+
+                Ok(())
+            })
+            .await
+            .unwrap()
         };
 
         let rt = tokio::runtime::Builder::new_current_thread().enable_io().build().unwrap();

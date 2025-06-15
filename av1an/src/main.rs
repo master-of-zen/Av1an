@@ -601,7 +601,8 @@ pub struct CliOpts {
     #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
     pub vmaf_res: String,
 
-    /// Resolution used for Target Quality metric calculation
+    /// Resolution used for Target Quality metric calculation in the form of
+    /// `widthxheight` where width and height are positive integers
     ///
     /// If not specified, the output video will be scaled to the resolution of
     /// the input video.
@@ -626,47 +627,50 @@ pub struct CliOpts {
     /// the consistency of quality in some cases.
     ///
     /// The VMAF and SSIMULACRA2 score ranges are 0-100 (where 0 is the worst
-    /// quality, and 100 is the best). Floating-point values are allowed.
-    /// The Butteraugli score minimum is 0 as the best quality and increases as
-    /// quality decreases. Floating-point values are allowed.
+    /// quality, and 100 is the best).
+    ///
+    /// The butteraugli score minimum is 0 as the best quality and increases as
+    /// quality decreases towards infinity.
+    ///
     /// The XPSNR score minimum is 0 as the worst quality and increases as
-    /// quality increases. Floating-point values are allowed.
+    /// quality increases towards infinity.
+    ///
+    /// Floating-point values are allowed for all metrics.
     #[clap(long, help_heading = "Target Quality")]
     pub target_quality: Option<f64>,
-
     /// The metric used for Target Quality mode
     ///
-    /// Supported metrics:
+    /// vmaf - Requires FFmpeg with VMAF enabled.
     ///
-    /// - `vmaf` - Requires FFmpeg with VMAF enabled
-    /// - `ssimulacra2` - Requires Vapoursynth-HIP or VapourSynth-Zig Image
-    ///   Process plugin. Also requires Chunk method to be set to `lsmash`,
-    ///   `ffms2`, `bestsource`, or `dgdecnv`.
-    /// - `butteraugli-inf` - Requires Vapoursynth-HIP or Julek plugin. Also
-    ///   requires Chunk method to be set to `lsmash`, `ffms2`, `bestsource`, or
-    ///   `dgdecnv`. Uses the Infinite-Norm value of Butteraugli.
-    /// - `butteraugli-3` - Requires Vapoursynth-HIP plugin. Also requires Chunk
-    ///   method to be set to `lsmash`, `ffms2`, `bestsource`, or `dgdecnv`.
-    ///   Uses the 3-Norm value of Butteraugli.
-    /// - `xpsnr` - Requires FFmpeg with XPSNR enabled when Probing Rate is
-    ///   unspecified or set to 1. When Probing Rate is specified higher than 1,
-    ///   the VapourSynth-Zig Image Process plugin version R7 or newer is
-    ///   required and the Chunk method must be set to `lsmash`, `ffms2`,
-    ///   `bestsource`, or `dgdecnv`. Uses the minimum of Y, U, and V.
-    /// - `xpsnr-weighted` - Requires FFmpeg with XPSNR enabled when Probing
-    ///   Rate is unspecified or set to 1. When Probing Rate is specified higher
-    ///   than 1, the VapourSynth-Zig Image Process plugin version R7 or newer
-    ///   is required and the Chunk method must be set to `lsmash`, `ffms2`,
-    ///   `bestsource`, or `dgdecnv`. Uses weighted XPSNR based on this formula:
-    ///   `((4 * Y) + U + V) / 6`
+    /// ssimulacra2 - Requires Vapoursynth-HIP or VapourSynth-Zig Image Process
+    /// plugin. Also requires Chunk method to be set to "lsmash", "ffms2",
+    /// "bestsource", or "dgdecnv".
     ///
-    /// If not specified, VMAF is used
+    /// butteraugli-inf - Uses the Infinite-Norm value of Butteraugli. Requires
+    /// Vapoursynth-HIP or Julek plugin. Also requires Chunk method to be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// butteraugli-3  - Uses the 3-Norm value of Butteraugli. Requires
+    /// Vapoursynth-HIP plugin. Also requires Chunk method to be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// xpsnr -  Uses the minimum of Y, U, and V. Requires FFmpeg with XPSNR
+    /// enabled when Probing Rate is unspecified or set to 1. When Probing Rate
+    /// is specified higher than 1, the VapourSynth-Zig Image Process plugin
+    /// version R7 or newer is required and the Chunk method must be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// xpsnr-weighted - Uses weighted XPSNR based on this formula: `((4 * Y) +
+    /// U + V) / 6`. Requires FFmpeg with XPSNR enabled when Probing Rate is
+    /// unspecified or set to 1. When Probing Rate is specified higher than 1,
+    /// the VapourSynth-Zig Image Process plugin version R7 or newer is required
+    /// and the Chunk method must be set to "lsmash", "ffms2", "bestsource", or
+    /// "dgdecnv".
     #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality", ignore_case = true)]
-    pub target_metric: TargetMetric,
-
+    pub target_metric:  TargetMetric,
     /// Maximum number of probes allowed for target quality
     #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
-    pub probes: u32,
+    pub probes:         u32,
 
     /// Only use every nth frame for VMAF calculation, while probing.
     ///
@@ -677,11 +681,18 @@ pub struct CliOpts {
     #[clap(long, default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..=4), help_heading = "Target Quality")]
     pub probing_rate: u16,
 
-    /// Speed for probes, defaults to veryfast
+    /// Speed for probes. Lower speed for higher quality and accuracy
     ///
-    /// Does not override Probe Slow if not specified
+    /// Speeds:
+    ///   veryfast
+    ///   fast
+    ///   medium
+    ///   slow
+    ///   veryslow
     ///
-    /// Lower speed for higher quality and accuracy probes
+    /// If specified with `--probe-slow`, overrides the respective speed
+    /// parameter (eg. "--cpu-used=", "--preset", etc.). Otherwise defaults to
+    /// "veryfast".
     #[clap(long, help_heading = "Target Quality", ignore_case = true)]
     pub probing_speed: Option<ProbingSpeed>,
 
@@ -739,20 +750,20 @@ pub struct CliOpts {
     /// scores
     ///
     /// Available methods:
-    ///   auto                       - Automatically choose the best method based on the target metric, probing speed, and the quantizer
+    ///   auto                       - Automatically choose the best method based on the target metric, the probing speed, and the quantizer
     ///   mean                       - Arithmetic mean (average)
     ///   median                     - Middle value
-    ///   harmonic                   - Harmonic mean (emphasizes lower scores)
+    ///   harmonic                   - Harmonic mean (emphasizes lower quality scores)
     ///   percentile=<FLOAT>         - Percentile of a specified value. Must be between 0.0 and 100.0
     ///   standard-deviation=<FLOAT> - Standard deviation distance from mean (σ) clamped by the minimum and maximum probe scores
     ///   mode                       - Most common integer-rounded value
-    ///   minimum                    - Lowest value
-    ///   maximum                    - Highest value
+    ///   minimum                    - Lowest quality value
+    ///   maximum                    - Highest quality value
     ///   root-mean-square           - Root Mean Square (quadratic mean)
     ///
     /// Warning:
-    ///   `root-mean-square` should only be used with inverse target metrics such as `butteraugli`.
-    ///   'HARMONIC' works as expected when there are no negative scores. Use with caution with target metrics such as `ssimulacra2`.
+    ///   "root-mean-square" should only be used with inverse target metrics such as "butteraugli".
+    ///   "harmonic" works as expected when there are no negative scores. Use with caution with target metrics such as "ssimulacra2".
     #[clap(long, default_value_t = String::from("auto"), help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_stat: String,
 }

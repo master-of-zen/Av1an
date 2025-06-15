@@ -1,5 +1,5 @@
+use core::f64;
 use std::{
-    cmp::Ordering,
     ffi::OsStr,
     path::Path,
     process::{Command, Stdio},
@@ -40,6 +40,7 @@ pub fn validate_libxpsnr() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_xpsnr(
     encoded: &Path,
     reference_pipe_cmd: &[impl AsRef<OsStr>],
@@ -48,6 +49,7 @@ pub fn run_xpsnr(
     res: &str,
     scaler: &str,
     sample_rate: usize,
+    framerate: f64,
 ) -> Result<(), Box<EncoderCrash>> {
     let filter = if sample_rate > 1 {
         format!(
@@ -88,11 +90,11 @@ pub fn run_xpsnr(
         "1024",
         "-hide_banner",
         "-r",
-        "60",
+        &framerate.to_string(),
         "-i",
     ]);
     cmd.arg(encoded);
-    cmd.args(["-r", "60", "-i", "-", "-filter_complex"]);
+    cmd.args(["-r", &framerate.to_string(), "-i", "-", "-filter_complex"]);
 
     let distorted = format!(
         "[0:v]scale={}:flags={}:force_original_aspect_ratio=decrease,setsar=1[distorted];",
@@ -128,80 +130,72 @@ pub fn run_xpsnr(
     Ok(())
 }
 
-pub fn read_xpsnr_file(file: impl AsRef<Path>, submetric: XPSNRSubMetric) -> Vec<f64> {
+pub fn read_xpsnr_file(file: impl AsRef<Path>, submetric: XPSNRSubMetric) -> (f64, Vec<f64>) {
     let log_str = std::fs::read_to_string(file).unwrap();
-    let re = regex::Regex::new(
+    let frame_regex = regex::Regex::new(
         r".*XPSNR y: *([0-9\.]+|inf) *XPSNR u: *([0-9\.]+|inf) *XPSNR v: *([0-9\.]+|inf)",
     )
     .unwrap();
-    let mut min_psnrs = Vec::new();
+
+    let final_line = log_str
+        .lines()
+        .find(|line| line.contains("XPSNR average"))
+        .expect("No average XPSNR line found");
+
+    let final_regex = regex::Regex::new(
+        r"XPSNR average, \d+ frames  y: *([0-9\.]+|inf)  u: *([0-9\.]+|inf)  v: *([0-9\.]+|inf)  \(minimum: *([0-9\.]+|inf)\)",
+    )
+    .unwrap();
+
+    let parse_float_or_inf = |s: &str| {
+        if s == "inf" {
+            f64::INFINITY
+        } else {
+            s.parse::<f64>().unwrap_or(f64::INFINITY)
+        }
+    };
+    let final_captures = final_regex.captures(final_line).unwrap();
+    let final_yuv = (
+        parse_float_or_inf(&final_captures[1]),
+        parse_float_or_inf(&final_captures[2]),
+        parse_float_or_inf(&final_captures[3]),
+    );
+
+    let mut frame_values = Vec::new();
     for line in log_str.lines() {
-        if let Some(captures) = re.captures(line) {
+        if let Some(captures) = frame_regex.captures(line) {
             if submetric == XPSNRSubMetric::Minimum {
                 let min_psnr = captures
                     .iter()
                     .skip(1)
-                    .filter_map(|x| {
-                        x.unwrap().as_str().parse::<f64>().ok().or_else(|| {
-                            if x.unwrap().as_str() == "inf" {
-                                Some(f64::INFINITY)
-                            } else {
-                                panic!("XPSNR line did not contain a valid float or 'inf'!")
-                            }
-                        })
-                    })
+                    .map(|value| parse_float_or_inf(value.unwrap().as_str()))
                     .fold(f64::INFINITY, f64::min);
-                min_psnrs.push(min_psnr);
+                frame_values.push(min_psnr);
             } else {
                 let parsed_values: Vec<f64> = captures
                     .iter()
                     .skip(1)
-                    .map(|x| {
-                        x.unwrap().as_str().parse::<f64>().unwrap_or_else(|_| {
-                            if x.unwrap().as_str() == "inf" {
-                                f64::INFINITY
-                            } else {
-                                panic!("XPSNR line did not contain a valid float or 'inf'!")
-                            }
-                        })
-                    })
+                    .map(|value| parse_float_or_inf(value.unwrap().as_str()))
                     .collect();
 
                 let weighted =
                     ((4.0 * parsed_values[0]) + parsed_values[1] + parsed_values[2]) / 6.0;
-                min_psnrs.push(weighted);
+                frame_values.push(weighted);
             }
         }
     }
 
-    min_psnrs
-}
-
-// Read a certain percentile XPSNR score from the PSNR log file
-pub fn read_weighted_xpsnr<P: AsRef<Path>>(
-    file: P,
-    percentile: f64,
-    submetric: XPSNRSubMetric,
-) -> Result<f64, serde_json::Error> {
-    fn inner(
-        file: &Path,
-        percentile: f64,
-        submetric: XPSNRSubMetric,
-    ) -> Result<f64, serde_json::Error> {
-        let mut scores = read_xpsnr_file(file, submetric);
-
-        assert!(!scores.is_empty());
-
-        let k = ((scores.len() - 1) as f64 * percentile) as usize;
-
-        // if we are just calling this function a single time for this file, it is more
-        // efficient to use select_nth_unstable_by than it is to completely sort
-        // scores
-        let (_, kth_element, _) =
-            scores.select_nth_unstable_by(k, |a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-        Ok(*kth_element)
+    match submetric {
+        XPSNRSubMetric::Minimum => (final_yuv.0.min(final_yuv.1).min(final_yuv.2), frame_values),
+        XPSNRSubMetric::Weighted => {
+            let weighted = -10.0
+                * f64::log10(
+                    ((4.0 * f64::powf(10.0, -final_yuv.0 / 10.0))
+                        + f64::powf(10.0, -final_yuv.1 / 10.0)
+                        + f64::powf(10.0, -final_yuv.2 / 10.0))
+                        / 6.0,
+                );
+            (weighted, frame_values)
+        },
     }
-
-    inner(file.as_ref(), percentile, submetric)
 }

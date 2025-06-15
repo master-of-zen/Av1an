@@ -49,16 +49,6 @@ pub enum InputPixelFormat {
     FFmpeg { format: Pixel },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
-pub enum ProbingStats {
-    #[value(name = "mean")]
-    Mean,
-    #[value(name = "median")]
-    Median,
-    #[value(name = "harmonic_mean")]
-    HarmonicMean,
-}
-
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct EncodeArgs {
@@ -160,7 +150,7 @@ impl EncodeArgs {
                          SSIMULACRA2"
                     );
                 },
-                TargetMetric::ButteraugliInf => {
+                TargetMetric::ButteraugliINF => {
                     ensure!(
                         is_vship_installed() || is_julek_installed(),
                         "Butteraugli metric requires either Vapoursynth-HIP or \
@@ -178,7 +168,7 @@ impl EncodeArgs {
                          Butteraugli"
                     );
                 },
-                TargetMetric::BUTTERAUGLI3 => {
+                TargetMetric::Butteraugli3 => {
                     ensure!(
                         is_vship_installed(),
                         "Butteraugli 3 Norm metric requires Vapoursynth-HIP plugin to be installed"

@@ -91,6 +91,7 @@ Name | Flag | Type | Default
 [Probe Resolution](./Cli/target_quality.md#probe-resolution---probe-res) | `--probe-res` | String |
 [Probing Rate](./Cli/target_quality.md#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
 [Probing Speed](./Cli/target_quality.md#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
+[Probing Statistic](./Cli/target_quality.md#probing-statistic---probing-stat) | `--probing-stat` | String | `percentile=1`
 [Probe Slow](./Cli/target_quality.md#probe-slow---probe-slow) | `--probe-slow` || 
 [Minimum Quantizer](./Cli/target_quality.md#minimum-quantizer---min-q) | `--min-q` | Integer | Based on Encoder
 [Maximum Quantizer](./Cli/target_quality.md#maximum-quantizer---max-q) | `--max-q` | Integer | Based on Encoder

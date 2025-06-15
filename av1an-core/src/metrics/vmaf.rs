@@ -27,14 +27,6 @@ struct VmafResult {
     frames: Vec<Metrics>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum VmafScoreMethod {
-    Percentile(f64),
-    Mean,
-    Median,
-    HarmonicMean,
-}
-
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
     let scores = read_vmaf_file(scores_file).with_context(|| "Failed to parse VMAF file")?;
 
@@ -319,7 +311,6 @@ pub fn run_vmaf_weighted(
     encoded: &Path,
     reference_pipe_cmd: &[impl AsRef<OsStr>],
     vspipe_args: Vec<String>,
-    stat_file: impl AsRef<Path>,
     model: Option<impl AsRef<Path>>,
     _res: &str,
     _scaler: &str,
@@ -328,7 +319,7 @@ pub fn run_vmaf_weighted(
     threads: usize,
     framerate: f64,
     disable_motion: bool,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Vec<f64>> {
     let temp_dir = encoded.parent().unwrap();
     let vmaf_y_path = temp_dir.join(format!(
         "vmaf_y_{}.json",
@@ -463,28 +454,14 @@ pub fn run_vmaf_weighted(
     let u_scores = read_vmaf_file(&vmaf_u_path).context("Failed to read VMAF U scores")?;
     let v_scores = read_vmaf_file(&vmaf_v_path).context("Failed to read VMAF V scores")?;
 
-    let weighted_scores: Vec<f64> = y_scores
+    let weighted_scores = y_scores
         .iter()
         .zip(u_scores.iter())
         .zip(v_scores.iter())
         .map(|((y, u), v)| (4.0 * y + u + v) / 6.0)
         .collect();
 
-    let weighted_result = VmafResult {
-        frames: weighted_scores
-            .iter()
-            .map(|&score| Metrics {
-                metrics: VmafScore {
-                    vmaf: score
-                },
-            })
-            .collect(),
-    };
-
-    let json_str = serde_json::to_string_pretty(&weighted_result)?;
-    std::fs::write(stat_file, json_str)?;
-
-    Ok(())
+    Ok(weighted_scores)
 }
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
@@ -493,44 +470,6 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
     let v = vmaf_results.frames.into_iter().map(|metric| metric.metrics.vmaf).collect();
 
     Ok(v)
-}
-
-/// Read a certain, given percentile VMAF score from the VMAF json file
-pub fn read_weighted_vmaf<P: AsRef<Path>>(
-    file: P,
-    method: VmafScoreMethod,
-) -> Result<f64, serde_json::Error> {
-    let scores = read_vmaf_file(file)?;
-    assert!(!scores.is_empty());
-
-    match method {
-        VmafScoreMethod::Percentile(percentile) => {
-            let mut sorted_scores = scores.clone();
-            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-            let index = ((sorted_scores.len() as f64 * percentile) as usize)
-                .saturating_sub(1)
-                .min(sorted_scores.len() - 1);
-
-            Ok(sorted_scores[index])
-        },
-        VmafScoreMethod::Mean => Ok(scores.iter().sum::<f64>() / scores.len() as f64),
-        VmafScoreMethod::Median => {
-            let mut sorted_scores = scores.clone();
-            sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-
-            let len = sorted_scores.len();
-            if len % 2 == 0 {
-                Ok((sorted_scores[len / 2 - 1] + sorted_scores[len / 2]) / 2.0)
-            } else {
-                Ok(sorted_scores[len / 2])
-            }
-        },
-        VmafScoreMethod::HarmonicMean => {
-            let sum_reciprocals: f64 = scores.iter().map(|&x| 1.0 / x).sum();
-            Ok(scores.len() as f64 / sum_reciprocals)
-        },
-    }
 }
 
 pub fn percentile_of_sorted(scores: &[f64], percentile: f64) -> f64 {

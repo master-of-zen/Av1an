@@ -23,8 +23,7 @@ use chunk::Chunk;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-pub use settings::ProbingStats;
-use strum::{Display, EnumString, IntoStaticStr};
+use strum::{Display, EnumString, FromRepr, IntoStaticStr};
 pub use target_quality::VmafFeature;
 
 pub use crate::{
@@ -33,7 +32,7 @@ pub use crate::{
     encoder::Encoder,
     logging::{init_logging, DEFAULT_LOG_LEVEL},
     settings::{EncodeArgs, InputPixelFormat, PixelFormat},
-    target_quality::{adapt_probing_rate, TargetQuality},
+    target_quality::TargetQuality,
     util::read_in_dir,
 };
 use crate::{progress_bar::finish_progress_bar, vapoursynth::generate_loadscript_text};
@@ -48,6 +47,7 @@ mod logging;
 mod metrics {
     pub mod butteraugli;
     pub mod ssimulacra2;
+    pub mod statistics;
     pub mod vmaf;
     pub mod xpsnr;
 }
@@ -513,9 +513,9 @@ pub enum TargetMetric {
     #[strum(serialize = "ssimulacra2")]
     SSIMULACRA2,
     #[strum(serialize = "butteraugli-inf")]
-    ButteraugliInf,
+    ButteraugliINF,
     #[strum(serialize = "butteraugli-3")]
-    BUTTERAUGLI3,
+    Butteraugli3,
     #[strum(serialize = "xpsnr")]
     XPSNR,
     #[strum(serialize = "xpsnr-weighted")]
@@ -617,7 +617,9 @@ fn read_chunk_queue(temp: &Path) -> anyhow::Result<Vec<Chunk>> {
     Ok(serde_json::from_str(&contents)?)
 }
 
-#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+#[derive(
+    Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone, Copy, FromRepr,
+)]
 pub enum ProbingSpeed {
     #[strum(serialize = "veryslow")]
     VerySlow = 0,
@@ -629,4 +631,34 @@ pub enum ProbingSpeed {
     Fast = 3,
     #[strum(serialize = "veryfast")]
     VeryFast = 4,
+}
+
+#[derive(Serialize, Deserialize, Debug, EnumString, IntoStaticStr, Display, Clone)]
+pub enum ProbingStatisticName {
+    #[strum(serialize = "mean")]
+    Mean = 0,
+    #[strum(serialize = "median")]
+    Median = 1,
+    #[strum(serialize = "harmonic")]
+    Harmonic = 2,
+    #[strum(serialize = "percentile")]
+    Percentile = 3,
+    #[strum(serialize = "standard-deviation")]
+    StandardDeviation = 4,
+    #[strum(serialize = "mode")]
+    Mode = 5,
+    #[strum(serialize = "minimum")]
+    Minimum = 6,
+    #[strum(serialize = "maximum")]
+    Maximum = 7,
+    #[strum(serialize = "root-mean-square")]
+    RootMeanSquare = 8,
+    #[strum(serialize = "auto")]
+    Automatic = 9,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProbingStatistic {
+    pub name:  ProbingStatisticName,
+    pub value: Option<f64>,
 }

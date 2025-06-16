@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap,
     ffi::OsStr,
     path::Path,
     process::{Command, Stdio},
@@ -11,15 +10,7 @@ use plotters::prelude::*;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-use crate::{
-    broker::EncoderCrash,
-    ffmpeg,
-    ref_smallvec,
-    util::printable_base10_digits,
-    Input,
-    ProbingStatistic,
-    ProbingStatisticName,
-};
+use crate::{broker::EncoderCrash, ffmpeg, ref_smallvec, util::printable_base10_digits, Input};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct VmafScore {
@@ -34,113 +25,6 @@ struct Metrics {
 #[derive(Deserialize, Serialize, Debug)]
 struct VmafResult {
     frames: Vec<Metrics>,
-}
-
-pub struct MetricStatistics {
-    scores: Vec<f64>,
-    cache:  HashMap<String, f64>,
-}
-
-impl MetricStatistics {
-    pub fn new(scores: Vec<f64>) -> Self {
-        MetricStatistics {
-            scores,
-            cache: HashMap::new(),
-        }
-    }
-
-    fn get_or_compute(&mut self, key: &str, compute: impl FnOnce(&[f64]) -> f64) -> f64 {
-        *self.cache.entry(key.to_string()).or_insert_with(|| compute(&self.scores))
-    }
-
-    pub fn mean(&mut self) -> f64 {
-        self.get_or_compute("average", |scores| {
-            scores.iter().sum::<f64>() / scores.len() as f64
-        })
-    }
-
-    pub fn harmonic_mean(&mut self) -> f64 {
-        self.get_or_compute("harmonic_mean", |scores| {
-            let sum_reciprocals: f64 = scores.iter().map(|&x| 1.0 / x).sum();
-            scores.len() as f64 / sum_reciprocals
-        })
-    }
-
-    pub fn median(&mut self) -> f64 {
-        let mut sorted_scores = self.scores.clone();
-        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-        self.get_or_compute("median", |scores| {
-            let mid = scores.len() / 2;
-            if scores.len() % 2 == 0 {
-                (sorted_scores[mid - 1] + sorted_scores[mid]) / 2.0
-            } else {
-                sorted_scores[mid]
-            }
-        })
-    }
-
-    pub fn mode(&mut self) -> f64 {
-        let mut counts = HashMap::new();
-        for score in &self.scores {
-            // Round to nearest integer for fewer unique buckets
-            let rounded_score = score.round() as i32;
-            *counts.entry(rounded_score).or_insert(0) += 1;
-        }
-        let max_count = counts.values().copied().max().unwrap_or(0);
-        self.get_or_compute("mode", |scores| {
-            *scores
-                .iter()
-                .find(|score| counts[&(score.round() as i32)] == max_count)
-                .unwrap_or(&0.0)
-        })
-    }
-
-    pub fn minimum(&mut self) -> f64 {
-        self.get_or_compute("minimum", |scores| {
-            *scores.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
-        })
-    }
-
-    pub fn maximum(&mut self) -> f64 {
-        self.get_or_compute("maximum", |scores| {
-            *scores.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0)
-        })
-    }
-
-    pub fn variance(&mut self) -> f64 {
-        let average = self.mean();
-        self.get_or_compute("variance", |scores| {
-            scores
-                .iter()
-                .map(|x| {
-                    let diff = x - average;
-                    diff * diff
-                })
-                .sum::<f64>()
-                / scores.len() as f64
-        })
-    }
-
-    pub fn standard_deviation(&mut self) -> f64 {
-        let variance = self.variance();
-        self.get_or_compute("standard_deviation", |_| variance.sqrt())
-    }
-
-    pub fn percentile(&mut self, index: usize) -> f64 {
-        let mut sorted_scores = self.scores.clone();
-        sorted_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-        self.get_or_compute(&format!("percentile_{index}"), |scores| {
-            let index = (index as f64 / 100.0 * scores.len() as f64) as usize;
-            *sorted_scores.get(index).unwrap_or(&sorted_scores[0])
-        })
-    }
-
-    pub fn root_mean_square(&mut self) -> f64 {
-        self.get_or_compute("root_mean_square", |scores| {
-            let sum_of_squares: f64 = scores.iter().map(|&x| x * x).sum();
-            (sum_of_squares / scores.len() as f64).sqrt()
-        })
-    }
 }
 
 pub fn plot_vmaf_score_file(scores_file: &Path, plot_path: &Path) -> anyhow::Result<()> {
@@ -253,7 +137,7 @@ pub fn plot(
 
     let pipe_cmd: SmallVec<[&OsStr; 8]> = match reference {
         Input::Video {
-            ref path,
+            ref path, ..
         } => {
             vspipe_args = vec![];
             ref_smallvec!(OsStr, 8, [
@@ -270,6 +154,7 @@ pub fn plot(
         Input::VapourSynth {
             ref path,
             vspipe_args: args,
+            ..
         } => {
             vspipe_args = args.to_owned();
             ref_smallvec!(OsStr, 8, ["vspipe", "-c", "y4m", path, "-"])
@@ -426,7 +311,6 @@ pub fn run_vmaf_weighted(
     encoded: &Path,
     reference_pipe_cmd: &[impl AsRef<OsStr>],
     vspipe_args: Vec<String>,
-    stat_file: impl AsRef<Path>,
     model: Option<impl AsRef<Path>>,
     _res: &str,
     _scaler: &str,
@@ -435,7 +319,7 @@ pub fn run_vmaf_weighted(
     threads: usize,
     framerate: f64,
     disable_motion: bool,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Vec<f64>> {
     let temp_dir = encoded.parent().unwrap();
     let vmaf_y_path = temp_dir.join(format!(
         "vmaf_y_{}.json",
@@ -572,28 +456,14 @@ pub fn run_vmaf_weighted(
     let u_scores = read_vmaf_file(&vmaf_u_path).context("Failed to read VMAF U scores")?;
     let v_scores = read_vmaf_file(&vmaf_v_path).context("Failed to read VMAF V scores")?;
 
-    let weighted_scores: Vec<f64> = y_scores
+    let weighted_scores = y_scores
         .iter()
         .zip(u_scores.iter())
         .zip(v_scores.iter())
         .map(|((y, u), v)| (4.0 * y + u + v) / 6.0)
         .collect();
 
-    let weighted_result = VmafResult {
-        frames: weighted_scores
-            .iter()
-            .map(|&score| Metrics {
-                metrics: VmafScore {
-                    vmaf: score
-                },
-            })
-            .collect(),
-    };
-
-    let json_str = serde_json::to_string_pretty(&weighted_result)?;
-    std::fs::write(stat_file, json_str)?;
-
-    Ok(())
+    Ok(weighted_scores)
 }
 
 pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Error> {
@@ -602,43 +472,6 @@ pub fn read_vmaf_file(file: impl AsRef<Path>) -> Result<Vec<f64>, serde_json::Er
     let v = vmaf_results.frames.into_iter().map(|metric| metric.metrics.vmaf).collect();
 
     Ok(v)
-}
-
-/// Read a certain, given percentile VMAF score from the VMAF json file
-pub fn read_weighted_vmaf<P: AsRef<Path>>(
-    file: P,
-    probe_statistic: ProbingStatistic,
-) -> Result<f64, Box<dyn std::error::Error>> {
-    let scores = read_vmaf_file(file)?;
-    if scores.is_empty() {
-        return Err("No VMAF scores found".into());
-    }
-
-    // Must be mutable as each computation is cached for reuse in implementation
-    let mut metric_statistics = MetricStatistics::new(scores);
-
-    let statistic = match probe_statistic.name {
-        ProbingStatisticName::Mean => metric_statistics.mean(),
-        ProbingStatisticName::Median => metric_statistics.median(),
-        ProbingStatisticName::Harmonic => metric_statistics.harmonic_mean(),
-        ProbingStatisticName::Percentile => {
-            let value = probe_statistic.value.ok_or("Percentile statistic requires a value")?;
-            metric_statistics.percentile(value as usize)
-        },
-        ProbingStatisticName::StandardDeviation => {
-            let value =
-                probe_statistic.value.ok_or("Standard deviation statistic requires a value")?;
-            let sigma_distance = value * metric_statistics.standard_deviation();
-            let statistic = metric_statistics.mean() + sigma_distance;
-            statistic.clamp(metric_statistics.minimum(), metric_statistics.maximum())
-        },
-        ProbingStatisticName::Mode => metric_statistics.mode(),
-        ProbingStatisticName::Minimum => metric_statistics.minimum(),
-        ProbingStatisticName::Maximum => metric_statistics.maximum(),
-        ProbingStatisticName::RootMeanSquare => metric_statistics.root_mean_square(),
-    };
-
-    Ok(statistic)
 }
 
 pub fn percentile_of_sorted(scores: &[f64], percentile: f64) -> f64 {

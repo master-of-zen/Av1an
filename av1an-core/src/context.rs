@@ -1,12 +1,10 @@
 use std::{
     borrow::Cow,
-    cmp,
-    cmp::Reverse,
+    cmp::{self, Reverse},
     collections::BTreeSet,
     convert::TryInto,
     ffi::OsString,
-    fs,
-    fs::File,
+    fs::{self, read_to_string, File},
     io::Write,
     iter,
     path::{Path, PathBuf},
@@ -16,8 +14,7 @@ use std::{
         mpsc,
         Arc,
     },
-    thread,
-    thread::available_parallelism,
+    thread::{self, available_parallelism},
 };
 
 use ansi_term::{Color, Style};
@@ -42,6 +39,7 @@ use crate::{
     get_done,
     init_done,
     into_vec,
+    metrics::vmaf,
     progress_bar::{
         finish_progress_bar,
         inc_bar,
@@ -62,7 +60,6 @@ use crate::{
     settings::{EncodeArgs, InputPixelFormat},
     split::{extra_splits, segment, write_scenes_to_file},
     vapoursynth::{copy_vs_file, create_vs_file},
-    vmaf,
     ChunkMethod,
     ChunkOrdering,
     DashMap,
@@ -194,11 +191,11 @@ impl Av1anContext {
         {
           self.vs_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => path.clone(),
-            Input::Video{ path } => create_vs_file(&self.args.temp, path, self.args.chunk_method, self.args.sc_downscale_height, self.args.sc_pix_format, self.args.scaler.clone())?,
+            Input::Video{ path, .. } => create_vs_file(&self.args.temp, path, self.args.chunk_method, self.args.sc_downscale_height, self.args.sc_pix_format, self.args.scaler.clone())?,
           });
           self.vs_scd_script = Some(match &self.args.input {
             Input::VapourSynth { path, .. } => copy_vs_file(&self.args.temp, path, self.args.sc_downscale_height)?,
-            Input::Video { path: _ } => self.vs_script.clone().unwrap(),
+            Input::Video { .. } => self.vs_script.clone().unwrap(),
           });
 
           let vs_script = self.vs_script.clone().unwrap();
@@ -791,6 +788,7 @@ impl Av1anContext {
             |vs_script| Input::VapourSynth {
                 path:        vs_script.clone(),
                 vspipe_args: Vec::new(),
+                script_text: read_to_string(vs_script).unwrap(),
             },
         );
 
@@ -961,7 +959,8 @@ impl Av1anContext {
             temp: self.args.temp.clone(),
             index,
             input: Input::Video {
-                path: src_path.to_path_buf(),
+                path:        src_path.to_path_buf(),
+                script_text: None,
             },
             source_cmd: ffmpeg_gen_cmd,
             output_ext: output_ext.to_owned(),
@@ -1019,6 +1018,7 @@ impl Av1anContext {
             input: Input::VapourSynth {
                 path:        vs_script.to_path_buf(),
                 vspipe_args: self.args.input.as_vspipe_args_vec()?,
+                script_text: self.args.input.as_script_text().to_string(),
             },
             source_cmd: vspipe_cmd_gen,
             output_ext: output_ext.to_owned(),
@@ -1201,7 +1201,8 @@ impl Av1anContext {
         let mut chunk = Chunk {
             temp: self.args.temp.clone(),
             input: Input::Video {
-                path: PathBuf::from(file),
+                path:        PathBuf::from(file),
+                script_text: None,
             },
             source_cmd: ffmpeg_gen_cmd,
             output_ext: output_ext.to_owned(),

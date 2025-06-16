@@ -45,7 +45,8 @@ fn get_test_args() -> Av1anContext {
             format: Pixel::YUV420P10LE,
         },
         input:                 Input::Video {
-            path: PathBuf::new(),
+            path:        PathBuf::new(),
+            script_text: None,
         },
         output_pix_format:     PixelFormat {
             format:    Pixel::YUV420P10LE,
@@ -72,6 +73,7 @@ fn get_test_args() -> Av1anContext {
         vmaf_res:              "1920x1080".to_string(),
         vmaf_threads:          None,
         vmaf_filter:           None,
+        probe_res:             None,
     };
     Av1anContext {
         vs_script: None,

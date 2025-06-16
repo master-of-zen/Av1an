@@ -15,20 +15,25 @@ use tracing_subscriber::filter::LevelFilter;
 use crate::{
     concat::ConcatMethod,
     encoder::Encoder,
+    metrics::{vmaf::validate_libvmaf, xpsnr::validate_libxpsnr},
     parse::valid_params,
     target_quality::TargetQuality,
     vapoursynth::{
         is_bestsource_installed,
         is_dgdecnv_installed,
         is_ffms2_installed,
+        is_julek_installed,
         is_lsmash_installed,
+        is_vship_installed,
+        is_vszip_installed,
+        is_vszip_r7_or_newer,
     },
-    vmaf::validate_libvmaf,
     ChunkMethod,
     ChunkOrdering,
     Input,
     ScenecutMethod,
     SplitMethod,
+    TargetMetric,
     Verbosity,
 };
 
@@ -99,6 +104,7 @@ pub struct EncodeArgs {
     pub vmaf:           bool,
     pub vmaf_path:      Option<PathBuf>,
     pub vmaf_res:       String,
+    pub probe_res:      Option<String>,
     pub vmaf_threads:   Option<usize>,
     pub vmaf_filter:    Option<String>,
 }
@@ -124,7 +130,96 @@ impl EncodeArgs {
         );
 
         if self.target_quality.is_some() {
-            validate_libvmaf()?;
+            match self.target_quality.as_ref().unwrap().metric {
+                TargetMetric::VMAF => validate_libvmaf()?,
+                TargetMetric::SSIMULACRA2 => {
+                    ensure!(
+                        is_vship_installed() || is_vszip_installed(),
+                        "SSIMULACRA2 metric requires either Vapoursynth-HIP or VapourSynth Zig \
+                         Image Process to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         SSIMULACRA2"
+                    );
+                },
+                TargetMetric::ButteraugliINF => {
+                    ensure!(
+                        is_vship_installed() || is_julek_installed(),
+                        "Butteraugli metric requires either Vapoursynth-HIP or \
+                         vapoursynth-julek-plugin to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         Butteraugli"
+                    );
+                },
+                TargetMetric::Butteraugli3 => {
+                    ensure!(
+                        is_vship_installed(),
+                        "Butteraugli 3 Norm metric requires Vapoursynth-HIP plugin to be installed"
+                    );
+                    ensure!(
+                        matches!(
+                            self.chunk_method,
+                            ChunkMethod::LSMASH
+                                | ChunkMethod::FFMS2
+                                | ChunkMethod::BESTSOURCE
+                                | ChunkMethod::DGDECNV
+                        ),
+                        "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                         Butteraugli 3 Norm"
+                    );
+                },
+                TargetMetric::XPSNR | TargetMetric::XPSNRWeighted => {
+                    let metric_name = if self.target_quality.as_ref().unwrap().metric
+                        == TargetMetric::XPSNRWeighted
+                    {
+                        "Weighted "
+                    } else {
+                        ""
+                    };
+                    if self.target_quality.as_ref().unwrap().probing_rate > 1 {
+                        ensure!(
+                            is_vszip_installed() && is_vszip_r7_or_newer(),
+                            format!(
+                                "{metric_name}XPSNR metric with probing rate greater than 1 \
+                                 requires VapourSynth-Zig Image Process R7 or newer to be \
+                                 installed"
+                            )
+                        );
+                        ensure!(
+                            matches!(
+                                self.chunk_method,
+                                ChunkMethod::LSMASH
+                                    | ChunkMethod::FFMS2
+                                    | ChunkMethod::BESTSOURCE
+                                    | ChunkMethod::DGDECNV
+                            ),
+                            format!(
+                                "Chunk method must be lsmash, ffms2, bestsource, or dgdecnv for \
+                                 {metric_name}XPSNR with probing rate greater than 1"
+                            )
+                        );
+                    } else {
+                        validate_libxpsnr()?;
+                    }
+                },
+            }
         }
 
         if which::which("ffmpeg").is_err() {
@@ -202,6 +297,18 @@ impl EncodeArgs {
             }
 
             ensure!(target_quality.min_q >= 1);
+
+            if let Some(resolution) = &target_quality.probe_res {
+                match resolution.split('x').collect::<Vec<&str>>().as_slice() {
+                    [width_str, height_str] => {
+                        match (width_str.parse::<u32>(), height_str.parse::<u32>()) {
+                            (Ok(_width), Ok(_height)) => {},
+                            _ => eprintln!("Failed to parse Probe Resolution"),
+                        }
+                    },
+                    _ => eprintln!("Probe Resolution must be in the format widthxheight"),
+                }
+            }
         }
 
         let encoder_bin = self.encoder.bin();

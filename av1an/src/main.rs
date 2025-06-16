@@ -10,7 +10,6 @@ use std::{
 use ::ffmpeg::format::Pixel;
 use anyhow::{anyhow, bail, ensure, Context};
 use av1an_core::{
-    adapt_probing_rate,
     ffmpeg,
     hash_path,
     init_logging,
@@ -31,6 +30,7 @@ use av1an_core::{
     ProbingStatisticName,
     ScenecutMethod,
     SplitMethod,
+    TargetMetric,
     TargetQuality,
     Verbosity,
     VmafFeature,
@@ -63,11 +63,17 @@ fn version() -> &'static str {
   systems.innocent.lsmas : {}
   com.vapoursynth.ffms2  : {}
   com.vapoursynth.dgdecodenv : {}
-  com.vapoursynth.bestsource : {}",
+  com.vapoursynth.bestsource : {}
+  com.julek.plugin : {}
+  com.julek.vszip : {}
+  com.lumen.vship : {}",
             isfound(vapoursynth::is_lsmash_installed()),
             isfound(vapoursynth::is_ffms2_installed()),
             isfound(vapoursynth::is_dgdecnv_installed()),
-            isfound(vapoursynth::is_bestsource_installed())
+            isfound(vapoursynth::is_bestsource_installed()),
+            isfound(vapoursynth::is_julek_installed()),
+            isfound(vapoursynth::is_vszip_installed()),
+            isfound(vapoursynth::is_vship_installed())
         )
     }
 
@@ -595,6 +601,14 @@ pub struct CliOpts {
     #[clap(long, default_value = "1920x1080", help_heading = "VMAF")]
     pub vmaf_res: String,
 
+    /// Resolution used for Target Quality metric calculation in the form of
+    /// `widthxheight` where width and height are positive integers
+    ///
+    /// If not specified, the output video will be scaled to the resolution of
+    /// the input video.
+    #[clap(long, help_heading = "Target Quality")]
+    pub probe_res: Option<String>,
+
     /// Number of threads to use for target quality VMAF calculation
     #[clap(long, help_heading = "VMAF")]
     pub vmaf_threads: Option<usize>,
@@ -605,21 +619,58 @@ pub struct CliOpts {
     #[clap(long, help_heading = "VMAF")]
     pub vmaf_filter: Option<String>,
 
-    /// Target a VMAF score for encoding (disabled by default)
+    /// Target a metric score for encoding (disabled by default)
     ///
     /// For each chunk, target quality uses an algorithm to find the
-    /// quantizer/crf needed to achieve a certain VMAF score. Target quality
-    /// mode is much slower than normal encoding, but can improve the
-    /// consistency of quality in some cases.
+    /// quantizer/crf needed to achieve a certain metric score.
+    /// Target quality mode is much slower than normal encoding, but can improve
+    /// the consistency of quality in some cases.
     ///
-    /// The VMAF score range is 0-100 (where 0 is the worst quality, and 100 is
-    /// the best). Floating-point values are allowed.
+    /// The VMAF and SSIMULACRA2 score ranges are 0-100 (where 0 is the worst
+    /// quality, and 100 is the best).
+    ///
+    /// The butteraugli score minimum is 0 as the best quality and increases as
+    /// quality decreases towards infinity.
+    ///
+    /// The XPSNR score minimum is 0 as the worst quality and increases as
+    /// quality increases towards infinity.
+    ///
+    /// Floating-point values are allowed for all metrics.
     #[clap(long, help_heading = "Target Quality")]
     pub target_quality: Option<f64>,
-
+    /// The metric used for Target Quality mode
+    ///
+    /// vmaf - Requires FFmpeg with VMAF enabled.
+    ///
+    /// ssimulacra2 - Requires Vapoursynth-HIP or VapourSynth-Zig Image Process
+    /// plugin. Also requires Chunk method to be set to "lsmash", "ffms2",
+    /// "bestsource", or "dgdecnv".
+    ///
+    /// butteraugli-inf - Uses the Infinite-Norm value of Butteraugli. Requires
+    /// Vapoursynth-HIP or Julek plugin. Also requires Chunk method to be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// butteraugli-3  - Uses the 3-Norm value of Butteraugli. Requires
+    /// Vapoursynth-HIP plugin. Also requires Chunk method to be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// xpsnr -  Uses the minimum of Y, U, and V. Requires FFmpeg with XPSNR
+    /// enabled when Probing Rate is unspecified or set to 1. When Probing Rate
+    /// is specified higher than 1, the VapourSynth-Zig Image Process plugin
+    /// version R7 or newer is required and the Chunk method must be set to
+    /// "lsmash", "ffms2", "bestsource", or "dgdecnv".
+    ///
+    /// xpsnr-weighted - Uses weighted XPSNR based on this formula: `((4 * Y) +
+    /// U + V) / 6`. Requires FFmpeg with XPSNR enabled when Probing Rate is
+    /// unspecified or set to 1. When Probing Rate is specified higher than 1,
+    /// the VapourSynth-Zig Image Process plugin version R7 or newer is required
+    /// and the Chunk method must be set to "lsmash", "ffms2", "bestsource", or
+    /// "dgdecnv".
+    #[clap(long, default_value_t = TargetMetric::VMAF, help_heading = "Target Quality", ignore_case = true)]
+    pub target_metric:  TargetMetric,
     /// Maximum number of probes allowed for target quality
     #[clap(long, default_value_t = 4, help_heading = "Target Quality")]
-    pub probes: u32,
+    pub probes:         u32,
 
     /// Only use every nth frame for VMAF calculation, while probing.
     ///
@@ -630,12 +681,19 @@ pub struct CliOpts {
     #[clap(long, default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..=4), help_heading = "Target Quality")]
     pub probing_rate: u16,
 
-    /// Speed for probes, defaults to veryfast
+    /// Speed for probes. Lower speed for higher quality and accuracy
     ///
-    /// Does not override Probe Slow if not specified
+    /// Speeds:
+    ///   veryfast
+    ///   fast
+    ///   medium
+    ///   slow
+    ///   veryslow
     ///
-    /// Lower speed for higher quality and accuracy probes
-    #[clap(long, help_heading = "Target Quality")]
+    /// If specified with `--probe-slow`, overrides the respective speed
+    /// parameter (eg. "--cpu-used=", "--preset", etc.). Otherwise defaults to
+    /// "veryfast".
+    #[clap(long, help_heading = "Target Quality", ignore_case = true)]
     pub probing_speed: Option<ProbingSpeed>,
 
     /// Use encoding settings for probes specified by --video-params rather than
@@ -692,20 +750,21 @@ pub struct CliOpts {
     /// scores
     ///
     /// Available methods:
+    ///   auto                       - Automatically choose the best method based on the target metric, the probing speed, and the quantizer
     ///   mean                       - Arithmetic mean (average)
     ///   median                     - Middle value
-    ///   harmonic                   - Harmonic mean (emphasizes lower scores)
+    ///   harmonic                   - Harmonic mean (emphasizes lower quality scores)
     ///   percentile=<FLOAT>         - Percentile of a specified value. Must be between 0.0 and 100.0
     ///   standard-deviation=<FLOAT> - Standard deviation distance from mean (σ) clamped by the minimum and maximum probe scores
     ///   mode                       - Most common integer-rounded value
-    ///   minimum                    - Lowest value
-    ///   maximum                    - Highest value
+    ///   minimum                    - Lowest quality value
+    ///   maximum                    - Highest quality value
     ///   root-mean-square           - Root Mean Square (quadratic mean)
     ///
     /// Warning:
-    ///   'Root Mean Square' can only be used with reverse metrics.
-    ///   'HARMONIC' works as expected when there is no negative score. Use with caution.
-    #[clap(long, default_value_t = String::from("percentile=1"), help_heading = "Target Quality", verbatim_doc_comment)]
+    ///   "root-mean-square" should only be used with inverse target metrics such as "butteraugli".
+    ///   "harmonic" works as expected when there are no negative scores. Use with caution with target metrics such as "ssimulacra2".
+    #[clap(long, default_value_t = String::from("auto"), help_heading = "Target Quality", verbatim_doc_comment)]
     pub probing_stat: String,
 }
 
@@ -724,6 +783,10 @@ impl CliOpts {
                 let max_q = self.max_q.unwrap_or(max as u32);
 
                 let probing_statistic = match self.probing_stat.to_lowercase().as_str() {
+                    "auto" => ProbingStatistic {
+                        name:  ProbingStatisticName::Automatic,
+                        value: None,
+                    },
                     "mean" => ProbingStatistic {
                         name:  ProbingStatisticName::Mean,
                         value: None,
@@ -815,6 +878,7 @@ impl CliOpts {
 
                 Ok(TargetQuality {
                     vmaf_res: self.vmaf_res.clone(),
+                    probe_res: self.probe_res.clone(),
                     vmaf_scaler: self.scaler.clone(),
                     vmaf_filter: self.vmaf_filter.clone(),
                     vmaf_threads: self.vmaf_threads.unwrap_or_else(|| {
@@ -825,6 +889,7 @@ impl CliOpts {
                     model: self.vmaf_path.clone(),
                     probes: self.probes,
                     target: tq,
+                    metric: self.target_metric,
                     min_q,
                     max_q,
                     encoder: self.encoder,
@@ -834,8 +899,8 @@ impl CliOpts {
                     video_params: video_params.clone(),
                     vspipe_args: self.vspipe_args.clone(),
                     probe_slow: self.probe_slow,
-                    probing_speed: self.probing_speed.clone().map(|s| s as u8),
-                    probing_rate: adapt_probing_rate(self.probing_rate as usize),
+                    probing_speed: self.probing_speed,
+                    probing_rate: self.probing_rate as usize,
                     probing_vmaf_features: if self.probing_vmaf_features.is_empty() {
                         vec![VmafFeature::Default]
                     } else {
@@ -911,7 +976,33 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             format!(".{}", hash_path(input.as_path()))
         };
 
-        let input = Input::from((input, args.vspipe_args.clone()));
+        let chunk_method =
+            args.chunk_method.unwrap_or_else(vapoursynth::best_available_chunk_method);
+        let scaler = {
+            let mut scaler = args.scaler.to_string().clone();
+            let mut scaler_ext =
+                "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
+            if scaler.starts_with("lanczos") {
+                for n in 1..=9 {
+                    if scaler.ends_with(&n.to_string()) {
+                        scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
+                        scaler = "lanczos".to_string();
+                    }
+                }
+            }
+            scaler.push_str(&scaler_ext);
+            scaler
+        };
+
+        let input = Input::from((
+            input,
+            args.vspipe_args.clone(),
+            temp.as_str(),
+            chunk_method,
+            args.sc_downscale_height,
+            args.sc_pix_format,
+            scaler.clone(),
+        ));
 
         let verbosity = if args.quiet {
             Verbosity::Quiet
@@ -999,9 +1090,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             } else {
                 into_vec!["-c:a", "copy"]
             },
-            chunk_method: args
-                .chunk_method
-                .unwrap_or_else(vapoursynth::best_available_chunk_method),
+            chunk_method,
             chunk_order: args.chunk_order,
             concat: args.concat,
             encoder: args.encoder,
@@ -1024,7 +1113,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             input_pix_format: {
                 match &input {
                     Input::Video {
-                        path,
+                        path, ..
                     } => InputPixelFormat::FFmpeg {
                         format: ffmpeg::get_pixel_format(path.as_ref()).with_context(|| {
                             format!("FFmpeg failed to get pixel format for input video {path:?}")
@@ -1058,6 +1147,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             vmaf: args.vmaf,
             vmaf_path: args.vmaf_path.clone(),
             vmaf_res: args.vmaf_res.clone(),
+            probe_res: args.probe_res.clone(),
             vmaf_threads: args.vmaf_threads,
             vmaf_filter: args.vmaf_filter.clone(),
             verbosity,
@@ -1066,21 +1156,7 @@ pub fn parse_cli(args: CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             tile_auto: args.tile_auto,
             set_thread_affinity: args.set_thread_affinity,
             zones: args.zones.clone(),
-            scaler: {
-                let mut scaler = args.scaler.to_string().clone();
-                let mut scaler_ext =
-                    "+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact".to_string();
-                if scaler.starts_with("lanczos") {
-                    for n in 1..=9 {
-                        if scaler.ends_with(&n.to_string()) {
-                            scaler_ext.push_str(&format!(":param0={}", &n.to_string()));
-                            scaler = "lanczos".to_string();
-                        }
-                    }
-                }
-                scaler.push_str(&scaler_ext);
-                scaler
-            },
+            scaler,
             ignore_frame_mismatch: args.ignore_frame_mismatch,
         };
 

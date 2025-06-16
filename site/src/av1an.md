@@ -85,8 +85,10 @@ Name | Flag | Type | Default
 
 Name | Flag | Type | Default
 --- | --- | --- | ---
+[Target Metric](./Cli/target_quality.md#target-metric---target-metric) | `--target-metric` | `TARGET_METRIC` | `VMAF`
 [Target Quality](./Cli/target_quality.md#target-quality---target-quality) | `--target-quality` | Float | 
 [Probes](./Cli/target_quality.md#probes---probes) | `--probes` | Integer | `4`
+[Probe Resolution](./Cli/target_quality.md#probe-resolution---probe-res) | `--probe-res` | String |
 [Probing Rate](./Cli/target_quality.md#probing-rate---probing-rate) | `--probing-rate` | Integer | `1`
 [Probing Speed](./Cli/target_quality.md#probing-speed---probing-speed) | `--probing-speed` | `PROBING_SPEED` |
 [Probing Statistic](./Cli/target_quality.md#probing-statistic---probing-stat) | `--probing-stat` | String | `percentile=1`

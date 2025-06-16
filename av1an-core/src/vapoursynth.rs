@@ -302,10 +302,10 @@ impl PluginId {
 fn get_plugin(core: CoreRef, plugin_id: PluginId) -> anyhow::Result<Plugin> {
     let plugin = core.get_plugin_by_id(plugin_id.as_str())?;
 
-    match plugin {
-        Some(plugin) => Ok(plugin),
-        None => bail!("Failed to get VapourSynth {} plugin", plugin_id.as_str()),
-    }
+    plugin.ok_or(anyhow::anyhow!(
+        "Failed to get VapourSynth {plugin_id} plugin",
+        plugin_id = plugin_id.as_str()
+    ))
 }
 
 fn import_lsmash<'core>(
@@ -313,7 +313,7 @@ fn import_lsmash<'core>(
     encoded: &Path,
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let lsmash = get_plugin(core, PluginId::Lsmash)?;
     let absolute_encoded_path = absolute(encoded)?;
 
@@ -329,9 +329,19 @@ fn import_lsmash<'core>(
             false => 0,
         })?;
     }
+    // Allow hardware acceleration, falls back to software decoding.
     arguments.set_int("prefer_hw", 3)?;
 
-    Ok(lsmash.invoke("LWLibavSource", &arguments)?.get_node("clip")?)
+    let error_message = format!(
+        "Failed to import {video_path} with lsmash",
+        video_path = encoded.display()
+    );
+
+    lsmash
+        .invoke("LWLibavSource", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 fn import_ffms2<'core>(
@@ -339,7 +349,7 @@ fn import_ffms2<'core>(
     encoded: &Path,
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let ffms2 = get_plugin(core, PluginId::Ffms2)?;
     let absolute_encoded_path = absolute(encoded)?;
 
@@ -357,7 +367,16 @@ fn import_ffms2<'core>(
         })?;
     }
 
-    Ok(ffms2.invoke("Source", &arguments)?.get_node("clip")?)
+    let error_message = format!(
+        "Failed to import {video_path} with ffms2",
+        video_path = encoded.display()
+    );
+
+    ffms2
+        .invoke("Source", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 fn import_bestsource<'core>(
@@ -365,7 +384,7 @@ fn import_bestsource<'core>(
     encoded: &Path,
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let bestsource = get_plugin(core, PluginId::BestSource)?;
     let absolute_encoded_path = absolute(encoded)?;
 
@@ -387,18 +406,34 @@ fn import_bestsource<'core>(
         })?;
     }
 
-    Ok(bestsource.invoke("VideoSource", &arguments)?.get_node("clip")?)
+    let error_message = format!(
+        "Failed to import {video_path} with bestsource",
+        video_path = encoded.display()
+    );
+
+    bestsource
+        .invoke("VideoSource", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
-// Attempts to import video using LSMASH, FFMS2 or BestSource in that order
+// Attempts to import video using FFMS2, BestSource, or LSMASH in that order
 fn import_video<'core>(
     core: CoreRef<'core>,
     encoded: &Path,
     cache: Option<bool>,
 ) -> anyhow::Result<Node<'core>> {
-    import_ffms2(core, encoded, cache).or_else(|_| {
-        import_bestsource(core, encoded, cache).or_else(|_| import_lsmash(core, encoded, cache))
-    })
+    import_ffms2(core, encoded, cache)
+        .or_else(|_| {
+            import_bestsource(core, encoded, cache).or_else(|_| import_lsmash(core, encoded, cache))
+        })
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "Failed to import {video_path} with any decoder",
+                video_path = encoded.display()
+            )
+        })
 }
 
 fn trim_node<'core>(
@@ -407,7 +442,7 @@ fn trim_node<'core>(
     start: u32,
     end: u32,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let std = get_plugin(core, PluginId::Std)?;
 
     let mut arguments = vapoursynth::map::OwnedMap::new(api);
@@ -415,7 +450,12 @@ fn trim_node<'core>(
     arguments.set("first", &(start as i64))?;
     arguments.set("last", &(end as i64))?;
 
-    Ok(std.invoke("Trim", &arguments)?.get_node("clip")?)
+    let error_message = format!("Failed to trim video from {start} to {end}");
+
+    std.invoke("Trim", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 fn resize_node<'core>(
@@ -426,7 +466,7 @@ fn resize_node<'core>(
     format: Option<PresetFormat>,
     matrix_in_s: Option<&'static str>,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let std = get_plugin(core, PluginId::Resize)?;
 
     let mut arguments = vapoursynth::map::OwnedMap::new(api);
@@ -444,7 +484,16 @@ fn resize_node<'core>(
         arguments.set("matrix_in_s", &matrix_in_s.as_bytes())?;
     }
 
-    Ok(std.invoke("Bicubic", &arguments)?.get_node("clip")?)
+    let error_message = format!(
+        "Failed to resize video to {width}x{height}",
+        width = width.unwrap_or(0),
+        height = height.unwrap_or(0)
+    );
+
+    std.invoke("Bicubic", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 fn select_every<'core>(
@@ -452,7 +501,7 @@ fn select_every<'core>(
     node: &Node<'core>,
     n: usize,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
     let std = get_plugin(core, PluginId::Std)?;
 
     let mut arguments = vapoursynth::map::OwnedMap::new(api);
@@ -460,7 +509,12 @@ fn select_every<'core>(
     arguments.set_int("cycle", n as i64)?;
     arguments.set_int_array("offsets", &[0])?;
 
-    Ok(std.invoke("SelectEvery", &arguments)?.get_node("clip")?)
+    let error_message = format!("Failed to select 1 of every {n} frames");
+
+    std.invoke("SelectEvery", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 fn compare_ssimulacra2<'core>(
@@ -468,47 +522,63 @@ fn compare_ssimulacra2<'core>(
     source: &Node<'core>,
     encoded: &Node<'core>,
 ) -> anyhow::Result<(Node<'core>, &'static str)> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    if !is_vship_installed() && !is_vszip_installed() {
+        return Err(anyhow::anyhow!("SSIMULACRA2 not available"));
+    }
+
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
+    let plugin = get_plugin(
+        core,
+        if is_vship_installed() {
+            PluginId::Vship
+        } else {
+            PluginId::Vszip
+        },
+    )?;
+
+    let error_message = format!(
+        "Failed to calculate SSIMULACRA2 with {plugin_id} plugin",
+        plugin_id = if is_vship_installed() {
+            PluginId::Vship.as_str()
+        } else {
+            PluginId::Vszip.as_str()
+        }
+    );
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set("reference", source)?;
+    arguments.set("distorted", encoded)?;
 
     if is_vship_installed() {
-        let vship = get_plugin(core, PluginId::Vship)?;
-
-        let mut arguments = vapoursynth::map::OwnedMap::new(api);
-        arguments.set("reference", source)?;
-        arguments.set("distorted", encoded)?;
         arguments.set_int("numStream", 4)?;
-
-        return Ok((
-            vship.invoke("SSIMULACRA2", &arguments)?.get_node("clip")?,
-            "_SSIMULACRA2",
-        ));
-    } else if is_vszip_installed() {
-        let vszip = get_plugin(core, PluginId::Vszip)?;
-
-        // Handle breaking API change in vszip
-        if is_vszip_r7_or_newer() {
-            let mut arguments = vapoursynth::map::OwnedMap::new(api);
-            arguments.set("reference", source)?;
-            arguments.set("distorted", encoded)?;
-
-            Ok((
-                vszip.invoke("SSIMULACRA2", &arguments)?.get_node("clip")?,
-                "SSIMULACRA2",
-            ))
-        } else {
-            let mut arguments = vapoursynth::map::OwnedMap::new(api);
-            arguments.set("reference", source)?;
-            arguments.set("distorted", encoded)?;
-            arguments.set_int("mode", 0)?;
-
-            Ok((
-                vszip.invoke("Metrics", &arguments)?.get_node("clip")?,
-                "_SSIMULACRA2",
-            ))
-        }
-    } else {
-        bail!("SSIMULACRA2 not available");
+    } else if is_vszip_installed() && !is_vszip_r7_or_newer() {
+        // Handle older vszip API
+        arguments.set_int("mode", 0)?;
     }
+
+    let output = plugin
+        .invoke(
+            if is_vship_installed() || (is_vszip_installed() && is_vszip_r7_or_newer()) {
+                "SSIMULACRA2"
+            } else {
+                // Handle older vszip API
+                "Metrics"
+            },
+            &arguments,
+        )
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?;
+
+    Ok((
+        output,
+        if is_vship_installed() || (is_vszip_installed() && !is_vszip_r7_or_newer()) {
+            "_SSIMULACRA2"
+        } else {
+            // Handle newer vszip API
+            "SSIMULACRA2"
+        },
+    ))
 }
 
 fn compare_butteraugli<'core>(
@@ -517,29 +587,40 @@ fn compare_butteraugli<'core>(
     encoded: &Node<'core>,
     submetric: ButteraugliSubMetric,
 ) -> anyhow::Result<(Node<'core>, &'static str)> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    if !is_vship_installed() && !is_julek_installed() {
+        return Err(anyhow::anyhow!("butteraugli not available"));
+    }
+
+    const INTENSITY: f64 = 80.0;
+    let error_message = format!(
+        "Failed to calculate butteraugli with {plugin_id} plugin",
+        plugin_id = if is_vship_installed() {
+            PluginId::Vship.as_str()
+        } else {
+            PluginId::Julek.as_str()
+        }
+    );
+
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
+    let plugin = get_plugin(
+        core,
+        if is_vship_installed() {
+            PluginId::Vship
+        } else {
+            PluginId::Julek
+        },
+    )?;
+
+    let mut arguments = vapoursynth::map::OwnedMap::new(api);
+    arguments.set_int("distmap", 1)?;
 
     if is_vship_installed() {
-        let vship = get_plugin(core, PluginId::Vship)?;
-
-        let mut arguments = vapoursynth::map::OwnedMap::new(api);
         arguments.set("reference", source)?;
         arguments.set("distorted", encoded)?;
-        arguments.set_float("intensity_multiplier", 80.0)?;
-        arguments.set_int("distmap", 1)?;
+        arguments.set_float("intensity_multiplier", INTENSITY)?;
         arguments.set_int("numStream", 4)?;
-
-        return Ok((
-            vship.invoke("BUTTERAUGLI", &arguments)?.get_node("clip")?,
-            if submetric == ButteraugliSubMetric::InfiniteNorm {
-                "_BUTTERAUGLI_INFNorm"
-            } else {
-                "_BUTTERAUGLI_3Norm"
-            },
-        ));
     } else if is_julek_installed() {
-        let julek = get_plugin(core, PluginId::Julek)?;
-
+        // Inputs must be in RGBS format
         let formatted_source = resize_node(
             core,
             source,
@@ -557,19 +638,36 @@ fn compare_butteraugli<'core>(
             Some("709"),
         )?;
 
-        let mut arguments = vapoursynth::map::OwnedMap::new(api);
         arguments.set("reference", &formatted_source)?;
         arguments.set("distorted", &formatted_encoded)?;
-        arguments.set_float("intensity_target", 80.0)?;
-        arguments.set_int("distmap", 1)?;
-
-        return Ok((
-            julek.invoke("Butteraugli", &arguments)?.get_node("clip")?,
-            "_FrameButteraugli",
-        ));
-    } else {
-        bail!("Butteraugli not available");
+        arguments.set_float("intensity_target", INTENSITY)?;
     }
+
+    let output = plugin
+        .invoke(
+            if is_vship_installed() {
+                "BUTTERAUGLI"
+            } else {
+                "butteraugli"
+            },
+            &arguments,
+        )
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?;
+
+    Ok((
+        output,
+        if is_vship_installed() {
+            if submetric == ButteraugliSubMetric::InfiniteNorm {
+                "_BUTTERAUGLI_INFNorm"
+            } else {
+                "_BUTTERAUGLI_3Norm"
+            }
+        } else {
+            "_FrameButteraugli"
+        },
+    ))
 }
 
 fn compare_xpsnr<'core>(
@@ -577,13 +675,13 @@ fn compare_xpsnr<'core>(
     source: &Node<'core>,
     encoded: &Node<'core>,
 ) -> anyhow::Result<Node<'core>> {
-    let api = API::get().expect("Failed to get VapourSynth API");
+    let api = API::get().ok_or(anyhow::anyhow!("Failed to get VapourSynth API"))?;
 
     if !is_vszip_installed() || !is_vszip_r7_or_newer() {
-        bail!("XPSNR not available");
+        return Err(anyhow::anyhow!("XPSNR not available"));
     }
 
-    let vszip = get_plugin(core, PluginId::Vszip)?;
+    let plugin = get_plugin(core, PluginId::Vszip)?;
 
     // XPSNR requires YUV input and a maximum bit depth of 10
     let formatted_source = resize_node(
@@ -607,7 +705,16 @@ fn compare_xpsnr<'core>(
     arguments.set("reference", &formatted_source)?;
     arguments.set("distorted", &formatted_encoded)?;
 
-    Ok(vszip.invoke("XPSNR", &arguments)?.get_node("clip")?)
+    let error_message = format!(
+        "Failed to calculate XPSNR with {plugin_id} plugin",
+        plugin_id = PluginId::Vszip.as_str()
+    );
+
+    plugin
+        .invoke("XPSNR", &arguments)
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))?
+        .get_node("clip")
+        .map_err(|_| anyhow::anyhow!(error_message.clone()))
 }
 
 #[inline]
@@ -1053,8 +1160,13 @@ pub fn measure_xpsnr(
                 scores.push(minimum);
             },
             XPSNRSubMetric::Weighted => {
-                // Weighted Sum as recommended by https://wiki.x266.mov/docs/metrics/XPSNR
-                let weighted = ((4.0 * xpsnr_y) + xpsnr_u + xpsnr_v) / 6.0;
+                let weighted = -10.0
+                    * f64::log10(
+                        (4.0 * f64::powf(10.0, -xpsnr_y / 10.0))
+                            + f64::powf(10.0, -xpsnr_u / 10.0)
+                            + f64::powf(10.0, -xpsnr_v / 10.0),
+                    )
+                    / 6.0;
                 scores.push(weighted);
             },
         }

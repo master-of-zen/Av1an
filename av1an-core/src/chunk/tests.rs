@@ -132,14 +132,14 @@ fn apply_photon_noise_args_with_noise() -> anyhow::Result<()> {
     let mut ch = Chunk {
         temp:                  temp_dir.path().to_string_lossy().to_string(),
         index:                 1,
-        input:                 Input::new(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-files/blank_1080p.mkv"),
-            vec![],
-            &temp_dir.path().to_string_lossy(),
-            ChunkMethod::LSMASH,
-            false,
-            vapoursynth::CacheSource::SOURCE,
-        )?,
+        input:                 Input::Video {
+            path:         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("test-files/blank_1080p.mkv"),
+            temp:         temp_dir.path().to_string_lossy().to_string(),
+            chunk_method: ChunkMethod::Select,
+            is_proxy:     false,
+            cache_mode:   vapoursynth::CacheSource::SOURCE,
+        },
         proxy:                 None,
         source_cmd:            vec!["".into()],
         proxy_cmd:             None,
@@ -159,7 +159,7 @@ fn apply_photon_noise_args_with_noise() -> anyhow::Result<()> {
         ignore_frame_mismatch: false,
     };
 
-    ch.apply_photon_noise_args(Some(8), true)?;
+    ch.apply_photon_noise_args(Some(8), true, None)?;
     assert!(ch.video_params.iter().any(|p| p.contains("fgs-table")));
     Ok(())
 }
@@ -197,7 +197,7 @@ fn apply_photon_noise_args_no_noise() -> anyhow::Result<()> {
         ignore_frame_mismatch: false,
     };
 
-    ch.apply_photon_noise_args(None, false)?;
+    ch.apply_photon_noise_args(None, false, None)?;
     assert!(!ch.video_params.iter().any(|p| p.contains("fgs-table")));
     Ok(())
 }
@@ -235,6 +235,6 @@ fn apply_photon_noise_args_unsupported_encoder() -> anyhow::Result<()> {
         ignore_frame_mismatch: false,
     };
 
-    assert!(ch.apply_photon_noise_args(Some(8), true).is_err());
+    assert!(ch.apply_photon_noise_args(Some(8), true, None).is_err());
     Ok(())
 }

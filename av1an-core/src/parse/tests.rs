@@ -78,6 +78,15 @@ fn x26x_parsing() {
             "[42.5%] 121/285 frames, 2.47 fps, 1445.28 kb/s, eta 0:01:06",
             Some(121),
         ),
+        (
+            "x264 [38.2%] 844/2208 frames @ 115.7 fps | 2930.1 kb/s | 0:00:07 [-0:00:11] | 12.89 \
+             MB [33.73 MB]",
+            Some(844),
+        ),
+        (
+            "x264 [INFO]: frame I:116   Avg QP:15.35  size: 138182",
+            None,
+        ),
         ("invalid data", None),
         ("", None),
     ];

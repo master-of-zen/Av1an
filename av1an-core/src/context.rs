@@ -3,7 +3,7 @@ use std::{
     cmp::{self, Reverse},
     ffi::OsString,
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, Write},
     iter,
     path::{Path, PathBuf},
     process::{exit, ChildStderr, Command, Stdio},
@@ -14,6 +14,7 @@ use std::{
         Mutex,
     },
     thread::{self, available_parallelism},
+    time::Instant,
 };
 
 use anyhow::Context;
@@ -33,6 +34,7 @@ use crate::{
     determine_workers,
     ffmpeg::{compose_ffmpeg_pipe, get_num_frames},
     get_done,
+    get_encode_summary_stats,
     init_done,
     into_vec,
     log_merge::LogMerger,
@@ -51,8 +53,10 @@ use crate::{
         update_progress_bar_estimates,
     },
     read_chunk_queue,
+    reset_encode_summary_stats,
     save_chunk_queue,
     scenes::{Scene, SceneFactory, ZoneOptions},
+    set_encode_summary_stats,
     settings::{EncodeArgs, InputPixelFormat},
     split::segment,
     vapoursynth::{create_vs_file, LoadscriptArgs},
@@ -65,6 +69,26 @@ use crate::{
     PixelFormatConverter,
     Verbosity,
 };
+
+fn open_chunk_log_file(
+    temp_dir: &Path,
+    chunk_index: usize,
+    current_pass: u8,
+    total_passes: u8,
+    capture_logs: bool,
+) -> io::Result<Option<File>> {
+    if !capture_logs || current_pass != total_passes {
+        return Ok(None);
+    }
+
+    let log_file_path = temp_dir.join("logs").join(format!("log_{}.log", chunk_index));
+    OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(log_file_path)
+        .map(Some)
+}
 
 #[derive(Debug)]
 pub struct Av1anContext {
@@ -107,6 +131,7 @@ impl Av1anContext {
         create_dir!(Path::new(&self.args.temp))?;
         create_dir!(Path::new(&self.args.temp).join("split"))?;
         create_dir!(Path::new(&self.args.temp).join("encode"))?;
+        reset_encode_summary_stats();
 
         debug!("temporary directory: {temp}", temp = &self.args.temp);
 
@@ -393,6 +418,7 @@ impl Av1anContext {
             }
 
             let (tx, rx) = mpsc::channel();
+            let encode_start = Instant::now();
             let handle = s.spawn(|_| -> anyhow::Result<()> {
                 broker.encoding_loop(tx, self.args.set_thread_affinity, total_chunks as u32)?;
                 Ok(())
@@ -406,6 +432,23 @@ impl Av1anContext {
             }
 
             handle.join().expect("thread should join successfully")?;
+            let encode_seconds = encode_start.elapsed().as_secs_f64();
+
+            let total_frames: usize =
+                get_done().done.iter().map(|entry| entry.value().frames).sum();
+            let total_bytes: u64 =
+                get_done().done.iter().map(|entry| entry.value().size_bytes).sum();
+            let media_seconds = if fps > 0.0 {
+                total_frames as f64 / fps
+            } else {
+                0.0
+            };
+            set_encode_summary_stats(crate::EncodeSummaryStats {
+                total_frames,
+                media_seconds,
+                encode_seconds,
+                total_bytes,
+            });
 
             finish_progress_bar();
 
@@ -531,7 +574,9 @@ impl Av1anContext {
 
                     match File::create(&output_log_path) {
                         Ok(log_file) => {
-                            if let Err(e) = merger.write_merged(log_file) {
+                            let summary = get_encode_summary_stats()
+                                .expect("encode summary stats should exist");
+                            if let Err(e) = merger.write_merged_with_summary(log_file, &summary) {
                                 warn!("Failed to write merged log: {}", e);
                             }
                         },
@@ -793,10 +838,15 @@ impl Av1anContext {
                 let mut buf = Vec::with_capacity(128);
                 let mut enc_stderr = String::with_capacity(128);
 
-                let log_file_path =
-                    Path::new(&chunk.temp).join("logs").join(format!("log_{}.log", chunk.index));
-                let mut log_file =
-                    OpenOptions::new().create(true).append(true).open(&log_file_path).ok();
+                let mut log_file = open_chunk_log_file(
+                    Path::new(&chunk.temp),
+                    chunk.index,
+                    current_pass,
+                    chunk.passes,
+                    self.args.params_indicate_logging(),
+                )
+                .ok()
+                .flatten();
 
                 while let Ok(read) = reader.read_until(b'\r', &mut buf) {
                     if read == 0 {
@@ -1469,5 +1519,39 @@ impl Av1anContext {
             save_chunk_queue(&self.args.temp, &chunks)?;
             Ok((chunks, num_chunks))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, io::Write};
+
+    use tempfile::TempDir;
+
+    use super::open_chunk_log_file;
+
+    #[test]
+    fn chunk_log_file_is_only_created_for_final_pass() {
+        let dir = TempDir::new().expect("temp dir should exist");
+        let log_file = open_chunk_log_file(dir.path(), 7, 1, 2, true).expect("open should work");
+        assert!(log_file.is_none());
+        assert!(!dir.path().join("logs").join("log_7.log").exists());
+    }
+
+    #[test]
+    fn chunk_log_file_truncates_previous_attempt_contents() {
+        let dir = TempDir::new().expect("temp dir should exist");
+        let logs_dir = dir.path().join("logs");
+        fs::create_dir_all(&logs_dir).expect("logs dir should exist");
+        fs::write(logs_dir.join("log_3.log"), "old attempt\n").expect("seed log should write");
+
+        let mut log_file = open_chunk_log_file(dir.path(), 3, 2, 2, true)
+            .expect("open should work")
+            .expect("final pass should open log file");
+        log_file.write_all(b"new attempt\n").expect("new log should write");
+        drop(log_file);
+
+        let contents = fs::read_to_string(logs_dir.join("log_3.log")).expect("log should read");
+        assert_eq!(contents, "new attempt\n");
     }
 }

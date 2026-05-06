@@ -425,7 +425,17 @@ struct DoneJson {
     audio_done: AtomicBool,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct EncodeSummaryStats {
+    pub total_frames:   usize,
+    pub media_seconds:  f64,
+    pub encode_seconds: f64,
+    pub total_bytes:    u64,
+}
+
 static DONE_JSON: OnceCell<DoneJson> = OnceCell::new();
+static ENCODE_SUMMARY_STATS: Lazy<Mutex<Option<EncodeSummaryStats>>> =
+    Lazy::new(|| Mutex::new(None));
 
 // once_cell::sync::Lazy cannot be used here due to Lazy<T> not implementing
 // Serialize or Deserialize, we need to get a reference directly to the global
@@ -436,6 +446,18 @@ fn get_done() -> &'static DoneJson {
 
 fn init_done(done: DoneJson) -> &'static DoneJson {
     DONE_JSON.get_or_init(|| done)
+}
+
+fn reset_encode_summary_stats() {
+    *ENCODE_SUMMARY_STATS.lock().expect("mutex should acquire lock") = None;
+}
+
+fn set_encode_summary_stats(stats: EncodeSummaryStats) {
+    *ENCODE_SUMMARY_STATS.lock().expect("mutex should acquire lock") = Some(stats);
+}
+
+fn get_encode_summary_stats() -> Option<EncodeSummaryStats> {
+    *ENCODE_SUMMARY_STATS.lock().expect("mutex should acquire lock")
 }
 
 #[inline]

@@ -1170,6 +1170,8 @@ pub fn parse_cli(args: &CliOpts) -> anyhow::Result<Vec<EncodeArgs>> {
             ignore_frame_mismatch: args.ignore_frame_mismatch,
             vapoursynth_plugins,
             user_log_file: None,
+            x265_csv_file: None,
+            merge_text_logs: false,
         };
 
         if !args.overwrite {

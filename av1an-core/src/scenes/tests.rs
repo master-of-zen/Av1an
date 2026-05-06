@@ -89,6 +89,8 @@ fn get_test_args() -> Av1anContext {
         cache_mode:            CacheSource::SOURCE,
         pix_format_converter:  crate::PixelFormatConverter::FFMPEG,
         user_log_file:         None,
+        x265_csv_file:         None,
+        merge_text_logs:       false,
     };
     Av1anContext {
         vs_script: None,

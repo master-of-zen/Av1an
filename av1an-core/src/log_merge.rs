@@ -4,17 +4,20 @@ use std::{
     path::Path,
 };
 
+use crate::EncodeSummaryStats;
+
 pub struct LogMerger {
-    encoder:       String,
-    total_seconds: f64,
+    encoder:              String,
+    total_encode_seconds: f64,
+    total_media_seconds:  f64,
     // Frame type stats: (count, total_qp, total_size_or_rate)
     // For x264, 3rd element is Bytes. For x265, strict parsing is harder for rate,
     // but x265 reports 'kb/s' per type. We can try to sum kb/s * time?
     // Or just parse whatever the 3rd metric is.
     // x264 'size' is Bytes. x265 'kb/s' is Rate.
-    frame_i_stats: (usize, f64, f64),
-    frame_p_stats: (usize, f64, f64),
-    frame_b_stats: (usize, f64, f64),
+    frame_i_stats:        (usize, f64, f64),
+    frame_p_stats:        (usize, f64, f64),
+    frame_b_stats:        (usize, f64, f64),
 
     // Header lines to preserve (from first chunk)
     headers: Vec<String>,
@@ -29,14 +32,15 @@ pub struct LogMerger {
 impl LogMerger {
     pub fn new(encoder: &str) -> Self {
         Self {
-            encoder:       encoder.to_string(),
-            total_seconds: 0.0,
-            frame_i_stats: (0, 0.0, 0.0),
-            frame_p_stats: (0, 0.0, 0.0),
-            frame_b_stats: (0, 0.0, 0.0),
-            headers:       Vec::new(),
-            log_prefix:    String::new(),
-            header_done:   false,
+            encoder:              encoder.to_string(),
+            total_encode_seconds: 0.0,
+            total_media_seconds:  0.0,
+            frame_i_stats:        (0, 0.0, 0.0),
+            frame_p_stats:        (0, 0.0, 0.0),
+            frame_b_stats:        (0, 0.0, 0.0),
+            headers:              Vec::new(),
+            log_prefix:           String::new(),
+            header_done:          false,
         }
     }
 
@@ -195,8 +199,8 @@ impl LogMerger {
                     // x265 rate case
                     stats.2 += metric_val * count as f64;
                 } else {
-                    // x264 size case (bytes)
-                    stats.2 += metric_val;
+                    // x264 size case stores average bytes per frame for each frame type.
+                    stats.2 += metric_val * count as f64;
                 }
 
                 matched = true;
@@ -221,10 +225,6 @@ impl LogMerger {
     }
 
     fn parse_summary(&mut self, line: &str) {
-        // Common parsers for time/fps to help reconstruct global stats if needed
-        // x265: encoded 100 frames in 10.00s (10.00 fps), 1000.00 kb/s...
-        // x264: encoded 100 frames, 10.00 fps, 1000.00 kb/s... (duration inferred?)
-
         let mut frames = 0;
         if let Some(idx) = line.find("encoded") {
             let s = line.get(idx + 7..).unwrap_or(""); // after "encoded"
@@ -234,42 +234,67 @@ impl LogMerger {
             }
         }
 
-        // Extract duration/FPS to accumulate total_seconds
-        // x265: "in 123.45s"
+        let mut parsed_encode_seconds = false;
         if let Some(in_idx) = line.find("in ") {
             let s = line.get(in_idx + 3..).unwrap_or("");
             let time_str: String =
                 s.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
             if let Ok(time) = time_str.parse::<f64>() {
-                self.total_seconds += time;
-            }
-        } else if let Some(fps_idx) = line.find("fps") {
-            // fallback for x264 which often puts frame count and fps
-            // "1684 frames, 35.53 fps"
-            // We need frame count for *this chunk* to get duration.
-            // Parsing frame count again from this line:
-            if frames > 0 {
-                let before_fps = line.get(..fps_idx).unwrap_or("");
-                let fps_str: String = before_fps
-                    .trim()
-                    .chars()
-                    .rev()
-                    .take_while(|c| c.is_ascii_digit() || *c == '.')
-                    .collect();
-                let fps_str: String = fps_str.chars().rev().collect();
-                if let Ok(fps) = fps_str.parse::<f64>() {
-                    if fps > 0.0 {
-                        self.total_seconds += frames as f64 / fps;
-                    }
-                }
+                self.total_encode_seconds += time;
+                parsed_encode_seconds = true;
             }
         }
 
-        // Accumulate size?
-        // WE already accumulated in parse_stats.
+        if let Some(media_seconds) = parse_x264_duration_seconds(line) {
+            self.total_media_seconds += media_seconds;
+        }
+
+        if frames > 0 && !parsed_encode_seconds {
+            if let Some(fps) = parse_summary_fps(line) {
+                if fps > 0.0 {
+                    self.total_encode_seconds += frames as f64 / fps;
+                }
+            }
+        }
     }
 
+    #[cfg(test)]
     pub fn write_merged<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        let inferred_summary = self.inferred_summary();
+        self.write_merged_inner(&mut writer, inferred_summary.as_ref())
+    }
+
+    pub fn write_merged_with_summary<W: Write>(
+        &self,
+        mut writer: W,
+        summary: &EncodeSummaryStats,
+    ) -> io::Result<()> {
+        self.write_merged_inner(&mut writer, Some(summary))
+    }
+
+    #[cfg(test)]
+    fn inferred_summary(&self) -> Option<EncodeSummaryStats> {
+        let total_frames = self.frame_i_stats.0 + self.frame_p_stats.0 + self.frame_b_stats.0;
+        if total_frames == 0 {
+            return None;
+        }
+
+        let total_bytes =
+            (self.frame_i_stats.2 + self.frame_p_stats.2 + self.frame_b_stats.2).round() as u64;
+
+        Some(EncodeSummaryStats {
+            total_frames,
+            media_seconds: self.total_media_seconds,
+            encode_seconds: self.total_encode_seconds,
+            total_bytes,
+        })
+    }
+
+    fn write_merged_inner<W: Write>(
+        &self,
+        mut writer: W,
+        summary: Option<&EncodeSummaryStats>,
+    ) -> io::Result<()> {
         for line in &self.headers {
             writeln!(writer, "{}", line)?;
         }
@@ -303,11 +328,11 @@ impl LogMerger {
                     prefix, type_char, s.0, avg_qp, avg_rate
                 )?;
             } else {
-                let total_size = s.2 as u64;
+                let avg_size = (s.2 / s.0 as f64).round() as u64;
                 writeln!(
                     w,
                     "{} frame {}:{:>5}    Avg QP:{:>5.2}  size: {:>8}",
-                    prefix, type_char, s.0, avg_qp, total_size
+                    prefix, type_char, s.0, avg_qp, avg_size
                 )?;
             }
             Ok(())
@@ -319,22 +344,30 @@ impl LogMerger {
 
         writeln!(writer)?;
 
-        // Summary
-        let total_frames = self.frame_i_stats.0 + self.frame_p_stats.0 + self.frame_b_stats.0;
-        let total_time = self.total_seconds;
-        let fps = if total_time > 0.0 {
-            total_frames as f64 / total_time
+        let total_frames = summary.map_or_else(
+            || self.frame_i_stats.0 + self.frame_p_stats.0 + self.frame_b_stats.0,
+            |summary| summary.total_frames,
+        );
+        let encode_seconds =
+            summary.map_or(self.total_encode_seconds, |summary| summary.encode_seconds);
+        let media_seconds = summary.map_or_else(
+            || {
+                if self.total_media_seconds > 0.0 {
+                    self.total_media_seconds
+                } else {
+                    self.total_encode_seconds
+                }
+            },
+            |summary| summary.media_seconds,
+        );
+
+        let fps = if encode_seconds > 0.0 {
+            total_frames as f64 / encode_seconds
         } else {
             0.0
         };
 
-        // Calculate global bitrate
-        // x265 accumulated Rate*Count in .2. -> Sum(Rate*Count) / TotalFrames =
-        // AvgRate. x264 accumulated Bytes in .2. -> Sum(Bytes) * 8 / 1000 /
-        // TotalTime = Bitrate (kbps).
-
         let kbps = if self.encoder.contains("x265") {
-            // Weighted average of rates
             let sum_rate_count = self.frame_i_stats.2 + self.frame_p_stats.2 + self.frame_b_stats.2;
             if total_frames > 0 {
                 sum_rate_count / total_frames as f64
@@ -342,9 +375,15 @@ impl LogMerger {
                 0.0
             }
         } else {
-            let total_bytes = self.frame_i_stats.2 + self.frame_p_stats.2 + self.frame_b_stats.2;
-            if total_time > 0.0 {
-                (total_bytes * 8.0) / 1000.0 / total_time
+            let total_bytes = summary.map_or_else(
+                || {
+                    (self.frame_i_stats.2 + self.frame_p_stats.2 + self.frame_b_stats.2).round()
+                        as u64
+                },
+                |summary| summary.total_bytes,
+            );
+            if media_seconds > 0.0 {
+                total_bytes as f64 * 8.0 / 1000.0 / media_seconds
             } else {
                 0.0
             }
@@ -362,17 +401,136 @@ impl LogMerger {
             writeln!(
                 writer,
                 "encoded {} frames in {:.2}s ({:.2} fps), {:.2} kb/s, Avg QP:{:.2}",
-                total_frames, total_time, fps, kbps, avg_qp
+                total_frames, encode_seconds, fps, kbps, avg_qp
             )?;
         } else {
-            // encoded 1684 frames, 35.53 fps, 2732.18 kb/s
+            let duration_suffix = if media_seconds > 0.0 {
+                format!(", duration {}", format_duration(media_seconds))
+            } else {
+                String::new()
+            };
             writeln!(
                 writer,
-                "{} encoded {} frames, {:.2} fps, {:.2} kb/s",
-                prefix, total_frames, fps, kbps
+                "{} encoded {} frames, {:.2} fps, {:.2} kb/s{}",
+                prefix, total_frames, fps, kbps, duration_suffix
             )?;
         }
 
         Ok(())
+    }
+}
+
+fn parse_summary_fps(line: &str) -> Option<f64> {
+    let fps_idx = line.find("fps")?;
+    let before_fps = line.get(..fps_idx)?;
+    let fps_str: String = before_fps
+        .trim()
+        .chars()
+        .rev()
+        .take_while(|c| c.is_ascii_digit() || *c == '.')
+        .collect();
+    let fps_str: String = fps_str.chars().rev().collect();
+    fps_str.parse::<f64>().ok()
+}
+
+fn parse_x264_duration_seconds(line: &str) -> Option<f64> {
+    let duration_idx = line.find("duration ")?;
+    let duration = line.get(duration_idx + "duration ".len()..)?.trim();
+    let mut parts = duration.split(':');
+    let hours = parts.next()?.parse::<u64>().ok()?;
+    let minutes = parts.next()?.parse::<u64>().ok()?;
+    let seconds = parts.next()?.parse::<f64>().ok()?;
+    Some(hours as f64 * 3600.0 + minutes as f64 * 60.0 + seconds)
+}
+
+fn format_duration(total_seconds: f64) -> String {
+    let hours = (total_seconds / 3600.0).floor() as u64;
+    let minutes = ((total_seconds % 3600.0) / 60.0).floor() as u64;
+    let seconds = total_seconds % 60.0;
+    format!("{hours}:{minutes:02}:{seconds:05.2}")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::PathBuf};
+
+    use tempfile::TempDir;
+
+    use super::LogMerger;
+    use crate::EncodeSummaryStats;
+
+    fn write_temp_log(dir: &TempDir, name: &str, contents: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        fs::write(&path, contents).expect("should write temp log");
+        path
+    }
+
+    #[test]
+    fn x264_frame_size_is_weighted_by_frame_count() {
+        let dir = TempDir::new().expect("temp dir should exist");
+        let chunk1 = write_temp_log(
+            &dir,
+            "chunk1.log",
+            "x264 [info]: frame I:2     Avg QP:10.00  size:      100\nx264 [info]: encoded 2 \
+             frames, 1.00 fps, 1.60 kb/s, duration 0:00:02.00\n",
+        );
+        let chunk2 = write_temp_log(
+            &dir,
+            "chunk2.log",
+            "x264 [info]: frame I:1     Avg QP:20.00  size:      200\nx264 [info]: encoded 1 \
+             frames, 1.00 fps, 1.60 kb/s, duration 0:00:01.00\n",
+        );
+
+        let mut merger = LogMerger::new("x264");
+        merger.process_chunk(&chunk1, true).expect("chunk1 should parse");
+        merger.process_chunk(&chunk2, false).expect("chunk2 should parse");
+
+        let mut output = Vec::new();
+        merger.write_merged(&mut output).expect("merged log should write");
+        let output = String::from_utf8(output).expect("merged log should be utf8");
+
+        assert!(
+            output.contains("frame I:    3    Avg QP:13.33  size:      133"),
+            "unexpected merged output:\n{output}"
+        );
+    }
+
+    #[test]
+    fn x264_summary_uses_external_encode_stats() {
+        let dir = TempDir::new().expect("temp dir should exist");
+        let chunk1 = write_temp_log(
+            &dir,
+            "chunk1.log",
+            "x264 [info]: frame I:2     Avg QP:10.00  size:      100\nx264 [info]: encoded 2 \
+             frames, 2.00 fps, 9999.99 kb/s, duration 0:00:01.00\n",
+        );
+        let chunk2 = write_temp_log(
+            &dir,
+            "chunk2.log",
+            "x264 [info]: frame P:2     Avg QP:20.00  size:       50\nx264 [info]: encoded 2 \
+             frames, 1.00 fps, 8888.88 kb/s, duration 0:00:02.00\n",
+        );
+
+        let mut merger = LogMerger::new("x264");
+        merger.process_chunk(&chunk1, true).expect("chunk1 should parse");
+        merger.process_chunk(&chunk2, false).expect("chunk2 should parse");
+
+        let mut output = Vec::new();
+        merger
+            .write_merged_with_summary(&mut output, &EncodeSummaryStats {
+                total_frames:   4,
+                media_seconds:  2.0,
+                encode_seconds: 0.5,
+                total_bytes:    300,
+            })
+            .expect("merged log should write");
+        let output = String::from_utf8(output).expect("merged log should be utf8");
+
+        assert!(
+            output.contains(
+                "x264 [info]: encoded 4 frames, 8.00 fps, 1.20 kb/s, duration 0:00:02.00"
+            ),
+            "unexpected merged output:\n{output}"
+        );
     }
 }

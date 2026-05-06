@@ -247,10 +247,27 @@ pub fn parse_svt_av1_frames(input: &str) -> Option<u64> {
 }
 
 pub fn parse_x26x_frames(s: &str) -> Option<u64> {
-    s.split_ascii_whitespace()
-        .find(|part| !part.starts_with('['))
-        .map(|val| val.split_once('/').map_or(val, |(val, _)| val))
-        .and_then(|s| s.parse().ok())
+    let mut parts = s.split_ascii_whitespace();
+    while let Some(part) = parts.next() {
+        if part == "encoded" {
+            return parts
+                .next()
+                .map(|val| val.split_once('/').map_or(val, |(val, _)| val))
+                .and_then(|s| s.parse().ok());
+        }
+    }
+
+    let mut previous = None;
+    for part in s.split_ascii_whitespace() {
+        if part.starts_with("frames") {
+            return previous
+                .map(|candidate: &str| candidate.split_once('/').map_or(candidate, |(val, _)| val))
+                .and_then(|s| s.parse().ok());
+        }
+        previous = Some(part);
+    }
+
+    None
 }
 
 fn strip_ansi_escape_sequences(input: &str) -> Cow<'_, str> {

@@ -75,9 +75,10 @@ COPY .github/.env /tmp/cicd.env
 COPY av-metrics-vship/scripts/install-libvship-linux.sh av-metrics-fmetrics/scripts/install-fmetrics-linux.sh /usr/local/bin/
 
 # Run via bash: the scripts are not executable and may carry CRLF. Sourcing the
-# env file exports every pin for the installers to pick up.
-RUN set -a && . /tmp/cicd.env && set +a && \
-    sed -i 's/\r$//' /usr/local/bin/install-libvship-linux.sh /usr/local/bin/install-fmetrics-linux.sh && \
+# env file exports every pin for the installers to pick up. The env file may
+# also carry CRLF (Windows checkout), so strip it before sourcing.
+RUN sed -i 's/\r$//' /tmp/cicd.env /usr/local/bin/install-libvship-linux.sh /usr/local/bin/install-fmetrics-linux.sh && \
+    set -a && . /tmp/cicd.env && set +a && \
     bash /usr/local/bin/install-libvship-linux.sh -Destination /usr/lib -Quiet && \
     bash /usr/local/bin/install-fmetrics-linux.sh -Destination /usr/lib -Quiet && \
     rm -f /tmp/cicd.env

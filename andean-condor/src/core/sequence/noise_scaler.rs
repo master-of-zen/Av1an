@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Noise Scaler",
     description: "Scales the Photon Noise per scene based on Noise Detector results.",
     version:     "0.0.1",

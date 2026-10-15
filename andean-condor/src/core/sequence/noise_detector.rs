@@ -38,7 +38,8 @@ use crate::{
         },
     },
 };
-static DETAILS: SequenceDetails = SequenceDetails {
+
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Noise Detector",
     description: "Measure the amount of noise of the video per scene",
     version:     "0.0.1",

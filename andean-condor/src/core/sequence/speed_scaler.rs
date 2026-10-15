@@ -15,7 +15,7 @@ use crate::{
     utils::interpolators::natural_cubic_spline,
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Convex Hull",
     description: "Applies a speed based on the quantiizer per scene.",
     version:     "0.0.1",

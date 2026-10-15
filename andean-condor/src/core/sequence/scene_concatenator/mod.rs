@@ -55,7 +55,7 @@ mod ffmpeg;
 mod ivf;
 mod mkvmerge;
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Scene Concatenator",
     description: "Concatenates encoded scenes into a single output file",
     version:     "0.0.1",

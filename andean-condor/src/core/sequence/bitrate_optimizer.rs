@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Bitrate Optimizer",
     description: "Optimize scenes that exceed normal bitrate after targeting quality.",
     version:     "0.0.1",

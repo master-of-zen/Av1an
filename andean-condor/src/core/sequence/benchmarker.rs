@@ -34,7 +34,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Benchmarker",
     description: "Measures how fast scenes can be encoded in parallel before no meaningful \
                   improvement is seen by adding more workers.",

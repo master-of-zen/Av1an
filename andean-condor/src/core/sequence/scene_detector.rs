@@ -36,7 +36,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Scene Detector",
     description: "Detect scene changes",
     version:     "0.0.1-A",

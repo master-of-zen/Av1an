@@ -26,7 +26,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Serial Encoder",
     description: "Encodes every scene linearly with no threading or parallelism.",
     version:     "0.0.1",

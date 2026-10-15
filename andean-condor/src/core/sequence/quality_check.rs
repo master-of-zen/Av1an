@@ -47,7 +47,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Quality Check",
     description: "Measure the quality of the video per scene",
     version:     "0.0.1",

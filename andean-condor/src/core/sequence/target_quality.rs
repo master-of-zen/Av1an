@@ -64,7 +64,7 @@ use crate::{
     },
 };
 
-static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Target Quality",
     description: "Determine the optimal quantizer for a given video quality metric score per \
                   scene.",

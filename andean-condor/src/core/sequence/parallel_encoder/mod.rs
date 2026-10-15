@@ -30,7 +30,7 @@ pub use task::{ParallelEncoderResult, Task};
 /// encoder. 4-8 measured as fast as larger windows with less memory.
 pub(super) const STREAM_WINDOW: usize = 8;
 
-pub(super) static DETAILS: SequenceDetails = SequenceDetails {
+pub static DETAILS: SequenceDetails = SequenceDetails {
     name:        "Parallel Encoder",
     description: "Encodes a set of scenes in parallel until all scenes are encoded.",
     version:     "0.0.1",

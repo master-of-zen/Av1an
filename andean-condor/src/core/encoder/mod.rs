@@ -891,6 +891,9 @@ impl Encoder {
             Encoder::SVTAV1 {
                 photon_noise: pn, ..
             } => *pn = photon_noise,
+            Encoder::AVM {
+                photon_noise: pn, ..
+            } => *pn = photon_noise,
             _ => {},
         }
     }

@@ -53,6 +53,12 @@ impl EncoderBase {
         }
     }
 
+    /// Whether this encoder can carry a Photon Noise table.
+    #[inline]
+    pub fn supports_photon_noise(&self) -> bool {
+        matches!(self, Self::AOM | Self::RAV1E | Self::SVTAV1 | Self::AVM)
+    }
+
     #[inline]
     pub fn default_parameters(&self) -> HashMap<String, CLIParameter> {
         match self {
@@ -471,7 +477,7 @@ impl EncoderBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Encoder {
     AOM {
         executable:    Option<PathBuf>,
@@ -830,6 +836,103 @@ impl Encoder {
         }
     }
 
+    /// The encoder's Photon Noise table, if the base carries one.
+    #[inline]
+    pub fn photon_noise(&self) -> Option<&PhotonNoise> {
+        match self {
+            Encoder::AOM {
+                photon_noise, ..
+            }
+            | Encoder::RAV1E {
+                photon_noise, ..
+            }
+            | Encoder::SVTAV1 {
+                photon_noise, ..
+            }
+            | Encoder::AVM {
+                photon_noise, ..
+            } => photon_noise.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// The custom encoder binary path, if one was configured.
+    #[inline]
+    pub fn custom_executable(&self) -> Option<&PathBuf> {
+        match self {
+            Encoder::AOM {
+                executable, ..
+            }
+            | Encoder::RAV1E {
+                executable, ..
+            }
+            | Encoder::VPX {
+                executable, ..
+            }
+            | Encoder::SVTAV1 {
+                executable, ..
+            }
+            | Encoder::AVM {
+                executable, ..
+            }
+            | Encoder::X264 {
+                executable, ..
+            }
+            | Encoder::X265 {
+                executable, ..
+            }
+            | Encoder::VVenC {
+                executable, ..
+            }
+            | Encoder::FFmpeg {
+                executable, ..
+            } => executable.as_ref(),
+        }
+    }
+
+    /// Sets the encoder binary, or restores the base's default when `None`.
+    #[inline]
+    pub fn set_executable(&mut self, executable: Option<PathBuf>) {
+        match self {
+            Encoder::AOM {
+                executable: binary,
+                ..
+            }
+            | Encoder::RAV1E {
+                executable: binary,
+                ..
+            }
+            | Encoder::VPX {
+                executable: binary,
+                ..
+            }
+            | Encoder::SVTAV1 {
+                executable: binary,
+                ..
+            }
+            | Encoder::AVM {
+                executable: binary,
+                ..
+            }
+            | Encoder::X264 {
+                executable: binary,
+                ..
+            }
+            | Encoder::X265 {
+                executable: binary,
+                ..
+            }
+            | Encoder::VVenC {
+                executable: binary,
+                ..
+            }
+            | Encoder::FFmpeg {
+                executable: binary,
+                ..
+            } => *binary = executable,
+        }
+    }
+
     /// Sets the FFmpeg filtergraph applied to this encoder's frames.
     ///
     /// A no-op for [`Encoder::FFmpeg`], which filters through `options`.
@@ -867,7 +970,7 @@ impl Encoder {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum EncoderPasses {
     All(u8),
     Specific(u8, u8),

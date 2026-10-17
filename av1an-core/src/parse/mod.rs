@@ -288,7 +288,7 @@ pub fn parse_x26x_frames(s: &str) -> Option<u64> {
 }
 
 /// Case-insensitive `starts_with` that does not allocate.
-fn starts_with_ignore_ascii_case(s: &str, prefix: &str) -> bool {
+pub(crate) fn starts_with_ignore_ascii_case(s: &str, prefix: &str) -> bool {
     s.as_bytes()
         .get(..prefix.len())
         .is_some_and(|start| start.eq_ignore_ascii_case(prefix.as_bytes()))

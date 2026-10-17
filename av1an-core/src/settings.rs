@@ -40,13 +40,18 @@ struct InterceptedEncoderLogArgs {
 }
 
 fn parse_log_level_value(param: &str, next_param: Option<&String>) -> Option<(String, bool)> {
-    if let Some((_, value)) = param.split_once('=') {
-        Some((value.to_ascii_lowercase(), false))
-    } else if param == "--log-level" {
-        next_param.map(|value| (value.to_ascii_lowercase(), true))
-    } else {
-        None
+    // Only `--log-level` may be parsed here: every other parameter that happens
+    // to use the `--option=value` syntax would otherwise be mistaken for a log
+    // level and silently disable the log merge.
+    if let Some(value) = param.strip_prefix("--log-level=") {
+        return Some((value.to_ascii_lowercase(), false));
     }
+
+    if param == "--log-level" {
+        return next_param.map(|value| (value.to_ascii_lowercase(), true));
+    }
+
+    None
 }
 
 fn parse_path_value(
@@ -55,12 +60,14 @@ fn parse_path_value(
     next_param: Option<&String>,
 ) -> Option<(String, bool)> {
     if let Some(value) = param.strip_prefix(&format!("{flag}=")) {
-        Some((value.to_string(), false))
-    } else if param == flag {
-        next_param.cloned().map(|value| (value, true))
-    } else {
-        None
+        return Some((value.to_string(), false));
     }
+
+    if param == flag {
+        return next_param.cloned().map(|value| (value, true));
+    }
+
+    None
 }
 
 fn intercept_encoder_log_args(params: &[String], encoder: Encoder) -> InterceptedEncoderLogArgs {
@@ -106,10 +113,8 @@ fn intercept_encoder_log_args(params: &[String], encoder: Encoder) -> Intercepte
             log_level = Some(level);
             skip_next = consumes_next;
             cleaned.push(param.clone());
-            if consumes_next {
-                if let Some(next_param) = params.get(i + 1) {
-                    cleaned.push(next_param.clone());
-                }
+            if consumes_next && let Some(next_param) = params.get(i + 1) {
+                cleaned.push(next_param.clone());
             }
             continue;
         }
@@ -436,8 +441,8 @@ impl EncodeArgs {
             }
         }
 
-        // Intercept encoder log-output options to prevent concurrent writes from
-        // workers.
+        // Intercept encoder log-output options to prevent concurrent writes
+        // from workers.
         if self.encoder == Encoder::x264 || self.encoder == Encoder::x265 {
             let intercepted = intercept_encoder_log_args(&self.video_params, self.encoder);
             self.video_params = intercepted.params;
@@ -854,6 +859,20 @@ mod tests {
         assert_eq!(intercepted.text_log_file.as_deref(), Some("chunked.log"));
         assert_eq!(intercepted.params, vec!["--log-level=none".to_string()]);
         assert!(!intercepted.merge_text_log);
+    }
+
+    #[test]
+    fn unrelated_equals_parameters_do_not_disable_log_merging() {
+        let intercepted = super::intercept_encoder_log_args(
+            &["--log-level=info".to_string(), "--crf=20".to_string()],
+            Encoder::x264,
+        );
+
+        assert_eq!(intercepted.params, vec![
+            "--log-level=info".to_string(),
+            "--crf=20".to_string()
+        ]);
+        assert!(intercepted.merge_text_log);
     }
 
     #[test]

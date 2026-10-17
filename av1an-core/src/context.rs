@@ -37,7 +37,7 @@ use crate::{
     get_encode_summary_stats,
     init_done,
     into_vec,
-    log_merge::LogMerger,
+    log_merge::{capture_log_lines, LogMerger},
     metrics::vmaf,
     progress_bar::{
         finish_progress_bar,
@@ -556,7 +556,7 @@ impl Av1anContext {
                         let log_path = temp_path.join("logs").join(format!("log_{}.log", i));
                         if log_path.exists() {
                             processed_count += 1;
-                            if let Err(e) = merger.process_chunk(&log_path, i == 0) {
+                            if let Err(e) = merger.process_chunk(&log_path) {
                                 warn!("Failed to process log chunk {}: {}", i, e);
                             }
                         }
@@ -575,9 +575,15 @@ impl Av1anContext {
 
                     match File::create(&output_log_path) {
                         Ok(log_file) => {
-                            let summary = get_encode_summary_stats()
-                                .expect("encode summary stats should exist");
-                            if let Err(e) = merger.write_merged_with_summary(log_file, &summary) {
+                            let write_result = match get_encode_summary_stats() {
+                                Some(summary) => {
+                                    merger.write_merged_with_summary(log_file, &summary)
+                                },
+                                // The summary is only missing if av1an never got to
+                                // collect it, so fall back to the chunk logs alone.
+                                None => merger.write_merged(log_file),
+                            };
+                            if let Err(e) = write_result {
                                 warn!("Failed to write merged log: {}", e);
                             }
                         },
@@ -591,10 +597,10 @@ impl Av1anContext {
                     }
                 }
 
-                if !self.args.keep {
-                    if let Err(e) = fs::remove_dir_all(&self.args.temp) {
-                        warn!("Failed to delete temp directory: {e}");
-                    }
+                if !self.args.keep
+                    && let Err(e) = fs::remove_dir_all(&self.args.temp)
+                {
+                    warn!("Failed to delete temp directory: {e}");
                 }
             }
 
@@ -855,42 +861,12 @@ impl Av1anContext {
                     }
 
                     if let Ok(line) = simdutf8::basic::from_utf8_mut(&mut buf) {
-                        // Filter progress lines and empty/whitespace lines from being written to
-                        // the log file
+                        // Drop the redrawn progress bar, but keep everything
+                        // else: the configuration
+                        // header and the statistics of the chunk
+                        // are what the merged log is built from.
                         if let Some(f) = &mut log_file {
-                            // The buffer might contain multiple lines (e.g. headers followed by
-                            // valid lines), so we split by newline to
-                            // filter granularly.
-                            for part in line.split_inclusive('\n') {
-                                let trimmed = part.trim();
-                                // Skip empty lines (often caused by \r or clearing spaces)
-                                if trimmed.is_empty() {
-                                    continue;
-                                }
-
-                                // Explicitly whitelist lines we NEED for log merging
-                                let is_stat = part.contains("frame I:")
-                                    || part.contains("frame P:")
-                                    || part.contains("frame B:")
-                                    || part.contains("encoded");
-
-                                // Filter out progress bar noise (blacklist)
-                                // Note: x265 uses "Frames:", x264 uses digit-start or "time="
-                                // typically in stderr progress
-                                // ffmpeg uses "time="
-                                let is_progress = part.contains("Frames")
-                                    || part.contains("eta ")
-                                    || part.contains("time=");
-
-                                // Write if it's a known stat line OR if it's NOT a progress line
-                                if is_stat || !is_progress {
-                                    let _ = f.write_all(part.as_bytes());
-                                    // Ensure newline if missing (prevent line merging)
-                                    if !part.ends_with('\n') {
-                                        let _ = f.write_all(b"\n");
-                                    }
-                                }
-                            }
+                            let _ = capture_log_lines(line, f);
                         }
 
                         if self.args.verbosity == Verbosity::Verbose && !line.contains('\n') {

@@ -230,7 +230,8 @@ fn validate_zones_no_args_reset() {
     let input = "5000 -1 rav1e reset";
     let args = get_test_args();
 
-    // This is weird, but can technically work for some encoders so we'll allow it.
+    // This is weird, but can technically work for some encoders so we'll allow
+    // it.
     let result = Scene::parse_from_zone(input, &args.args, args.frames)
         .expect("should parse zone successfully");
     assert_eq!(result.start_frame, 5000);
@@ -257,7 +258,7 @@ fn validate_zones_target_quality() {
         name:  crate::ProbingStatisticName::Mode,
         value: None,
     };
-    let desired_interpolation_method4 = "natural";
+    let desired_interpolation_method4 = "fritschcarlson";
     let desired_interpolation_method5 = "cubic";
 
     let input = format!(

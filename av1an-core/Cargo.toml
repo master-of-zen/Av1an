@@ -1,7 +1,7 @@
 [package]
 name = "av1an-core"
 version = "0.5.2"
-rust-version = "1.89"
+rust-version = "1.95"
 edition = "2024"
 description = """
 Cross-platform command-line AV1 / VP9 / HEVC / H264 encoding framework with per scene quality encoding [Core library]
@@ -17,14 +17,14 @@ readme = "../README.md"
 [dependencies]
 anyhow = { workspace = true }
 arrayvec = "0.7.2"
-av-decoders = { version = "0.9.1", features = ["vapoursynth"] }
+av-decoders = { version = "0.11.1", features = ["vapoursynth"] }
 av-format = "0.7.0"
 av-ivf = "0.5.0"
-av-scenechange = { version = "0.23.0", default-features = false, features = [
+av-scenechange = { version = "0.24.0", default-features = false, features = [
     "asm",
     "vapoursynth",
 ] }
-av1-grain = { version = "0.4.1", default-features = false, features = [
+av1-grain = { version = "0.5.0", default-features = false, features = [
     "create",
 ] }
 cfg-if = "1.0.4"
@@ -32,7 +32,7 @@ crossbeam-channel = "0.5.15"
 crossbeam-utils = "0.8.5"
 dashmap = { version = "6.0.0", features = ["serde"] }
 indicatif = "0.18.4"
-itertools = "0.14.0"
+itertools = "0.15.0"
 memchr = "2.8.0"
 nom = "8.0.0"
 num-traits = { workspace = true }
@@ -54,7 +54,7 @@ smallvec = { version = "1.15.1", default-features = false, features = [
 ] }
 strsim = "0.11.0"
 strum = { version = "0.28.0", features = ["derive"] }
-sysinfo = "0.38.4"
+sysinfo = "0.39"
 textwrap = "0.16.0"
 thiserror = "2.0.18"
 tracing = { workspace = true }

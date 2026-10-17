@@ -21,6 +21,7 @@ use crate::{
         akima_interpolate,
         catmull_rom_interpolate,
         cubic_polynomial_interpolate,
+        fritsch_carlson,
         linear_interpolate,
         natural_cubic_spline,
         pchip_interpolate,
@@ -46,6 +47,7 @@ pub enum InterpolationMethod {
     Linear,
     Quadratic,
     Natural,
+    FritschCarlson,
     Pchip,
     Catmull,
     Akima,
@@ -61,6 +63,7 @@ impl FromStr for InterpolationMethod {
             "linear" => Ok(Self::Linear),
             "quadratic" => Ok(Self::Quadratic),
             "natural" => Ok(Self::Natural),
+            "fritschcarlson" => Ok(Self::FritschCarlson),
             "pchip" => Ok(Self::Pchip),
             "catmull" => Ok(Self::Catmull),
             "akima" => Ok(Self::Akima),
@@ -199,7 +202,8 @@ impl TargetQuality {
             let score = {
                 let value = self.probe(chunk, next_quantizer, plugins)?;
 
-                // Butteraugli is an inverse metric, invert score for comparisons
+                // Butteraugli is an inverse metric, invert score for
+                // comparisons
                 match self.metric {
                     TargetMetric::ButteraugliINF | TargetMetric::Butteraugli3 => -value,
                     _ => value,
@@ -260,7 +264,8 @@ impl TargetQuality {
             })
             .max_by(|(q1, _), (q2, _)| q1.partial_cmp(q2).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or_else(|| {
-                // No quantizers within tolerance, choose the quantizer closest to target
+                // No quantizers within tolerance, choose the quantizer closest
+                // to target
                 let target_midpoint = f64::midpoint(target.0, target.1);
                 quantizer_score_history
                     .iter()
@@ -330,7 +335,8 @@ impl TargetQuality {
                         statistic.clamp(statistics.minimum(), statistics.maximum())
                     };
 
-                    // Based on quantizer - lower quantizer leads to more accurate scores (lower
+                    // Based on quantizer - lower quantizer leads to more
+                    // accurate scores (lower
                     // variance) (citation needed)
                     if self.encoder.get_cq_relative_percentage(quantizer as usize) > 0.25 {
                         // Liberal: Use mean to determine aggregate
@@ -599,7 +605,8 @@ impl TargetQuality {
                     (Some(source_pipe), enc_pipe)
                 } else {
                     // We unfortunately have to duplicate the code like this
-                    // in order to satisfy the borrow checker for `source_stdout`
+                    // in order to satisfy the borrow checker for
+                    // `source_stdout`
                     let enc_pipe = if let [cmd, args @ ..] = &*output {
                         build_encoder_pipe(cmd, args, source_stdout)?
                     } else {
@@ -814,11 +821,27 @@ impl TargetQuality {
         match method4 {
             InterpolationMethod::Linear
             | InterpolationMethod::Quadratic
-            | InterpolationMethod::Natural => {},
+            | InterpolationMethod::Natural
+            | InterpolationMethod::FritschCarlson => {},
             _ => {
                 return Err(anyhow::anyhow!(
                     "Method '{}' not available for 4th round",
                     parts[0]
+                ))
+            },
+        }
+        match method5 {
+            InterpolationMethod::Linear
+            | InterpolationMethod::Quadratic
+            | InterpolationMethod::Natural
+            | InterpolationMethod::Pchip
+            | InterpolationMethod::Catmull
+            | InterpolationMethod::Akima
+            | InterpolationMethod::CubicPolynomial => {},
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Method '{}' not available for 5th round",
+                    parts[1]
                 ))
             },
         }
@@ -938,7 +961,8 @@ fn predict_quantizer(
                 },
                 3 => {
                     // 4th probe: configurable method
-                    let method = interp_method.map_or(InterpolationMethod::Natural, |(m, _)| m);
+                    let method =
+                        interp_method.map_or(InterpolationMethod::FritschCarlson, |(m, _)| m);
                     match method {
                         InterpolationMethod::Linear => linear_interpolate(
                             &[scores[0], scores[1]],
@@ -952,6 +976,9 @@ fn predict_quantizer(
                         ),
                         InterpolationMethod::Natural => {
                             natural_cubic_spline(&scores, &quantizers, target)
+                        },
+                        InterpolationMethod::FritschCarlson => {
+                            fritsch_carlson(&scores, &quantizers, target)
                         },
                         _ => None,
                     }
@@ -978,9 +1005,10 @@ fn predict_quantizer(
                         InterpolationMethod::CubicPolynomial => {
                             cubic_polynomial_interpolate(s, q, target)
                         },
+                        _ => None,
                     }
                 },
-                _ => None,
+                _ => pchip_interpolate(&scores, &quantizers, target),
             };
 
             result.unwrap_or_else(|| {
@@ -1040,7 +1068,8 @@ pub fn log_probes(
     let mut sorted_quantizer_scores = quantizer_score_history.to_vec();
     sorted_quantizer_scores
         .sort_by(|(q1, _), (q2, _)| q1.partial_cmp(q2).unwrap_or(std::cmp::Ordering::Equal));
-    // Butteraugli is an inverse metric and needs to be inverted back before display
+    // Butteraugli is an inverse metric and needs to be inverted back before
+    // display
     if matches!(
         metric,
         TargetMetric::ButteraugliINF | TargetMetric::Butteraugli3

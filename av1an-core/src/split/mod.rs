@@ -27,7 +27,17 @@ pub fn segment(
 
     cmd.args(["-hide_banner", "-y", "-i"]);
     cmd.arg(input);
-    cmd.args(["-map", "0:V:0", "-an", "-c", "copy", "-avoid_negative_ts", "1", "-vsync", "0"]);
+    cmd.args([
+        "-map",
+        "0:V:0",
+        "-an",
+        "-c",
+        "copy",
+        "-avoid_negative_ts",
+        "1",
+        "-fps_mode",
+        "passthrough",
+    ]);
 
     if segments.is_empty() {
         let split_path = Path::new(temp).join("split").join("0.mkv");
@@ -53,7 +63,8 @@ pub fn extra_splits(
     scores: &BTreeMap<usize, ScenecutResult>,
 ) -> Vec<Scene> {
     if scores.is_empty() {
-        // This is most likely to occur when the user specifies no scene detection
+        // This is most likely to occur when the user specifies no scene
+        // detection
         simple_extra_splits(scenes, split_size)
     } else {
         enhanced_extra_splits(scenes, split_size, scores)
@@ -161,7 +172,8 @@ fn enhanced_extra_splits(
                 .iter()
                 .max_by_key(|(_, score)| {
                     // This should be enough precision.
-                    // It would be great if there was a `NonNaNF64` type that implemented `Ord`.
+                    // It would be great if there was a `NonNaNF64` type that
+                    // implemented `Ord`.
                     (*score * 10000.0).round() as u64
                 })
                 .expect("split scores is not empty")

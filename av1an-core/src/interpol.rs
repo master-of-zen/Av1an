@@ -22,9 +22,9 @@ pub fn natural_cubic_spline(x: &[f64], y: &[f64], xi: f64) -> Option<f64> {
         return None;
     }
 
-    // Noramally, no bounds check is needed - we're interpolating, not extrapolating
-    // The target (xi) is a score value we're looking for, not restricted to input
-    // range
+    // Noramally, no bounds check is needed - we're interpolating, not
+    // extrapolating The target (xi) is a score value we're looking for, not
+    // restricted to input range
 
     // Verify xi is within the observed range (it should be by algorithm design)
     if xi < x[0] || xi > x[n - 1] {
@@ -115,87 +115,121 @@ pub fn natural_cubic_spline(x: &[f64], y: &[f64], xi: f64) -> Option<f64> {
     Some(b_coeff.mul_add(dx, a_coeff) + c_coeff.mul_add(dx.powi(2), d_coeff * dx.powi(3)))
 }
 
-pub fn pchip_interpolate(x: &[f64; 4], y: &[f64; 4], xi: f64) -> Option<f64> {
-    // Check strictly increasing
-    for i in 0..3 {
+pub fn fritsch_carlson(x: &[f64], y: &[f64], xi: f64) -> Option<f64> {
+    let n = x.len();
+    if n != 3 || n != y.len() || xi < x[0] || xi > x[n - 1] {
+        return None;
+    }
+
+    if x.windows(2).any(|pair| pair[1] <= pair[0]) {
+        return None;
+    }
+
+    let k = usize::from(xi >= x[1] && xi <= x[2]);
+
+    let d0 = (y[1] - y[0]) / (x[1] - x[0]);
+    let d1 = (y[2] - y[1]) / (x[2] - x[1]);
+
+    let mut m = [0.0; 3];
+
+    m[0] = d0;
+    m[2] = d1;
+
+    if d0 * d1 <= 0.0 {
+        m[1] = 0.0;
+    } else {
+        let h0 = x[1] - x[0];
+        let h1 = x[2] - x[1];
+        let w1 = 2.0f64.mul_add(h1, h0);
+        let w2 = 2.0f64.mul_add(h0, h1);
+        m[1] = (w1 + w2) / (w1 / d0 + w2 / d1);
+    }
+
+    let h = x[k + 1] - x[k];
+    let t = (xi - x[k]) / h;
+    let t2 = t * t;
+    let t3 = t2 * t;
+
+    let h00 = 2.0f64.mul_add(t3, 3.0f64.mul_add(-t2, 1.0));
+    let h10 = 2.0f64.mul_add(-t2, t3.mul_add(1.0, t));
+    let h01 = (-2.0f64).mul_add(t3, 3.0 * t2);
+    let h11 = t3 - t2;
+
+    Some((h11 * h).mul_add(
+        m[k + 1],
+        h00.mul_add(y[k], h10.mul_add(h * m[k], h01 * y[k + 1])),
+    ))
+}
+
+pub fn pchip_interpolate(x: &[f64], y: &[f64], xi: f64) -> Option<f64> {
+    let n = x.len();
+    if n < 2 || y.len() != n {
+        return None;
+    }
+
+    for i in 0..n - 1 {
         if x[i + 1] <= x[i] {
             return None;
         }
     }
 
-    // Find interval containing xi
-    let mut k = 0;
-    for i in 0..3 {
-        if xi >= x[i] && xi <= x[i + 1] {
-            k = i;
-            break;
-        }
+    if xi < x[0] || xi > x[n - 1] {
+        return None;
     }
 
-    // Calculate slopes
-    let s0 = (y[1] - y[0]) / (x[1] - x[0]);
-    let s1 = (y[2] - y[1]) / (x[2] - x[1]);
-    let s2 = (y[3] - y[2]) / (x[3] - x[2]);
+    let k = (0..n - 1).find(|&i| xi >= x[i] && xi <= x[i + 1]).unwrap_or(0);
 
-    // Calculate derivatives using PCHIP method
-    let mut d = [0.0; 4];
+    let s: Vec<f64> = (0..n - 1).map(|i| (y[i + 1] - y[i]) / (x[i + 1] - x[i])).collect();
 
-    // Endpoint derivatives
-    d[0] = s0;
-    d[3] = s2;
+    let mut d = vec![0.0; n];
+    d[0] = s[0];
+    d[n - 1] = s[n - 2];
 
-    // Interior derivatives (weighted harmonic mean)
-    #[expect(clippy::needless_range_loop)]
-    for i in 1..=2 {
-        let (s_prev, s_next, h_prev, h_next) = if i == 1 {
-            (s0, s1, x[1] - x[0], x[2] - x[1])
-        } else {
-            (s1, s2, x[2] - x[1], x[3] - x[2])
-        };
-
+    for i in 1..n - 1 {
+        let s_prev = s[i - 1];
+        let s_next = s[i];
         if s_prev * s_next <= 0.0 {
             d[i] = 0.0;
         } else {
+            let h_prev = x[i] - x[i - 1];
+            let h_next = x[i + 1] - x[i];
             let w1 = 2.0f64.mul_add(h_next, h_prev);
             let w2 = 2.0f64.mul_add(h_prev, h_next);
             d[i] = (w1 + w2) / (w1 / s_prev + w2 / s_next);
         }
     }
 
-    // Monotonicity constraint
-    let slopes = [s0, s1, s2];
-    for i in 0..3 {
-        if slopes[i] == 0.0 {
+    for i in 0..n - 1 {
+        if s[i] == 0.0 {
             d[i] = 0.0;
             d[i + 1] = 0.0;
         } else {
-            let alpha = d[i] / slopes[i];
-            let beta = d[i + 1] / slopes[i];
+            let alpha = d[i] / s[i];
+            let beta = d[i + 1] / s[i];
             let tau = alpha.mul_add(alpha, beta * beta);
 
             if tau > PCHIP_MAX_TAU_SQUARED {
                 let scale = 3.0 / tau.sqrt();
-                d[i] = scale * alpha * slopes[i];
-                d[i + 1] = scale * beta * slopes[i];
+                d[i] = scale * alpha * s[i];
+                d[i + 1] = scale * beta * s[i];
             }
         }
     }
 
-    // Hermite cubic evaluation
     let h = x[k + 1] - x[k];
     let t = (xi - x[k]) / h;
     let t2 = t * t;
     let t3 = t2 * t;
 
-    // (2.0 * t3 - 3.0 * t2 + 1.0) * y[k]
-    // + (t3 - 2.0 * t2 + t) * h * d[k]
-    // + (-2.0 * t3 + 3.0 * t2) * y[k + 1]
-    // + (t3 - t2) * h * d[k + 1],
-    Some(
-        (2.0f64.mul_add(t3, -(3.0 * t2)) + 1.0)
-            .mul_add(y[k], (2.0f64.mul_add(-t2, t3) + t) * h * d[k])
-            + (-2.0f64).mul_add(t3, 3.0 * t2).mul_add(y[k + 1], (t3 - t2) * h * d[k + 1]),
-    )
+    let h00 = 2.0f64.mul_add(t3, -3.0 * t2) + 1.0;
+    let h10 = 2.0f64.mul_add(-t2, t3) + t;
+    let h01 = (-2.0f64).mul_add(t3, 3.0 * t2);
+    let h11 = t3 - t2;
+
+    Some(h00.mul_add(
+        y[k],
+        (h10 * h).mul_add(d[k], (h11 * h).mul_add(d[k + 1], h01 * y[k + 1])),
+    ))
 }
 
 pub fn quadratic_interpolate(x: &[f64; 3], y: &[f64; 3], xi: f64) -> Option<f64> {
@@ -363,7 +397,7 @@ pub fn akima_interpolate(x: &[f64; 4], y: &[f64; 4], xi: f64) -> Option<f64> {
     // Interior point slopes using Akima weights
     // For point 1: use differences m[0] and m[1]
     if (m[1] - m[0]).abs() < 1e-10 {
-        t[1] = 0.5 * (m[0] + m[1]);
+        t[1] = f64::midpoint(m[0], m[1]);
     } else {
         // For 4 points, we approximate the weights
         let w1 = (m[1] - m[0]).abs();
@@ -373,7 +407,7 @@ pub fn akima_interpolate(x: &[f64; 4], y: &[f64; 4], xi: f64) -> Option<f64> {
 
     // For point 2: use differences m[1] and m[2]
     if (m[2] - m[1]).abs() < 1e-10 {
-        t[2] = 0.5 * (m[1] + m[2]);
+        t[2] = f64::midpoint(m[1], m[2]);
     } else {
         let w1 = (m[2] - m[1]).abs();
         let w2 = (m[2] - m[1]).abs(); // Same weight for symmetry
@@ -405,6 +439,7 @@ mod tests {
         akima_interpolate as akima_interpolate_impl,
         catmull_rom_interpolate as catmull_rom_interpolate_impl,
         cubic_polynomial_interpolate as cubic_polynomial_interpolate_impl,
+        fritsch_carlson as fritsch_carlson_impl,
         linear_interpolate as linear_interpolate_impl,
         natural_cubic_spline as natural_cubic_spline_impl,
         pchip_interpolate as pchip_interpolate_impl,
@@ -456,7 +491,8 @@ mod tests {
     #[test]
     fn natural_cubic_spline() {
         // CRF 10 (84.872162), CRF 20 (78.517479), CRF 30 (72.812233)
-        let x = vec![72.812233, 78.517479, 84.872162]; // scores (ascending order)
+        let x = vec![72.812233, 78.517479, 84.872162]; // scores (ascending
+                                                       // order)
         let y = vec![30.0, 20.0, 10.0]; // CRFs
 
         // Test exact points
@@ -485,7 +521,8 @@ mod tests {
         );
 
         // CRF 15 (84.864449), CRF 25 (80.161186), CRF 35 (72.134048)
-        let x2 = vec![72.134048, 80.161186, 84.864449]; // scores (ascending order)
+        let x2 = vec![72.134048, 80.161186, 84.864449]; // scores (ascending
+                                                        // order)
         let y2 = vec![35.0, 25.0, 15.0]; // CRFs
 
         // Test interpolation for score 82.0
@@ -528,10 +565,91 @@ mod tests {
     }
 
     #[test]
+    fn fritsch_carlson() {
+        // CRF 10 (84.872162), CRF 20 (78.517479), CRF 30 (72.812233)
+        let x = vec![72.812233, 78.517479, 84.872162]; // scores (ascending
+                                                       // order)
+        let y = vec![30.0, 20.0, 10.0]; // CRFs
+
+        // Test exact points
+        assert!(
+            (fritsch_carlson_impl(&x, &y, 72.812233).expect("result should exist") - 30.0).abs()
+                < 1e-10
+        );
+        assert!(
+            (fritsch_carlson_impl(&x, &y, 78.517479).expect("result should exist") - 20.0).abs()
+                < 1e-10
+        );
+        assert!(
+            (fritsch_carlson_impl(&x, &y, 84.872162).expect("result should exist") - 10.0).abs()
+                < 1e-10
+        );
+
+        // Test interpolation for score 81.0
+        let result = fritsch_carlson_impl(&x, &y, 81.0);
+        assert!(result.is_some());
+        assert!(
+            result.expect("result should exist") > 10.0
+                && result.expect("result should exist") < 20.0
+        );
+
+        // CRF 15 (84.864449), CRF 25 (80.161186), CRF 35 (72.134048)
+        let x2 = vec![72.134048, 80.161186, 84.864449]; // scores (ascending
+                                                        // order)
+        let y2 = vec![35.0, 25.0, 15.0]; // CRFs
+
+        // Test interpolation for score 82.0
+        let result = fritsch_carlson_impl(&x2, &y2, 82.0);
+        assert!(result.is_some());
+        assert!(
+            result.expect("result should exist") > 15.0
+                && result.expect("result should exist") < 25.0
+        );
+
+        // CRF 20 (83.0155), CRF 30 (77.7812), CRF 40 (67.3447)
+        let x3 = vec![67.3447, 77.7812, 83.0155]; // scores (ascending order)
+        let y3 = vec![40.0, 30.0, 20.0]; // CRFs
+
+        // Test interpolation for score 80.0
+        let result = fritsch_carlson_impl(&x3, &y3, 80.0);
+        assert!(result.is_some());
+        assert!(
+            result.expect("result should exist") > 20.0
+                && result.expect("result should exist") < 30.0
+        );
+
+        // Test with non-increasing x values (should return None)
+        let x_bad = vec![84.872162, 78.517479, 80.0]; // Not properly ordered
+        let y_bad = vec![10.0, 20.0, 25.0];
+        assert_eq!(fritsch_carlson_impl(&x_bad, &y_bad, 79.0), None);
+
+        // Test with duplicate scores (should return None)
+        let x_dup = vec![80.0, 80.0, 80.0];
+        let y_dup = vec![30.0, 20.0, 10.0];
+        assert_eq!(fritsch_carlson_impl(&x_dup, &y_dup, 80.0), None);
+
+        // Test partial duplicate (should return None)
+        let x_dup2 = vec![80.0, 80.0, 87.0];
+        let y_dup2 = vec![30.0, 20.0, 10.0];
+        assert_eq!(fritsch_carlson_impl(&x_dup2, &y_dup2, 80.0), None);
+
+        // Test with too few points (should return None)
+        let x_short = vec![87.0715, 90.0064];
+        let y_short = vec![20.0, 10.0];
+        assert_eq!(fritsch_carlson_impl(&x_short, &y_short, 88.0), None);
+
+        // Test with mismatched lengths (should return None)
+        let x_mismatch = vec![83.8005, 87.0715, 90.0064];
+        let y_mismatch = vec![30.0, 20.0];
+        assert_eq!(fritsch_carlson_impl(&x_mismatch, &y_mismatch, 85.0), None);
+    }
+
+    #[test]
     fn pchip_interpolate() {
         // Test with monotonic data
         // CRF 5 (92.4354), CRF 15 (85.7452), CRF 25 (80.5088), CRF 35 (72.9709)
-        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending order)
+        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending
+                                                      // order)
         let y = [35.0, 25.0, 15.0, 5.0]; // CRFs
 
         // Test exact points
@@ -673,7 +791,8 @@ mod tests {
     fn cubic_polynomial_interpolate() {
         // Test with CRF/score data
         // CRF 5 (92.4354), CRF 15 (85.7452), CRF 25 (80.5088), CRF 35 (72.9709)
-        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending order)
+        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending
+                                                      // order)
         let y = [35.0, 25.0, 15.0, 5.0]; // CRFs
 
         // Test exact points
@@ -770,7 +889,8 @@ mod tests {
     fn catmull_rom_interpolate() {
         // Test with CRF/score data
         // CRF 5 (92.4354), CRF 15 (85.7452), CRF 25 (80.5088), CRF 35 (72.9709)
-        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending order)
+        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending
+                                                      // order)
         let y = [35.0, 25.0, 15.0, 5.0]; // CRFs
 
         // Test exact points (at x[1] and x[2])
@@ -860,7 +980,8 @@ mod tests {
     fn akima_interpolate() {
         // Test with CRF/score data
         // CRF 5 (92.4354), CRF 15 (85.7452), CRF 25 (80.5088), CRF 35 (72.9709)
-        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending order)
+        let x = [72.9709, 80.5088, 85.7452, 92.4354]; // scores (ascending
+                                                      // order)
         let y = [35.0, 25.0, 15.0, 5.0]; // CRFs
 
         // Test exact points

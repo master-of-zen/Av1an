@@ -246,6 +246,20 @@ pub fn parse_svt_av1_frames(input: &str) -> Option<u64> {
     None
 }
 
+/// Parses the number of encoded frames out of x264/x265 output.
+///
+/// Both the official encoders and the builds of
+/// [Patman](https://github.com/Patman86) are supported. They report progress
+/// with the same information but different layouts, and Patman's x265 build
+/// capitalises `Frames`/`FPS`:
+///
+/// ```text
+/// [42.5%] 121/285 frames, 2.47 fps, 1445.28 kb/s, eta 0:01:06   (official)
+/// x264 [38.2%] 844/2208 frames @ 115.7 fps | 2930.1 kb/s | ...  (Patman x264)
+/// [38.2%] 844/2208 Frames @ 115.7 FPS | 2930.1 kb/s | ...       (Patman x265)
+/// x264 844 frames @ 115.7 fps | 2930.1 kb/s | 12.89 MB          (unknown total)
+/// encoded 844 frames, 115.7 fps, 2930.1 kb/s                    (summary)
+/// ```
 pub fn parse_x26x_frames(s: &str) -> Option<u64> {
     let mut parts = s.split_ascii_whitespace();
     while let Some(part) = parts.next() {
@@ -257,9 +271,12 @@ pub fn parse_x26x_frames(s: &str) -> Option<u64> {
         }
     }
 
-    let mut previous = None;
+    // Every encoder prints "<n> frames" or "<n>/<total> frames" right before
+    // the frame rate, where the first number is the amount of output
+    // frames.
+    let mut previous: Option<&str> = None;
     for part in s.split_ascii_whitespace() {
-        if part.starts_with("frames") {
+        if starts_with_ignore_ascii_case(part, "frames") {
             return previous
                 .map(|candidate: &str| candidate.split_once('/').map_or(candidate, |(val, _)| val))
                 .and_then(|s| s.parse().ok());
@@ -268,6 +285,13 @@ pub fn parse_x26x_frames(s: &str) -> Option<u64> {
     }
 
     None
+}
+
+/// Case-insensitive `starts_with` that does not allocate.
+fn starts_with_ignore_ascii_case(s: &str, prefix: &str) -> bool {
+    s.as_bytes()
+        .get(..prefix.len())
+        .is_some_and(|start| start.eq_ignore_ascii_case(prefix.as_bytes()))
 }
 
 fn strip_ansi_escape_sequences(input: &str) -> Cow<'_, str> {

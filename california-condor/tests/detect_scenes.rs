@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use california_condor::{
     commands::handlers::load_configuration,
@@ -7,13 +9,18 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
     use andean_condor::{
         models::{
-            input::{Input, VapourSynthImportMethod},
-            sequence::scene_detector::{SceneDetectionMethod, ScenecutMethod},
+            input::{ImportMethod, Input, VapourSynthImportMethod},
+            sequence::scene_detector::{
+                SceneDetectionMethod,
+                SceneDetectionMethod as CoreMethod,
+                ScenecutMethod,
+            },
         },
         vapoursynth::vapoursynth_filters::VapourSynthFilter,
     };
@@ -392,6 +399,271 @@ mod tests {
             scene_boundaries.last().expect("non-empty").1,
             test_video.frames,
             "last scene ends at the final frame"
+        );
+    }
+
+    /// `set method` must carry the settings the user did not restate across an
+    /// algorithm switch instead of dropping them with the old variant.
+    #[serial]
+    #[test]
+    fn detect_scenes_set_method_keeps_settings_across_algorithm_switch() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args([
+                "detect-scenes",
+                "set",
+                "method",
+                "avscenechange",
+                "--minimum-frames",
+                "20",
+                "--maximum-frames",
+                "280",
+                "--method",
+                "fast",
+                "--save-scores",
+            ])
+            .assert()
+            .success();
+        let method = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(method, CoreMethod::AVSceneChange {
+                minimum_length: 20,
+                maximum_length: 280,
+                method:         ScenecutMethod::Fast,
+                save_scores:    true,
+            }),
+            "method is {method:?}"
+        );
+
+        // Switching algorithms keeps the frame limits and the score setting.
+        condor_cmd(&temp)
+            .args(["detect-scenes", "set", "method", "transnetv2"])
+            .assert()
+            .success();
+        let method = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(method, CoreMethod::TransNetV2 {
+                minimum_length: 20,
+                maximum_length: 280,
+                model_path:     None,
+                save_scores:    true,
+            }),
+            "method is {method:?}"
+        );
+
+        // The explicit switch wins over the inherited setting.
+        condor_cmd(&temp)
+            .args(["detect-scenes", "set", "method", "transnetv2", "--save-scores", "off"])
+            .assert()
+            .success();
+        let method = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(method, CoreMethod::TransNetV2 {
+                save_scores: false,
+                ..
+            }),
+            "method is {method:?}"
+        );
+
+        condor_cmd(&temp)
+            .args(["detect-scenes", "set", "method", "none"])
+            .assert()
+            .success();
+        let method = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(method, CoreMethod::None {
+                minimum_length: 20,
+                maximum_length: 280,
+            }),
+            "method is {method:?}"
+        );
+    }
+
+    /// An impossible frame range is rejected before anything is written.
+    #[serial]
+    #[test]
+    fn detect_scenes_set_method_rejects_impossible_frame_range() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args([
+                "detect-scenes",
+                "set",
+                "method",
+                "avscenechange",
+                "--minimum-frames",
+                "300",
+                "--maximum-frames",
+                "100",
+            ])
+            .assert()
+            .failure();
+
+        let method = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(method, CoreMethod::AVSceneChange {
+                minimum_length: 24,
+                maximum_length: 240,
+                ..
+            }),
+            "the rejected edit left the method at {method:?}"
+        );
+    }
+
+    /// `info` prints the saved value as JSON, `reset` restores the default.
+    #[serial]
+    #[test]
+    fn detect_scenes_info_and_reset() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["detect-scenes", "set", "method", "avscenechange", "--minimum-frames", "30"])
+            .assert()
+            .success();
+
+        let output = condor_cmd(&temp)
+            .args(["detect-scenes", "info"])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let section: serde_json::Value =
+            serde_json::from_slice(&output).expect("info prints valid JSON");
+        assert_eq!(
+            section["method"]["AVSceneChange"]["minimum_length"], 30,
+            "info shows the saved method: {section}"
+        );
+
+        let output = condor_cmd(&temp)
+            .args(["detect-scenes", "info", "method"])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let method: serde_json::Value =
+            serde_json::from_slice(&output).expect("info prints valid JSON");
+        assert_eq!(
+            method["AVSceneChange"]["minimum_length"], 30,
+            "info method shows the saved method: {method}"
+        );
+
+        condor_cmd(&temp).args(["detect-scenes", "reset", "method"]).assert().success();
+        let restored = load(&config_path).condor.sequence_config.scene_detector.method;
+        assert!(
+            matches!(restored, CoreMethod::AVSceneChange {
+                minimum_length: 24,
+                maximum_length: 240,
+                method:         ScenecutMethod::Standard,
+                save_scores:    false,
+            }),
+            "reset restores the default, found {restored:?}"
+        );
+    }
+
+    /// `set input` builds the same override the run flags would, and an input
+    /// property without flags changes nothing.
+    #[serial]
+    #[test]
+    fn detect_scenes_set_input_builds_an_override() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+        let video = get_test_video();
+
+        condor_cmd(&temp).args(["detect-scenes", "set", "input"]).assert().failure();
+
+        condor_cmd(&temp)
+            .args([
+                "detect-scenes",
+                "set",
+                "input",
+                "--path",
+                path_str(&video.path),
+                "--decoder",
+                "ffms2",
+            ])
+            .assert()
+            .success();
+        let detector = load(&config_path).condor.sequence_config.scene_detector;
+        let input = detector.input.expect("scene detector input is set");
+        assert!(
+            matches!(input, Input::Video {
+                import_method: ImportMethod::FFMS2 { .. },
+                ..
+            }),
+            "scene detector input is {input:?}"
+        );
+
+        condor_cmd(&temp).args(["detect-scenes", "reset", "input"]).assert().success();
+        let detector = load(&config_path).condor.sequence_config.scene_detector;
+        assert!(detector.input.is_none(), "scene detector input is cleared");
+    }
+
+    /// `--vs-args` only reaches a `.vpy`/`.py` input. For any other input the
+    /// flag is reported instead of dropped in silence.
+    #[serial]
+    #[test]
+    fn vs_args_on_a_native_input_warns() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        init_config(&temp);
+        let video = get_test_video();
+
+        // Inheriting the main input.
+        let stderr = condor_cmd(&temp)
+            .args(["detect-scenes", "set", "input", "--vs-args", "somekey=somevalue"])
+            .assert()
+            .success()
+            .get_output()
+            .stderr
+            .clone();
+        let stderr = String::from_utf8(stderr).expect("stderr is UTF-8");
+        assert!(
+            stderr.contains("--vs-args applies only to VapourSynth script")
+                && stderr.contains("BestSource video input"),
+            "stderr is {stderr}"
+        );
+
+        // Rebuilding the input from a new path changes nothing about that.
+        let stderr = condor_cmd(&temp)
+            .args([
+                "detect-scenes",
+                "set",
+                "input",
+                "--path",
+                path_str(&video.path),
+                "--vs-args",
+                "somekey=somevalue",
+            ])
+            .assert()
+            .success()
+            .get_output()
+            .stderr
+            .clone();
+        let stderr = String::from_utf8(stderr).expect("stderr is UTF-8");
+        assert!(
+            stderr.contains("--vs-args applies only to VapourSynth script")
+                && stderr.contains("drop --vs-args or use a script input"),
+            "stderr is {stderr}"
         );
     }
 }

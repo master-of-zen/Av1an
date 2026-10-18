@@ -121,6 +121,30 @@ A picture-altering filter (`crop`, `hflip`, `negate`, ...) changes what gets enc
 - `> condor encode --ffmpeg-filter "crop=iw-16:ih-16"`
 - `> condor encode --ffmpeg-filter "eq=brightness=0.05:saturation=1.2"`
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved parallel-encoder and encoder settings without running the command:
+
+- `set workers N` — how many encoder processes run at once (`≥ 1`); `reset workers` clears it so Benchmarker decides.
+- `set input [--path P] [--decoder D] [--filters …] [--vs-args …] [--stream-concurrently [on|off]]` — the input Parallel Encoder reads instead of the main input; `--filters` applies to the main input.
+- `set scenes-directory PATH` — the directory the encoded scenes are written to.
+- `set encoder ENCODER` — switches the encoder and starts from its defaults.
+- `set executable PATH` — pins a custom encoder binary path; `reset executable` restores PATH lookup.
+- `set passes N` — number of encoder passes (`≥ 1`); rejected for single-pass-only `ffmpeg`.
+- `set params "--crf 16 --tune 0"` — merges encoder parameters into the current encoder's options; `reset params` restores the encoder's defaults.
+- `set photon-noise ISO [--chroma-noise ISO]` — sets the Photon Noise table; rejected for encoders that do not support Photon Noise; `reset photon-noise` clears it.
+- `set ffmpeg-filter FILTER` — sets the FFmpeg filtergraph; `reset ffmpeg-filter` clears it.
+- `info [KEY]` prints JSON for one key or both `parallel_encoder` and `encoder`; `reset KEY` resets one key, and a bare `reset` restores both to their defaults (preserving the temp-derived `scenes-directory`).
+
+```bash
+$ condor encode set workers 4
+$ condor encode set photon-noise 800 --chroma-noise 200
+$ condor encode set ffmpeg-filter "crop=iw-16:ih-16"
+$ condor encode reset photon-noise
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -141,6 +165,9 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-encode-verbose-light.avif"><picture><source srcset="../media/tui/help-encode-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-encode-verbose-light.avif" alt="condor encode --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor encode --help --verbose</p>
     </td>
-    <td width="50%" valign="top"></td>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-encode-set-light.avif"><picture><source srcset="../media/tui/help-encode-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-encode-set-light.avif" alt="condor encode set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor encode set --help</p>
+    </td>
   </tr>
 </table>

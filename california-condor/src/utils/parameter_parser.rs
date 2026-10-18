@@ -8,7 +8,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_till1},
     character::complete::{char, multispace0, multispace1},
-    combinator::rest,
+    combinator::success,
     multi::many0,
     sequence::{preceded, separated_pair},
 };
@@ -79,7 +79,7 @@ impl EncoderParamsParser {
     fn parse_flag(input: &str) -> IResult<&str, (String, CLIParameter)> {
         let (input, prefix) = Self::parse_prefix(input)?;
         // Take until space or end of string
-        let (input, name) = alt((take_till1(|c| c == ' '), rest)).parse(input)?;
+        let (input, name) = take_till1(|c| c == ' ').parse(input)?;
 
         Ok((
             input,
@@ -90,8 +90,11 @@ impl EncoderParamsParser {
         ))
     }
 
+    /// An optional `-` or `--` before the name. The flag style is not assumed.
+    /// A missing prefix stays empty so the parameter is passed through exactly
+    /// as written.
     fn parse_prefix(input: &str) -> IResult<&str, &str> {
-        alt((tag("--"), tag("-"))).parse(input)
+        alt((tag("--"), tag("-"), success(""))).parse(input)
     }
 
     fn to_cli_parameter(prefix: &str, delim: &str, val: &str) -> CLIParameter {
@@ -201,6 +204,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_dashless_pairs_keep_an_empty_prefix() {
+        let result =
+            EncoderParamsParser::parse_string("crf=16 tune=0").expect("dash-less pairs parse");
+        assert_eq!(result.len(), 2, "input contains 2 parameters");
+        assert_matches!(
+            result["crf"],
+            CLIParameter::Number { ref prefix, ref delimiter, value }
+                if prefix.is_empty() && delimiter == "=" && value == 16.0,
+            "crf=16 keeps its empty prefix instead of gaining one"
+        );
+        assert_matches!(
+            result["tune"],
+            CLIParameter::Number { ref prefix, ref delimiter, value }
+                if prefix.is_empty() && delimiter == "=" && value == 0.0,
+            "tune=0 keeps its empty prefix instead of gaining one"
+        );
+    }
+
+    #[test]
+    fn parse_dashless_space_pair() {
+        let result = EncoderParamsParser::parse_string("crf 16").expect("parses");
+        assert_matches!(
+            result["crf"],
+            CLIParameter::Number { ref prefix, ref delimiter, value }
+                if prefix.is_empty() && delimiter == " " && value == 16.0,
+            "a space-separated pair works without a dash too"
+        );
+    }
+
+    #[test]
     fn parse_multiple_params() {
         let result = EncoderParamsParser::parse_string("--key1 val1 --key2=val2 -f");
         assert!(result.is_ok(), "input should parse");
@@ -217,11 +250,4 @@ mod tests {
     //     let result = EncoderParamsParser::parse_string("--invalid-param,43");
     //     assert_matches!(result, Err(_), "input should not parse");
     // }
-
-    // TODO: Why does this parse successfully as empty?
-    // #[test]
-    // fn parse_invalid_params() {
-    //     let result = EncoderParamsParser::parse_string("lorem ipsum dolor sit
-    // amet");     assert_matches!(result, Err(_), "input should not
-    // parse"); }
 }

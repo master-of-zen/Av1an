@@ -71,7 +71,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::info;
 
-use crate::{commands::DecoderMethod, tui::open_input_with_progress, utils::hash_path::hash_path};
+use crate::{
+    commands::DecoderMethod,
+    tui::open_input_with_progress,
+    utils::hash_path::hash_path,
+    zoner::{ZonerConfig, ZonerData},
+};
 
 /// Fallback schema URL used when the binary was built without git metadata
 /// (e.g. from a source tarball). Normal builds bake the correct URL in via
@@ -146,6 +151,7 @@ impl Configuration {
                             save_scores:    false,
                         },
                     },
+                    zoner:              None,
                     noise_detector:     None,
                     noise_scaler:       None,
                     benchmarker:        BenchmarkerConfig::default(),
@@ -365,6 +371,7 @@ where
         + SceneConcatenatorConfigHandler,
 {
     pub scene_detector:     SceneDetectorConfig,
+    pub zoner:              Option<ZonerConfig>,
     pub noise_detector:     Option<NoiseDetectorConfig>,
     pub noise_scaler:       Option<NoiseScalerConfig>,
     pub benchmarker:        BenchmarkerConfig,
@@ -381,6 +388,7 @@ impl Default for CliSequenceConfig {
     fn default() -> Self {
         Self {
             scene_detector:     SceneDetectorConfig::default(),
+            zoner:              None,
             noise_detector:     None,
             noise_scaler:       None,
             benchmarker:        BenchmarkerConfig::default(),
@@ -504,6 +512,10 @@ where
     pub parallel_encoder: ParallelEncoderData,
     pub target_quality:   TargetQualityData,
     pub quality_check:    QualityCheckData,
+    /// The Zoner's record of having processed the list; absent in
+    /// configurations written before zoning became idempotent.
+    #[serde(default)]
+    pub zoner:            ZonerData,
 }
 
 impl SequenceDataHandler for CliSequenceData {
@@ -519,6 +531,7 @@ impl Default for CliSequenceData {
             parallel_encoder: ParallelEncoderData::default(),
             target_quality:   TargetQualityData::default(),
             quality_check:    QualityCheckData::default(),
+            zoner:            ZonerData::default(),
         }
     }
 }

@@ -309,6 +309,29 @@ Available filters:"#,
 );
 pub const HELP_FILTERS_SHORT: &str = short_help(HELP_FILTERS);
 
+pub const HELP_ZONES: &str = r#"Zone overrides to apply to the scenes inside their frame ranges.
+
+Each value is a zone definition or a path to a zone file. A zone definition reads
+
+`<start> <end> [replace|merge] [encoder[(executable)]] ["options"] [flags]`
+
+- the end is exclusive, and `-1` can be used to refer to the input's first or last frame,
+- the name of the encoder used to encode the zone, optionally with the binary path in parentheses (`svt-av1("/tools/fish")`),
+- `replace` replaces the scene's encoder outright, while the default `merge` patches the scene's own; a merge that names another encoder leaves the scene alone,
+- the quoted string holds encoder parameters (*--params*),
+- and the flags are `--maximum-frames` (split longer scenes), `--ffmpeg-filter`, `--iso`, `--chroma-iso`, `--width`, `--height`, `--sy`, `--ccb` and `--ccr` (comma-separated Photon Noise tables).
+
+Zone files are read by extension: `.json` for `{ "zones": [...] }` or a bare array, `.jsonl`/`.ndjson` for one zone per line, and anything else as a text file of zone definitions with `#` comments.
+
+The zones are written to *condor.sequence_config.zoner*, replacing the zones already configured.
+
+Examples:
+- `--zones '-1 200 svt-av1 "--preset 3 --crf 23" --iso 400'`
+- `--zones '-1 200 replace aom("/tools/aomenc") "--cpu-used=4" --maximum-frames 240'`
+- `--zones ./zones.json`
+"#;
+pub const HELP_ZONES_SHORT: &str = short_help(HELP_ZONES);
+
 pub const HELP_FFMPEG_FILTER: &str = r#"FFmpeg filtergraph to apply to each scene before encoding.
 
 FFmpeg must be installed and available in PATH.

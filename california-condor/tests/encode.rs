@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use andean_condor::models::encoder::{
     Encoder,
@@ -13,6 +15,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -409,6 +412,63 @@ mod tests {
             height.parse::<usize>().expect("height is numeric"),
             HEIGHT - 16,
             "encoded chunk height is cropped"
+        );
+    }
+
+    /// `encode` edits both `parallel_encoder` and `encoder`, validates
+    /// encoder-specific capabilities, and resets individual keys.
+    #[serial]
+    #[test]
+    fn encode_set_and_reset() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp).args(["encode", "set", "workers", "4"]).assert().success();
+        condor_cmd(&temp).args(["encode", "set", "passes", "2"]).assert().success();
+        condor_cmd(&temp)
+            .args(["encode", "set", "photon-noise", "800", "--chroma-noise", "200"])
+            .assert()
+            .success();
+        condor_cmd(&temp)
+            .args(["encode", "set", "ffmpeg-filter", "crop=iw-16:ih-16"])
+            .assert()
+            .success();
+
+        let config = load(&config_path);
+        assert_eq!(
+            config.condor.sequence_config.parallel_encoder.workers,
+            Some(4),
+            "workers is set"
+        );
+        assert_eq!(config.condor.encoder.total_passes(), 2, "passes is set");
+        assert_eq!(
+            config.condor.encoder.photon_noise().map(|pn| (pn.iso, pn.chroma_iso)),
+            Some((800, Some(200))),
+            "photon noise is set"
+        );
+        assert_eq!(
+            config.condor.encoder.ffmpeg_filter(),
+            Some("crop=iw-16:ih-16"),
+            "ffmpeg filter is set"
+        );
+
+        // Switching to x264 and attempting to set photon-noise is rejected.
+        condor_cmd(&temp).args(["encode", "set", "encoder", "x264"]).assert().success();
+        condor_cmd(&temp)
+            .args(["encode", "set", "photon-noise", "800"])
+            .assert()
+            .failure();
+
+        // Resetting encoder restores the default SVT-AV1 encoder.
+        condor_cmd(&temp).args(["encode", "reset", "encoder"]).assert().success();
+        condor_cmd(&temp).args(["encode", "reset", "workers"]).assert().success();
+        let config = load(&config_path);
+        assert_eq!(
+            config.condor.sequence_config.parallel_encoder.workers, None,
+            "workers is cleared"
         );
     }
 }

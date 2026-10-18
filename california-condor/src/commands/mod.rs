@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use andean_condor::{
     models::{
@@ -19,6 +22,7 @@ use thiserror::Error;
 
 use crate::commands::help_text::*;
 
+pub mod config;
 pub mod handlers;
 pub mod help_text;
 pub mod version;
@@ -92,6 +96,8 @@ pub struct CondorCli {
     pub chroma_noise:      Option<u32>,
     #[arg(long, value_name = "FFmpeg Filter", allow_hyphen_values = true, help = HELP_FFMPEG_FILTER_SHORT, long_help = HELP_FFMPEG_FILTER)]
     pub ffmpeg_filter:     Option<String>,
+    #[arg(long, value_name = "Zone", allow_hyphen_values = true, help = HELP_ZONES_SHORT, long_help = HELP_ZONES)]
+    pub zones:             Option<Vec<String>>,
     #[arg(long, value_name = "Metric", help = HELP_TARGET_METRIC_SHORT, long_help = HELP_TARGET_METRIC)]
     pub target_metric:     Option<QualityMetric>,
     #[arg(long, value_name = "Score", help = HELP_TARGET_SHORT, long_help = HELP_TARGET)]
@@ -107,15 +113,87 @@ pub struct CondorCli {
     pub skip_scd:          bool,
 }
 
+impl CondorCli {
+    /// Rejects `condor scenes INDEX add` as a usage error.
+    ///
+    /// `add` places the scene it inserts itself, so an index before it is not
+    /// a form the command has; Clap cannot express an argument that conflicts
+    /// with one subcommand, so the check runs after parsing and reports the
+    /// conflict the way Clap would.
+    pub(crate) fn reject_indexed_add(&self, cmd: &mut clap::Command) {
+        if matches!(
+            &self.command,
+            Some(Commands::Scenes {
+                index:  Some(_),
+                action: Some(handlers::scenes::ScenesAction::Add { .. }),
+            })
+        ) {
+            let scenes = cmd.find_subcommand_mut("scenes").expect("the scenes subcommand exists");
+            scenes
+                .error(
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "`add` creates a new scene and takes no index: run `condor scenes add START \
+                     END`",
+                )
+                .exit();
+        }
+    }
+
+    /// Hyphen-accepting positionals make Clap capture flags after the first
+    /// zone value. Recover only the reserved standalone dry-run flag.
+    pub(crate) fn normalize_zone_flags(&mut self) {
+        if let Some(Commands::Zone {
+            zones,
+            dry_run,
+        }) = &mut self.command
+        {
+            zones.retain(|zone| {
+                if zone == "--dry-run" {
+                    *dry_run = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+    }
+}
+
+/// The global `--verbose` flag, recorded once at startup so handlers that
+/// print optional detail can consult it without threading it through every
+/// call.
+static VERBOSE: AtomicBool = AtomicBool::new(false);
+
+/// Records the global `--verbose` flag; called once at startup.
+pub fn set_verbose(verbose: bool) {
+    VERBOSE.store(verbose, Ordering::Relaxed);
+}
+
+/// Whether `--verbose` was given. Output that only repeats what a status line
+/// already says is printed only then.
+pub fn is_verbose() -> bool {
+    VERBOSE.load(Ordering::Relaxed)
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Initialize a new configuration.
+    ///
+    /// Creating a configuration takes INPUT and OUTPUT; both are required
+    /// unless one of the configuration subcommands below is used.
+    ///
+    /// Also reads, changes or resets the top-level settings of an existing
+    /// configuration without running anything: *condor init info*, *set* and
+    /// *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     Init {
+        #[command(subcommand)]
+        edit:          Option<handlers::init::InitAction>,
         #[arg(value_name = "Input", help = HELP_INPUT_SHORT, long_help = HELP_INPUT)]
-        input:         PathBuf,
+        input:         Option<PathBuf>,
         #[arg(value_name = "Output", help = HELP_OUTPUT_SHORT, long_help = HELP_OUTPUT)]
-        output:        PathBuf,
+        output:        Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
         decoder:       Option<DecoderMethod>,
         #[arg(long, value_name = "VapourSynth Filters", help = HELP_FILTERS_SHORT, long_help = HELP_FILTERS)]
@@ -139,7 +217,13 @@ pub enum Commands {
         target:        Option<f64>,
     },
     /// Detect scenes (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor detect-scenes info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     DetectScenes {
+        #[command(subcommand)]
+        edit:              Option<handlers::detect_scenes::DetectScenesAction>,
         #[arg(long, short('i'), value_name = "Input", help = HELP_SCD_INPUT_SHORT, long_help = HELP_SCD_INPUT)]
         input:             Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
@@ -155,8 +239,48 @@ pub enum Commands {
         #[arg(long, value_name = "Scene Duration", help = HELP_MAX_SCENE_SECONDS_SHORT, long_help = HELP_MAX_SCENE_SECONDS)]
         max_scene_seconds: Option<usize>,
     },
+    /// Apply zone overrides to the scenes inside their frame ranges.
+    ///
+    /// Zones mark the scenes that share a frame with them, merging their
+    /// encoder settings into the scenes' own or replacing the encoder outright,
+    /// and splitting scenes longer than the zone's maximum.
+    Zone {
+        /// Zone definitions, or paths to JSON, JSON lines, or text zone files.
+        #[arg(value_name = "Zone", allow_hyphen_values = true)]
+        zones:   Vec<String>,
+        /// Report planned scene changes without saving configuration or
+        /// changing outputs.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Inspect and edit the scenes saved in the configuration.
+    ///
+    /// The index comes first and selects the scenes the action addresses:
+    /// `1`, `0-4`, `1,3`, `1-2,8-10,16`, or `-1`/`all`/`every` for the whole
+    /// list. Scenes hold everything the pipeline saved per scene: frame
+    /// ranges, sub-scenes, the per-scene encoder and the step results. *info*
+    /// prints them as JSON, *set* changes them, *reset* restores them and
+    /// *delete* removes them. Without an action the addressed scenes are
+    /// printed.
+    ///
+    /// To add a scene, run `condor scenes add START END`: it places the new
+    /// scene itself, so it takes no index.
+    Scenes {
+        /// Which scenes to address: `1`, `0-4`, `1,3`, `1-2,8-10,16`, or
+        /// `-1`/`all`/`every` for every scene.
+        #[arg(value_name = "Index", allow_hyphen_values = true)]
+        index:  Option<crate::scenes::SceneSelection>,
+        #[command(subcommand)]
+        action: Option<handlers::scenes::ScenesAction>,
+    },
     /// Detect noise per scene (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor detect-noise info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     DetectNoise {
+        #[command(subcommand)]
+        edit:              Option<handlers::detect_noise::DetectNoiseAction>,
         #[arg(long, value_name = "Noise Detector Input", help = HELP_ND_INPUT_SHORT, long_help = HELP_ND_INPUT)]
         input:             Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
@@ -172,7 +296,13 @@ pub enum Commands {
     ///
     /// Scenes must have Photon Noise (*--photon-noise*/*--chroma-noise*)
     /// configured. Scenes below the threshold will not be scaled.
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor scale-noise info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     ScaleNoise {
+        #[command(subcommand)]
+        edit:           Option<handlers::scale_noise::ScaleNoiseAction>,
         /// Minimum noise value for a scene to scale Photon Noise ISO.
         ///
         /// Recommended: 0.002
@@ -189,7 +319,13 @@ pub enum Commands {
         scale_chroma:   bool,
     },
     /// Benchmark the optimum amount of workers (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor benchmark info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     Benchmark {
+        #[command(subcommand)]
+        edit:       Option<handlers::benchmarker::BenchmarkAction>,
         /// The minimum speed increase (in percent) required to add an
         /// additional worker.
         ///
@@ -203,7 +339,13 @@ pub enum Commands {
     },
     /// Calculate the optimum quantizer per scene for a given metric target
     /// (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor target-quality info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     TargetQuality {
+        #[command(subcommand)]
+        edit:              Option<handlers::target_quality::TargetQualityAction>,
         #[arg(long, short('i'), value_name = "Input", help = HELP_INPUT_SHORT, long_help = HELP_INPUT)]
         input:             Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
@@ -230,7 +372,13 @@ pub enum Commands {
     ///
     /// Scenes with a bitrate above the normal threshold will be optimized by
     /// clamping the quantizer to the average quantizer value.
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor optimize-bitrate info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     OptimizeBitrate {
+        #[command(subcommand)]
+        edit:            Option<handlers::optimize_bitrate::OptimizeBitrateAction>,
         /// Minimum bitrate sigma (σ) threshold for a scene to be optimized.
         #[arg(long, value_name = "Sigma", value_parser = value_parser!(u8).range(1..=10))]
         sigma_threshold: Option<u8>,
@@ -240,7 +388,13 @@ pub enum Commands {
     ///
     /// Speeds for scenes with quantizers between points will be interpolated
     /// between the nearest points.
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor scale-speed info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     ScaleSpeed {
+        #[command(subcommand)]
+        edit:       Option<handlers::scale_speed::ScaleSpeedAction>,
         /// Quantizer values for speed-quantizer pairs. (must match number of
         /// speeds)
         ///
@@ -267,7 +421,13 @@ pub enum Commands {
         speeds:     Option<Vec<i8>>,
     },
     /// Encode scenes in parallel (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor encode info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     Encode {
+        #[command(subcommand)]
+        edit:          Option<handlers::encode::EncodeAction>,
         #[arg(long, short('i'), value_name = "Input", help = HELP_INPUT_SHORT, long_help = HELP_INPUT)]
         input:         Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
@@ -293,13 +453,25 @@ pub enum Commands {
         ffmpeg_filter: Option<String>,
     },
     /// Concatenate encoded scenes into output video (Triggers TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor concatenate info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     Concatenate {
+        #[command(subcommand)]
+        edit:   Option<handlers::concatenate::ConcatenateAction>,
         #[arg(long, value_name = "Concatenation Method", help = HELP_CONCAT_SHORT, long_help = HELP_CONCAT)]
         method: Option<ConcatenationMethod>,
     },
     /// Measure the quality of the concatenated output per scene (Triggers
     /// TUI).
+    ///
+    /// Also reads, changes or resets its saved settings without running:
+    /// *condor quality-check info*, *set* and *reset*.
+    #[command(args_conflicts_with_subcommands = true)]
     QualityCheck {
+        #[command(subcommand)]
+        edit:    Option<handlers::quality_check::QualityCheckAction>,
         #[arg(long, short('i'), value_name = "Input", help = HELP_INPUT_SHORT, long_help = HELP_INPUT)]
         input:   Option<PathBuf>,
         #[arg(long, value_name = "Decoder", help = HELP_DECODER_SHORT, long_help = HELP_DECODER)]
@@ -760,6 +932,9 @@ mod tests {
                 );
             }
 
+            /// INPUT and OUTPUT are optional at parse time because `init` also
+            /// carries `info`/`set`/`reset`; the missing one is reported by the
+            /// command itself (see `handlers::init::require_paths`).
             #[test]
             fn without_output() {
                 let test_video = get_test_video();
@@ -769,7 +944,19 @@ mod tests {
                     "init",
                     test_video.path.to_str().expect("test_video path is valid"),
                 ]);
-                assert_matches!(result, Err(_), "\"condor init input\" without output fails");
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Init {
+                            edit: None,
+                            input: Some(_),
+                            output: None,
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"condor init input\" parses and leaves output unset"
+                );
             }
 
             #[test]
@@ -961,8 +1148,432 @@ mod tests {
                     "\"condor --input INPUT --output OUTPUT --photon-noise -24.8\" does not parse"
                 );
             }
+
+            #[test]
+            fn with_zones() {
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "--input",
+                    "./relative-input.mp4",
+                    "--output",
+                    "/absolute/path/to/output.mkv",
+                    "--zones",
+                    "-1 200 svt-av1 \"--preset 3\"",
+                    "--zones",
+                    "./zones.json",
+                ]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: None,
+                        zones: Some(ref zones),
+                        ..
+                    }) if zones.len() == 2 && zones[1] == "./zones.json",
+                    "\"condor --zones ZONE --zones FILE\" parses"
+                );
+            }
         }
 
+        mod zone {
+            use super::*;
+
+            #[test]
+            fn dry_run_before_and_after_negative_bound_zones() {
+                for args in [
+                    vec!["condor", "zone", "--dry-run", "-1 200 svt-av1 \"--preset 3\""],
+                    vec!["condor", "zone", "-1 200 svt-av1 \"--preset 3\"", "--dry-run"],
+                    vec!["condor", "zone", "--dry-run"],
+                ] {
+                    let mut cli = CondorCli::try_parse_from(args).expect("dry-run flag parses");
+                    cli.normalize_zone_flags();
+                    assert_matches!(cli.command, Some(Commands::Zone { dry_run: true, ref zones })
+                        if zones.len() <= 1 && zones.iter().all(|zone| zone.starts_with("-1 200")));
+                }
+            }
+
+            #[test]
+            fn default() {
+                let result = CondorCli::try_parse_from(["condor", "zone"]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Zone { ref zones, dry_run: false }),
+                        ..
+                    }) if zones.is_empty(),
+                    "\"condor zone\" parses"
+                );
+            }
+
+            #[test]
+            fn with_zones() {
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "zone",
+                    "-1 200 svt-av1 \"--preset 3\"",
+                    "./zones.json",
+                ]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Zone { ref zones, dry_run: false }),
+                        ..
+                    }) if zones.len() == 2 && zones[0].starts_with("-1 200"),
+                    "\"condor zone ZONE FILE\" parses"
+                );
+            }
+        }
+
+        mod scenes {
+            use super::*;
+            use crate::{
+                commands::handlers::scenes::{ScenesAction, ScenesKey},
+                scenes::SceneSelection,
+            };
+
+            /// The index comes first and names what the action works on;
+            /// without an action the addressed scenes are printed. The shapes
+            /// the index binds are pinned here so the grammar cannot drift.
+            #[test]
+            fn the_index_comes_before_the_action() {
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "scenes",
+                    "1-2,8-10,16",
+                    "info",
+                    "quality-check",
+                ])
+                .expect("\"condor scenes 1-2,8-10,16 info quality-check\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::Scenes {
+                        index: Some(SceneSelection::Ranges(ref ranges)),
+                        action: Some(ScenesAction::Info {
+                            key: Some(ScenesKey::QualityCheck),
+                        }),
+                        ..
+                    }) if ranges == &[(1, 2), (8, 10), (16, 16)]
+                );
+
+                let cli = CondorCli::try_parse_from(["condor", "scenes", "all", "reset"])
+                    .expect("\"condor scenes all reset\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::Scenes {
+                        index: Some(SceneSelection::All),
+                        action: Some(ScenesAction::Reset {
+                            key: None
+                        }),
+                        ..
+                    })
+                );
+
+                // Without an action, and without an index, the whole list is
+                // what a bare `condor scenes` prints.
+                let cli = CondorCli::try_parse_from(["condor", "scenes"])
+                    .expect("\"condor scenes\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::Scenes {
+                        index: None,
+                        action: None,
+                        ..
+                    })
+                );
+            }
+
+            /// `add` places its own scene, so its placements are exclusive.
+            #[test]
+            fn add_placements_are_exclusive() {
+                let cli =
+                    CondorCli::try_parse_from(["condor", "scenes", "add", "0", "100", "--after=3"])
+                        .expect("\"condor scenes add 0 100 --after=3\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::Scenes {
+                        index: None,
+                        action: Some(ScenesAction::Add {
+                            after: Some(3),
+                            ..
+                        }),
+                        ..
+                    })
+                );
+
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "scenes",
+                    "add",
+                    "0",
+                    "100",
+                    "--append",
+                    "--prepend",
+                ]);
+                assert!(result.is_err(), "the placements are exclusive");
+            }
+        }
+        mod config {
+            use super::*;
+            use crate::commands::{
+                config::{ConfigAction, Toggle},
+                handlers::{
+                    detect_noise::DetectNoiseSet,
+                    detect_scenes::{DetectScenesKey, DetectScenesSet},
+                    scale_noise::{ScaleNoiseKey, ScaleNoiseSet},
+                    scale_speed::ScaleSpeedSet,
+                },
+            };
+
+            /// The `info` / `set` / `reset` triple is one generic
+            /// `ConfigAction`, so a single command pins the wiring every
+            /// editor shares: a keyed read, a typed write and both reset
+            /// forms.
+            #[test]
+            fn the_config_action_triple_binds() {
+                let cli = CondorCli::try_parse_from(["condor", "detect-scenes", "info", "method"])
+                    .expect("\"detect-scenes info method\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::DetectScenes {
+                        edit: Some(ConfigAction::Info {
+                            key: Some(DetectScenesKey::Method),
+                        }),
+                        ..
+                    })
+                );
+
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "init",
+                    "set",
+                    "input",
+                    "--path",
+                    "./alt.mkv",
+                    "--decoder",
+                    "ffms2",
+                ])
+                .expect("\"init set input ...\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::Init {
+                        edit: Some(ConfigAction::Set { .. }),
+                        ..
+                    })
+                );
+
+                let cli = CondorCli::try_parse_from(["condor", "detect-noise", "reset"])
+                    .expect("\"detect-noise reset\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::DetectNoise {
+                        edit: Some(ConfigAction::Reset {
+                            key: None
+                        }),
+                        ..
+                    })
+                );
+
+                let cli =
+                    CondorCli::try_parse_from(["condor", "scale-noise", "reset", "threshold"])
+                        .expect("\"scale-noise reset threshold\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::ScaleNoise {
+                        edit: Some(ConfigAction::Reset {
+                            key: Some(ScaleNoiseKey::Threshold),
+                        }),
+                        ..
+                    })
+                );
+
+                // The redundant `section` key is gone; a bare `reset`
+                // replaces it.
+                assert!(
+                    CondorCli::try_parse_from(["condor", "scale-noise", "reset", "section"])
+                        .is_err(),
+                    "\"reset section\" is no longer a property"
+                );
+            }
+
+            /// Values that are never optional are positionals, and the value
+            /// tables the parser owns — the switch spellings, the alias names —
+            /// are pinned here rather than end to end.
+            #[test]
+            fn values_positionals_and_aliases_parse() {
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "scale-speed",
+                    "set",
+                    "speed-scalers",
+                    "20=6",
+                    "35=4",
+                ])
+                .expect("\"scale-speed set speed-scalers 20=6 35=4\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::ScaleSpeed {
+                        edit: Some(ConfigAction::Set {
+                            setting: ScaleSpeedSet::SpeedQuantizers {
+                                points,
+                            },
+                        }),
+                        ..
+                    }) if points == vec![(20, 6), (35, 4)]
+                );
+
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "detect-noise",
+                    "set",
+                    "reference-filters",
+                    "resize:width=960;",
+                ])
+                .expect("\"detect-noise set reference-filters resize:...\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::DetectNoise {
+                        edit: Some(ConfigAction::Set {
+                            setting: DetectNoiseSet::ReferenceFilters {
+                                ref filters,
+                            },
+                        }),
+                        ..
+                    }) if filters == &["resize:width=960;".to_owned()]
+                );
+
+                // One flag turns a setting both ways: every spelling of the
+                // on/off value lands on the switch, and a following flag is
+                // never swallowed as its value.
+                for (value, expected) in [
+                    ("on", Toggle::On),
+                    ("enable", Toggle::On),
+                    ("enabled", Toggle::On),
+                    ("yes", Toggle::On),
+                    ("true", Toggle::On),
+                    ("1", Toggle::On),
+                    ("off", Toggle::Off),
+                    ("disable", Toggle::Off),
+                    ("disabled", Toggle::Off),
+                    ("no", Toggle::Off),
+                    ("false", Toggle::Off),
+                    ("0", Toggle::Off),
+                ] {
+                    let cli = CondorCli::try_parse_from([
+                        "condor",
+                        "detect-scenes",
+                        "set",
+                        "method",
+                        "avscenechange",
+                        "--save-scores",
+                        value,
+                    ])
+                    .unwrap_or_else(|err| panic!("--save-scores {value} parses: {err}"));
+                    assert_matches!(
+                        cli.command,
+                        Some(Commands::DetectScenes {
+                            edit: Some(ConfigAction::Set {
+                                setting: DetectScenesSet::Method {
+                                    save_scores, ..
+                                },
+                            }),
+                            ..
+                        }) if save_scores == Some(expected)
+                    );
+                }
+
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "detect-scenes",
+                    "set",
+                    "method",
+                    "avscenechange",
+                    "--save-scores",
+                    "--minimum-frames",
+                    "20",
+                ])
+                .expect("\"--save-scores --minimum-frames 20\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::DetectScenes {
+                        edit: Some(ConfigAction::Set {
+                            setting: DetectScenesSet::Method {
+                                save_scores: Some(Toggle::On),
+                                minimum_frames: Some(20),
+                                ..
+                            },
+                        }),
+                        ..
+                    })
+                );
+
+                // The switch value is optional and means on when omitted.
+                let cli =
+                    CondorCli::try_parse_from(["condor", "scale-noise", "set", "scale-chroma"])
+                        .expect("\"scale-noise set scale-chroma\" parses");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::ScaleNoise {
+                        edit: Some(ConfigAction::Set {
+                            setting: ScaleNoiseSet::ScaleChroma {
+                                value: None
+                            },
+                        }),
+                        ..
+                    })
+                );
+            }
+
+            /// Unknown properties and kinds are parse errors, and run flags
+            /// never mix with an editing subcommand.
+            #[test]
+            fn invalid_edits_and_mixed_run_flags_are_rejected() {
+                for args in [
+                    vec!["condor", "detect-scenes", "set", "nonsense"],
+                    vec!["condor", "detect-scenes", "set", "method", "not-an-algorithm"],
+                    vec!["condor", "quality-check", "set", "strategy", "bogus"],
+                    vec!["condor", "target-quality", "set", "metric", "bogus"],
+                    vec!["condor", "concatenate", "set", "method", "bogus"],
+                    vec!["condor", "scale-speed", "set", "speed-quantizers", "not-a-pair", "x=1"],
+                    vec!["condor", "target-quality", "set", "quantizer-range", "30-10"],
+                    vec!["condor", "target-quality", "set", "interpolators", "linear"],
+                    vec!["condor", "target-quality", "set", "plot"],
+                ] {
+                    assert!(
+                        CondorCli::try_parse_from(&args).is_err(),
+                        "{args:?} is rejected"
+                    );
+                }
+
+                // Run flags still parse on their own, but conflict with a
+                // configuration subcommand.
+                let cli = CondorCli::try_parse_from([
+                    "condor",
+                    "detect-scenes",
+                    "--min-scene-seconds",
+                    "3",
+                ])
+                .expect("run flags still parse");
+                assert_matches!(
+                    cli.command,
+                    Some(Commands::DetectScenes {
+                        edit: None,
+                        min_scene_seconds: Some(3),
+                        ..
+                    })
+                );
+
+                assert!(
+                    CondorCli::try_parse_from([
+                        "condor",
+                        "detect-scenes",
+                        "--min-scene-seconds",
+                        "3",
+                        "info",
+                    ])
+                    .is_err(),
+                    "flags and subcommands conflict"
+                );
+            }
+        }
         mod detect_scenes {
             use super::*;
 

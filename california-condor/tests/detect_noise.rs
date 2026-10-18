@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use california_condor::{
     commands::handlers::load_configuration,
@@ -7,6 +9,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -173,5 +176,120 @@ mod tests {
                 expected_noise(index)
             );
         });
+    }
+
+    /// `detect-noise` owns its filter lists: replace, clear and reset, and
+    /// resetting a key from a never-enabled section stays a no-op.
+    #[serial]
+    #[test]
+    fn detect_noise_set_and_reset_filter_lists() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        // Resetting from a section that was never enabled must not enable it.
+        condor_cmd(&temp).args(["detect-noise", "reset", "input"]).assert().success();
+        let detector = load(&config_path).condor.sequence_config.noise_detector;
+        assert!(detector.is_none(), "noise detector stays unconfigured");
+
+        condor_cmd(&temp)
+            .args(["detect-noise", "set", "reference-filters", "resize:width=960;height=540;"])
+            .assert()
+            .success();
+
+        let detector = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_detector
+            .expect("noise detector is set");
+        assert_eq!(
+            detector.reference_filters.len(),
+            1,
+            "one reference filter was set"
+        );
+        assert!(
+            matches!(&detector.reference_filters[0], VapourSynthFilter::Resize {
+                width: Some(960),
+                height: Some(540),
+                ..
+            }),
+            "reference filter is {:?}",
+            detector.reference_filters[0]
+        );
+
+        // No values at all empties the list, and so does a clear word.
+        condor_cmd(&temp)
+            .args(["detect-noise", "set", "reference-filters"])
+            .assert()
+            .success();
+        let detector = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_detector
+            .expect("noise detector exists");
+        assert!(
+            detector.reference_filters.is_empty(),
+            "reference filters were cleared by an empty list"
+        );
+
+        condor_cmd(&temp)
+            .args(["detect-noise", "set", "reference-filters", "none"])
+            .assert()
+            .success();
+        let detector = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_detector
+            .expect("noise detector exists");
+        assert!(
+            detector.reference_filters.is_empty(),
+            "a clear word empties the filters too"
+        );
+
+        condor_cmd(&temp)
+            .args(["detect-noise", "reset", "reference-filters"])
+            .assert()
+            .success();
+        let detector = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_detector
+            .expect("noise detector exists");
+        assert_eq!(
+            detector.reference_filters.len(),
+            1,
+            "the default reference filter was restored"
+        );
+    }
+
+    /// Resetting a filter list says how to empty it outright.
+    #[serial]
+    #[test]
+    fn reset_hints_how_to_clear_a_filter_list() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["detect-noise", "set", "reference-filters", "resize:width=960;"])
+            .assert()
+            .success();
+
+        let stdout = condor_cmd(&temp)
+            .args(["detect-noise", "reset", "reference-filters"])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let stdout = String::from_utf8(stdout).expect("stdout is UTF-8");
+        assert!(
+            stdout.contains("condor detect-noise set reference-filters none"),
+            "output is {stdout}"
+        );
     }
 }

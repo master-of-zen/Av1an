@@ -1,6 +1,6 @@
 # condor.scenes
 
-`condor.scenes` in `condor.json`. See [condor](./index.md). Written by [`detect-scenes`](../../commands/detect-scenes.md), updated per scene by [`target-quality`](../../commands/target-quality.md), [`encode`](../../commands/encode.md), [`detect-noise`](../../commands/detect-noise.md), [`scale-noise`](../../commands/scale-noise.md), [`quality-check`](../../commands/quality-check.md).
+`condor.scenes` in `condor.json`. See [condor](./index.md). Written by [`detect-scenes`](../../commands/detect-scenes.md), updated per scene by [`target-quality`](../../commands/target-quality.md), [`encode`](../../commands/encode.md), [`detect-noise`](../../commands/detect-noise.md), [`scale-noise`](../../commands/scale-noise.md), [`quality-check`](../../commands/quality-check.md). Read, edited, added to and reset without re-detecting with [`scenes`](../../commands/scenes.md).
 
 Array of scene objects. `[]` on `init`.
 
@@ -20,8 +20,9 @@ Array of scene objects. `[]` on `init`.
 | `noise_detection` | Object or null | Yes | `{ "noise": <f64>, "luminance": <f64>, "created_on": <SystemTime> }` |
 | `noise_scaling` | Object or null | Yes | `{ "scaler": <f64> }` |
 | `parallel_encoder` | Object | Yes | `{ "started_on": <u128 ms epoch> or null, "completed_on": <u128 ms epoch> or null, "bytes": <u64> or null }` |
-| `target_quality` | Object | Yes | `{ "passes": [ { "quantizer": <u32>, "score": <f64>, ... } ] }` |
-| `quality_check` | Object | Yes | `{ "quality": { "quantizer": <u32>, "score": <f64>, ... } }` |
+| `target_quality` | Object | Yes | `{ "passes": [ { "quantizer": <f64>, "scores": [<f64>], "bitrate": <f64>, "started_on": <u128 ms epoch>, "completed_on": <u128 ms epoch> } ] }` |
+| `quality_check` | Object | Yes | `{ "quality": { "quantizer": <f64>, "scores": [<f64>], "bitrate": <f64>, "started_on": <u128 ms epoch>, "completed_on": <u128 ms epoch> } }` |
+| `zoner` | Object | No | `{ "zoned": <bool> }`. Absent in configurations written before zoning became idempotent; defaults to `false`. Set to `true` when the Zoner has applied the zones to the list; `condor scenes reset zoner` clears it |
 
 Example (two scenes, fresh detection):
 
@@ -34,6 +35,7 @@ Example (two scenes, fresh detection):
         "encoder": {
             "SVTAV1": {
                 "executable": null,
+                "ffmpeg_filter": null,
                 "pass": { "All": 1 },
                 "options": {
                     "preset": { "Number": { "prefix": "--", "delimiter": " ", "value": 4.0 } },
@@ -48,7 +50,8 @@ Example (two scenes, fresh detection):
             "noise_scaling": null,
             "parallel_encoder": { "started_on": null, "completed_on": null, "bytes": null },
             "target_quality": { "passes": [] },
-            "quality_check": { "quality": { "quantizer": 0, "score": 0.0 } }
+            "quality_check": { "quality": { "quantizer": 0.0, "scores": [], "bitrate": 0.0, "started_on": 0, "completed_on": 0 } },
+            "zoner": { "zoned": false }
         }
     },
     {
@@ -58,6 +61,7 @@ Example (two scenes, fresh detection):
         "encoder": {
             "SVTAV1": {
                 "executable": null,
+                "ffmpeg_filter": null,
                 "pass": { "All": 1 },
                 "options": {
                     "preset": { "Number": { "prefix": "--", "delimiter": " ", "value": 4.0 } },
@@ -72,10 +76,11 @@ Example (two scenes, fresh detection):
             "noise_scaling": null,
             "parallel_encoder": { "started_on": null, "completed_on": null, "bytes": null },
             "target_quality": { "passes": [] },
-            "quality_check": { "quality": { "quantizer": 0, "score": 0.0 } }
+            "quality_check": { "quality": { "quantizer": 0.0, "scores": [], "bitrate": 0.0, "started_on": 0, "completed_on": 0 } },
+            "zoner": { "zoned": false }
         }
     }
 ]
 ```
 
-Do not hand-edit `sequence_data` timestamps or scores; rerun the owning command instead.
+Do not hand-edit `sequence_data` timestamps or scores; rerun the owning command instead, or clear a scene's saved results with `condor scenes <INDEX> reset <KEY>` (see [scenes](../../commands/scenes.md)).

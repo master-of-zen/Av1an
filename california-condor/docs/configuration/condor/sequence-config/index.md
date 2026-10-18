@@ -5,6 +5,7 @@ Index for `condor.sequence_config` sub-objects. See [sequence_config](../sequenc
 | Document | `sequence_config` key | CLI command |
 | -------- | --------------------- | ----------- |
 | [scene-detector](./scene-detector.md) | `scene_detector` | [`detect-scenes`](../../../commands/detect-scenes.md) |
+| [zoner](./zoner.md) | `zoner` | [`zone`](../../../commands/zone.md) |
 | [noise-detector](./noise-detector.md) | `noise_detector` | [`detect-noise`](../../../commands/detect-noise.md) |
 | [noise-scaler](./noise-scaler.md) | `noise_scaler` | [`scale-noise`](../../../commands/scale-noise.md) |
 | [benchmarker](./benchmarker.md) | `benchmarker` | [`benchmark`](../../../commands/benchmark.md) |

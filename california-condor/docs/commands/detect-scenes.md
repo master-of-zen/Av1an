@@ -11,7 +11,7 @@ $ condor detect-scenes -i input.mp4 --method standard --min-scene-seconds 1 --ma
 | ----------------------------------------------------- | --------------------- | --------- | ------------ |
 | [Input](#input--i)                                    | `-i`, `--input`       | Path      | Config input |
 | [Decoder](#decoder---decoder)                         | `--decoder`           | [`DECODER`](../types/decoder.md) | `bestsource` |
-| [Filters](#filters---filters)                         | `--filters`           | [Filters](../types/filters.md)   |              |
+| [Filters](#filters---filters)                         | `--filters`           | [Filters](../types/filters.md)   | Config input's filters |
 | [VapourSynth Arguments](#vapoursynth-arguments---vs-args) | `--vs-args`       | [String List](../types/vs-args.md) |            |
 | [Method](#method---method)                            | `--method`            | [`METHOD`](../types/scene-detection.md)  | `standard`   |
 | [Min Scene Seconds](#min-scene-seconds---min-scene-seconds) | `--min-scene-seconds` | Integer | `1`       |
@@ -40,7 +40,7 @@ Method used for decoding the input video. Methods besides `ffms2` require extern
 
 ## Filters `--filters`
 
-VapourSynth filters to apply to the Scene Detector input. See [Filters](../types/filters.md).
+VapourSynth filters to apply to the Scene Detector input. Defaults to the input's own filters. See [Filters](../types/filters.md).
 
 ### Examples
 
@@ -85,6 +85,22 @@ Maximum scene duration in seconds.
 
 If not specified, `10` is used.
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved scene-detection settings without running the command:
+
+- `set method ALGORITHM [--minimum-frames N] [--maximum-frames N] [--method fast|standard] [--model-path P] [--save-scores [on|off]]` — pick the detection algorithm; flags you omit keep their current value when the chosen algorithm still supports them. `--save-scores` on its own means `on`, `--save-scores off` turns it off; there is no negating flag.
+- `set input [--path P] [--decoder D] [--filters …] [--vs-args …] [--stream-concurrently [on|off]]` — the input scene detection reads instead of the main input.
+- `info [method|input]` prints JSON; `reset method` resets the algorithm, `reset input` drops the override, and a bare `reset` restores the whole section to its defaults.
+
+```bash
+$ condor detect-scenes set method avscenechange --minimum-frames 20 --maximum-frames 280
+$ condor detect-scenes info method
+$ condor detect-scenes reset method
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -105,6 +121,9 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-detect-scenes-verbose-light.avif"><picture><source srcset="../media/tui/help-detect-scenes-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-detect-scenes-verbose-light.avif" alt="condor detect-scenes --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-scenes --help --verbose</p>
     </td>
-    <td width="50%" valign="top"></td>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-detect-scenes-set-light.avif"><picture><source srcset="../media/tui/help-detect-scenes-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-detect-scenes-set-light.avif" alt="condor detect-scenes set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-scenes set --help</p>
+    </td>
   </tr>
 </table>

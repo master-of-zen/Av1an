@@ -111,6 +111,32 @@ The preset profile to choose the Target Quality Probe Strategy and Statistic. Se
 
 If not specified, `standard` is used.
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved Target Quality settings without running the command:
+
+- `set metric METRIC` — the quality metric the search measures (same values as `--metric`). Switching the metric resets its target range.
+- `set target SCORE` — folds the score into the metric's acceptable range; `reset target` restores the metric's default range.
+- `set maximum-probes N` — probes a scene may take (`≥ 1`).
+- `set quantizer-range MIN-MAX` — the quantizers the search may probe, as one value (`18-30`); rejected unless `MIN ≤ MAX`.
+- `set interpolators BELOW ABOVE` — the spline methods used below and above a probe value (`linear`, `quadratic`, `natural`, `pchip`, `catmull`, `akima`, `cubic-polynomial`).
+- `set strategy KIND [FRAMES]` — the probing strategy: `whole`, `skip FRAMES`, or `subset [--position start|middle|end] [--length-frames N | --length-percent P]` (same values as `quality-check set strategy`).
+- `set statistic KIND [VALUE] …` — how probe scores become one result: `mean`, `median`, `harmonic`, `percentile PERCENT` (or `--percentile P`), `standard-deviation-distance SIGMA` (or `--sigma S`), `mode`, `minimum`, `maximum`, `root-mean-square`.
+- `set params "--crf 16 --tune 0"` — the encoder parameters the probes encode with (same syntax as `--params`); pairs you omit keep their value, `reset params` falls back to the encoder defaults.
+- `set input …` / `set metric-input …` — the input the search encodes and measures, and the input only the metric measures.
+- `info [KEY]` prints one key as JSON; `reset KEY` resets it, and `reset` with no key drops the whole optional section back to `null`.
+
+```bash
+$ condor target-quality set target 85
+$ condor target-quality set quantizer-range 18-30
+$ condor target-quality set interpolators natural pchip
+$ condor target-quality set strategy subset --position end --length-percent 25
+$ condor target-quality set params "--crf 16 --tune 0"
+$ condor target-quality reset target
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -135,5 +161,12 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-target-quality-verbose-light.avif"><picture><source srcset="../media/tui/help-target-quality-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-target-quality-verbose-light.avif" alt="condor target-quality --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor target-quality --help --verbose</p>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-target-quality-set-light.avif"><picture><source srcset="../media/tui/help-target-quality-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-target-quality-set-light.avif" alt="condor target-quality set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor target-quality set --help</p>
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>

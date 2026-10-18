@@ -30,6 +30,23 @@ If not specified, `mkvmerge` is used.
 - `> condor concatenate --method mkvmerge`
 - `> condor concatenate --method ffmpeg`
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved concatenation settings without running the command:
+
+- `set method METHOD` — `mkvmerge`, `ffmpeg` or `ivf`. Keeping the current tool keeps its settings; switching to another tool starts from that tool's defaults.
+- `set output PATH` — the file the concatenated video is written to; `reset output` clears it.
+- `set scenes-directory PATH` — the directory the encoded scenes are read from.
+- `info [method|output|scenes-directory]` prints JSON; `reset KEY` resets one of them, and a bare `reset` restores the method and output to their defaults (the temp-derived `scenes-directory` stays).
+
+```bash
+$ condor concatenate set method ffmpeg
+$ condor concatenate set output final.mkv
+$ condor concatenate reset output
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -50,6 +67,9 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-concatenate-verbose-light.avif"><picture><source srcset="../media/tui/help-concatenate-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-concatenate-verbose-light.avif" alt="condor concatenate --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor concatenate --help --verbose</p>
     </td>
-    <td width="50%" valign="top"></td>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-concatenate-set-light.avif"><picture><source srcset="../media/tui/help-concatenate-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-concatenate-set-light.avif" alt="condor concatenate set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor concatenate set --help</p>
+    </td>
   </tr>
 </table>

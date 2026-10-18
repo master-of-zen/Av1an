@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use andean_condor::models::sequence::quality_check::QualityCheckConfig;
 use california_condor::{
@@ -8,6 +10,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -21,6 +24,7 @@ mod tests {
                 ProbeStatistic,
                 ProbeStrategy,
                 QualityMetric,
+                QualityMetric as MetricModel,
                 SubsetProbeLength,
                 SubsetProbePosition,
             },
@@ -202,5 +206,107 @@ mod tests {
                 index,
             );
         });
+    }
+
+    /// `quality-check` probes and reduces exactly as configured, and refuses
+    /// flags that do not belong to the chosen kind.
+    #[serial]
+    #[test]
+    fn quality_check_set_strategy_and_statistic() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args([
+                "quality-check",
+                "set",
+                "strategy",
+                "subset",
+                "--position",
+                "end",
+                "--length-percent",
+                "25",
+            ])
+            .assert()
+            .success();
+        let check = load(&config_path)
+            .condor
+            .sequence_config
+            .quality_check
+            .expect("quality check was materialized");
+        assert_eq!(
+            check.strategy,
+            ProbeStrategy::Subset {
+                position: SubsetProbePosition::End,
+                length:   SubsetProbeLength::Percentage(25.0),
+            },
+            "strategy is set"
+        );
+
+        // Flags that do not belong to the kind are refused.
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "strategy", "whole", "--skip", "4"])
+            .assert()
+            .failure();
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "strategy", "skip"])
+            .assert()
+            .failure();
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "statistic", "percentile"])
+            .assert()
+            .failure();
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "statistic", "percentile", "--percentile", "150"])
+            .assert()
+            .failure();
+
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "statistic", "percentile", "--percentile", "10"])
+            .assert()
+            .success();
+        let check = load(&config_path)
+            .condor
+            .sequence_config
+            .quality_check
+            .expect("quality check exists");
+        assert_eq!(
+            check.statistic,
+            ProbeStatistic::Percentile(10.0),
+            "statistic is set"
+        );
+
+        condor_cmd(&temp)
+            .args(["quality-check", "set", "metric", "xpsnr"])
+            .assert()
+            .success();
+        let check = load(&config_path)
+            .condor
+            .sequence_config
+            .quality_check
+            .expect("quality check exists");
+        assert!(
+            matches!(check.metric, MetricModel::XPSNR { .. }),
+            "metric is {:?}",
+            check.metric
+        );
+
+        condor_cmd(&temp)
+            .args(["quality-check", "reset", "strategy"])
+            .assert()
+            .success();
+        let check = load(&config_path)
+            .condor
+            .sequence_config
+            .quality_check
+            .expect("quality check exists");
+        assert_eq!(
+            check.strategy,
+            ProbeStrategy::default(),
+            "reset restores the default strategy"
+        );
     }
 }

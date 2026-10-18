@@ -1,11 +1,14 @@
 # Init
 
-Create a new `condor.json` configuration. See [guide](../guide.md), [configuration](../configuration.md), and [type reference](../types.md).
+Create a new `condor.json` configuration, or edit the top-level settings of an existing one. See [guide](../guide.md), [configuration](../configuration.md), and [type reference](../types.md).
 
 ```bash
 $ condor init "input.mp4" "output.mkv"
 $ condor init input.mp4 output.mkv --encoder svt-av1 --target-metric ssimulacra2 --target 85
+$ condor init set output final.mkv
 ```
+
+Creating a configuration needs `INPUT` and `OUTPUT`; the `info`, `set` and `reset` subcommands edit an existing one instead. The input and output of a running pipeline are changed here — no other command owns them.
 
 | Name                                                        | Flag              | Type      | Default                |
 | ----------------------------------------------------------- | ----------------- | --------- | ---------------------- |
@@ -161,6 +164,28 @@ The quality metric score that Target Quality will aim for.
 
 - `> condor init input.mp4 output.mkv --target-metric ssimulacra2 --target 85`
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the top-level settings of an existing configuration without running anything:
+
+- `set input [--path P] [--decoder D] [--filters …] [--vs-args …] [--stream-concurrently [on|off]]` — the input the pipeline reads, built from the same flags as `init` itself; the path the pipeline records is updated too.
+- `set output PATH` — the file the pipeline writes.
+- `set encoder [--encoder E] [--executable PATH] [--params …] [--photon-noise ISO]` — the encoder and its parameters; provide at least one flag, values you omit keep their current value.
+- `set workers N` — encoder processes to run at once (`≥ 1`).
+- `set concatenator METHOD` — the tool that joins the encoded scenes; keeping the current tool keeps its settings.
+- `set target-metric METRIC` / `set target SCORE` — the Target Quality metric and the score it aims for.
+- `info [KEY]` prints one key as JSON, or the whole top level; `reset KEY` restores one key. A bare `reset` is refused, because the input and output of a pipeline have no default to restore.
+
+```bash
+$ condor init set output final.mkv
+$ condor init set input --path ./new-input.mp4 --decoder ffms2
+$ condor init set encoder --params "--crf 20 --tune 0"
+$ condor init info encoder
+$ condor init reset encoder
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -181,6 +206,9 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-init-verbose-light.avif"><picture><source srcset="../media/tui/help-init-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-init-verbose-light.avif" alt="condor init --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor init --help --verbose</p>
     </td>
-    <td width="50%" valign="top"></td>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-init-set-light.avif"><picture><source srcset="../media/tui/help-init-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-init-set-light.avif" alt="condor init set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor init set --help</p>
+    </td>
   </tr>
 </table>

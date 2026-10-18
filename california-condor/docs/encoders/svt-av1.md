@@ -1,6 +1,6 @@
 # SVT-AV1
 
-This will be a quick guide for setting options svt-av1 when using with Av1an. For more complete documentation, you should read the official documentation:
+This is a quick guide to the SVT-AV1 options worth setting in `--params`; everything here can also be set per scene through `condor.encoder`. For the complete reference, read the official documentation:
 
 - [SVT-AV1 Docs - GitLab](https://gitlab.com/AOMediaCodec/SVT-AV1/-/tree/master/Docs)
 
@@ -27,7 +27,7 @@ Constant rate factor, a.k.a. constant quality. This is the most common way of de
 **Example:**
 
 ```
-av1an ... -v " --rc 0 --crf 24 --preset 4 --input-depth 10 --tune 0" ...
+condor encode --params "--rc 0 --crf 24 --preset 4 --input-depth 10 --tune 0"
 ```
 
 ## Variable bit-rate
@@ -41,7 +41,7 @@ Variable bit-rate. Requires you to set target bit-rate `--tbr`.
 **Example:**
 
 ```
-av1an ... --passes 2 -v " --rc 1 --tbr 2000 --preset 4 --input-depth 10 --tune 0" ...
+condor encode --passes 2 --params "--rc 1 --tbr 2000 --preset 4 --input-depth 10 --tune 0"
 ```
 
 # Preset

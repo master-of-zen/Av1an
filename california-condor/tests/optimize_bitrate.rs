@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use california_condor::{
     commands::handlers::load_configuration,
@@ -7,6 +9,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -25,6 +28,7 @@ mod tests {
             },
         },
     };
+    use serial_test::serial;
 
     use super::*;
 
@@ -126,5 +130,42 @@ mod tests {
                 expected_crf(index)
             );
         });
+    }
+
+    /// `optimize-bitrate` owns an optional sigma threshold.
+    #[serial]
+    #[test]
+    fn optimize_bitrate_set_and_reset() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["optimize-bitrate", "set", "sigma-threshold", "4"])
+            .assert()
+            .success();
+        condor_cmd(&temp)
+            .args(["optimize-bitrate", "set", "sigma-threshold", "0"])
+            .assert()
+            .failure();
+        let optimizer = load(&config_path)
+            .condor
+            .sequence_config
+            .bitrate_optimizer
+            .bitrate_sigma_threshold;
+        assert_eq!(optimizer, Some(4), "sigma threshold is set");
+
+        condor_cmd(&temp)
+            .args(["optimize-bitrate", "reset", "sigma-threshold"])
+            .assert()
+            .success();
+        let optimizer = load(&config_path)
+            .condor
+            .sequence_config
+            .bitrate_optimizer
+            .bitrate_sigma_threshold;
+        assert_eq!(optimizer, None, "sigma threshold is cleared");
     }
 }

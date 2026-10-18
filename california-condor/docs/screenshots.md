@@ -95,6 +95,16 @@ follow the [Commands](commands/condor.md) section to see them in context.
   </tr>
   <tr>
     <td width="50%" valign="top">
+      <a href="media/tui/help-zone-light.avif"><picture><source srcset="media/tui/help-zone-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-zone-light.avif" alt="condor zone --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor zone --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-zone-verbose-light.avif"><picture><source srcset="media/tui/help-zone-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-zone-verbose-light.avif" alt="condor zone --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor zone --help --verbose</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
       <a href="media/tui/help-detect-noise-light.avif"><picture><source srcset="media/tui/help-detect-noise-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-detect-noise-light.avif" alt="condor detect-noise --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-noise --help</p>
     </td>
@@ -192,6 +202,70 @@ follow the [Commands](commands/condor.md) section to see them in context.
       <a href="media/tui/help-clean-verbose-light.avif"><picture><source srcset="media/tui/help-clean-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-clean-verbose-light.avif" alt="condor clean --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor clean --help --verbose</p>
     </td>
+  </tr>
+</table>
+
+## Edit Property Help
+
+The property list of each command's `set` subcommand — the configuration-editing discovery surface.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-detect-scenes-set-light.avif"><picture><source srcset="media/tui/help-detect-scenes-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-detect-scenes-set-light.avif" alt="condor detect-scenes set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-scenes set --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-scale-noise-set-light.avif"><picture><source srcset="media/tui/help-scale-noise-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-scale-noise-set-light.avif" alt="condor scale-noise set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor scale-noise set --help</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-benchmark-set-light.avif"><picture><source srcset="media/tui/help-benchmark-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-benchmark-set-light.avif" alt="condor benchmark set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor benchmark set --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-optimize-bitrate-set-light.avif"><picture><source srcset="media/tui/help-optimize-bitrate-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-optimize-bitrate-set-light.avif" alt="condor optimize-bitrate set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor optimize-bitrate set --help</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-detect-noise-set-light.avif"><picture><source srcset="media/tui/help-detect-noise-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-detect-noise-set-light.avif" alt="condor detect-noise set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-noise set --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-target-quality-set-light.avif"><picture><source srcset="media/tui/help-target-quality-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-target-quality-set-light.avif" alt="condor target-quality set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor target-quality set --help</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-scale-speed-set-light.avif"><picture><source srcset="media/tui/help-scale-speed-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-scale-speed-set-light.avif" alt="condor scale-speed set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor scale-speed set --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-concatenate-set-light.avif"><picture><source srcset="media/tui/help-concatenate-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-concatenate-set-light.avif" alt="condor concatenate set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor concatenate set --help</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-quality-check-set-light.avif"><picture><source srcset="media/tui/help-quality-check-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-quality-check-set-light.avif" alt="condor quality-check set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor quality-check set --help</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-init-set-light.avif"><picture><source srcset="media/tui/help-init-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-init-set-light.avif" alt="condor init set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor init set --help</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="media/tui/help-encode-set-light.avif"><picture><source srcset="media/tui/help-encode-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/help-encode-set-light.avif" alt="condor encode set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor encode set --help</p>
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>
 

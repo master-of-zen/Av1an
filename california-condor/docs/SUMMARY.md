@@ -13,6 +13,8 @@
 - [condor](commands/condor.md)
   - [init](commands/init.md)
   - [detect-scenes](commands/detect-scenes.md)
+  - [zone](commands/zone.md)
+  - [scenes](commands/scenes.md)
   - [detect-noise](commands/detect-noise.md)
   - [scale-noise](commands/scale-noise.md)
   - [scale-speed](commands/scale-speed.md)
@@ -23,6 +25,7 @@
   - [quality-check](commands/quality-check.md)
   - [concatenate](commands/concatenate.md)
   - [clean](commands/clean.md)
+- [Editing saved settings](commands/config-editing.md)
 
 # Configuration Reference
 
@@ -35,6 +38,7 @@
   - [sequence_config](configuration/condor/sequence_config.md)
   - [Step configs](configuration/condor/sequence-config/index.md)
     - [scene-detector](configuration/condor/sequence-config/scene-detector.md)
+    - [zoner](configuration/condor/sequence-config/zoner.md)
     - [noise-detector](configuration/condor/sequence-config/noise-detector.md)
     - [noise-scaler](configuration/condor/sequence-config/noise-scaler.md)
     - [benchmarker](configuration/condor/sequence-config/benchmarker.md)
@@ -57,6 +61,7 @@
   - [Quality metric](types/quality-metric.md)
   - [Quality profile](types/quality-profile.md)
   - [Photon noise](types/photon-noise.md)
+  - [Zone](types/zone.md)
   - [VapourSynth args](types/vs-args.md)
 - [Encoders](encoders/aomenc.md)
   - [aomenc](encoders/aomenc.md)

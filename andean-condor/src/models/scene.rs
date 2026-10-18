@@ -13,7 +13,7 @@ pub struct Scene<SequenceData> {
     pub sequence_data: SequenceData,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct SubScene {
     pub start_frame: usize, // Inclusive
     pub end_frame:   usize, // Exclusive

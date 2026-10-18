@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use std::time::SystemTime;
 
@@ -13,6 +15,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -190,5 +193,63 @@ mod tests {
                     &format!("scene {} encoder", index),
                 );
             });
+    }
+
+    /// `scale-noise` materializes its optional section, validates the scaler
+    /// bounds, and `reset` resets single settings.
+    #[serial]
+    #[test]
+    fn scale_noise_set_reset_and_validation() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["scale-noise", "set", "threshold", "0.002"])
+            .assert()
+            .success();
+        condor_cmd(&temp)
+            .args(["scale-noise", "set", "scale-chroma", "on"])
+            .assert()
+            .success();
+
+        // A minimum above the default maximum (0) is refused.
+        condor_cmd(&temp)
+            .args(["scale-noise", "set", "minimum-scaler", "1.5"])
+            .assert()
+            .failure();
+
+        condor_cmd(&temp)
+            .args(["scale-noise", "set", "maximum-scaler", "2"])
+            .assert()
+            .success();
+        condor_cmd(&temp)
+            .args(["scale-noise", "set", "minimum-scaler", "1.5"])
+            .assert()
+            .success();
+
+        let scaler = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_scaler
+            .expect("noise scaler is set");
+        assert_eq!(scaler.threshold, 0.002, "threshold is set");
+        assert_eq!(scaler.minimum_scaler, 1.5, "minimum scaler is set");
+        assert_eq!(scaler.maximum_scaler, 2.0, "maximum scaler is set");
+        assert!(scaler.scale_chroma, "chroma scaling is on");
+
+        condor_cmd(&temp)
+            .args(["scale-noise", "reset", "scale-chroma"])
+            .assert()
+            .success();
+        let scaler = load(&config_path)
+            .condor
+            .sequence_config
+            .noise_scaler
+            .expect("noise scaler still exists");
+        assert!(!scaler.scale_chroma, "chroma scaling is off again");
+        assert_eq!(scaler.threshold, 0.002, "the other settings are untouched");
     }
 }

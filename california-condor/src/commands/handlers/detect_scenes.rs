@@ -2,16 +2,31 @@ use std::path::{Path, PathBuf};
 
 use andean_condor::{
     core::input::Input,
-    models::sequence::scene_detector::SceneDetectionMethod as CoreSceneDetectionMethod,
+    models::sequence::scene_detector::{
+        SceneDetectionMethod as CoreSceneDetectionMethod,
+        SceneDetectorConfig,
+        ScenecutMethod,
+    },
     vapoursynth::vapoursynth_filters::VapourSynthFilter,
 };
 use anyhow::Result;
+use clap::{Subcommand, ValueEnum};
+use serde_json::Value;
+use thiserror::Error;
 
 use crate::{
     commands::{
         DecoderMethod,
         SceneDetectionMethod,
-        handlers::{configure_override_input, configure_temp, load_configuration},
+        config::{ConfigAction, ConfigCommand, InputOverride, PropertyChange, Toggle},
+        handlers::{
+            apply_input_override,
+            config::{edit, ensure_override_requested},
+            configure_override_input,
+            configure_temp,
+            load_configuration,
+            warn_missing_path,
+        },
     },
     configuration::Configuration,
 };
@@ -148,6 +163,313 @@ pub fn configure_scene_detector(
         .set_maximum_length(max_scene_frames)?;
 
     Ok(())
+}
+
+/// The scene detection algorithms `detect-scenes set method` can choose.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DetectionAlgorithm {
+    /// av-scenechange scenecut; *--method* picks fast or standard.
+    #[value(name = "avscenechange")]
+    AvSceneChange,
+    /// TransNetV2 neural network over ONNX Runtime; *--model-path* pins the
+    /// model file.
+    #[value(name = "transnetv2")]
+    TransNetV2,
+    /// No detection; scenes are chunked by maximum length only.
+    #[value(name = "none")]
+    None,
+}
+
+/// The scenecut algorithms the `avscenechange` detector offers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ScenecutAlgorithm {
+    /// Scenecut fast algorithm.
+    #[value(name = "fast")]
+    Fast,
+    /// Scenecut standard algorithm.
+    #[value(name = "standard")]
+    Standard,
+}
+
+impl ScenecutAlgorithm {
+    /// This choice for a scenecut method already in the configuration.
+    #[inline]
+    pub fn from_method(method: ScenecutMethod) -> Self {
+        match method {
+            ScenecutMethod::Fast => Self::Fast,
+            ScenecutMethod::Standard => Self::Standard,
+        }
+    }
+}
+
+impl From<ScenecutAlgorithm> for ScenecutMethod {
+    #[inline]
+    fn from(algorithm: ScenecutAlgorithm) -> Self {
+        match algorithm {
+            ScenecutAlgorithm::Fast => Self::Fast,
+            ScenecutAlgorithm::Standard => Self::Standard,
+        }
+    }
+}
+
+/// `info` and `reset` keys of `sequence_config.scene_detector`.
+#[derive(Debug, Clone, Subcommand)]
+pub enum DetectScenesKey {
+    /// The detection algorithm and its settings.
+    Method,
+    /// The input the Scene Detector reads instead of the main input.
+    Input,
+}
+
+/// Settings `condor detect-scenes set` can change.
+#[derive(Debug, Clone, Subcommand)]
+pub enum DetectScenesSet {
+    /// Choose the detection algorithm and configure it.
+    ///
+    /// Values you omit keep their current value when the chosen algorithm
+    /// supports them, and otherwise fall back to the default, so switching
+    /// algorithms never silently drops your frame limits or score setting.
+    Method {
+        /// The detection algorithm to use.
+        #[arg(value_name = "ALGORITHM")]
+        algorithm:      DetectionAlgorithm,
+        /// Smallest scene length to accept, in frames.
+        #[arg(long, value_name = "Frames")]
+        minimum_frames: Option<usize>,
+        /// Largest scene length to split at, in frames.
+        #[arg(long, value_name = "Frames")]
+        maximum_frames: Option<usize>,
+        /// Scenecut algorithm used by *avscenechange*.
+        #[arg(long, value_name = "Method")]
+        method:         Option<ScenecutAlgorithm>,
+        /// ONNX model file used by *transnetv2*.
+        #[arg(long, value_name = "Path")]
+        model_path:     Option<PathBuf>,
+        /// Keep the per-frame detection scores in the saved results.
+        ///
+        /// Bare `--save-scores` means on; `--save-scores off` turns it off.
+        /// Omitted keeps the current setting.
+        #[arg(long, value_name = "on|off", num_args = 0..=1, default_missing_value = "on")]
+        save_scores:    Option<Toggle>,
+    },
+    /// Read from this input instead of the main input.
+    ///
+    /// Builds the same input the *--input*, *--decoder*, *--filters* and
+    /// *--vs-args* flags of `detect-scenes` would build. Omitted flags inherit
+    /// the current override, or the main input when there is none.
+    Input {
+        #[command(flatten)]
+        args: InputOverride,
+    },
+}
+
+/// The action triple attached to `condor detect-scenes`.
+pub type DetectScenesAction = ConfigAction<DetectScenesKey, DetectScenesSet>;
+
+/// Everything that can make a Scene Detector setting unusable.
+#[derive(Debug, Error)]
+pub enum DetectScenesConfigError {
+    #[error("scene detection minimum length must be positive")]
+    MinimumNotPositive,
+    #[error("scene detection maximum length must be positive")]
+    MaximumNotPositive,
+    #[error("scene detection minimum length must not exceed maximum length")]
+    RangeInverted,
+}
+
+/// The `condor detect-scenes` configuration section.
+pub struct DetectScenesCrud;
+
+impl DetectScenesCrud {
+    #[inline]
+    fn section(configuration: &Configuration) -> &SceneDetectorConfig {
+        &configuration.condor.sequence_config.scene_detector
+    }
+
+    #[inline]
+    fn section_mut(configuration: &mut Configuration) -> &mut SceneDetectorConfig {
+        &mut configuration.condor.sequence_config.scene_detector
+    }
+
+    /// Rejects frame limits no detector can honour, before anything is written.
+    fn validate(detector: &SceneDetectorConfig) -> Result<(), DetectScenesConfigError> {
+        let method = &detector.method;
+        if method.minimum_length() == 0 {
+            return Err(DetectScenesConfigError::MinimumNotPositive);
+        }
+        if method.maximum_length() == 0 {
+            return Err(DetectScenesConfigError::MaximumNotPositive);
+        }
+        if method.minimum_length() > method.maximum_length() {
+            return Err(DetectScenesConfigError::RangeInverted);
+        }
+        Ok(())
+    }
+
+    /// Builds the requested detection algorithm, keeping the settings the user
+    /// did not express and the chosen algorithm still supports.
+    fn apply_method(
+        configuration: &mut Configuration,
+        algorithm: DetectionAlgorithm,
+        minimum_frames: Option<usize>,
+        maximum_frames: Option<usize>,
+        method: Option<ScenecutAlgorithm>,
+        model_path: Option<&PathBuf>,
+        save_scores: Option<Toggle>,
+    ) {
+        let current = configuration.condor.sequence_config.scene_detector.method.clone();
+        let minimum_length = minimum_frames.unwrap_or_else(|| current.minimum_length());
+        let maximum_length = maximum_frames.unwrap_or_else(|| current.maximum_length());
+        let scores = save_scores.map_or_else(|| current_scores(&current), Toggle::enabled);
+
+        configuration.condor.sequence_config.scene_detector.method = match algorithm {
+            DetectionAlgorithm::None => CoreSceneDetectionMethod::None {
+                minimum_length,
+                maximum_length,
+            },
+            DetectionAlgorithm::AvSceneChange => CoreSceneDetectionMethod::AVSceneChange {
+                minimum_length,
+                maximum_length,
+                method: method.map_or_else(
+                    || match &current {
+                        CoreSceneDetectionMethod::AVSceneChange {
+                            method, ..
+                        } => *method,
+                        _ => ScenecutMethod::Standard,
+                    },
+                    Into::into,
+                ),
+                save_scores: scores,
+            },
+            DetectionAlgorithm::TransNetV2 => CoreSceneDetectionMethod::TransNetV2 {
+                minimum_length,
+                maximum_length,
+                model_path: model_path.cloned().or_else(|| match &current {
+                    CoreSceneDetectionMethod::TransNetV2 {
+                        model_path, ..
+                    } => model_path.clone(),
+                    _ => None,
+                }),
+                save_scores: scores,
+            },
+        };
+    }
+
+    /// Applies one `set input` override.
+    fn apply_input(configuration: &mut Configuration, args: &InputOverride) -> Result<()> {
+        ensure_override_requested(args)?;
+        let existing = configuration
+            .condor
+            .sequence_config
+            .scene_detector
+            .input
+            .clone()
+            .unwrap_or_else(|| configuration.condor.input.clone());
+        configuration.condor.sequence_config.scene_detector.input =
+            Some(apply_input_override(configuration, &existing, args)?);
+        Ok(())
+    }
+}
+
+impl ConfigCommand for DetectScenesCrud {
+    type Key = DetectScenesKey;
+    type Set = DetectScenesSet;
+
+    fn subject() -> &'static str {
+        "Scene detection settings"
+    }
+
+    fn render(configuration: &Configuration, key: Option<&Self::Key>) -> Result<Value> {
+        let detector = Self::section(configuration);
+        Ok(match key {
+            None => serde_json::to_value(detector)?,
+            Some(DetectScenesKey::Method) => serde_json::to_value(&detector.method)?,
+            Some(DetectScenesKey::Input) => serde_json::to_value(&detector.input)?,
+        })
+    }
+
+    fn apply(configuration: &mut Configuration, set: &Self::Set) -> Result<PropertyChange> {
+        match set {
+            DetectScenesSet::Method {
+                algorithm,
+                minimum_frames,
+                maximum_frames,
+                method,
+                model_path,
+                save_scores,
+            } => {
+                if let Some(model_path) = model_path.as_deref() {
+                    warn_missing_path("TransNetV2 model path", model_path);
+                }
+                Self::apply_method(
+                    configuration,
+                    *algorithm,
+                    *minimum_frames,
+                    *maximum_frames,
+                    *method,
+                    model_path.as_ref(),
+                    *save_scores,
+                );
+                Self::validate(Self::section(configuration))?;
+                PropertyChange::new("method", &Self::section(configuration).method)
+            },
+            DetectScenesSet::Input {
+                args,
+            } => {
+                Self::apply_input(configuration, args)?;
+                Self::validate(Self::section(configuration))?;
+                PropertyChange::new("input", &Self::section(configuration).input)
+            },
+        }
+    }
+
+    fn restore(
+        configuration: &mut Configuration,
+        key: Option<&Self::Key>,
+    ) -> Result<Option<PropertyChange>> {
+        let defaults = SceneDetectorConfig::default();
+        let detector = Self::section_mut(configuration);
+        let (property, value) = match key {
+            None => {
+                *detector = defaults;
+                ("section", serde_json::to_value(&*detector)?)
+            },
+            Some(DetectScenesKey::Method) => {
+                detector.method = defaults.method;
+                ("method", serde_json::to_value(&detector.method)?)
+            },
+            Some(DetectScenesKey::Input) => {
+                detector.input = None;
+                ("input", serde_json::to_value(&detector.input)?)
+            },
+        };
+        Self::validate(Self::section(configuration))?;
+        Ok(Some(PropertyChange {
+            property: property.to_owned(),
+            value,
+        }))
+    }
+}
+
+/// The score setting that carries over: the current one when the chosen
+/// algorithm stores scores at all, the default (off) otherwise.
+fn current_scores(current: &CoreSceneDetectionMethod) -> bool {
+    match current {
+        CoreSceneDetectionMethod::AVSceneChange {
+            save_scores, ..
+        }
+        | CoreSceneDetectionMethod::TransNetV2 {
+            save_scores, ..
+        } => *save_scores,
+        CoreSceneDetectionMethod::None {
+            ..
+        } => false,
+    }
+}
+
+/// `condor detect-scenes info|set|reset`.
+pub fn config(config_path: Option<&Path>, action: &DetectScenesAction) -> Result<()> {
+    edit::<DetectScenesCrud>(config_path, action)
 }
 
 #[cfg(test)]

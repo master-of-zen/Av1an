@@ -6,14 +6,21 @@ use california_condor::{
 
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
     use andean_condor::{
         ffmpeg::FFPixelFormat,
-        models::{encoder::cli_parameter::CLIParameter, input::Input},
+        models::{
+            encoder::cli_parameter::CLIParameter,
+            input::Input,
+            sequence::benchmarker::BenchmarkerConfig,
+        },
         vapoursynth::{plugins::resize::Scaler, vapoursynth_filters::VapourSynthFilter},
     };
     use serial_test::serial;
@@ -170,5 +177,47 @@ mod tests {
             load_configuration(Some(&config_path)).expect("load_configuration should succeed");
 
         check_basic_config(&config, &expected_config);
+    }
+
+    /// `benchmark` writes scalars and restores defaults per key.
+    #[serial]
+    #[test]
+    fn benchmark_set_and_reset() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["benchmark", "set", "threshold", "8"])
+            .assert()
+            .success();
+        condor_cmd(&temp)
+            .args(["benchmark", "set", "max-memory", "8192"])
+            .assert()
+            .success();
+        // Out of the documented 0..=100 range.
+        condor_cmd(&temp)
+            .args(["benchmark", "set", "threshold", "101"])
+            .assert()
+            .failure();
+
+        let benchmarker = load(&config_path).condor.sequence_config.benchmarker;
+        assert_eq!(benchmarker.threshold, 8, "threshold is set");
+        assert_eq!(benchmarker.max_memory, Some(8192), "max memory is set");
+
+        condor_cmd(&temp).args(["benchmark", "reset", "max-memory"]).assert().success();
+        condor_cmd(&temp).args(["benchmark", "reset", "threshold"]).assert().success();
+        let benchmarker = load(&config_path).condor.sequence_config.benchmarker;
+        let defaults = BenchmarkerConfig::default();
+        assert_eq!(
+            benchmarker.threshold, defaults.threshold,
+            "reset restores the default threshold"
+        );
+        assert_eq!(
+            benchmarker.max_memory, defaults.max_memory,
+            "reset clears the max memory"
+        );
     }
 }

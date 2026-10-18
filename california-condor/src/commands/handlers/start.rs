@@ -142,7 +142,7 @@ pub fn start_handler(
         }
     }
     configure_encoder(
-        &mut configuration,
+        &mut configuration.condor.encoder,
         encoder,
         passes,
         params,

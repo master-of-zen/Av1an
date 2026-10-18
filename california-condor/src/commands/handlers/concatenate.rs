@@ -4,13 +4,17 @@ use andean_condor::models::sequence::scene_concatenator::{
     ConcatMethod,
     FfmpegConfig,
     MkvmergeConfig,
+    SceneConcatenatorConfig,
 };
 use anyhow::Result;
+use clap::Subcommand;
+use serde_json::Value;
 
 use crate::{
     commands::{
         ConcatenationMethod,
-        handlers::{configure_temp, load_configuration},
+        config::{ConfigAction, ConfigCommand, PropertyChange},
+        handlers::{config::edit, configure_temp, load_configuration},
     },
     configuration::Configuration,
 };
@@ -54,6 +58,142 @@ pub fn configure_concatenate(
     }
 
     Ok(())
+}
+
+/// `info` and `reset` keys of `sequence_config.scene_concatenator`.
+#[derive(Debug, Clone, Subcommand)]
+pub enum ConcatenateKey {
+    /// The tool used to join the encoded scenes.
+    Method,
+    /// The file the concatenated video is written to.
+    Output,
+    /// The directory the encoded scenes are read from.
+    ScenesDirectory,
+}
+
+/// Settings `condor concatenate set` can change.
+#[derive(Debug, Clone, Subcommand)]
+pub enum ConcatenateSet {
+    /// The tool used to join the encoded scenes.
+    ///
+    /// Keeping the current tool keeps its settings; switching to another tool
+    /// starts from that tool's defaults.
+    Method {
+        #[arg(value_name = "Method")]
+        method: ConcatenationMethod,
+    },
+    /// The file the concatenated video is written to.
+    Output {
+        #[arg(value_name = "Path")]
+        path: PathBuf,
+    },
+    /// The directory the encoded scenes are read from.
+    ScenesDirectory {
+        #[arg(value_name = "Path")]
+        path: PathBuf,
+    },
+}
+
+/// The action triple attached to `condor concatenate`.
+pub type ConcatenateAction = ConfigAction<ConcatenateKey, ConcatenateSet>;
+
+/// The `condor concatenate` configuration section.
+pub struct ConcatenateCrud;
+
+impl ConfigCommand for ConcatenateCrud {
+    type Key = ConcatenateKey;
+    type Set = ConcatenateSet;
+
+    fn subject() -> &'static str {
+        "Concatenation settings"
+    }
+
+    fn render(configuration: &Configuration, key: Option<&Self::Key>) -> Result<Value> {
+        let concat = &configuration.condor.sequence_config.scene_concatenator;
+        Ok(match key {
+            None => serde_json::to_value(concat)?,
+            Some(ConcatenateKey::Method) => serde_json::to_value(&concat.method)?,
+            Some(ConcatenateKey::Output) => serde_json::to_value(&concat.output)?,
+            Some(ConcatenateKey::ScenesDirectory) => {
+                serde_json::to_value(&concat.scenes_directory)?
+            },
+        })
+    }
+
+    fn apply(configuration: &mut Configuration, set: &Self::Set) -> Result<PropertyChange> {
+        match set {
+            ConcatenateSet::Method {
+                method,
+            } => {
+                configure_concatenate(configuration, Some(method))?;
+                PropertyChange::new(
+                    "method",
+                    &configuration.condor.sequence_config.scene_concatenator.method,
+                )
+            },
+            ConcatenateSet::Output {
+                path: output,
+            } => {
+                configuration.condor.sequence_config.scene_concatenator.output =
+                    Some(output.clone());
+                PropertyChange::new(
+                    "output",
+                    &configuration.condor.sequence_config.scene_concatenator.output,
+                )
+            },
+            ConcatenateSet::ScenesDirectory {
+                path: directory,
+            } => {
+                configuration.condor.sequence_config.scene_concatenator.scenes_directory =
+                    directory.clone();
+                PropertyChange::new(
+                    "scenes-directory",
+                    &configuration.condor.sequence_config.scene_concatenator.scenes_directory,
+                )
+            },
+        }
+    }
+
+    fn restore(
+        configuration: &mut Configuration,
+        key: Option<&Self::Key>,
+    ) -> Result<Option<PropertyChange>> {
+        let defaults = SceneConcatenatorConfig::default();
+        let concat = &mut configuration.condor.sequence_config.scene_concatenator;
+        let (property, value) = match key {
+            // `scenes_directory` is derived from --temp, so resetting the whole
+            // section restores the method and output but keeps it in place.
+            None => {
+                concat.method = defaults.method;
+                concat.output = None;
+                ("section", serde_json::to_value(&*concat)?)
+            },
+            Some(ConcatenateKey::Method) => {
+                concat.method = defaults.method;
+                ("method", serde_json::to_value(&concat.method)?)
+            },
+            Some(ConcatenateKey::Output) => {
+                concat.output = None;
+                ("output", serde_json::to_value(&concat.output)?)
+            },
+            Some(ConcatenateKey::ScenesDirectory) => {
+                concat.scenes_directory = defaults.scenes_directory;
+                (
+                    "scenes-directory",
+                    serde_json::to_value(&concat.scenes_directory)?,
+                )
+            },
+        };
+        Ok(Some(PropertyChange {
+            property: property.to_owned(),
+            value,
+        }))
+    }
+}
+
+/// `condor concatenate info|set|reset`.
+pub fn config(config_path: Option<&Path>, action: &ConcatenateAction) -> Result<()> {
+    edit::<ConcatenateCrud>(config_path, action)
 }
 
 #[cfg(test)]

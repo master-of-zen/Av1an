@@ -59,6 +59,24 @@ VapourSynth filters to apply to the Denoised VideoNode. See [Filters](../types/f
 
 If not specified, `wnnm:sigma=6.0,0.0,0.0;` is used.
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved noise-detection settings without running the command:
+
+- `set input [--path P] [--decoder D] [--filters …] [--vs-args …] [--stream-concurrently [on|off]]` — the input the Noise Detector reads instead of the main input.
+- `set reference-filters FILTER …` — replaces the chain that builds the noisy reference (default: one `wnnm` with `sigma 3`). With no filters, or with `none`, `empty`, `clear` or `remove`, the chain is emptied.
+- `set denoised-filters FILTER …` — replaces the denoised chain (default: `wnnm` with `sigma 6`). Same syntax.
+- `info [input|reference-filters|denoised-filters]` prints JSON; `reset reference-filters` restores the default chain (and says how to empty it instead); `reset` with no key drops the whole optional section back to `null`.
+
+```bash
+$ condor detect-noise set reference-filters "resize:width=960;" "wnnm:sigma=3.0,0.0,0.0;"
+$ condor detect-noise set reference-filters none
+$ condor detect-noise reset reference-filters
+$ condor detect-noise reset
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -79,6 +97,9 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-detect-noise-verbose-light.avif"><picture><source srcset="../media/tui/help-detect-noise-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-detect-noise-verbose-light.avif" alt="condor detect-noise --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-noise --help --verbose</p>
     </td>
-    <td width="50%" valign="top"></td>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-detect-noise-set-light.avif"><picture><source srcset="../media/tui/help-detect-noise-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-detect-noise-set-light.avif" alt="condor detect-noise set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor detect-noise set --help</p>
+    </td>
   </tr>
 </table>

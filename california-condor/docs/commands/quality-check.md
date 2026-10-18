@@ -11,7 +11,7 @@ $ condor quality-check --metric ssimulacra2 --profile standard
 | ----------------------------------------------------- | ------------- | ----------- | ------------- |
 | [Input](#input--i)                                    | `-i`, `--input` | Path      | Config input  |
 | [Decoder](#decoder---decoder)                         | `--decoder`   | [`DECODER`](../types/decoder.md)   | `bestsource`  |
-| [Filters](#filters---filters)                         | `--filters`   | [Filters](../types/filters.md)     |               |
+| [Filters](#filters---filters)                         | `--filters`   | [Filters](../types/filters.md)     | `resize:scaler=bicubic;format=yuv420p10le` |
 | [VapourSynth Arguments](#vapoursynth-arguments---vs-args) | `--vs-args` | [String List](../types/vs-args.md) |             |
 | [Metric](#metric---metric)                            | `--metric`    | [`METRIC`](../types/quality-metric.md)    | `ssimulacra2` |
 | [Profile](#profile---profile)                         | `--profile`   | [`PROFILE`](../types/quality-profile.md)   | `standard`    |
@@ -35,6 +35,10 @@ Method used for decoding the input video. Methods besides `ffms2` require extern
 ## Filters `--filters`
 
 VapourSynth filters to apply to the input. See [Filters](../types/filters.md).
+
+### Default
+
+If not specified, `resize:scaler=bicubic;format=yuv420p10le` (YUV 4:2:0 10-bit) is used.
 
 ## VapourSynth Arguments `--vs-args`
 
@@ -71,6 +75,25 @@ The preset profile to choose the Quality Check Strategy and Statistic. See [Qual
 
 If not specified, `standard` is used.
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved quality-check settings without running the command:
+
+- `set metric METRIC` — the metric measured per scene (same values as `--metric`).
+- `set strategy KIND [FRAMES]` — which frames are probed: `whole`, `skip FRAMES`, or `subset [--position start|middle|end] [--length-frames N | --length-percent P]`. Values and flags of another kind are rejected.
+- `set statistic KIND [VALUE] …` — how the probe scores become one result: `mean`, `median`, `harmonic`, `percentile PERCENT` (or `--percentile P`), `standard-deviation-distance SIGMA` (or `--sigma S`), `mode`, `minimum`, `maximum`, `root-mean-square`.
+- `set input [--path P] [--decoder D] [--filters …] [--vs-args …] [--stream-concurrently [on|off]]` — the input Quality Check measures.
+- `info [metric|strategy|statistic|input]` prints JSON; `reset KEY` resets one of them, and `reset` with no key drops the whole optional section back to `null`.
+
+```bash
+$ condor quality-check set strategy subset --position end --length-percent 25
+$ condor quality-check set statistic percentile 10
+$ condor quality-check reset statistic
+$ condor quality-check reset
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -85,5 +108,12 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-quality-check-verbose-light.avif"><picture><source srcset="../media/tui/help-quality-check-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-quality-check-verbose-light.avif" alt="condor quality-check --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor quality-check --help --verbose</p>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-quality-check-set-light.avif"><picture><source srcset="../media/tui/help-quality-check-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-quality-check-set-light.avif" alt="condor quality-check set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor quality-check set --help</p>
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>

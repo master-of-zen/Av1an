@@ -1,28 +1,48 @@
 use std::path::{Path, PathBuf};
 
 use andean_condor::{
-    models::sequence::target_quality::types::{
-        DEFAULT_BUTTERAUGLI_TARGET_RANGE,
-        DEFAULT_CVVDP_TARGET_RANGE,
-        DEFAULT_SSIMULACRA2_TARGET_RANGE,
-        DEFAULT_VMAF_TARGET_RANGE,
-        DEFAULT_XPSNR_TARGET_RANGE,
-        ProbeStatistic,
-        ProbeStrategy,
-        QualityMetric,
-        SubsetProbeLength,
-        SubsetProbePosition,
+    models::sequence::{
+        quality_check::QualityCheckConfig,
+        target_quality::types::{
+            DEFAULT_BUTTERAUGLI_TARGET_RANGE,
+            DEFAULT_CVVDP_TARGET_RANGE,
+            DEFAULT_SSIMULACRA2_TARGET_RANGE,
+            DEFAULT_VMAF_TARGET_RANGE,
+            DEFAULT_XPSNR_TARGET_RANGE,
+            ProbeStatistic,
+            ProbeStrategy,
+            QualityMetric,
+            SubsetProbeLength,
+            SubsetProbePosition,
+        },
     },
     vapoursynth::vapoursynth_filters::VapourSynthFilter,
 };
 use anyhow::Result;
+use clap::Subcommand;
+use serde_json::Value;
+use tracing::warn;
 
 use crate::{
     commands::{
         DecoderMethod,
         QualityMetric as QualityMetricBase,
         QualityProfile,
-        handlers::{configure_override_input, configure_temp, load_configuration},
+        config::{
+            ConfigAction,
+            ConfigCommand,
+            InputOverride,
+            PropertyChange,
+            StatisticArgs,
+            StrategyArgs,
+        },
+        handlers::{
+            apply_input_override,
+            config::{edit, ensure_override_requested},
+            configure_override_input,
+            configure_temp,
+            load_configuration,
+        },
     },
     configuration::Configuration,
 };
@@ -174,6 +194,169 @@ pub fn configure_quality_check(
     }
 
     Ok(())
+}
+
+/// `info` and `reset` keys of `sequence_config.quality_check`.
+#[derive(Debug, Clone, Subcommand)]
+pub enum QualityCheckKey {
+    /// The quality metric measured per scene.
+    Metric,
+    /// Which frames of each scene are probed.
+    Strategy,
+    /// How the probe scores become one result.
+    Statistic,
+    /// The input Quality Check measures.
+    Input,
+}
+
+/// Settings `condor quality-check set` can change.
+#[derive(Debug, Clone, Subcommand)]
+pub enum QualityCheckSet {
+    /// The quality metric measured per scene.
+    Metric {
+        #[arg(value_name = "Metric")]
+        metric: QualityMetricBase,
+    },
+    /// Which frames of each scene are probed.
+    Strategy {
+        #[command(flatten)]
+        args: StrategyArgs,
+    },
+    /// How the probe scores become one result.
+    Statistic {
+        #[command(flatten)]
+        args: StatisticArgs,
+    },
+    /// The input Quality Check measures.
+    Input {
+        #[command(flatten)]
+        args: InputOverride,
+    },
+}
+
+/// The action triple attached to `condor quality-check`.
+pub type QualityCheckAction = ConfigAction<QualityCheckKey, QualityCheckSet>;
+
+/// The `condor quality-check` configuration section.
+pub struct QualityCheckCrud;
+
+impl QualityCheckCrud {
+    /// The section, materialized so a `set` always has somewhere to write.
+    fn section_mut(configuration: &mut Configuration) -> &mut QualityCheckConfig {
+        configuration
+            .condor
+            .sequence_config
+            .quality_check
+            .get_or_insert_with(QualityCheckConfig::default)
+    }
+}
+
+impl ConfigCommand for QualityCheckCrud {
+    type Key = QualityCheckKey;
+    type Set = QualityCheckSet;
+
+    fn subject() -> &'static str {
+        "Quality check settings"
+    }
+
+    fn render(configuration: &Configuration, key: Option<&Self::Key>) -> Result<Value> {
+        let check = configuration.condor.sequence_config.quality_check.as_ref();
+        Ok(match key {
+            None => serde_json::to_value(&configuration.condor.sequence_config.quality_check)?,
+            Some(QualityCheckKey::Metric) => serde_json::to_value(check.map(|c| &c.metric))?,
+            Some(QualityCheckKey::Strategy) => serde_json::to_value(check.map(|c| &c.strategy))?,
+            Some(QualityCheckKey::Statistic) => serde_json::to_value(check.map(|c| &c.statistic))?,
+            Some(QualityCheckKey::Input) => serde_json::to_value(check.map(|c| c.input.as_ref()))?,
+        })
+    }
+
+    fn apply(configuration: &mut Configuration, set: &Self::Set) -> Result<PropertyChange> {
+        Self::section_mut(configuration);
+        match set {
+            QualityCheckSet::Metric {
+                metric,
+            } => {
+                configure_quality_check(configuration, None, None, None, None, Some(metric), None)?;
+                PropertyChange::new("metric", &Self::section_mut(configuration).metric)
+            },
+            QualityCheckSet::Strategy {
+                args,
+            } => {
+                let strategy = args.build()?;
+                Self::section_mut(configuration).strategy = strategy;
+                PropertyChange::new("strategy", &Self::section_mut(configuration).strategy)
+            },
+            QualityCheckSet::Statistic {
+                args,
+            } => {
+                let statistic = args.build()?;
+                Self::section_mut(configuration).statistic = statistic;
+                PropertyChange::new("statistic", Self::section_mut(configuration).statistic)
+            },
+            QualityCheckSet::Input {
+                args,
+            } => {
+                ensure_override_requested(args)?;
+                let existing = configuration
+                    .condor
+                    .sequence_config
+                    .quality_check
+                    .as_ref()
+                    .and_then(|check| check.input.clone())
+                    .unwrap_or_else(|| configuration.condor.input.clone());
+                Self::section_mut(configuration).input =
+                    Some(apply_input_override(configuration, &existing, args)?);
+                PropertyChange::new("input", &Self::section_mut(configuration).input)
+            },
+        }
+    }
+
+    fn restore(
+        configuration: &mut Configuration,
+        key: Option<&Self::Key>,
+    ) -> Result<Option<PropertyChange>> {
+        if configuration.condor.sequence_config.quality_check.is_none() {
+            warn!("Quality check is not configured; nothing to reset.");
+            return Ok(None);
+        }
+        if key.is_none() {
+            configuration.condor.sequence_config.quality_check = None;
+            return Ok(Some(PropertyChange {
+                property: "section".to_owned(),
+                value:    Value::Null,
+            }));
+        }
+        let check = Self::section_mut(configuration);
+        let defaults = QualityCheckConfig::default();
+        let (property, value) = match key {
+            None => unreachable!("handled above"),
+            Some(QualityCheckKey::Metric) => {
+                check.metric = defaults.metric;
+                ("metric", serde_json::to_value(&check.metric)?)
+            },
+            Some(QualityCheckKey::Strategy) => {
+                check.strategy = defaults.strategy;
+                ("strategy", serde_json::to_value(&check.strategy)?)
+            },
+            Some(QualityCheckKey::Statistic) => {
+                check.statistic = defaults.statistic;
+                ("statistic", serde_json::to_value(check.statistic)?)
+            },
+            Some(QualityCheckKey::Input) => {
+                check.input = None;
+                ("input", serde_json::to_value(&check.input)?)
+            },
+        };
+        Ok(Some(PropertyChange {
+            property: property.to_owned(),
+            value,
+        }))
+    }
+}
+
+/// `condor quality-check info|set|reset`.
+pub fn config(config_path: Option<&Path>, action: &QualityCheckAction) -> Result<()> {
+    edit::<QualityCheckCrud>(config_path, action)
 }
 
 #[cfg(test)]

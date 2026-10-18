@@ -20,6 +20,7 @@ Example:
     "scenes": [],
     "sequence_config": {
         "scene_detector": { "method": { "AVSceneChange": { "minimum_length": 24, "maximum_length": 240, "method": "Standard" } }, "input": null },
+        "zoner": null,
         "noise_detector": null,
         "noise_scaler": null,
         "benchmarker": { "threshold": 5, "max_memory": null },

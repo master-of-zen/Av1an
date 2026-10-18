@@ -1,10 +1,18 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
+use clap::Subcommand;
+use serde_json::Value;
 use thiserror::Error;
 use tracing::error;
 
-use crate::{commands::handlers::load_configuration, configuration::Configuration};
+use crate::{
+    commands::{
+        config::{ConfigAction, ConfigCommand, PropertyChange},
+        handlers::{config::edit, load_configuration},
+    },
+    configuration::Configuration,
+};
 
 pub fn scale_speed_handler(
     config_path: Option<&Path>,
@@ -71,6 +79,124 @@ pub enum SpeedScalerError {
     },
     #[error("At least 2 speed-quantizer pairs are required.")]
     MinimumPairsRequired,
+}
+
+/// Parses `QUANTIZER=SPEED` into one speed–quantizer pair, both as the
+/// integers the run flags accept.
+fn parse_point(value: &str) -> Result<(i8, i8), String> {
+    let (quantizer, speed) = value
+        .split_once('=')
+        .ok_or_else(|| format!("expected QUANTIZER=SPEED, got {value}"))?;
+    let quantizer: i8 = quantizer
+        .trim()
+        .parse()
+        .map_err(|err| format!("invalid quantizer in {value}: {err}"))?;
+    let speed: i8 =
+        speed.trim().parse().map_err(|err| format!("invalid speed in {value}: {err}"))?;
+    Ok((quantizer, speed))
+}
+
+/// `info` and `reset` keys of `sequence_config.speed_scaler`.
+#[derive(Debug, Clone, Subcommand)]
+pub enum ScaleSpeedKey {
+    /// The speed–quantizer pairs Convex Hull interpolates between.
+    #[command(alias = "speed-scalers")]
+    SpeedQuantizers,
+}
+
+/// Settings `condor scale-speed set` can change.
+#[derive(Debug, Clone, Subcommand)]
+pub enum ScaleSpeedSet {
+    /// The speed–quantizer pairs Convex Hull interpolates between.
+    ///
+    /// Give each pair as `QUANTIZER=SPEED`; at least two are required. Reset
+    /// the property to stop scaling entirely.
+    #[command(alias = "speed-scalers")]
+    SpeedQuantizers {
+        /// Two or more pairs, each written `QUANTIZER=SPEED`.
+        #[arg(value_name = "QUANTIZER=SPEED", value_parser = parse_point, num_args = 2..)]
+        points: Vec<(i8, i8)>,
+    },
+}
+
+/// The action triple attached to `condor scale-speed`.
+pub type ScaleSpeedAction = ConfigAction<ScaleSpeedKey, ScaleSpeedSet>;
+
+/// Everything that can make a Speed Scaler setting unusable.
+#[derive(Debug, Error)]
+pub enum ScaleSpeedConfigError {
+    #[error("each quantizer may appear only once")]
+    DuplicateQuantizer,
+}
+
+/// The `condor scale-speed` configuration section.
+pub struct ScaleSpeedCrud;
+
+impl ConfigCommand for ScaleSpeedCrud {
+    type Key = ScaleSpeedKey;
+    type Set = ScaleSpeedSet;
+
+    fn subject() -> &'static str {
+        "Speed scaling settings"
+    }
+
+    fn render(configuration: &Configuration, key: Option<&Self::Key>) -> Result<Value> {
+        let scaler = &configuration.condor.sequence_config.speed_scaler;
+        Ok(match key {
+            None => serde_json::to_value(scaler)?,
+            Some(ScaleSpeedKey::SpeedQuantizers) => serde_json::to_value(&scaler.speed_quantizers)?,
+        })
+    }
+
+    fn apply(configuration: &mut Configuration, set: &Self::Set) -> Result<PropertyChange> {
+        match set {
+            ScaleSpeedSet::SpeedQuantizers {
+                points,
+            } => {
+                let mut points = points.clone();
+                points.sort_by_key(|(quantizer, _)| *quantizer);
+                if !points.windows(2).all(|pair| pair[0].0 < pair[1].0) {
+                    return Err(ScaleSpeedConfigError::DuplicateQuantizer.into());
+                }
+                // The configuration stores speed first, quantizer second.
+                let speed_quantizers: Vec<(i8, f64)> = points
+                    .iter()
+                    .map(|(quantizer, speed)| (*speed, f64::from(*quantizer)))
+                    .collect();
+                configuration.condor.sequence_config.speed_scaler.speed_quantizers =
+                    speed_quantizers;
+                PropertyChange::new(
+                    "speed-quantizers",
+                    &configuration.condor.sequence_config.speed_scaler.speed_quantizers,
+                )
+            },
+        }
+    }
+
+    fn restore(
+        configuration: &mut Configuration,
+        key: Option<&Self::Key>,
+    ) -> Result<Option<PropertyChange>> {
+        let scaler = &mut configuration.condor.sequence_config.speed_scaler;
+        let (property, value) = match key {
+            None | Some(ScaleSpeedKey::SpeedQuantizers) => {
+                scaler.speed_quantizers = Vec::new();
+                (
+                    "speed-quantizers",
+                    serde_json::to_value(&scaler.speed_quantizers)?,
+                )
+            },
+        };
+        Ok(Some(PropertyChange {
+            property: property.to_owned(),
+            value,
+        }))
+    }
+}
+
+/// `condor scale-speed info|set|reset`.
+pub fn config(config_path: Option<&Path>, action: &ScaleSpeedAction) -> Result<()> {
+    edit::<ScaleSpeedCrud>(config_path, action)
 }
 
 #[cfg(test)]

@@ -41,11 +41,9 @@ use andean_condor::{
     },
 };
 
-use crate::configuration::{
-    CONFIGURATION_SCHEMA_URL,
-    CliSequenceConfig,
-    CliSequenceData,
-    Configuration,
+use crate::{
+    configuration::{CONFIGURATION_SCHEMA_URL, CliSequenceConfig, CliSequenceData, Configuration},
+    zoner::ZonerConfig,
 };
 
 /// Convert a path to a `&str`, assuming it contains valid UTF-8.
@@ -234,6 +232,7 @@ pub fn default_config(test_video: &TestVideo, output: &Path, temp: &Path) -> Con
                     },
                     input:  None,
                 },
+                zoner:              None,
                 noise_detector:     None,
                 noise_scaler:       None,
                 benchmarker:        BenchmarkerConfig::default(),
@@ -336,6 +335,10 @@ pub fn check_basic_config(config: &Configuration, expected_config: &Configuratio
     check_scene_detector(
         &config.condor.sequence_config.scene_detector,
         &expected_config.condor.sequence_config.scene_detector,
+    );
+    check_zoner(
+        config.condor.sequence_config.zoner.as_ref(),
+        expected_config.condor.sequence_config.zoner.as_ref(),
     );
     check_encoder(
         &config.condor.encoder,
@@ -1211,6 +1214,19 @@ pub fn check_noise_scaler(
         );
     } else {
         assert_matches!(noise_scaler, None, "Noise Scaler is None");
+    }
+}
+
+pub fn check_zoner(zoner: Option<&ZonerConfig>, expected_zoner: Option<&ZonerConfig>) {
+    if let Some(expected_config) = expected_zoner {
+        let config = zoner.expect("Zoner is Some");
+        assert_eq!(
+            config.zones, expected_config.zones,
+            "Zoner zones are {:?}",
+            expected_config.zones
+        );
+    } else {
+        assert_matches!(zoner, None, "Zoner is None");
     }
 }
 

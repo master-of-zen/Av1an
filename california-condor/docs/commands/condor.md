@@ -1,6 +1,6 @@
 # Condor
 
-Run the full pipeline with no subcommand (triggers TUIs per step). Runs scene detection, noise detection, benchmark, target quality, bitrate optimization, speed scaling, encode, concatenation, and quality check in order. See [guide](../guide.md) and [type reference](../types.md).
+Run the full pipeline with no subcommand (triggers TUIs per step). Runs scene detection, zoning, noise detection, benchmark, target quality, bitrate optimization, speed scaling, encode, concatenation, and quality check in order. See [guide](../guide.md) and [type reference](../types.md).
 
 ```bash
 $ condor -i "input.mp4" -o "output.mkv"
@@ -17,8 +17,8 @@ $ condor --config-file ./config.json --skip-scd
 | [Scene Detector Decoder](#scene-detector-decoder---scd-decoder)   | `--scd-decoder`       | [`DECODER`](../types/decoder.md)   | Decoder                |
 | [Target Quality Decoder](#target-quality-decoder---tq-decoder)    | `--tq-decoder`        | [`DECODER`](../types/decoder.md)   | Decoder                |
 | [Filters](#filters---filters)                                     | `--filters`           | [Filters](../types/filters.md)     | `resize:scaler=bicubic;format=yuv420p10le` |
-| [Scene Detector Filters](#scene-detector-filters---scd-filters)   | `--scd-filters`       | [Filters](../types/filters.md)     |                        |
-| [Target Quality Filters](#target-quality-filters---tq-filters)    | `--tq-filters`        | [Filters](../types/filters.md)     |                        |
+| [Scene Detector Filters](#scene-detector-filters---scd-filters)   | `--scd-filters`       | [Filters](../types/filters.md)     | Input's filters        |
+| [Target Quality Filters](#target-quality-filters---tq-filters)    | `--tq-filters`        | [Filters](../types/filters.md)     | Input's filters        |
 | [VapourSynth Arguments](#vapoursynth-arguments---vs-args)         | `--vs-args`           | [String List](../types/vs-args.md) |                        |
 | [Scene Detector VS Args](#scene-detector-vs-args---scd-vs-args)   | `--scd-vs-args`       | [String List](../types/vs-args.md) |                        |
 | [Target Quality VS Args](#target-quality-vs-args---tq-vs-args)    | `--tq-vs-args`        | [String List](../types/vs-args.md) |                        |
@@ -31,6 +31,7 @@ $ condor --config-file ./config.json --skip-scd
 | [Photon Noise](#photon-noise---photon-noise)                      | `--photon-noise`      | [Integer](../types/photon-noise.md)      |                        |
 | [Chroma Noise](#chroma-noise---chroma-noise)                      | `--chroma-noise`      | [Integer](../types/photon-noise.md)      |                        |
 | [FFmpeg Filter](#ffmpeg-filter---ffmpeg-filter)                  | `--ffmpeg-filter`    | String      |                        |
+| [Zones](#zones---zones)                                           | `--zones`             | [Zone](../types/zone.md)   |                        |
 | [Target Metric](#target-metric---target-metric)                    | `--target-metric`     | [`METRIC`](../types/quality-metric.md)    | `ssimulacra2`          |
 | [Target](#target---target)                                         | `--target`            | Float       |                        |
 | [Minimum Quantizer](#minimum-quantizer---minimum-quantizer)       | `--minimum-quantizer` | Integer     | Based on Encoder       |
@@ -166,6 +167,17 @@ A picture-altering filter (`crop`, `hflip`, `negate`, ...) changes what gets enc
 
 - `> condor --ffmpeg-filter "crop=iw-16:ih-16"`
 - `> condor --ffmpeg-filter "eq=brightness=0.05:saturation=1.2"`
+
+## Zones `--zones`
+
+Zone overrides to apply after Scene Detection. Each value is a zone definition or a path to a JSON, JSON lines, or text zone file. See [Zone](../types/zone.md) and [zone](./zone.md).
+
+A zone marks the scenes that share a frame with it, merges its encoder settings into the scenes' own (or replaces their encoder outright with `replace`), and splits scenes longer than its `--maximum-frames`. Zones are written to `condor.sequence_config.zoner`, replacing the zones already configured. With `--skip-scd`, zones apply to the existing scenes; if earlier zoning split scenes, their intersections with zones may have changed.
+
+### Examples
+
+- `> condor --zones '-1 200 svt-av1 "--preset 3 --crf 23" --iso 400'`
+- `> condor --zones '-1 200 replace aom("/tools/aomenc") "--cpu-used=4"' --zones ./zones.json`
 
 ## Target Metric `--target-metric`
 

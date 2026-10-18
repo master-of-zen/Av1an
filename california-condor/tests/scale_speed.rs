@@ -1,5 +1,7 @@
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use andean_condor::models::sequence::speed_scaler::SpeedScalerConfig;
 use california_condor::{
@@ -8,6 +10,7 @@ use california_condor::{
     utils::hash_path::hash_path,
 };
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
@@ -173,5 +176,44 @@ mod tests {
             test_video.scenes.len(),
             "scene count matches"
         );
+    }
+
+    /// `scale-speed` stores speed first, quantizer second, sorted by
+    /// quantizer, and refuses fewer than two pairs.
+    #[serial]
+    #[test]
+    fn scale_speed_set_points_store_speed_first() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+
+        condor_cmd(&temp)
+            .args(["scale-speed", "set", "speed-quantizers", "50=2", "20=6"])
+            .assert()
+            .success();
+        let scaler = load(&config_path).condor.sequence_config.speed_scaler;
+        assert_eq!(
+            scaler.speed_quantizers,
+            vec![(6, 20.0), (2, 50.0)],
+            "pairs are sorted by quantizer and stored speed-first"
+        );
+
+        condor_cmd(&temp)
+            .args(["scale-speed", "set", "speed-quantizers", "20=6"])
+            .assert()
+            .failure();
+        condor_cmd(&temp)
+            .args(["scale-speed", "set", "speed-quantizers", "20=6", "20=4"])
+            .assert()
+            .failure();
+
+        condor_cmd(&temp)
+            .args(["scale-speed", "reset", "speed-quantizers"])
+            .assert()
+            .success();
+        let scaler = load(&config_path).condor.sequence_config.speed_scaler;
+        assert!(scaler.speed_quantizers.is_empty(), "pairs were cleared");
     }
 }

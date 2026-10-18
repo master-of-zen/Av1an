@@ -34,6 +34,24 @@ Maximum scale factor for Photon Noise ISO scaling.
 
 Scale Chroma ISO.
 
+## Edit saved settings
+
+`info`, `set` and `reset` read, change and reset the saved noise-scaling settings without running the command:
+
+- `set threshold NOISE` — noise below which a scene is not scaled (recommended `0.002`).
+- `set minimum-scaler FACTOR` / `set maximum-scaler FACTOR` — bounds for the ISO scale factor; rejected when the minimum exceeds the maximum.
+- `set scale-chroma [on|off]` — scale the chroma ISO too; the value may be omitted, which means `on`.
+- `info [threshold|minimum-scaler|maximum-scaler|scale-chroma]` prints JSON; `reset KEY` resets one of them, and `reset` with no key drops the whole optional section back to `null`.
+
+```bash
+$ condor scale-noise set threshold 0.002
+$ condor scale-noise set maximum-scaler 4
+$ condor scale-noise reset threshold
+$ condor scale-noise reset
+```
+
+Shared semantics (validation, staleness warnings): see [Editing saved settings](config-editing.md).
+
 ## Screenshots
 
 The screenshots below are generated from the live interface. Click any image to open it full size.
@@ -48,5 +66,12 @@ The screenshots below are generated from the live interface. Click any image to 
       <a href="../media/tui/help-scale-noise-verbose-light.avif"><picture><source srcset="../media/tui/help-scale-noise-verbose-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-scale-noise-verbose-light.avif" alt="condor scale-noise --help --verbose" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor scale-noise --help --verbose</p>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="../media/tui/help-scale-noise-set-light.avif"><picture><source srcset="../media/tui/help-scale-noise-set-dark.avif" media="(prefers-color-scheme: dark)"><img src="../media/tui/help-scale-noise-set-light.avif" alt="condor scale-noise set --help" style="width:100%;border-radius:8px;display:block;"></picture></a>
+      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">condor scale-noise set --help</p>
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>

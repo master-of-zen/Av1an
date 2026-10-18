@@ -5,6 +5,7 @@
 | Field | Type | Required | Default on `init` | Document |
 | ----- | ---- | -------- | ----------------- | -------- |
 | `scene_detector` | Object | Yes | AVSceneChange standard, min 1s frames, max 10s frames | [scene-detector](./sequence-config/scene-detector.md) |
+| `zoner` | Object or null | Yes | `null` | [zoner](./sequence-config/zoner.md) |
 | `noise_detector` | Object or null | Yes | `null` | [noise-detector](./sequence-config/noise-detector.md) |
 | `noise_scaler` | Object or null | Yes | `null` | [noise-scaler](./sequence-config/noise-scaler.md) |
 | `benchmarker` | Object | Yes | `{ "threshold": 5, "max_memory": null }` | [benchmarker](./sequence-config/benchmarker.md) |
@@ -23,6 +24,7 @@ Example (init defaults):
         "method": { "AVSceneChange": { "minimum_length": 24, "maximum_length": 240, "method": "Standard" } },
         "input": null
     },
+    "zoner": null,
     "noise_detector": null,
     "noise_scaler": null,
     "benchmarker": { "threshold": 5, "max_memory": null },

@@ -14,13 +14,17 @@ use tracing::{debug, error, warn};
 
 use crate::{
     DEFAULT_CONFIG_PATH,
-    commands::{CondorCliError, DecoderMethod},
+    commands::{
+        CondorCliError,
+        DecoderMethod,
+        config::{InputOverride, Toggle},
+    },
     configuration::{ConfigError, Configuration},
 };
 
 pub mod benchmarker;
 pub mod concatenate;
-// pub mod config;
+pub mod config;
 pub mod detect_noise;
 pub mod detect_scenes;
 pub mod encode;
@@ -29,8 +33,10 @@ pub mod optimize_bitrate;
 pub mod quality_check;
 pub mod scale_noise;
 pub mod scale_speed;
+pub mod scenes;
 pub mod start;
 pub mod target_quality;
+pub mod zone;
 
 pub fn load_configuration(config_path: Option<&Path>) -> Result<(Configuration, PathBuf)> {
     if let Some(config_path) = config_path
@@ -171,6 +177,7 @@ pub fn configure_input(
         index.or(existing_index),
         // cache_path: None, // TODO: Support Cache Path
     )?;
+    warn_unused_vs_args(&input, vs_args);
     // The input is rebuilt from its path and decoder, which drops its filters,
     // so carry them over.
     input.adopt_filters(existing_input);
@@ -182,6 +189,125 @@ pub fn configure_input(
     {
         *rebuilt = stream_concurrently;
     }
+    Ok(input)
+}
+
+/// A human-readable description of an input's resolved kind, for diagnostics.
+pub fn input_kind_label(input: &InputModel) -> &'static str {
+    match input {
+        InputModel::Video {
+            import_method: ImportMethod::FFMS2 {
+                ..
+            },
+            ..
+        } => "native FFMS2 video input",
+        InputModel::VapourSynth {
+            import_method: VapourSynthImportMethod::BestSource {
+                ..
+            },
+            ..
+        } => "BestSource video input",
+        InputModel::VapourSynth {
+            import_method: VapourSynthImportMethod::FFMS2 {
+                ..
+            },
+            ..
+        } => "VapourSynth FFMS2 video input",
+        InputModel::VapourSynth {
+            import_method: VapourSynthImportMethod::LSMASHWorks {
+                ..
+            },
+            ..
+        } => "L-SMASH-Works video input",
+        InputModel::VapourSynth {
+            import_method: VapourSynthImportMethod::DGDecNV {
+                ..
+            },
+            ..
+        } => "DGDecNV video input",
+        InputModel::VapourSynthScript {
+            ..
+        } => "VapourSynth script input",
+    }
+}
+
+/// Warns that a script-only flag was ignored for an input that cannot use it.
+///
+/// VapourSynth script arguments and concurrent streaming only reach a
+/// `.vpy`/`.py` input; a video or an indexed source has no script environment
+/// to pass them to, so the flag would otherwise be dropped without a word.
+pub fn warn_script_flag_ignored(flag: &str, input: &InputModel) {
+    let kind = input_kind_label(input);
+    warn!(
+        "{flag} applies only to VapourSynth script (.vpy/.py) inputs and was ignored for this \
+         {kind}; drop {flag} or use a script input"
+    );
+}
+
+/// Warns when `--vs-args` was given for an input that cannot use it.
+pub fn warn_unused_vs_args(input: &InputModel, vs_args: Option<&[String]>) {
+    let given = vs_args.is_some_and(|args| !args.is_empty());
+    if given && !matches!(input, InputModel::VapourSynthScript { .. }) {
+        warn_script_flag_ignored("--vs-args", input);
+    }
+}
+
+/// Applies `--stream-concurrently` to `input`, or warns when `input` is not a
+/// VapourSynth script.
+pub fn apply_stream_concurrently(input: &mut InputModel, toggle: Option<Toggle>) {
+    let Some(toggle) = toggle else {
+        return;
+    };
+    if let InputModel::VapourSynthScript {
+        stream_concurrently,
+        ..
+    } = input
+    {
+        *stream_concurrently = toggle.enabled();
+    } else {
+        warn_script_flag_ignored("--stream-concurrently", input);
+    }
+}
+
+/// Warns when `path` does not exist yet on disk.
+///
+/// Editing a configuration does not open the file immediately, so a missing
+/// path is accepted with a warning rather than rejected.
+pub fn warn_missing_path(what: &str, path: &Path) {
+    if !path.exists() {
+        warn!(
+            "{what} `{}` does not exist; it will be needed when the step runs",
+            path.display()
+        );
+    }
+}
+
+/// Builds the override input an [`InputOverride`] describes, warning if a
+/// supplied path does not exist yet.
+///
+/// The caller has already rejected an override that sets no flag
+/// ([`ensure_override_requested`](super::config::ensure_override_requested)),
+/// so this always builds one.
+pub fn apply_input_override(
+    configuration: &Configuration,
+    existing_input: &InputModel,
+    args: &InputOverride,
+) -> Result<InputModel> {
+    if let Some(path) = args.path.as_deref() {
+        warn_missing_path("input path", path);
+    }
+    let mut input = configure_input(
+        configuration,
+        existing_input,
+        args.path.as_deref(),
+        args.decoder.as_ref(),
+        args.vs_args.as_deref(),
+        None,
+    )?;
+    if let Some(filters) = args.filters.as_deref() {
+        apply_input_filters(&mut input, filters);
+    }
+    apply_stream_concurrently(&mut input, args.stream_concurrently);
     Ok(input)
 }
 

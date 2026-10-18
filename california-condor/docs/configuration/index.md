@@ -43,7 +43,7 @@ Default on `init` for a native `--decoder ffms2` input:
 - Input filter: `resize:scaler=bicubic;format=yuv420p10le`
 - Scene detector: `standard`, 1s minimum, 10s maximum
 - `scenes`: `[]`
-- `noise_detector`, `noise_scaler`, `target_quality`, `quality_check`: `null`
+- `zoner`, `noise_detector`, `noise_scaler`, `target_quality`, `quality_check`: `null`
 
 ## Minimal Example
 
@@ -80,6 +80,7 @@ Default on `init` for a native `--decoder ffms2` input:
                 "method": { "AVSceneChange": { "minimum_length": 24, "maximum_length": 240, "method": "Standard" } },
                 "input": null
             },
+            "zoner": null,
             "noise_detector": null,
             "noise_scaler": null,
             "benchmarker": { "threshold": 5, "max_memory": null },

@@ -25,11 +25,17 @@ use california_condor::{
 
 #[path = "common.rs"]
 mod common;
+#[path = "config_helpers.rs"]
+mod config_helpers;
 
 use common::condor_cmd;
+use config_helpers::{init_config, load};
 
 #[cfg(test)]
 mod tests {
+    use andean_condor::models::input::{ImportMethod, Input};
+    use serial_test::serial;
+
     use super::*;
 
     #[test]
@@ -231,5 +237,48 @@ mod tests {
         let config_content = std::fs::read_to_string(temp.path().join("condor.json"))
             .expect("config file reads from disk");
         assert_eq!(config_content, "{}", "config file is unchanged");
+    }
+
+    /// The input and output live at the top level, so `init` is where they are
+    /// edited; neither has a default to reset to.
+    #[serial]
+    #[test]
+    fn init_set_input_and_output() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let config_path = init_config(&temp);
+        let video = get_test_video();
+        let new_output = temp.path().join("renamed.mkv");
+
+        condor_cmd(&temp)
+            .args(["init", "set", "output", path_str(&new_output)])
+            .assert()
+            .success();
+        let condor = load(&config_path).condor;
+        assert_eq!(condor.output.path, new_output, "output path is set");
+
+        condor_cmd(&temp)
+            .args(["init", "set", "input", "--path", path_str(&video.path), "--decoder", "ffms2"])
+            .assert()
+            .success();
+        let input = load(&config_path).condor.input;
+        assert!(
+            matches!(input, Input::Video {
+                import_method: ImportMethod::FFMS2 { .. },
+                ..
+            }),
+            "root input is {input:?}"
+        );
+
+        // A property with no flags changes nothing.
+        condor_cmd(&temp).args(["init", "set", "input"]).assert().failure();
+
+        // The paths are what `init` exists to capture, so there is no default
+        // to restore - not for a key and not for the whole section.
+        condor_cmd(&temp).args(["init", "reset", "input"]).assert().failure();
+        condor_cmd(&temp).args(["init", "reset", "output"]).assert().failure();
+        condor_cmd(&temp).args(["init", "reset"]).assert().failure();
     }
 }

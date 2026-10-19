@@ -116,7 +116,7 @@ impl Configuration {
         )?
         .as_path()
         .to_path_buf();
-        let input_data = Self::new_input_model(input, decoder, vs_args, None)?;
+        let input_data = Self::new_input_model(input, decoder, vs_args, None, None)?;
         info!("Indexing input...");
         // The first of the two opens every fresh run performs. Both go through
         // the same "Opening input" screen, so the expensive index is built
@@ -267,7 +267,7 @@ impl Configuration {
         decoder: Option<&DecoderMethod>,
         vs_args: Option<&[String]>,
         index: Option<u8>,
-        // cache_path: Option<&Path>, // TODO: Support Cache Path
+        cache_path: Option<&Path>,
     ) -> Result<InputModel> {
         if Self::input_is_script(input) {
             return Self::new_vs_input_model(input, None, vs_args, index);
@@ -278,6 +278,7 @@ impl Configuration {
                 path:          input.to_path_buf(),
                 import_method: andean_condor::models::input::ImportMethod::FFMS2 {
                     index,
+                    cache_path: cache_path.map(Path::to_path_buf),
                 },
                 filters:       Vec::new(),
             },

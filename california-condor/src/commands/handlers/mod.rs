@@ -103,9 +103,9 @@ pub fn configure_input(
     decoder: Option<&DecoderMethod>,
     vs_args: Option<&[String]>,
     index: Option<u8>,
-    // cache_path: Option<&Path>,
+    cache_path: Option<&Path>,
 ) -> Result<InputModel> {
-    let (existing_input_path, existing_decoder, existing_vs_args, existing_index) =
+    let (existing_input_path, existing_decoder, existing_vs_args, existing_index, existing_cache) =
         match existing_input {
             InputModel::Video {
                 path,
@@ -114,7 +114,14 @@ pub fn configure_input(
             } => match import_method {
                 ImportMethod::FFMS2 {
                     index,
-                } => (path, Some(DecoderMethod::FFMS2), None, *index),
+                    cache_path,
+                } => (
+                    path,
+                    Some(DecoderMethod::FFMS2),
+                    None,
+                    *index,
+                    cache_path.as_deref(),
+                ),
             },
             InputModel::VapourSynth {
                 path,
@@ -123,16 +130,16 @@ pub fn configure_input(
             } => match import_method {
                 VapourSynthImportMethod::LSMASHWorks {
                     index,
-                } => (path, Some(DecoderMethod::LSMASHWorks), None, *index),
+                } => (path, Some(DecoderMethod::LSMASHWorks), None, *index, None),
                 VapourSynthImportMethod::DGDecNV {
                     ..
-                } => (path, Some(DecoderMethod::DGDecodeNV), None, None),
+                } => (path, Some(DecoderMethod::DGDecodeNV), None, None, None),
                 VapourSynthImportMethod::FFMS2 {
                     index,
-                } => (path, Some(DecoderMethod::VSFFMS2), None, *index),
+                } => (path, Some(DecoderMethod::VSFFMS2), None, *index, None),
                 VapourSynthImportMethod::BestSource {
                     index,
-                } => (path, Some(DecoderMethod::BestSource), None, *index),
+                } => (path, Some(DecoderMethod::BestSource), None, *index, None),
             },
             InputModel::VapourSynthScript {
                 source,
@@ -141,13 +148,14 @@ pub fn configure_input(
                 ..
             } => match source {
                 VapourSynthScriptSource::Path(path) => {
-                    (path, None, Some(variables.clone()), Some(*index))
+                    (path, None, Some(variables.clone()), Some(*index), None)
                 },
                 VapourSynthScriptSource::Text(_) => (
                     &configuration.input,
                     None,
                     Some(variables.clone()),
                     Some(*index),
+                    None,
                 ),
             },
         };
@@ -175,7 +183,7 @@ pub fn configure_input(
         decoder.or(existing_decoder.as_ref()),
         vs_args.or(existing_vs_args.as_deref()),
         index.or(existing_index),
-        // cache_path: None, // TODO: Support Cache Path
+        cache_path.or(existing_cache),
     )?;
     warn_unused_vs_args(&input, vs_args);
     // The input is rebuilt from its path and decoder, which drops its filters,
@@ -303,6 +311,7 @@ pub fn apply_input_override(
         args.decoder.as_ref(),
         args.vs_args.as_deref(),
         None,
+        None,
     )?;
     if let Some(filters) = args.filters.as_deref() {
         apply_input_filters(&mut input, filters);
@@ -346,6 +355,7 @@ pub fn configure_override_input(
         input_path,
         decoder,
         vs_args,
+        None,
         None,
     )?;
     if let Some(filters) = filters {
@@ -401,8 +411,16 @@ mod tests {
             Configuration::new(&script, &PathBuf::from("out.mkv"), None, None, None)
                 .expect("a configuration can be built from a script");
 
-        let rebuilt = configure_input(&configuration, &script_input(false), None, None, None, None)
-            .expect("the input can be rebuilt");
+        let rebuilt = configure_input(
+            &configuration,
+            &script_input(false),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("the input can be rebuilt");
 
         assert!(
             !built_stream_concurrently(&rebuilt),

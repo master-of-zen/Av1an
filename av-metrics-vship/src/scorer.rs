@@ -179,12 +179,19 @@ impl VideoFormat {
     ) -> Result<VshipColorspace, VshipError> {
         colorspace_from_details(
             &VideoDetails {
-                width:           self.width as usize,
-                height:          self.height as usize,
-                bit_depth:       self.bit_depth as usize,
-                chroma_sampling: self.chroma_sampling,
-                frame_rate:      av_decoders::Rational32::new(0, 1),
-                total_frames:    None,
+                width:                         self.width as usize,
+                height:                        self.height as usize,
+                bit_depth:                     self.bit_depth as usize,
+                chroma_sampling:               self.chroma_sampling,
+                frame_rate:                    av_decoders::Rational32::new(0, 1),
+                total_frames:                  None,
+                color_range:                   None,
+                color_primaries:               None,
+                color_transfer_characteristic: None,
+                color_space:                   None,
+                chroma_location:               None,
+                mastering_display:             None,
+                content_light_level:           None,
             },
             target_resolution,
         )
@@ -1277,6 +1284,13 @@ mod tests {
             chroma_sampling,
             frame_rate: av_decoders::Rational32::new(24, 1),
             total_frames: None,
+            color_range: None,
+            color_primaries: None,
+            color_transfer_characteristic: None,
+            color_space: None,
+            chroma_location: None,
+            mastering_display: None,
+            content_light_level: None,
         }
     }
 

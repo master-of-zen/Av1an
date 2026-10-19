@@ -404,6 +404,7 @@ pub fn check_input(input: Option<&Input>, expected_input: Option<&Input>, input_
                         match import_method {
                             ImportMethod::FFMS2 {
                                 index,
+                                cache_path,
                             } => {
                                 assert_matches!(
                                     ci_import_method,
@@ -413,10 +414,15 @@ pub fn check_input(input: Option<&Input>, expected_input: Option<&Input>, input_
                                 match ci_import_method {
                                     ImportMethod::FFMS2 {
                                         index: ci_index,
+                                        cache_path: ci_cache_path,
                                     } => {
                                         assert_eq!(
                                             ci_index, index,
                                             "{input_name} index is {index:?}"
+                                        );
+                                        assert_eq!(
+                                            ci_cache_path, cache_path,
+                                            "{input_name} cache path is {cache_path:?}"
                                         );
                                     },
                                 }

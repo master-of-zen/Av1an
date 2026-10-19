@@ -36,15 +36,15 @@ pub mod color_range;
 pub mod ffms2_filter;
 pub mod pixel_format;
 
-/// Reports backend indexing progress as `(current, total)` units — frames for
-/// FFMS2, whatever its stdout counts for a subprocess.
+/// Reports backend indexing progress as `(current, total)` units — a whole
+/// percentage for FFMS2, whatever a subprocess's stdout counts for DGDecNV.
 pub type IndexProgress<'a> = &'a mut dyn FnMut(u64, u64);
 
 /// The stage of opening an input, as reported by [`Input::ensure_indexed`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OpenProgress {
-    /// FFMS2 is indexing the source, in `current` of `total` frames. Both are
-    /// `0` until FFMS2 has counted the stream.
+    /// FFMS2 is indexing the source, `current` percent of `total`. FFMS2
+    /// reports whole percentages, so `total` is always `100`.
     Indexing { current: u64, total: u64 },
     /// An index already existed and the input is being opened. No finer
     /// progress is available — VapourSynth indexes inside its source plugin,
@@ -185,13 +185,12 @@ impl Input {
 
     /// Opens the input described by `data`, reporting indexing progress first.
     ///
-    /// A native FFMS2 input is pre-indexed here through FFMS2's own indexer —
-    /// the one [`crate::core::input::ffms2`] and av-decoders use — so progress
-    /// can be reported while the `.ffindex` cache is built. A VapourSynth input
-    /// reports a single indeterminate [`OpenProgress::Opening`]: its source
-    /// plugin indexes internally, out of reach of this process. DGDecNV is the
-    /// one exception, since it shells out to `dgindexnv` and reports back on
-    /// its stdout.
+    /// A native FFMS2 input is pre-indexed here through av-decoders, so
+    /// progress can be reported while the `.ffindex` cache is built. A
+    /// VapourSynth input reports a single indeterminate
+    /// [`OpenProgress::Opening`]: its source plugin indexes internally, out of
+    /// reach of this process. DGDecNV is the one exception, since it shells out
+    /// to `dgindexnv` and reports back on its stdout.
     ///
     /// Pass `cancelled` to abort an in-flight index early.
     #[inline]
@@ -202,16 +201,22 @@ impl Input {
     ) -> Result<Self> {
         match data {
             InputModel::Video {
-                path, ..
+                path,
+                import_method,
+                ..
             } => {
                 // Validated here too: indexing must fail on a missing file
                 // with the same error `from_video` would have given.
                 Input::validate(data)?;
+                let ImportMethod::FFMS2 {
+                    cache_path, ..
+                } = import_method;
                 // If no `.ffindex` exists yet this is the index `from_video`
                 // would otherwise build itself; if one does it returns at once
                 // and `from_video` reads it straight from the cache.
                 ffms2::index_video_with_progress(
                     path,
+                    cache_path.as_deref(),
                     Some(&mut |current, total| {
                         progress(OpenProgress::Indexing {
                             current,
@@ -278,14 +283,12 @@ impl Input {
     pub fn clip_info(&mut self) -> Result<ClipInfo> {
         let slot = match self {
             Input::Video {
-                path,
-                filters,
                 decoder,
                 clip_info,
                 ..
             } => {
                 if clip_info.is_none() {
-                    *clip_info = Some(ffms2::clip_info(path, !filters.is_empty(), decoder)?);
+                    *clip_info = Some(ffms2::clip_info(decoder)?);
                 }
                 clip_info.as_ref()
             },
@@ -576,6 +579,13 @@ mod tests {
             chroma_sampling,
             frame_rate: Rational32::new(24, 1),
             total_frames: Some(100),
+            color_range: None,
+            color_primaries: None,
+            color_transfer_characteristic: None,
+            color_space: None,
+            chroma_location: None,
+            mastering_display: None,
+            content_light_level: None,
         }
     }
 

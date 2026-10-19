@@ -681,6 +681,13 @@ mod tests {
             chroma_sampling,
             frame_rate: Rational32::new(24, 1),
             total_frames: None,
+            color_range: None,
+            color_primaries: None,
+            color_transfer_characteristic: None,
+            color_space: None,
+            chroma_location: None,
+            mastering_display: None,
+            content_light_level: None,
         }
     }
 

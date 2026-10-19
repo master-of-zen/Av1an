@@ -32,6 +32,7 @@ accept the full [`VapourSynthFilter`](../../types/filters.md) set.
 | Field | Type | Required | Default | Description |
 | ----- | ---- | -------- | ------- | ----------- |
 | `index` | Integer or null | No | `null` | Track index |
+| `cache_path` | String (path) or null | No | `null` | Where to read or write the `.ffindex` cache. `null` uses `<input>.ffindex` next to the source |
 
 Example:
 
@@ -39,7 +40,7 @@ Example:
 {
     "Video": {
         "path": "input.mp4",
-        "import_method": { "FFMS2": { "index": null } },
+        "import_method": { "FFMS2": { "index": null, "cache_path": null } },
         "filters": [{ "OutputFormat": { "bit_depth": 10, "chroma": null, "width": null, "height": null } }]
     }
 }

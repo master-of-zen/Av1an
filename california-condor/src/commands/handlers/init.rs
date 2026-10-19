@@ -275,6 +275,7 @@ impl InitCrud {
             args.decoder.as_ref(),
             args.vs_args.as_deref(),
             None,
+            None,
         )?;
         if let Some(filters) = args.filters.as_deref() {
             apply_input_filters(&mut input, filters);

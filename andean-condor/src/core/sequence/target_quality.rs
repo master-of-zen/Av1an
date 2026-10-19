@@ -1003,7 +1003,8 @@ impl TargetQuality {
             let mut distorted = Input::from_video(&InputModel::Video {
                 path:          output.clone(),
                 import_method: ImportMethod::FFMS2 {
-                    index: None
+                    index:      None,
+                    cache_path: None,
                 },
                 // The probe output is already in the metric input's format, so
                 // it must not be converted again.

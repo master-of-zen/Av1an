@@ -130,6 +130,7 @@ pub fn start_handler(
         decoder,
         vs_args,
         None,
+        None,
     )?;
     if let Some(filters) = filters {
         let unsupported = InputModel::unsupported_filters(filters);
@@ -443,7 +444,8 @@ mod tests {
         expected_config.condor.input = Input::Video {
             path:          input_abs.clone(),
             import_method: ImportMethod::FFMS2 {
-                index: None
+                index:      None,
+                cache_path: None,
             },
             // `--filters` replaces the default conversion, and a native FFMS2
             // input cannot crop, so nothing remains.
@@ -649,7 +651,8 @@ mod tests {
         expected_config.condor.input = Input::Video {
             path:          input_abs.clone(),
             import_method: ImportMethod::FFMS2 {
-                index: None
+                index:      None,
+                cache_path: None,
             },
             // `--filters` replaces the default conversion, and a native FFMS2
             // input cannot crop, so nothing remains.

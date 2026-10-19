@@ -265,7 +265,8 @@ mod tests {
         Input::Video {
             path: "input.mkv".into(),
             import_method: ImportMethod::FFMS2 {
-                index: None
+                index:      None,
+                cache_path: None,
             },
             filters,
         }
@@ -502,6 +503,59 @@ mod tests {
             "false must not be lost when the config is saved and reloaded"
         );
     }
+
+    fn video_cache_path(input: &Input) -> Option<PathBuf> {
+        let Input::Video {
+            import_method: ImportMethod::FFMS2 {
+                cache_path, ..
+            },
+            ..
+        } = input
+        else {
+            panic!("expected a native FFMS2 input");
+        };
+        cache_path.clone()
+    }
+
+    /// A config written before the cache path existed must still load, and must
+    /// fall back to FFMS2's default index location next to the source.
+    #[test]
+    fn a_missing_cache_path_loads_as_none() {
+        let input: Input = serde_json::from_str(
+            r#"{ "Video": { "path": "input.mkv", "import_method": { "FFMS2": { "index": null } }, "filters": [] } }"#,
+        )
+        .expect("a native config without a cache path loads");
+
+        assert_eq!(
+            video_cache_path(&input),
+            None,
+            "an absent cache path means FFMS2's default location"
+        );
+    }
+
+    /// A user-supplied index location has to survive a save and reload.
+    #[test]
+    fn a_supplied_cache_path_survives_a_round_trip() {
+        let mut input = video_input(Vec::new());
+        let Input::Video {
+            import_method, ..
+        } = &mut input
+        else {
+            panic!("expected a native input");
+        };
+        let ImportMethod::FFMS2 {
+            cache_path, ..
+        } = import_method;
+        *cache_path = Some(PathBuf::from("cache/custom.ffindex"));
+
+        let written = serde_json::to_string(&input).expect("a native input serializes");
+        let reread: Input = serde_json::from_str(&written).expect("the written config loads");
+        assert_eq!(
+            video_cache_path(&reread),
+            Some(PathBuf::from("cache/custom.ffindex")),
+            "the cache path must not be lost when the config is saved and reloaded"
+        );
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -544,7 +598,15 @@ pub enum VapourSynthImportMethod {
 #[derive(Debug, Clone, Serialize, Deserialize, EnumString, IntoStaticStr, Display, JsonSchema)]
 pub enum ImportMethod {
     // FFmpeg {}, // Unsupported
-    FFMS2 { index: Option<u8> },
+    FFMS2 {
+        /// The video track to decode, as seen by FFMS2. `None` selects the
+        /// first video track.
+        index:      Option<u8>,
+        /// Where to read or write the `.ffindex` cache, defaulting to
+        /// `{source}.ffindex` next to the source file.
+        #[serde(default)]
+        cache_path: Option<PathBuf>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumString, IntoStaticStr, Display, JsonSchema)]

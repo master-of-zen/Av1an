@@ -230,7 +230,7 @@ dependencies = [
 [[package]]
 name = "av-decoders"
 version = "0.11.1"
-source = "git+https://github.com/BoatsMcGee/av-decoders?branch=vapoursynth-get-output#404f588ea818d868e52d0b8db18c62f1b965a41c"
+source = "git+https://github.com/BoatsMcGee/av-decoders?branch=v-0-12#c7b108db264875d35a29d6aabad008d2e67cee2c"
 dependencies = [
  "ffms2-sys",
  "num-rational",
@@ -308,7 +308,7 @@ dependencies = [
 [[package]]
 name = "av-scenechange"
 version = "0.25.0"
-source = "git+https://github.com/BoatsMcGee/av-scenechange?branch=av-decoders-0.11.0#bfae426ebaa3d09840c373b06dc322abe61d0374"
+source = "git+https://github.com/BoatsMcGee/av-scenechange?branch=av-decoders-0.11.0#08b2cec416418028b2c2befe0f958b2b91eb571e"
 dependencies = [
  "aligned",
  "anyhow",
@@ -3063,7 +3063,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys",

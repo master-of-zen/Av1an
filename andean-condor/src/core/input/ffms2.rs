@@ -1,30 +1,14 @@
 //! Native FFMS2 input: construction, format filtering, and y4m serialisation.
 
 use std::{
-    ffi::{CString, c_char, c_void},
     io::Write,
     path::Path,
-    sync::{
-        Once,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use anyhow::Result;
 use av_decoders::{Decoder, Ffms2Decoder};
-use ffms2_sys::{
-    FFMS_CreateIndexer,
-    FFMS_DestroyIndex,
-    FFMS_DoIndexing2,
-    FFMS_ErrorInfo,
-    FFMS_IndexBelongsToFile,
-    FFMS_Init,
-    FFMS_ReadIndex,
-    FFMS_SetProgressCallback,
-    FFMS_TrackType,
-    FFMS_TrackTypeIndexSettings,
-    FFMS_WriteIndex,
-};
+use av_format::rational::Rational64;
 
 use crate::{
     core::input::{
@@ -34,11 +18,11 @@ use crate::{
         RawFrame,
         RawPlane,
         clip_info::ClipInfo,
+        color_range::ColorRange,
         ffms2_filter::{Ffms2Filter, ffms2_pixel_format},
         frame_feed,
         pixel_format::PixelFormat,
     },
-    ffmpeg::get_clip_info,
     models::input::{ImportMethod, Input as InputModel},
 };
 
@@ -113,8 +97,13 @@ pub fn from_video(data: &InputModel) -> Result<Input> {
         // },
         ImportMethod::FFMS2 {
             index,
+            cache_path,
         } => {
-            let mut ffms2_decoder = Ffms2Decoder::new(path, *index)?;
+            let mut ffms2_decoder = match cache_path {
+                Some(cache_path) => Ffms2Decoder::with_index(path, cache_path, *index, None)?,
+                // No cache path: FFMS2's own default, `{source}.ffindex`.
+                None => Ffms2Decoder::new(path, *index)?,
+            };
 
             // Captured before any filter runs, so a filter's unset fields resolve
             // against the source rather than the filtered format.
@@ -137,212 +126,76 @@ pub fn from_video(data: &InputModel) -> Result<Input> {
     }
 }
 
-/// Describes a native input's clip. `ffprobe` reads the source file, so a
-/// filter's conversion overrides resolution and pixel format here; `ffprobe`
-/// remains the only source of colour range and transfer characteristics.
-pub fn clip_info(path: &Path, filtered: bool, decoder: &Decoder) -> Result<ClipInfo> {
-    let mut info = get_clip_info(path)?;
-    if filtered {
-        let details = decoder.get_video_details();
-        info.resolution = (details.width as u32, details.height as u32);
-        info.format_info = PixelFormat::FFmpeg {
-            format: ffms2_pixel_format(details.bit_depth, details.chroma_sampling)
-                .unwrap_or(info.format_info.as_pixel_format()?),
-        };
-    }
-    Ok(info)
+/// Describes a native input's clip from the decoder's own `VideoDetails`,
+/// which FFMS2 populates with the source's colour metadata.
+pub fn clip_info(decoder: &Decoder) -> Result<ClipInfo> {
+    let details = decoder.get_video_details();
+    Ok(ClipInfo {
+        format_info:              PixelFormat::FFmpeg {
+            format: ffms2_pixel_format(details.bit_depth, details.chroma_sampling).ok_or_else(
+                || {
+                    anyhow::anyhow!(
+                        "FFMS2 cannot have produced {}-bit {:?}",
+                        details.bit_depth,
+                        details.chroma_sampling
+                    )
+                },
+            )?,
+        },
+        frame_rate:               Rational64::new(
+            i64::from(*details.frame_rate.numer()),
+            i64::from(*details.frame_rate.denom()),
+        ),
+        color_range:              details.color_range.and_then(map_color_range),
+        resolution:               (details.width as u32, details.height as u32),
+        transfer_characteristics: match details.color_transfer_characteristic {
+            Some(av_decoders::TransferCharacteristic::SMPTE2084) => {
+                av1_grain::TransferFunction::SMPTE2084
+            },
+            _ => av1_grain::TransferFunction::BT1886,
+        },
+        num_frames:               details
+            .total_frames
+            .ok_or_else(|| anyhow::anyhow!("FFMS2 decoder did not report a frame count"))?,
+    })
 }
 
-const ERR_BUFFER_SIZE: usize = 1024;
-
-fn empty_error_info(buffer: &mut [c_char; ERR_BUFFER_SIZE]) -> FFMS_ErrorInfo {
-    FFMS_ErrorInfo {
-        ErrorType:  0,
-        SubType:    0,
-        BufferSize: ERR_BUFFER_SIZE as i32,
-        Buffer:     buffer.as_mut_ptr(),
+/// Maps av-decoders' colour range onto the local one
+#[inline]
+const fn map_color_range(color_range: av_decoders::ColorRange) -> Option<ColorRange> {
+    match color_range {
+        av_decoders::ColorRange::Full => Some(ColorRange::Full),
+        av_decoders::ColorRange::Limited => Some(ColorRange::Limited),
+        av_decoders::ColorRange::Unspecified => None,
     }
 }
 
-fn error_message(err: FFMS_ErrorInfo) -> String {
-    if err.Buffer.is_null() {
-        return "unknown FFMS2 error".to_owned();
-    }
-    // SAFETY: FFMS2 wrote a nul-terminated C string into the caller-owned buffer.
-    unsafe { std::ffi::CStr::from_ptr(err.Buffer) }.to_string_lossy().into_owned()
-}
-
-/// Context shared with the FFMS2 progress trampoline for the duration of
-/// `FFMS_DoIndexing2` (a synchronous call on this thread).
+/// Ensures an FFMS2 index exists for `path`.
+/// Returns `true` when an index was built (false if a valid one was already
+/// cached).
 ///
-/// Two lifetimes rather than one: `&mut` is invariant over its lifetime, so
-/// the two borrows cannot be forced to a common one without rejecting inputs
-/// whose callback borrow is longer than the cancel flag's (or vice versa).
-struct ProgressContext<'progress, 'cancelled> {
-    progress:  Option<IndexProgress<'progress>>,
-    cancelled: Option<&'cancelled AtomicBool>,
-}
-
-/// Trampoline the FFMS2 indexer calls with `(current, total)`. Returning
-/// non-zero asks FFMS2 to cancel indexing.
-unsafe extern "C" fn progress_trampoline(
-    current: i64,
-    total: i64,
-    opaque: *mut c_void,
-) -> std::os::raw::c_int {
-    // SAFETY: `opaque` is the `ProgressContext` borrowed for this call's lifetime.
-    let context = unsafe { &mut *(opaque as *mut ProgressContext<'_, '_>) };
-    if let Some(cancelled) = context.cancelled
-        && cancelled.load(Ordering::Relaxed)
-    {
-        return 1;
-    }
-    if let Some(progress) = context.progress.as_mut() {
-        (**progress)(current.max(0) as u64, total.max(0) as u64);
-    }
-    0
-}
-
-/// Ensure `{path}.ffindex` exists and belongs to `path`, indexing with progress
-/// if needed. Returns `true` when an index was built (false if one already
-/// existed).
-///
-/// This drives FFMS2's indexer directly so progress can be reported — the same
-/// indexer `av-decoders` uses, writing the same `.ffindex` format — so a later
-/// `Ffms2Decoder::new` finds the cache valid and skips indexing entirely.
+/// `cache_path` selects where the index lives, defaulting to
+/// `{path}.ffindex`. Progress is FFMS2's own whole-percentage report, mapped.
 pub fn index_video_with_progress(
     path: &Path,
+    cache_path: Option<&Path>,
     mut progress: Option<IndexProgress<'_>>,
     cancelled: Option<&AtomicBool>,
 ) -> Result<bool> {
-    // FFMS2 is initialised once per process; av-decoders does the same.
-    static FFMS2_INIT: Once = Once::new();
-    FFMS2_INIT.call_once(|| {
-        // SAFETY: FFI call with infallible parameters.
-        unsafe {
-            FFMS_Init(0, 0);
+    // FFMS2 reports whole percentages
+    let mut progress_fn = |percentage: u8| {
+        if let Some(progress) = progress.as_mut() {
+            (**progress)(u64::from(percentage), 100);
         }
-    });
-
-    let input_cstring = CString::new(path.to_string_lossy().as_bytes())
-        .map_err(|e| anyhow::anyhow!("invalid input path: {e}"))?;
-    let index_path = format!("{}.ffindex", path.to_string_lossy());
-    let index_cstring = CString::new(index_path.as_str())
-        .map_err(|e| anyhow::anyhow!("invalid index path: {e}"))?;
-
-    // A valid cached index short-circuits indexing entirely.
-    let mut err_buffer = [0 as c_char; ERR_BUFFER_SIZE];
-    let cached_index = if Path::new(&index_path).exists() {
-        // SAFETY: pointers are live and the error buffer is valid.
-        unsafe {
-            FFMS_ReadIndex(
-                index_cstring.as_ptr(),
-                &mut empty_error_info(&mut err_buffer),
-            )
-        }
-    } else {
-        std::ptr::null_mut()
     };
-    if !cached_index.is_null() {
-        // SAFETY: `cached_index` is a live index handle.
-        let belongs = unsafe {
-            FFMS_IndexBelongsToFile(
-                cached_index,
-                input_cstring.as_ptr(),
-                &mut empty_error_info(&mut err_buffer),
-            )
-        };
-        // SAFETY: `cached_index` is a live index handle we always destroy here.
-        unsafe {
-            FFMS_DestroyIndex(cached_index);
-        }
-        if belongs == 0 {
-            return Ok(false);
-        }
-    }
+    let cancelled_fn = || cancelled.is_some_and(|flag| flag.load(Ordering::Relaxed));
 
-    // Reaching here means the cache was missing or stale, so this is the only
-    // point that can honestly claim indexing is starting.
-    if let Some(progress) = progress.as_mut() {
-        (**progress)(0, 0);
-    }
-
-    // SAFETY: `input_cstring` and the error buffer are live.
-    let indexer = unsafe {
-        FFMS_CreateIndexer(
-            input_cstring.as_ptr(),
-            &mut empty_error_info(&mut err_buffer),
-        )
-    };
-    if indexer.is_null() {
-        anyhow::bail!(
-            "failed to create FFMS2 indexer for {}: {}",
-            path.display(),
-            error_message(empty_error_info(&mut err_buffer))
-        );
-    }
-
-    // SAFETY: `indexer` is a live indexer handle; each call only toggles which
-    // track types it indexes, and audio/data/subtitles/attachments would only
-    // slow indexing down.
-    unsafe {
-        FFMS_TrackTypeIndexSettings(indexer, FFMS_TrackType::FFMS_TYPE_AUDIO as i32, 0, 0);
-        FFMS_TrackTypeIndexSettings(indexer, FFMS_TrackType::FFMS_TYPE_DATA as i32, 0, 0);
-        FFMS_TrackTypeIndexSettings(indexer, FFMS_TrackType::FFMS_TYPE_SUBTITLE as i32, 0, 0);
-        FFMS_TrackTypeIndexSettings(indexer, FFMS_TrackType::FFMS_TYPE_ATTACHMENT as i32, 0, 0);
-    }
-
-    let mut context = ProgressContext {
-        progress,
-        cancelled,
-    };
-    if context.progress.is_some() || context.cancelled.is_some() {
-        // SAFETY: `indexer` is live and `context` outlives the synchronous
-        // `DoIndexing2` call that invokes the trampoline, which consumes the
-        // indexer so the pointer cannot be used again afterwards.
-        unsafe {
-            FFMS_SetProgressCallback(
-                indexer,
-                Some(progress_trampoline),
-                std::ptr::from_mut(&mut context).cast(),
-            );
-        }
-    }
-
-    // SAFETY: `indexer` is live; `DoIndexing2` consumes it and returns the index.
-    let idx = unsafe { FFMS_DoIndexing2(indexer, 0, &mut empty_error_info(&mut err_buffer)) };
-    if idx.is_null() {
-        if context.cancelled.is_some_and(|c| c.load(Ordering::Relaxed)) {
-            anyhow::bail!("indexing of {} was cancelled", path.display());
-        }
-        anyhow::bail!(
-            "failed to index {}: {}",
-            path.display(),
-            error_message(empty_error_info(&mut err_buffer))
-        );
-    }
-
-    // SAFETY: `idx` is a live index handle; writing and destroying it is our job.
-    let write_result = unsafe {
-        FFMS_WriteIndex(
-            index_cstring.as_ptr(),
-            idx,
-            &mut empty_error_info(&mut err_buffer),
-        )
-    };
-    // SAFETY: `idx` is a live index handle, and destroying it is our job.
-    unsafe {
-        FFMS_DestroyIndex(idx);
-    }
-    if write_result != 0 {
-        anyhow::bail!(
-            "failed to write index {}: {}",
-            index_path,
-            error_message(empty_error_info(&mut err_buffer))
-        );
-    }
-
-    Ok(true)
+    Ok(Ffms2Decoder::build_index(
+        path,
+        cache_path,
+        Some(&mut progress_fn),
+        Some(&cancelled_fn),
+    )?)
 }
 
 /// Writes a single decoded frame to `stream` as a complete y4m frame.

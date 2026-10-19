@@ -104,6 +104,7 @@ pub fn configure_parallel_encoder(
             decoder,
             vs_args,
             None,
+            None,
         )?;
         configuration.condor.sequence_config.parallel_encoder.input = Some(input);
     }
@@ -283,7 +284,8 @@ impl EncodeCrud {
         if let Some(toggle) = args.stream_concurrently {
             if configuration.condor.sequence_config.parallel_encoder.input.is_none() {
                 let existing = configuration.condor.input.clone();
-                let input = configure_input(configuration, &existing, None, None, None, None)?;
+                let input =
+                    configure_input(configuration, &existing, None, None, None, None, None)?;
                 configuration.condor.sequence_config.parallel_encoder.input = Some(input);
             }
             if let Some(input) =

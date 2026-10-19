@@ -90,6 +90,7 @@ pub fn configure_noise_detector(
             decoder,
             vs_args,
             None,
+            None,
         )?;
 
         if let Some(noise_detector) = configuration.condor.sequence_config.noise_detector.as_mut() {

@@ -263,7 +263,8 @@ impl QualityCheck {
         let mut distorted = Input::from_video(&InputModel::Video {
             path:          output_path.to_path_buf(),
             import_method: ImportMethod::FFMS2 {
-                index: None
+                index:      None,
+                cache_path: None,
             },
             // The encoded output is already in the input's format, so it must
             // not be converted again.
@@ -390,7 +391,8 @@ impl QualityCheck {
         let mut distorted = Input::from_video(&InputModel::Video {
             path:          output_path.to_path_buf(),
             import_method: ImportMethod::FFMS2 {
-                index: None
+                index:      None,
+                cache_path: None,
             },
             // The encoded output is already in the input's format, so it must
             // not be converted again.

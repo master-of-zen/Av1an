@@ -616,6 +616,60 @@ mod tests {
         assert!(detector.input.is_none(), "scene detector input is cleared");
     }
 
+    /// A native input reads and writes its `.ffindex` wherever `cache_path`
+    /// points, instead of next to the source.
+    #[serial]
+    #[test]
+    fn a_native_input_indexes_to_its_cache_path() {
+        if !ffmpeg_is_available() {
+            return;
+        }
+        let video = get_test_video();
+        let temp = tempfile::tempdir().expect("failed to create temp dir");
+        let output = temp.path().join("out.mkv");
+        let config_path = temp.path().join("condor.json");
+        // A fresh path in a fresh temp directory, so its appearance can only
+        // come from this run honouring it.
+        let cache_path = temp.path().join("custom.ffindex");
+
+        condor_cmd(&temp)
+            .args(["init", path_str(&video.path), path_str(&output), "--decoder", "ffms2"])
+            .assert()
+            .success();
+
+        let mut configuration = load(&config_path);
+        let Input::Video {
+            import_method, ..
+        } = &mut configuration.condor.input
+        else {
+            panic!("expected a native input");
+        };
+        let ImportMethod::FFMS2 {
+            cache_path: configured,
+            ..
+        } = import_method;
+        *configured = Some(cache_path.clone());
+        configuration.save(&config_path).expect("configuration save should succeed");
+
+        // `init` already indexed to the default location, so a run that
+        // ignored the cache path would find that index and never build this
+        // one.
+        condor_cmd(&temp)
+            .env("CONDOR_TEST_MODE", "1")
+            .args(["detect-scenes"])
+            .assert()
+            .success();
+
+        assert!(
+            cache_path.exists(),
+            "the index is written to the configured cache path"
+        );
+        assert!(
+            std::fs::metadata(&cache_path).expect("index metadata should resolve").len() > 0,
+            "the index at the configured cache path is not empty"
+        );
+    }
+
     /// `--vs-args` only reaches a `.vpy`/`.py` input. For any other input the
     /// flag is reported instead of dropped in silence.
     #[serial]

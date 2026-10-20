@@ -57,6 +57,8 @@ The `video` entry addresses the encoded video track (the concatenated scenes, tr
 
 Track maps are keyed by the stream index within that input file. `None` copies every audio, subtitle, and attachment/data stream. An empty payload (`{ "ffmpeg": {} }`) adds the original input and copies all of its audio, subtitle, and attachment/data streams.
 
+Because an absent stream is not mapped, a track map replaces the whole selection: list every stream to keep, not only the ones to change. `--discard` fills the map from the probe for this reason. Data streams have no settings of their own and are always mapped.
+
 Each entry is tagged with `"type"`: `video`, `audio`, or `subtitle` (each with the fields below), or `attachment`.
 
 | Field | Description |
@@ -69,6 +71,8 @@ Each entry is tagged with `"type"`: `video`, `audio`, or `subtitle` (each with t
 An `attachment` entry instead takes `path` (a file attached with `-attach`) plus `attachment_name`, `attachment_description`, and `attachment_mime_type` (required when `path` is set). Without a `path` it selects an existing attachment stream to copy.
 
 Keys that would fight Condor's own arguments are rejected: codec and mapping options (`-c`, `-map`, `-codec:a`, ...), filter options (`-af`, `-filter:*`, `-filter_complex`), input/output control (`-i`, `-f`, `-y`, ...), and stream selection (`-vn`, `-an`, `-sn`, `-dn`). Use the `codec`/`filter` fields instead.
+
+`chapters` and `metadata` are `null` by default, which copies the source's chapters and global tags. Set `"copy": false` to pass `-map_chapters -1` / `-map_metadata -1`. Unlike mkvmerge there is no chapter `language` or `charset`, so setting either only produces a warning.
 
 Example of filtering a second audio track:
 

@@ -2,8 +2,9 @@ use std::{collections::HashMap, path::PathBuf};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-use super::common::Metadata;
+use super::common::{Chapters, Metadata};
 
 /// Stream overrides for one input file, keyed by the stream index in that file.
 ///
@@ -21,6 +22,9 @@ pub struct FfmpegConfig {
     /// subtitle streams.
     #[serde(default)]
     pub tracks:       Option<FfmpegTrackMap>,
+    /// Chapter handling. `None` copies the source's chapters.
+    #[serde(default)]
+    pub chapters:     Option<Chapters>,
     /// Global metadata.
     #[serde(default)]
     pub metadata:     Option<Metadata>,
@@ -54,6 +58,15 @@ pub enum FfmpegTrack {
     Attachment(FfmpegAttachmentTrack),
 }
 
+/// The kind of stream an [`FfmpegTrack`] describes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FfmpegTrackKind {
+    Video,
+    Audio,
+    Subtitle,
+    Attachment,
+}
+
 impl FfmpegTrack {
     /// Whether this track is copied to the output. Defaults to `true`.
     #[inline]
@@ -62,6 +75,44 @@ impl FfmpegTrack {
         match self {
             Self::Video(options) | Self::Audio(options) | Self::Subtitle(options) => options.copy,
             Self::Attachment(attachment) => attachment.copy,
+        }
+    }
+
+    /// Sets whether this track is copied to the output.
+    #[inline]
+    pub fn set_copy(&mut self, copy: bool) {
+        match self {
+            Self::Video(options) | Self::Audio(options) | Self::Subtitle(options) => {
+                options.copy = copy;
+            },
+            Self::Attachment(attachment) => attachment.copy = copy,
+        }
+    }
+
+    /// An entry for `kind` that only sets the `copy` flag.
+    ///
+    /// Used to select or drop a source stream without describing it any
+    /// further.
+    #[must_use]
+    #[inline]
+    pub fn plain(kind: FfmpegTrackKind, copy: bool) -> Self {
+        let options = FfmpegTrackOptions {
+            copy,
+            codec: None,
+            filter: None,
+            parameters: HashMap::new(),
+        };
+        match kind {
+            FfmpegTrackKind::Video => Self::Video(options),
+            FfmpegTrackKind::Audio => Self::Audio(options),
+            FfmpegTrackKind::Subtitle => Self::Subtitle(options),
+            FfmpegTrackKind::Attachment => Self::Attachment(FfmpegAttachmentTrack {
+                copy,
+                path: None,
+                attachment_name: None,
+                attachment_description: None,
+                attachment_mime_type: None,
+            }),
         }
     }
 
@@ -201,6 +252,55 @@ pub const FORBIDDEN_PARAMETERS: &[&str] = &[
     "stats_period",
 ];
 
+/// Everything that stops the FFmpeg output settings from being used as
+/// written.
+#[derive(Debug, Error)]
+pub enum FfmpegConfigError {
+    #[error("FFmpeg has no chapter language/charset option; only the chapter copy flag is used")]
+    ChapterLanguageIgnored,
+    #[error(
+        "FFmpeg extra input {path} sets metadata, which applies to the whole output; only the \
+         main input's metadata is written",
+        path = .path.display()
+    )]
+    ExtraInputMetadataIgnored { path: PathBuf },
+    #[error("{input} {id}: an attachment with a path requires attachment_mime_type")]
+    AttachmentMimeTypeMissing { input: String, id: u32 },
+    #[error("{input} {id}: parameter key {key:?} must start with '-'")]
+    ParameterKeyWithoutDash {
+        input: String,
+        id:    u32,
+        key:   String,
+    },
+    #[error(
+        "{input} {id}: parameter \"{key}\" conflicts with an argument Condor sets; use the \
+         codec/filter fields instead"
+    )]
+    ParameterKeyForbidden {
+        input: String,
+        id:    u32,
+        key:   String,
+    },
+    #[error("{input} {id}: parameter key {key:?} must not contain whitespace")]
+    ParameterKeyWhitespace {
+        input: String,
+        id:    u32,
+        key:   String,
+    },
+    #[error("{input} {id}: filter must not be empty")]
+    FilterEmpty { input: String, id: u32 },
+    #[error(
+        "{input} {id}: video tracks cannot be filtered; only audio and subtitle tracks support a \
+         filter"
+    )]
+    VideoFilterUnsupported { input: String, id: u32 },
+    #[error(
+        "{input} {id}: a filter requires a non-copy codec, because a filtered stream must be \
+         re-encoded"
+    )]
+    FilterRequiresReEncode { input: String, id: u32 },
+}
+
 impl FfmpegConfig {
     /// Validates the configuration.
     ///
@@ -215,16 +315,22 @@ impl FfmpegConfig {
         if let Some(tracks) = &self.tracks {
             validate_tracks(tracks, "track")?;
         }
+        if let Some(chapters) = &self.chapters
+            && (chapters.language.is_some() || chapters.charset.is_some())
+        {
+            warnings.push(FfmpegConfigError::ChapterLanguageIgnored.into());
+        }
         for extra in &self.extra_inputs {
             if let Some(tracks) = &extra.tracks {
                 validate_tracks(tracks, &extra.path.display().to_string())?;
             }
             if extra.metadata.is_some() {
-                warnings.push(anyhow::anyhow!(
-                    "FFmpeg extra input {} sets metadata, which applies to the whole output; only \
-                     the main input's metadata is written",
-                    extra.path.display()
-                ));
+                warnings.push(
+                    FfmpegConfigError::ExtraInputMetadataIgnored {
+                        path: extra.path.clone(),
+                    }
+                    .into(),
+                );
             }
         }
         Ok(warnings)
@@ -232,14 +338,17 @@ impl FfmpegConfig {
 }
 
 fn validate_tracks(tracks: &FfmpegTrackMap, source: &str) -> anyhow::Result<()> {
-    for (id, track) in tracks {
+    for (&id, track) in tracks {
+        let input = || source.to_owned();
         // Attachments carry no codec, filter, or parameters; a new attachment
         // only needs a MIME type for FFmpeg to write it out.
         if let Some(attachment) = track.attachment() {
             if attachment.path.is_some() && attachment.attachment_mime_type.is_none() {
-                anyhow::bail!(
-                    "{source} {id}: an attachment with a path requires attachment_mime_type"
-                );
+                return Err(FfmpegConfigError::AttachmentMimeTypeMissing {
+                    input: input(),
+                    id,
+                }
+                .into());
             }
             continue;
         }
@@ -248,38 +357,56 @@ fn validate_tracks(tracks: &FfmpegTrackMap, source: &str) -> anyhow::Result<()> 
         };
         for key in options.parameters.keys() {
             if !key.starts_with('-') {
-                anyhow::bail!("{source} {id}: parameter key {key:?} must start with '-'");
+                return Err(FfmpegConfigError::ParameterKeyWithoutDash {
+                    input: input(),
+                    id,
+                    key: key.clone(),
+                }
+                .into());
             }
             let normalized = key.trim_start_matches('-').trim().to_ascii_lowercase();
             if FORBIDDEN_PARAMETERS.contains(&normalized.as_str()) {
-                anyhow::bail!(
-                    "{source} {id}: parameter \"{key}\" conflicts with an argument Condor sets; \
-                     use the codec/filter fields instead"
-                );
+                return Err(FfmpegConfigError::ParameterKeyForbidden {
+                    input: input(),
+                    id,
+                    key: key.clone(),
+                }
+                .into());
             }
             if normalized.contains(char::is_whitespace) || normalized.contains('\n') {
-                anyhow::bail!("{source} {id}: parameter key {key:?} must not contain whitespace");
+                return Err(FfmpegConfigError::ParameterKeyWhitespace {
+                    input: input(),
+                    id,
+                    key: key.clone(),
+                }
+                .into());
             }
         }
         if let Some(filter) = &options.filter {
             if filter.trim().is_empty() {
-                anyhow::bail!("{source} {id}: filter must not be empty");
+                return Err(FfmpegConfigError::FilterEmpty {
+                    input: input(),
+                    id,
+                }
+                .into());
             }
             if matches!(track, FfmpegTrack::Video(_)) {
-                anyhow::bail!(
-                    "{source} {id}: video tracks cannot be filtered; only audio and subtitle \
-                     tracks support a filter"
-                );
+                return Err(FfmpegConfigError::VideoFilterUnsupported {
+                    input: input(),
+                    id,
+                }
+                .into());
             }
             let re_encodes = options
                 .codec
                 .as_deref()
                 .is_some_and(|codec| !codec.eq_ignore_ascii_case("copy"));
             if !re_encodes {
-                anyhow::bail!(
-                    "{source} {id}: a filter requires a non-copy codec, because a filtered stream \
-                     must be re-encoded"
-                );
+                return Err(FfmpegConfigError::FilterRequiresReEncode {
+                    input: input(),
+                    id,
+                }
+                .into());
             }
         }
     }
@@ -323,6 +450,17 @@ mod tests {
         let config =
             config_from(r#"{"tracks":{"1":{"type":"audio","parameters":{"b:a":"128k"}}}}"#);
         assert!(config.validate().is_err());
+    }
+
+    /// A filter is accepted only on a re-encoded audio/subtitle stream; video
+    /// tracks cannot be filtered at all.
+    #[test]
+    fn chapter_language_and_charset_only_warn() {
+        let config =
+            config_from(r#"{"chapters":{"copy":false,"language":"eng","charset":"UTF-8"}}"#);
+        let warnings = config.validate().expect("only warnings are produced");
+        assert_eq!(warnings.len(), 1, "one warning for the FFmpeg-only gap");
+        assert!(!config.chapters.expect("chapters should be present").copy);
     }
 
     /// Video cannot be filtered, and filtering a copied stream is rejected.

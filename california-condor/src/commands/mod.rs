@@ -79,6 +79,8 @@ pub struct CondorCli {
     pub tq_vs_args:        Option<Vec<String>>,
     #[arg(long, value_name = "Concatenation Method", help = HELP_CONCAT_SHORT, long_help = HELP_CONCAT)]
     pub concat:            Option<ConcatenationMethod>,
+    #[arg(long, value_name = "Category", value_enum, value_delimiter = ',', help = HELP_DISCARD_SHORT, long_help = HELP_DISCARD)]
+    pub discard:           Option<Vec<DiscardCategory>>,
     /// The amount of encoder processes to use at once
     #[arg(long, short('w'), value_name = "Workers", help = HELP_WORKERS_SHORT, long_help = HELP_WORKERS)]
     pub workers:           Option<u8>,
@@ -202,6 +204,8 @@ pub enum Commands {
         vs_args:       Option<Vec<String>>,
         #[arg(long, value_name = "Concatenation Method", help = HELP_CONCAT_SHORT, long_help = HELP_CONCAT)]
         concat:        Option<ConcatenationMethod>,
+        #[arg(long, value_name = "Category", value_enum, value_delimiter = ',', help = HELP_DISCARD_SHORT, long_help = HELP_DISCARD)]
+        discard:       Option<Vec<DiscardCategory>>,
         /// The amount of encoder processes to use at once
         #[arg(long, short('w'), value_name = "Workers", help = HELP_WORKERS_SHORT, long_help = HELP_WORKERS)]
         workers:       Option<u8>,
@@ -459,9 +463,11 @@ pub enum Commands {
     #[command(args_conflicts_with_subcommands = true)]
     Concatenate {
         #[command(subcommand)]
-        edit:   Option<handlers::concatenate::ConcatenateAction>,
+        edit:    Option<handlers::concatenate::ConcatenateAction>,
         #[arg(long, value_name = "Concatenation Method", help = HELP_CONCAT_SHORT, long_help = HELP_CONCAT)]
-        method: Option<ConcatenationMethod>,
+        method:  Option<ConcatenationMethod>,
+        #[arg(long, value_name = "Category", value_enum, value_delimiter = ',', help = HELP_DISCARD_SHORT, long_help = HELP_DISCARD)]
+        discard: Option<Vec<DiscardCategory>>,
     },
     /// Measure the quality of the concatenated output per scene (Triggers
     /// TUI).
@@ -703,6 +709,48 @@ pub enum ConcatenationMethod {
     Ivf,
 }
 
+/// A kind of source content `--discard` can leave out of the output.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    EnumString,
+    IntoStaticStr,
+    DisplayMacro,
+    clap::ValueEnum,
+)]
+pub enum DiscardCategory {
+    /// Audio tracks.
+    #[strum(serialize = "audio")]
+    #[value(name = "audio")]
+    Audio,
+    /// Subtitle tracks.
+    #[strum(serialize = "subtitle")]
+    #[value(name = "subtitle")]
+    Subtitle,
+    /// Attachments, such as fonts.
+    #[strum(serialize = "attachment")]
+    #[value(name = "attachment")]
+    Attachment,
+    /// Global metadata/tags, including the title.
+    #[strum(serialize = "metadata")]
+    #[value(name = "metadata")]
+    Metadata,
+    /// Chapters.
+    #[strum(serialize = "chapters")]
+    #[value(name = "chapters")]
+    Chapters,
+    /// The encoded video, leaving an audio/subtitle-only output.
+    #[strum(serialize = "video")]
+    #[value(name = "video")]
+    Video,
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(
     Debug,
@@ -842,6 +890,7 @@ mod tests {
         ConcatenationMethod,
         CondorCli,
         DecoderMethod,
+        DiscardCategory,
         EncoderMethod,
         QualityMetric,
         QualityProfile,
@@ -999,6 +1048,70 @@ mod tests {
                     result,
                     Err(_),
                     "\"condor init INPUT OUTPUT --photon-noise -24.8\" does not parse"
+                );
+            }
+
+            #[test]
+            fn with_discard() {
+                let test_video = get_test_video();
+                let temp = tempfile::tempdir().expect("temp directory");
+                let output = temp.path().join("out.mkv");
+
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "init",
+                    test_video.path.to_str().expect("test_video path is valid"),
+                    output.to_str().expect("output path is valid"),
+                    "--discard",
+                    "audio,subtitle",
+                ]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Init {
+                            discard: Some(_),
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"condor init INPUT OUTPUT --discard audio,subtitle\" parses"
+                );
+                if let Ok(CondorCli {
+                    command:
+                        Some(Commands::Init {
+                            discard: Some(categories),
+                            ..
+                        }),
+                    ..
+                }) = CondorCli::try_parse_from([
+                    "condor",
+                    "init",
+                    test_video.path.to_str().expect("test_video path is valid"),
+                    output.to_str().expect("output path is valid"),
+                    "--discard",
+                    "audio,subtitle",
+                ]) {
+                    assert_eq!(categories, vec![
+                        DiscardCategory::Audio,
+                        DiscardCategory::Subtitle
+                    ]);
+                }
+            }
+
+            #[test]
+            fn with_invalid_discard() {
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "init",
+                    "./relative-input.mov",
+                    "./relative-output.ivf",
+                    "--discard",
+                    "fonts",
+                ]);
+                assert_matches!(
+                    result,
+                    Err(_),
+                    "\"condor init INPUT OUTPUT --discard fonts\" does not parse"
                 );
             }
         }
@@ -2723,6 +2836,143 @@ mod tests {
                     "\"condor concatenate --method invalid\" does not parse"
                 );
             }
+
+            #[test]
+            fn with_discard() {
+                let result =
+                    CondorCli::try_parse_from(["condor", "concatenate", "--discard", "audio"]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Concatenate {
+                            discard: Some(_),
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"condor concatenate --discard audio\" parses"
+                );
+                if let Ok(CondorCli {
+                    command:
+                        Some(Commands::Concatenate {
+                            discard: Some(categories),
+                            ..
+                        }),
+                    ..
+                }) = CondorCli::try_parse_from(["condor", "concatenate", "--discard", "audio"])
+                {
+                    assert_eq!(categories, vec![DiscardCategory::Audio]);
+                }
+            }
+
+            #[test]
+            fn with_repeated_discard() {
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "concatenate",
+                    "--discard",
+                    "audio",
+                    "--discard",
+                    "subtitle",
+                ]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Concatenate {
+                            discard: Some(_),
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"condor concatenate --discard audio --discard subtitle\" parses"
+                );
+                if let Ok(CondorCli {
+                    command:
+                        Some(Commands::Concatenate {
+                            discard: Some(categories),
+                            ..
+                        }),
+                    ..
+                }) = CondorCli::try_parse_from([
+                    "condor",
+                    "concatenate",
+                    "--discard",
+                    "audio",
+                    "--discard",
+                    "subtitle",
+                ]) {
+                    assert_eq!(categories, vec![
+                        DiscardCategory::Audio,
+                        DiscardCategory::Subtitle
+                    ]);
+                }
+            }
+
+            #[test]
+            fn with_delimited_discard() {
+                let result = CondorCli::try_parse_from([
+                    "condor",
+                    "concatenate",
+                    "--discard",
+                    "audio,subtitle,chapters",
+                ]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Concatenate {
+                            discard: Some(_),
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"condor concatenate --discard audio,subtitle,chapters\" parses"
+                );
+                if let Ok(CondorCli {
+                    command:
+                        Some(Commands::Concatenate {
+                            discard: Some(categories),
+                            ..
+                        }),
+                    ..
+                }) = CondorCli::try_parse_from([
+                    "condor",
+                    "concatenate",
+                    "--discard",
+                    "audio,subtitle,chapters",
+                ]) {
+                    assert_eq!(categories, vec![
+                        DiscardCategory::Audio,
+                        DiscardCategory::Subtitle,
+                        DiscardCategory::Chapters
+                    ]);
+                }
+            }
+
+            #[test]
+            fn with_invalid_discard() {
+                let result =
+                    CondorCli::try_parse_from(["condor", "concatenate", "--discard", "font"]);
+                assert_matches!(
+                    result,
+                    Err(_),
+                    "\"condor concatenate --discard font\" does not parse"
+                );
+            }
+
+            #[test]
+            fn discard_defaults_to_none() {
+                let result = CondorCli::try_parse_from(["condor", "concatenate"]);
+                if let Ok(CondorCli {
+                    command:
+                        Some(Commands::Concatenate {
+                            discard, ..
+                        }),
+                    ..
+                }) = result
+                {
+                    assert!(discard.is_none(), "--discard defaults to unset");
+                }
+            }
         }
 
         mod clean {
@@ -2771,6 +3021,92 @@ mod tests {
                     assert!(!all, "--all defaults to false");
                 }
             }
+        }
+    }
+
+    mod discard {
+        use std::str::FromStr;
+
+        use super::*;
+
+        #[test]
+        fn parses_every_category() {
+            for name in ["audio", "subtitle", "attachment", "metadata", "chapters", "video"] {
+                let result =
+                    CondorCli::try_parse_from(["condor", "concatenate", "--discard", name]);
+                assert_matches!(
+                    result,
+                    Ok(CondorCli {
+                        command: Some(Commands::Concatenate {
+                            discard: Some(_),
+                            ..
+                        }),
+                        ..
+                    }),
+                    "\"--discard {name}\" parses"
+                );
+            }
+        }
+
+        #[test]
+        fn category_names_round_trip() {
+            assert_eq!(DiscardCategory::Audio.to_string(), "audio");
+            assert_eq!(DiscardCategory::Subtitle.to_string(), "subtitle");
+            assert_eq!(DiscardCategory::Attachment.to_string(), "attachment");
+            assert_eq!(DiscardCategory::Metadata.to_string(), "metadata");
+            assert_eq!(DiscardCategory::Chapters.to_string(), "chapters");
+            assert_eq!(DiscardCategory::Video.to_string(), "video");
+            for category in [
+                DiscardCategory::Audio,
+                DiscardCategory::Subtitle,
+                DiscardCategory::Attachment,
+                DiscardCategory::Metadata,
+                DiscardCategory::Chapters,
+                DiscardCategory::Video,
+            ] {
+                let name: &'static str = category.into();
+                assert_eq!(DiscardCategory::from_str(name), Ok(category));
+            }
+        }
+
+        /// The top-level flag applies to any command, so it is accepted before
+        /// the subcommand as well as after it.
+        #[test]
+        fn the_top_level_flag_is_accepted() {
+            let result =
+                CondorCli::try_parse_from(["condor", "--discard", "audio", "detect-scenes"]);
+            assert_matches!(
+                result,
+                Ok(CondorCli {
+                    discard: Some(_),
+                    ..
+                }),
+                "\"condor --discard audio detect-scenes\" parses"
+            );
+        }
+
+        /// The subcommand's own `--discard` is parsed independently of the
+        /// top-level one, which belongs to the full run.
+        #[test]
+        fn the_subcommand_flag_is_parsed_separately() {
+            let cli = CondorCli::try_parse_from([
+                "condor",
+                "--discard",
+                "audio",
+                "concatenate",
+                "--discard",
+                "subtitle",
+            ])
+            .expect("\"condor --discard audio concatenate --discard subtitle\" parses");
+            assert_eq!(cli.discard, Some(vec![DiscardCategory::Audio]));
+            let Commands::Concatenate {
+                discard: Some(categories),
+                ..
+            } = cli.command.expect("the concatenate subcommand is set")
+            else {
+                panic!("the command is concatenate");
+            };
+            assert_eq!(categories, vec![DiscardCategory::Subtitle]);
         }
     }
 

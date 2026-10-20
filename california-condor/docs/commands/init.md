@@ -18,6 +18,7 @@ Creating a configuration needs `INPUT` and `OUTPUT`; the `info`, `set` and `rese
 | [Filters](#filters---filters)                               | `--filters`       | [Filters](../types/filters.md)   | `resize:scaler=bicubic;format=yuv420p10le` |
 | [VapourSynth Arguments](#vapoursynth-arguments---vs-args)   | `--vs-args`       | [String List](../types/vs-args.md) |                      |
 | [Concatenation](#concatenation---concat)                     | `--concat`        | [`CONCAT`](../types/concatenation.md)  | `mkvmerge`             |
+| [Discard](#discard---discard)                               | `--discard`       | [String List](#discard---discard)      | nothing                |
 | [Workers](#workers--w---workers)                            | `-w`, `--workers` | Integer   | Benchmarker decides    |
 | [Encoder](#encoder--e---encoder)                             | `-e`, `--encoder` | [`ENCODER`](../types/encoder.md) | `svt-av1`              |
 | [Encoder Parameters](#encoder-parameters---params)          | `--params`        | [String](../types/encoder-params.md)    | Based on Encoder       |
@@ -93,6 +94,23 @@ Method used for concatenating encoded chunks into the output file. See [Concaten
 ### Default
 
 If not specified, `mkvmerge` is used.
+
+## Discard `--discard`
+
+Tracks of the input file to leave out of the output. By default the concatenator copies the input's tracks, so dropping some of them normally means editing the `tracks` map of the saved [Scene Concatenator settings](../configuration/condor/sequence-config/scene-concatenator.md) by hand.
+
+`--discard` probes the input with `mkvmerge --identify`, resolves the tracks of each named category, and writes a matching `"copy": false` entry for each one into `condor.json`.
+
+The categories are `audio`, `subtitle`, `attachment`, `metadata`, `chapters` and `video`; see [the concatenate reference](concatenate.md#discard---discard) for what each one does.
+
+### Default
+
+If not specified, every track of the input is copied.
+
+### Examples
+
+- `> condor init input.mkv output.mkv --discard audio`
+- `> condor init input.mkv output.mkv --concat ffmpeg --discard audio,subtitle`
 
 ## Workers `-w`, `--workers`
 

@@ -249,6 +249,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("init_handler should succeed");
         let (config, found_config_path) = scale_speed_handler(Some(&config_path), None, None)
@@ -296,6 +297,7 @@ mod tests {
             Some(&temp.path().join(hash_path(&input_abs))),
             &test_video.path,
             &output,
+            None,
             None,
             None,
             None,
@@ -362,6 +364,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("init_handler should succeed");
         let result =
@@ -415,6 +418,7 @@ mod tests {
             Some(&temp.path().join(hash_path(&input_abs))),
             &test_video.path,
             &output,
+            None,
             None,
             None,
             None,

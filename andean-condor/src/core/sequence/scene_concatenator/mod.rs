@@ -95,10 +95,7 @@ where
                     Input::Video { .. } | Input::VapourSynth { .. }
                 );
                 if !has_input && ffmpeg.extra_inputs.is_empty() {
-                    warnings.push(anyhow::anyhow!(
-                        "FFmpeg output settings configure no additional inputs; the output will \
-                         contain only the encoded video"
-                    ));
+                    warnings.push(SceneConcatenatorError::NoFfmpegInputs.into());
                 }
                 warnings.extend(ffmpeg.validate()?);
             },
@@ -268,6 +265,11 @@ pub enum SceneConcatenatorError {
     MKVMergeNotInstalled,
     #[error("FFmpeg not installed")]
     FFmpegNotInstalled,
+    #[error(
+        "FFmpeg output settings configure no additional inputs; the output will contain only the \
+         encoded video"
+    )]
+    NoFfmpegInputs,
     #[error("Missing scene files: {scenes:?}")]
     SceneFilesMissing { scenes: Vec<usize> },
     #[error("Missing scenes directory: {path}")]

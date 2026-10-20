@@ -19,6 +19,7 @@ pub use ffmpeg::{
     FfmpegConfig,
     FfmpegExtraInput,
     FfmpegTrack,
+    FfmpegTrackKind,
     FfmpegTrackMap,
     FfmpegTrackOptions,
 };
@@ -29,6 +30,7 @@ pub use mkvmerge::{
     MkvmergeConfig,
     MkvmergeExtraInput,
     MkvmergeTrack,
+    MkvmergeTrackKind,
     SubtitleTrack,
     TrackMap,
     TrackOptions,

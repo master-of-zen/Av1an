@@ -23,13 +23,14 @@ use crate::{
         ConcatenationMethod,
         CondorCliError,
         DecoderMethod,
+        DiscardCategory,
         EncoderMethod,
         QualityMetric as QualityMetricBase,
         config::{ConfigAction, ConfigCommand, InputOverride, PropertyChange},
         handlers::{
             apply_input_filters,
             apply_stream_concurrently,
-            concatenate::configure_concatenate,
+            concatenate::{apply_discard, configure_concatenate},
             config::{edit, ensure_override_requested},
             configure_input,
             configure_temp,
@@ -52,6 +53,7 @@ pub fn init_handler(
     filters: Option<&[VapourSynthFilter]>,
     vs_args: Option<&[String]>,
     concatenator: Option<&ConcatenationMethod>,
+    discard: Option<&[DiscardCategory]>,
     workers: Option<u8>,
     encoder: Option<&EncoderMethod>,
     params: Option<&str>,
@@ -107,6 +109,7 @@ pub fn init_handler(
         None,
     )?;
     configure_concatenate(&mut configuration, concatenator)?;
+    apply_discard(&mut configuration, discard.unwrap_or_default())?;
 
     configuration.save(&config_path)?;
 
@@ -582,6 +585,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("init_handler should succeed");
 
@@ -679,6 +683,7 @@ mod tests {
             Some(&custom_filters),
             Some(&custom_vs_args),
             Some(&ConcatenationMethod::FFmpeg),
+            None,
             Some(2),
             Some(&EncoderMethod::AOM),
             Some("--cpu-used=7"),
@@ -755,6 +760,7 @@ mod tests {
             Some(&temp.path().join(hash_path(&input_abs))),
             &test_video,
             &output,
+            None,
             None,
             None,
             None,

@@ -410,6 +410,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("init_handler should succeed");
         let (config, found_config_path) =
@@ -485,6 +486,7 @@ mod tests {
             Some(&temp.path().join(hash_path(&input_abs))),
             &test_video.path,
             &output,
+            None,
             None,
             None,
             None,

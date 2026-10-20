@@ -247,6 +247,8 @@ fn ffmpeg_args(
                 args.push(format!("{input_index}:d?").into());
             },
             Some(tracks) => {
+                args.push("-map".into());
+                args.push(format!("{input_index}:d?").into());
                 let mut ids = tracks.keys().copied().collect::<Vec<_>>();
                 ids.sort_unstable();
                 for id in ids {
@@ -322,6 +324,12 @@ fn ffmpeg_args(
             }
             attachment_output += 1;
         }
+    }
+    if let Some(chapters) = &config.chapters
+        && !chapters.copy
+    {
+        args.push("-map_chapters".into());
+        args.push("-1".into());
     }
     if let Some(metadata) = &config.metadata {
         if !metadata.copy {
@@ -453,6 +461,52 @@ mod tests {
         assert!(args.windows(2).any(|pair| pair == ["-metadata:s:t:0", "mimetype=font/ttf"]));
         assert!(args.windows(2).any(|pair| pair == ["-metadata:s:t:0", "filename=My Font"]));
         assert!(args.windows(2).any(|pair| pair == ["-metadata:s:t:0", "comment=A font"]));
+    }
+
+    /// An override map cannot name data streams, so they are mapped anyway
+    /// rather than dropped by the more specific mapping.
+    #[test]
+    fn ffmpeg_args_with_an_override_map_still_maps_data_streams() {
+        let config: FfmpegConfig = serde_json::from_str(
+            r#"{"tracks":{"1":{"type":"audio"},"2":{"type":"audio","copy":false}}}"#,
+        )
+        .expect("config should deserialize");
+        let args = strings(ffmpeg_args(
+            Path::new("concat.txt"),
+            Path::new("out.mkv"),
+            Some(Path::new("in.mkv")),
+            Some(&config),
+        ));
+        assert!(args.windows(2).any(|pair| pair == ["-map", "1:1"]));
+        assert!(
+            !args.iter().any(|arg| arg == "1:2"),
+            "the dropped stream is not mapped"
+        );
+        assert!(args.windows(2).any(|pair| pair == ["-map", "1:d?"]));
+    }
+
+    /// Dropping chapters keeps the source's chapters out of the output.
+    #[test]
+    fn ffmpeg_args_drop_chapters() {
+        let config: FfmpegConfig = serde_json::from_str(r#"{"chapters":{"copy":false}}"#)
+            .expect("config should deserialize");
+        let args = strings(ffmpeg_args(
+            Path::new("concat.txt"),
+            Path::new("out.mkv"),
+            Some(Path::new("in.mkv")),
+            Some(&config),
+        ));
+        assert!(args.windows(2).any(|pair| pair == ["-map_chapters", "-1"]));
+
+        let copying: FfmpegConfig = serde_json::from_str(r#"{"chapters":{"copy":true}}"#)
+            .expect("config should deserialize");
+        let args = strings(ffmpeg_args(
+            Path::new("concat.txt"),
+            Path::new("out.mkv"),
+            Some(Path::new("in.mkv")),
+            Some(&copying),
+        ));
+        assert!(!args.iter().any(|arg| arg == "-map_chapters"));
     }
 
     /// Copying every stream also carries attachment (`t`) and data (`d`)

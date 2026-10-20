@@ -112,6 +112,7 @@ fn run() -> anyhow::Result<()> {
             filters,
             vs_args,
             concat,
+            discard,
             workers,
             encoder,
             params,
@@ -133,6 +134,7 @@ fn run() -> anyhow::Result<()> {
                 filters.as_deref(),
                 vs_args.as_deref(),
                 concat.as_ref(),
+                discard.as_deref(),
                 workers,
                 encoder.as_ref(),
                 params.as_deref(),
@@ -357,12 +359,17 @@ fn run() -> anyhow::Result<()> {
         Some(Commands::Concatenate {
             edit,
             method,
+            discard,
         }) => {
             if let Some(edit) = edit {
                 return commands::handlers::concatenate::config(config_path.as_deref(), &edit);
             }
-            let (configuration, save_file) =
-                concatenate_handler(config_path.as_deref(), temp.as_deref(), method.as_ref())?;
+            let (configuration, save_file) = concatenate_handler(
+                config_path.as_deref(),
+                temp.as_deref(),
+                method.as_ref(),
+                discard.as_deref(),
+            )?;
 
             run_concatenator(&configuration, &save_file)?;
         },
@@ -414,6 +421,7 @@ fn run() -> anyhow::Result<()> {
                 cli.scd_vs_args.as_deref(),
                 cli.tq_vs_args.as_deref(),
                 cli.concat.as_ref(),
+                cli.discard.as_deref(),
                 cli.workers,
                 cli.encoder.as_ref(),
                 cli.passes,

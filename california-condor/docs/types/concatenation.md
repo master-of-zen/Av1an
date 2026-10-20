@@ -12,6 +12,10 @@
 
 If not specified, `mkvmerge` is used.
 
+## Discarding source tracks
+
+Both `mkvmerge` and `ffmpeg` copy the source's tracks by default and take per-track overrides under `scene_concatenator.method`. [`--discard`](../commands/concatenate.md#discard---discard) writes those overrides for you from the input's probed track layout, so a specific category can be dropped without editing the track map by hand. `ivf` ignores it, as it never carries source tracks.
+
 ## Examples
 
 - `> condor concatenate --method mkvmerge`

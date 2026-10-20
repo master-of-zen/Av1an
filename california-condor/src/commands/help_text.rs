@@ -412,6 +412,32 @@ that muxer's settings object.
 "#;
 pub const HELP_CONCAT_SHORT: &str = short_help(HELP_CONCAT);
 
+pub const HELP_DISCARD: &str = r#"Source content to leave out of the output.
+
+By default the concatenated video is muxed with the input's audio, subtitle and
+attachment tracks, chapters and global metadata. Each value names one kind of
+content to drop instead.
+
+- `audio` - audio tracks
+- `subtitle` - subtitle tracks
+- `attachment` - attachments (fonts, etc.)
+- `metadata` - global tags/title
+- `chapters` - chapters
+- `video` - the encoded video (audio/subtitles only output)
+
+The input is probed with `mkvmerge --identify` (supplemented with `ffprobe` for
+FFmpeg stream indices, and replaced by `ffprobe` alone if mkvmerge cannot read
+the file) and the tracks to drop are written to the *scene_concatenator.method*
+entry in the configuration file as explicit `copy: false` overrides. Repeat the
+flag, or separate the values with commas, to drop several kinds. Nothing is
+resolved when the scenes are concatenated, so the saved configuration stays the
+source of truth; `condor concatenate set method` restores the method's defaults.
+
+The flag is ignored for the `ivf` method and for VapourSynth script inputs,
+which have no source tracks to copy.
+"#;
+pub const HELP_DISCARD_SHORT: &str = short_help(HELP_DISCARD);
+
 pub const HELP_WORKERS: &str = r#"The amount of encoder processes to use at once.
 
 If not specified, Benchmarker is used to determine the optimal number of workers.

@@ -23,6 +23,7 @@ $ condor --config-file ./config.json --skip-scd
 | [Scene Detector VS Args](#scene-detector-vs-args---scd-vs-args)   | `--scd-vs-args`       | [String List](../types/vs-args.md) |                        |
 | [Target Quality VS Args](#target-quality-vs-args---tq-vs-args)    | `--tq-vs-args`        | [String List](../types/vs-args.md) |                        |
 | [Concatenation](#concatenation---concat)                           | `--concat`            | [`CONCAT`](../types/concatenation.md)    | `mkvmerge`             |
+| [Discard](#discard---discard)                                     | `--discard`           | [String List](#discard---discard)        | nothing                |
 | [Workers](#workers--w---workers)                                  | `-w`, `--workers`     | Integer     | Benchmarker decides    |
 | [Encoder](#encoder--e---encoder)                                   | `-e`, `--encoder`     | [`ENCODER`](../types/encoder.md)     | `svt-av1`              |
 | [Passes](#passes---passes)                                        | `--passes`            | Integer     | `2` for aom/vpx, else `1` |
@@ -112,6 +113,16 @@ Method used for concatenating encoded chunks. Defaults to `mkvmerge`. See [Conca
 - `mkvmerge`
 - `ffmpeg`
 - `ivf`
+
+## Discard `--discard`
+
+Tracks of the input file to leave out of the output. The concatenator copies the input's tracks by default; `--discard` probes the input with `mkvmerge --identify` and writes `"copy": false` entries for the named categories into `condor.json`.
+
+The categories are `audio`, `subtitle`, `attachment`, `metadata`, `chapters` and `video`; see [the concatenate reference](concatenate.md#discard---discard) for what each one does.
+
+### Examples
+
+- `> condor -i input.mkv -o output.mkv --discard audio`
 
 ## Workers `-w`, `--workers`
 

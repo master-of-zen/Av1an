@@ -88,6 +88,71 @@ pub fn ffmpeg_is_available() -> bool {
     std::process::Command::new("ffmpeg").arg("-version").output().is_ok()
 }
 
+/// Check whether mkvmerge is available on PATH.
+pub fn mkvmerge_is_available() -> bool {
+    std::process::Command::new("mkvmerge").arg("--version").output().is_ok()
+}
+
+/// Cached multi-track test clip path, generated once per process.
+pub static TEST_MULTITRACK_CLIP: OnceLock<PathBuf> = OnceLock::new();
+
+/// A copy of the test clip with two audio tracks, a subtitle track, and an
+/// attachment, so the track selection has something to select.
+///
+/// Keeping the extra tracks out of [`get_test_video`] leaves the rest of the
+/// suite on a video-only clip whose streams are already known.
+pub fn get_test_multitrack_video() -> PathBuf {
+    TEST_MULTITRACK_CLIP
+        .get_or_init(|| {
+            let path = std::env::temp_dir().join("condor-test-multitrack-clip.mkv");
+            if !path.exists() {
+                generate_multitrack_clip(&path);
+            }
+            path
+        })
+        .clone()
+}
+
+/// Muxes the test clip with two AAC tracks, an SRT subtitle, and a font
+/// attachment.
+fn generate_multitrack_clip(path: &Path) {
+    let video = get_test_video();
+    let directory = path.parent().expect("the clip has a parent directory");
+    let subtitle = directory.join("condor-test-clip.srt");
+    let attachment = directory.join("condor-test-clip.ttf");
+    std::fs::write(
+        &subtitle,
+        "1\n00:00:00,000 --> 00:00:05,000\nFirst subtitle line.\n\n2\n00:00:05,000 --> \
+         00:00:10,000\nSecond subtitle line.\n",
+    )
+    .expect("the subtitle file should be written");
+    // FFmpeg only needs the file to exist and to be described; the bytes are
+    // never parsed as a real font.
+    std::fs::write(&attachment, b"condor test attachment")
+        .expect("the attachment should be written");
+
+    let status = std::process::Command::new("ffmpeg")
+        .args(["-y", "-hide_banner", "-loglevel", "error"])
+        .args(["-i", path_str(&video.path)])
+        .args(["-f", "lavfi", "-i", "sine=frequency=440:duration=30"])
+        .args(["-f", "lavfi", "-i", "sine=frequency=880:duration=30"])
+        .args(["-i", path_str(&subtitle)])
+        .args(["-attach", path_str(&attachment)])
+        .args(["-metadata:s:t:0", "mimetype=font/ttf"])
+        .args(["-metadata:s:t:0", "filename=condor-test-clip.ttf"])
+        .args(["-map", "0:v", "-map", "1:a", "-map", "2:a", "-map", "3:s"])
+        .args(["-c:v", "copy", "-c:a", "aac", "-c:s", "srt"])
+        .args(["-metadata", "title=Condor Test Clip"])
+        .arg(path)
+        .status()
+        .expect("Failed to run FFmpeg for the multi-track test clip");
+
+    assert!(
+        status.success(),
+        "FFmpeg multi-track clip generation failed"
+    );
+}
+
 /// Generates a video with FFmpeg in the temporary directory
 /// if it doesn't already exist.
 ///

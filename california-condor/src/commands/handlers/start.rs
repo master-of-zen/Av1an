@@ -13,11 +13,12 @@ use crate::{
         ConcatenationMethod,
         CondorCliError,
         DecoderMethod,
+        DiscardCategory,
         EncoderMethod,
         QualityMetric,
         QualityProfile,
         handlers::{
-            concatenate::configure_concatenate,
+            concatenate::{apply_discard, configure_concatenate},
             configure_input,
             configure_temp,
             detect_scenes::configure_scene_detector,
@@ -46,6 +47,7 @@ pub fn start_handler(
     scd_vs_args: Option<&[String]>,
     tq_vs_args: Option<&[String]>,
     concatenator: Option<&ConcatenationMethod>,
+    discard: Option<&[DiscardCategory]>,
     workers: Option<u8>,
     encoder: Option<&EncoderMethod>,
     passes: Option<u8>,
@@ -194,6 +196,7 @@ pub fn start_handler(
     // configure_optimize_bitrate_handler(&mut configuration, sigma_threshold)?;
     // configure_scale_speed(&mut configuration, quantizers, speeds)?;
     configure_concatenate(&mut configuration, concatenator)?;
+    apply_discard(&mut configuration, discard.unwrap_or_default())?;
 
     if !config_already_existed {
         debug!("Saving new Configuration to {}", config_path.display());
@@ -296,6 +299,7 @@ mod tests {
             None,
             None,
             Some(&output),
+            None,
             None,
             None,
             None,
@@ -513,6 +517,7 @@ mod tests {
             Some(&custom_vs_args.clone()),
             Some(&custom_vs_args),
             Some(&ConcatenationMethod::Ivf),
+            None,
             Some(6),
             Some(&EncoderMethod::X265),
             Some(3),
@@ -720,6 +725,7 @@ mod tests {
             Some(&custom_vs_args.clone()),
             Some(&custom_vs_args),
             Some(&ConcatenationMethod::Ivf),
+            None,
             Some(6),
             Some(&EncoderMethod::X265),
             Some(3),
@@ -878,6 +884,7 @@ mod tests {
             None,
             None,
             Some(&ConcatenationMethod::MkvMerge),
+            None,
             Some(12),
             Some(&EncoderMethod::X264),
             Some(1),
@@ -984,6 +991,7 @@ mod tests {
             None,
             None,
             Some(&output),
+            None,
             None,
             None,
             None,

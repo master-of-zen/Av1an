@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use super::common::{Chapters, Metadata, default_true};
 
@@ -56,6 +57,15 @@ pub enum MkvmergeTrack {
     Attachment(AttachmentTrack),
 }
 
+/// The kind of track an [`MkvmergeTrack`] describes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MkvmergeTrackKind {
+    Video,
+    Audio,
+    Subtitle,
+    Attachment,
+}
+
 impl MkvmergeTrack {
     /// Whether this track is copied to the output. Defaults to `true`.
     #[inline]
@@ -66,6 +76,53 @@ impl MkvmergeTrack {
             Self::Audio(track) => track.track.copy,
             Self::Subtitle(track) => track.track.copy,
             Self::Attachment(track) => track.copy,
+        }
+    }
+
+    /// Sets whether this track is copied to the output.
+    #[inline]
+    pub fn set_copy(&mut self, copy: bool) {
+        match self {
+            Self::Video(track) => track.track.copy = copy,
+            Self::Audio(track) => track.track.copy = copy,
+            Self::Subtitle(track) => track.track.copy = copy,
+            Self::Attachment(track) => track.copy = copy,
+        }
+    }
+
+    /// An entry for `kind` that only sets the `copy` flag.
+    ///
+    /// Used to select or drop a source track without describing it any
+    /// further.
+    #[must_use]
+    #[inline]
+    pub fn plain(kind: MkvmergeTrackKind, copy: bool) -> Self {
+        match kind {
+            MkvmergeTrackKind::Video => Self::Video(Box::new(VideoTrack {
+                track: TrackOptions {
+                    copy,
+                    ..TrackOptions::default()
+                },
+                ..VideoTrack::default()
+            })),
+            MkvmergeTrackKind::Audio => Self::Audio(AudioTrack {
+                track: TrackOptions {
+                    copy,
+                    ..TrackOptions::default()
+                },
+                ..AudioTrack::default()
+            }),
+            MkvmergeTrackKind::Subtitle => Self::Subtitle(SubtitleTrack {
+                track: TrackOptions {
+                    copy,
+                    ..TrackOptions::default()
+                },
+                ..SubtitleTrack::default()
+            }),
+            MkvmergeTrackKind::Attachment => Self::Attachment(AttachmentTrack {
+                copy,
+                ..AttachmentTrack::default()
+            }),
         }
     }
 }
@@ -198,7 +255,7 @@ pub struct WhiteColorCoordinates {
 
 /// A video track's parameters (`--cropping`, `--aspect-ratio`, color/HDR
 /// metadata, ...).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct VideoTrack {
     #[serde(flatten)]
     pub track:                    TrackOptions,
@@ -354,7 +411,7 @@ impl VideoTrack {
 }
 
 /// An audio track's parameters.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AudioTrack {
     #[serde(flatten)]
     pub track:          TrackOptions,
@@ -393,7 +450,7 @@ pub enum Compression {
 }
 
 /// A subtitle track's parameters.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SubtitleTrack {
     #[serde(flatten)]
     pub track:       TrackOptions,
@@ -433,7 +490,7 @@ impl SubtitleTrack {
 /// as its name, description, and MIME type). Without a `path` the entry only
 /// participates in copy selection; mkvmerge cannot rename or re-describe an
 /// attachment that is copied from a source file.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AttachmentTrack {
     /// Whether to copy this attachment. Defaults to `true`.
     #[serde(default = "default_true")]
@@ -559,26 +616,28 @@ impl MkvmergeConfig {
                 .filter(|(_, track)| matches!(track, MkvmergeTrack::Video(_)))
                 .count();
             if video_entries > 1 {
-                anyhow::bail!(
-                    "only one video track entry is supported (the encoded video is a single track)"
-                );
+                return Err(MkvmergeConfigError::MultipleVideoEntries.into());
             }
             for (id, track) in tracks {
                 match track {
-                    MkvmergeTrack::Video(_) if *id != 0 => anyhow::bail!(
-                        "the video track entry must use track ID 0 (the encoded video), found {id}"
-                    ),
+                    MkvmergeTrack::Video(_) if *id != 0 => {
+                        return Err(MkvmergeConfigError::VideoTrackNotZero {
+                            id: *id
+                        }
+                        .into());
+                    },
                     MkvmergeTrack::Attachment(attachment)
                         if attachment.path.is_none()
                             && (attachment.attachment_name.is_some()
                                 || attachment.attachment_description.is_some()
                                 || attachment.attachment_mime_type.is_some()) =>
                     {
-                        warnings.push(anyhow::anyhow!(
-                            "attachment track {id} sets a name/description/MIME type without a \
-                             path; mkvmerge cannot modify an attachment copied from a source, so \
-                             these fields are ignored"
-                        ));
+                        warnings.push(
+                            MkvmergeConfigError::AttachmentFieldsIgnored {
+                                id: *id
+                            }
+                            .into(),
+                        );
                     },
                     _ => (),
                 }
@@ -590,24 +649,53 @@ impl MkvmergeConfig {
                 .as_ref()
                 .is_some_and(|chapters| chapters.language.is_some() || chapters.charset.is_some())
             {
-                warnings.push(anyhow::anyhow!(
-                    "extra input {index} sets a chapter language/charset, which mkvmerge applies \
-                     globally; set them on the main input instead"
-                ));
+                warnings.push(
+                    MkvmergeConfigError::ExtraInputChaptersGlobal {
+                        index,
+                    }
+                    .into(),
+                );
             }
             if extra
                 .metadata
                 .as_ref()
                 .is_some_and(|metadata| metadata.title.is_some() || !metadata.tags.is_empty())
             {
-                warnings.push(anyhow::anyhow!(
-                    "extra input {index} sets a title or tags, which apply to the whole output; \
-                     only the main input's metadata is written"
-                ));
+                warnings.push(
+                    MkvmergeConfigError::ExtraInputMetadataGlobal {
+                        index,
+                    }
+                    .into(),
+                );
             }
         }
         Ok(warnings)
     }
+}
+
+/// Everything that stops the mkvmerge output settings from being used as
+/// written.
+#[derive(Debug, Error)]
+pub enum MkvmergeConfigError {
+    #[error("only one video track entry is supported (the encoded video is a single track)")]
+    MultipleVideoEntries,
+    #[error("the video track entry must use track ID 0 (the encoded video), found {id}")]
+    VideoTrackNotZero { id: u32 },
+    #[error(
+        "attachment track {id} sets a name/description/MIME type without a path; mkvmerge cannot \
+         modify an attachment copied from a source, so these fields are ignored"
+    )]
+    AttachmentFieldsIgnored { id: u32 },
+    #[error(
+        "extra input {index} sets a chapter language/charset, which mkvmerge applies globally; \
+         set them on the main input instead"
+    )]
+    ExtraInputChaptersGlobal { index: usize },
+    #[error(
+        "extra input {index} sets a title or tags, which apply to the whole output; only the main \
+         input's metadata is written"
+    )]
+    ExtraInputMetadataGlobal { index: usize },
 }
 
 impl MkvmergeExtraInput {

@@ -30,6 +30,18 @@ pub struct Metadata {
     pub tags:  HashMap<String, String>,
 }
 
+impl Default for Metadata {
+    /// Keeping the source's tags, which is what an absent `metadata` means.
+    #[inline]
+    fn default() -> Self {
+        Self {
+            copy:  true,
+            title: None,
+            tags:  HashMap::new(),
+        }
+    }
+}
+
 /// Chapter handling.
 ///
 /// `None` means "copy the source's chapters" (the default). When present,
@@ -46,4 +58,17 @@ pub struct Chapters {
     /// Character set used to decode simple chapter files.
     #[serde(default)]
     pub charset:  Option<String>,
+}
+
+impl Default for Chapters {
+    /// Keeping the source's chapters, which is what an absent `chapters`
+    /// means.
+    #[inline]
+    fn default() -> Self {
+        Self {
+            copy:     true,
+            language: None,
+            charset:  None,
+        }
+    }
 }

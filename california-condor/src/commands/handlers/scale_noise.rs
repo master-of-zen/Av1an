@@ -331,6 +331,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("init_handler should succeed");
         // Mock scenes and save to config file (simulates Scene Detector)

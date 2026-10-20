@@ -69,11 +69,10 @@ use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::info;
 
 use crate::{
     commands::DecoderMethod,
-    tui::open_input_with_progress,
+    tui::open_input,
     utils::hash_path::hash_path,
     zoner::{ZonerConfig, ZonerData},
 };
@@ -117,11 +116,9 @@ impl Configuration {
         .as_path()
         .to_path_buf();
         let input_data = Self::new_input_model(input, decoder, vs_args, None, None)?;
-        info!("Indexing input...");
-        // The first of the two opens every fresh run performs. Both go through
-        // the same "Opening input" screen, so the expensive index is built
-        // behind it rather than behind a bare log line.
-        let (_, clip_info) = open_input_with_progress(
+        // The startup open, needed here for the frame rate. This is also what
+        // builds a missing index, which `open_input` reports on the log.
+        let (_, clip_info) = open_input(
             &input_data,
             &std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         )?;
@@ -240,10 +237,9 @@ impl Configuration {
         save_callback: SaveCallback<CliSequenceData, CliSequenceConfig>,
     ) -> Result<Condor<CliSequenceData, CliSequenceConfig>> {
         // The input carries its own filters, so every input kind is opened the
-        // same way — and opened once, behind the startup "Opening input"
-        // screen, so the `Input` every later phase reads through `condor.input`
-        // is the one indexed here.
-        let (input, _clip_info) = open_input_with_progress(
+        // same way — and opened once here, so the `Input` every later phase
+        // reads through `condor.input` is the one indexed here.
+        let (input, _clip_info) = open_input(
             &self.condor.input,
             &std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         )?;

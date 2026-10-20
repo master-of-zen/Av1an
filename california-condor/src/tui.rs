@@ -12,9 +12,6 @@ use andean_condor::{
         input::{Input, OpenProgress, clip_info::ClipInfo},
         sequence::{
             Sequence,
-            SequenceCompletion,
-            SequenceStatus,
-            Status,
             benchmarker::Benchmarker,
             bitrate_optimizer::BitrateOptimizer,
             noise_detector::NoiseDetector,
@@ -31,13 +28,12 @@ use andean_condor::{
 };
 use anyhow::{Result, bail};
 use thiserror::Error as ThisError;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{
     apps::{
         TuiApp,
         benchmarker::BenchmarkerApp,
-        initializing::{INDEXING_ID, InitializingApp, OPENING_ID},
         noise_detection::NoiseDetectionApp,
         parallel_encoder::ParallelEncoderApp,
         quality_check::QualityCheckApp,
@@ -48,88 +44,41 @@ use crate::{
     configuration::{CliSequenceConfig, CliSequenceData},
 };
 
-/// Maps one stage of opening an input onto the [`SequenceStatus`] channel every
-/// [`TuiApp`] already consumes.
+/// Opens `data`, logging its progress, if available.
 ///
-/// The phase rides in [`Status::Processing`]'s `id`, because the percentage
-/// alone cannot tell "0% indexed" apart from "this stage has no percentage".
-fn open_progress_status(progress: OpenProgress) -> SequenceStatus {
-    let (id, completion) = match progress {
-        OpenProgress::Indexing {
-            current,
-            total,
-        } => (
-            INDEXING_ID,
-            SequenceCompletion::Percentage(if total == 0 {
-                0.0
-            } else {
-                current as f64 / total as f64 * 100.0
-            }),
-        ),
-        OpenProgress::Opening => (OPENING_ID, SequenceCompletion::Percentage(0.0)),
-    };
-    SequenceStatus::Whole(Status::Processing {
-        id: id.to_owned(),
-        completion,
-    })
-}
-
-/// Opens `data` behind the single startup "Opening input" screen.
-///
-/// The screen runs on a worker thread while [`Input::ensure_indexed`] opens the
-/// input on this one. FFMS2's indexer reports real progress through its own
-/// callback, so native inputs move a bar; VapourSynth indexes inside its
-/// source plugin where no callback can reach it, so those stay on an
-/// indeterminate "Opening Input..." — except DGDecNV, which shells out to
-/// `dgindexnv` and reports on its stdout.
-///
-/// The open stays on the calling thread rather than the worker's because an
-/// [`Input`] is not `Send`: its decoder holds raw FFMS2 and VapourSynth
-/// pointers. The screen only ever carries the progress messages.
+/// Only FFMS2 and DGDecNV report real progress. A VapourSynth input indexes
+/// inside its source plugin, where no callback can reach it, so it only gets
+/// the single `Opening input...` line.
 ///
 /// Returns the input together with its probed clip info, so callers do not have
 /// to reopen it just to read the header.
-pub fn open_input_with_progress(
-    data: &InputModel,
-    cancelled: &Arc<AtomicBool>,
-) -> Result<(Input, ClipInfo)> {
-    let screen = InitializingApp::new(None);
-    let clip_info_slot = screen.clip_info_slot();
-    let (status_tx, status_rx) = std::sync::mpsc::channel();
-
-    let screen_cancelled = Arc::clone(cancelled);
-    let screen_handle = thread::spawn(move || {
-        let mut screen = screen;
-        screen.run(status_rx, screen_cancelled)
-    });
-
-    let result = match Input::ensure_indexed(
+pub fn open_input(data: &InputModel, cancelled: &Arc<AtomicBool>) -> Result<(Input, ClipInfo)> {
+    info!("Opening input...");
+    // FFMS2 reports every whole percent, so only the tens are worth a line.
+    let mut last_decile = 0;
+    let mut input = Input::ensure_indexed(
         data,
         |progress| {
-            let _ = status_tx.send(open_progress_status(progress));
+            let OpenProgress::Indexing {
+                current,
+                total,
+            } = progress
+            else {
+                return;
+            };
+            if total == 0 {
+                return;
+            }
+            let decile = (current * 100 / total).min(100) / 10;
+            if decile > last_decile {
+                last_decile = decile;
+                trace!("Indexing input: {}%", decile * 10);
+            }
         },
         Some(cancelled),
-    ) {
-        Ok(mut input) => match input.clip_info() {
-            Ok(clip_info) => {
-                // Published so the screen's last frame already shows the clip
-                // it opened rather than the placeholder.
-                *clip_info_slot.lock().expect("initializing clip_info lock") = Some(clip_info);
-                Ok((input, clip_info))
-            },
-            Err(error) => Err(error),
-        },
-        Err(error) => Err(error),
-    };
-    // Closed only now, so the screen leaves after the open is finished. It has
-    // to be joined before returning either way: the thread owns raw mode and
-    // the panic hook until it does.
-    drop(status_tx);
-    screen_handle
-        .join()
-        .map_err(|_| anyhow::anyhow!("Initializing screen thread panicked"))??;
-
-    result
+    )?;
+    let clip_info = input.clip_info()?;
+    Ok((input, clip_info))
 }
 
 #[tracing::instrument(skip_all)]
@@ -152,7 +101,7 @@ pub fn run_scene_detector_tui(
     // its own, so re-opening the same model here would only index it twice.
     let (input, clip_info) = if let Some(configured) = &condor.sequence_config.scene_detector.input
     {
-        let (input, clip_info) = open_input_with_progress(configured, &cancelled)?;
+        let (input, clip_info) = open_input(configured, &cancelled)?;
         (Some(input), clip_info)
     } else {
         (None, condor.input.clip_info()?)
@@ -209,7 +158,7 @@ pub fn run_scene_detector_tui(
 
         let mut combined = scd_input_data;
         combined.append_input_filters(&main_input_data)?;
-        let (scd_input, clip_info) = open_input_with_progress(&combined, &cancelled)?;
+        let (scd_input, clip_info) = open_input(&combined, &cancelled)?;
 
         // Double check that the frames match
         if clip_info.num_frames != condor.input.clip_info()?.num_frames {
@@ -280,7 +229,7 @@ pub fn run_noise_detector_tui(
     };
 
     let (input, clip_info) = if let Some(input) = &noise_detector_config.input {
-        let (nd_input, clip_info) = open_input_with_progress(input, &cancelled)?;
+        let (nd_input, clip_info) = open_input(input, &cancelled)?;
         (Some(nd_input), clip_info)
     } else {
         (None, condor.input.clip_info()?)
@@ -421,11 +370,11 @@ pub fn run_target_quality_tui(
     let (target_quality_input, clip_info) = if let Some(Some(input)) =
         &condor.sequence_config.target_quality.as_ref().map(|tq| tq.input.clone())
     {
-        let (tq_input, clip_info) = open_input_with_progress(input, &cancelled)?;
+        let (tq_input, clip_info) = open_input(input, &cancelled)?;
         (Some(tq_input), clip_info)
     } else if let Some(pe_input) = &condor.sequence_config.parallel_encoder.input {
         debug!("Falling back to Parallel Encoder input");
-        let (tq_input, clip_info) = open_input_with_progress(pe_input, &cancelled)?;
+        let (tq_input, clip_info) = open_input(pe_input, &cancelled)?;
         (Some(tq_input), clip_info)
     } else {
         (None, condor.input.clip_info()?)
@@ -436,7 +385,7 @@ pub fn run_target_quality_tui(
         .as_ref()
         .and_then(|tq| tq.metric_input.clone())
     {
-        Some(input) => Some(open_input_with_progress(&input, &cancelled)?.0),
+        Some(input) => Some(open_input(&input, &cancelled)?.0),
         None => None,
     };
 
@@ -506,11 +455,11 @@ pub fn run_quality_check_tui(
     let (quality_check_input, clip_info) = if let Some(Some(input)) =
         &condor.sequence_config.quality_check.as_ref().map(|qc| qc.input.clone())
     {
-        let (qc_input, clip_info) = open_input_with_progress(input, &cancelled)?;
+        let (qc_input, clip_info) = open_input(input, &cancelled)?;
         (Some(qc_input), clip_info)
     } else if let Some(pe_input) = &condor.sequence_config.parallel_encoder.input {
         debug!("Falling back to Parallel Encoder input");
-        let (qc_input, clip_info) = open_input_with_progress(pe_input, &cancelled)?;
+        let (qc_input, clip_info) = open_input(pe_input, &cancelled)?;
         (Some(qc_input), clip_info)
     } else {
         (None, condor.input.clip_info()?)
@@ -634,7 +583,7 @@ pub fn run_parallel_encoder_tui(
     debug!("Instantiating Parallel Encoder Input");
     let (parallel_encoder_input, clip_info) =
         if let Some(input) = &condor.sequence_config.parallel_encoder.input {
-            let (pe_input, clip_info) = open_input_with_progress(input, &cancelled)?;
+            let (pe_input, clip_info) = open_input(input, &cancelled)?;
             (Some(pe_input), clip_info)
         } else {
             (None, condor.input.clip_info()?)

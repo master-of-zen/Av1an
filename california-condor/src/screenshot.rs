@@ -51,7 +51,6 @@ use crate::{
     apps::{
         TuiApp,
         benchmarker::{BenchmarkerApp, BenchmarkerState, WorkerStatus},
-        initializing::{InitializingApp, InitializingPhase, InitializingState},
         noise_detection::{NoiseDetectionApp, NoiseDetectionState},
         parallel_encoder::{ParallelEncoderApp, ParallelEncoderState, SceneEncoder},
         scene_concatenator::{SceneConcatenatorApp, SceneConcatenatorState},
@@ -688,21 +687,6 @@ struct Screen {
 fn tui_screens() -> Vec<Screen> {
     let ci = clip_info();
     let mut screens = Vec::new();
-
-    // Initializing Input.
-    {
-        let mut app = InitializingApp::new(Some(ci));
-        backdate(&mut app.started, 12);
-        app.on_snapshot(InitializingState {
-            percent: 34.0,
-            phase:   InitializingPhase::Indexing,
-        });
-        screens.push(Screen {
-            slug:    "initializing-input",
-            command: "init",
-            buf:     capture(|f| app.render(f)),
-        });
-    }
 
     // Scene Detection.
     // ~68% through a 10-minute clip; scene detection is decode-bound, so a few

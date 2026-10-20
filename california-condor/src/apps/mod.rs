@@ -26,7 +26,6 @@ use ratatui::{
 use tracing::debug;
 
 pub mod benchmarker;
-pub mod initializing;
 pub mod noise_detection;
 pub mod parallel_encoder;
 pub mod quality_check;

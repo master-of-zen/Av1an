@@ -17,13 +17,10 @@ follow the [Commands](commands/condor.md) section to see them in context.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <a href="media/tui/initializing-input-light.avif"><picture><source srcset="media/tui/initializing-input-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/initializing-input-light.avif" alt="Initializing the input" style="width:100%;border-radius:8px;display:block;"></picture></a>
-      <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">Initializing the input</p>
-    </td>
-    <td width="50%" valign="top">
       <a href="media/tui/scene-detection-light.avif"><picture><source srcset="media/tui/scene-detection-dark.avif" media="(prefers-color-scheme: dark)"><img src="media/tui/scene-detection-light.avif" alt="Detecting scenes" style="width:100%;border-radius:8px;display:block;"></picture></a>
       <p style="text-align:center;font-size:0.85em;opacity:0.75;margin:0.35em 0 0;">Detecting scenes</p>
     </td>
+    <td width="50%" valign="top"></td>
   </tr>
   <tr>
     <td width="50%" valign="top">
